@@ -80,6 +80,16 @@ void TraceLayer::Pre(UniformArrayMetaCommand& command) {
   printer.Finish(m_Flush);
 }
 
+void TraceLayer::Pre(MappedTextureDataMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "MappedTextureDataMeta");
+  printer.Add(command.m_Textures);
+  printer.Add(command.m_Levels);
+  printer.Add(command.m_Strides);
+  printer.Add(command.m_Rows);
+  printer.Add(command.m_Data);
+  printer.Finish(m_Flush);
+}
+
 void TraceLayer::Pre(UnsupportedCommand& command) {
   CommandPrinter printer(m_Stream, m_Mutex, command, "UnsupportedCommand");
   printer.AddText(command.GetName());

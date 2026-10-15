@@ -63,6 +63,16 @@ POST_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
 })
 
 
+# PRE_HOOK_KEY_PAIR_COMMANDS whose Wrapper_<cmd> reserves a third key, ahead of the pair, for
+# MappedTextureLayer's MappedTextureDataMetaCommand (via CaptureManager::
+# SetPendingMappedTextureKey()): mapped-texture writes the application publishes by swapping
+# must replay before the swap presents them.
+PRE_SWAP_TEXTURE_KEY_COMMANDS: frozenset[str] = frozenset({
+    'wglSwapBuffers', 'wglSwapLayerBuffers',
+})
+assert PRE_SWAP_TEXTURE_KEY_COMMANDS <= PRE_HOOK_KEY_PAIR_COMMANDS
+
+
 def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
     """PRE_HOOK_KEY_PAIR_COMMANDS plus ClientArraysLayer's draws (client_array_draws.py), which
     record a ClientArraysMetaCommand under the spare key the same way. The two sets must not
@@ -98,6 +108,7 @@ def generate_recorder_files(commands: list[Command]) -> None:
                share_lists_commands=SHARE_LISTS_COMMANDS,
                pre_hook_key_pair_commands=pre_hook_key_pair_commands(commands),
                post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
+               pre_swap_texture_key_commands=PRE_SWAP_TEXTURE_KEY_COMMANDS,
                client_array_setters=client_array_setters(commands),
                buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,

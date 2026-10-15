@@ -33,11 +33,13 @@ from texture_sampling_commands import sampling_hook_after, sampling_hook_before
 #     a low-level mechanism operating underneath the generated-command replay path, not a
 #     replayed command in its own right (mirrors recorder/mapTrackingWrappers.cpp's identical
 #     precedent for the same reason).
+#   - glMapTexture2DINTEL: player/mappedTextureDataMetaRunner.cpp, which maps a texture level
+#     itself to replay its captured contents.
 #
 # Included in `warmup_commands` below purely to preserve this function's pre-existing behavior
-# for these three specific names unchanged (they were warmed up before this filter existed too, as
+# for these specific names unchanged (they were warmed up before this filter existed too, as
 # part of the full, unfiltered list) - not because it is load-bearing for correctness. Every
-# other call site of the real, driver-resolved function for these three (mappedDataMetaRunner.
+# other call site of the real, driver-resolved function for these (mappedDataMetaRunner.
 # cpp's direct calls, ResolveDriverFunction's own recursive-looking call for
 # wglGetProcAddress itself) runs while a context is already current by construction (mapping a
 # buffer, or resolving some *other* function's real pointer, both require one) - the same
@@ -50,6 +52,7 @@ _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'wglGetProcAddress',
     'glGetIntegerv',
     'glMapBufferRange',
+    'glMapTexture2DINTEL',
 })
 
 

@@ -32,6 +32,7 @@ add_library(OpenGL2_layer_interface STATIC
   command.h
   layerBase.h
   mappedDataMetaTypes.h
+  mappedTextureDataMetaTypes.h
   uniformArrayMetaTypes.h
   unsupportedCommandTypes.h
   windowGeometryMetaTypes.h

@@ -31,6 +31,7 @@ public:
   void Pre(WindowGeometryMetaCommand& command) override;
   void Pre(ClientArraysMetaCommand& command) override;
   void Pre(UniformArrayMetaCommand& command) override;
+  void Pre(MappedTextureDataMetaCommand& command) override;
   void Pre(UnsupportedCommand& command) override;
 
 private:

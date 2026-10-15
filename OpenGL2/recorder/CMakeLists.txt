@@ -27,6 +27,8 @@ add_library(OpenGL2_recorder STATIC
   include/handleArgumentUpdaters.h
   include/mapTrackingService.h
   include/mapTrackingWrappers.h
+  include/mappedTextureLayer.h
+  include/mappedTextureService.h
   include/pixelFormatCaptureLayer.h
   include/realDriver.h
   include/recorderInterface.h
@@ -43,6 +45,8 @@ add_library(OpenGL2_recorder STATIC
   clientMemoryCapture.cpp
   mapTrackingService.cpp
   mapTrackingWrappers.cpp
+  mappedTextureLayer.cpp
+  mappedTextureService.cpp
   pixelFormatCaptureLayer.cpp
   realDriver.cpp
   recorder.cpp
@@ -72,7 +76,8 @@ target_link_libraries(OpenGL2_recorder
   # than relying on some other dependency injecting it implicitly, mirroring
   # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
   # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
-  PRIVATE OpenGL2_services common_interface log tbb gdi32 user32
+  # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
+  PRIVATE OpenGL2_services common_interface log tbb gdi32 user32 xxhash
 )
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)

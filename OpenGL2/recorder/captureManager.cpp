@@ -10,6 +10,7 @@
 
 #include "clientArraysLayerAuto.h"
 #include "encoderLayerAuto.h"
+#include "mappedTextureLayer.h"
 #include "pixelFormatCaptureLayer.h"
 #include "uniformArrayCaptureLayer.h"
 #include "unsupportedCommandTypes.h"
@@ -20,6 +21,7 @@ namespace gits::opengl2 {
 // See SetPendingPreHookKey()/TakePendingPreHookKey()'s own header comment (captureManager.h).
 thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
 thread_local uint64_t CaptureManager::s_PendingPostHookKey = 0;
+thread_local uint64_t CaptureManager::s_PendingMappedTextureKey = 0;
 
 CaptureManager& CaptureManager::Get() {
   // Thread-safe function-local static initialization (C++11 "magic statics") replaces a
@@ -73,6 +75,8 @@ void CaptureManager::LoadLayers() {
   // Records client-memory vertex arrays ahead of the draws that read them - see
   // clientArraysService.h.
   m_PreLayers.push_back(new ClientArraysLayer());
+  // Captures still-mapped GL_INTEL_map_texture textures at swaps - see mappedTextureLayer.h.
+  m_PreLayers.push_back(new MappedTextureLayer());
   // PixelFormatCaptureLayer must run BEFORE EncoderLayer (see that layer's own header comment
   // for why) - pushed first, since m_PostLayers runs in push_back order and EncoderLayer must
   // stay the LAST entry (see this class's own header comment on that invariant).

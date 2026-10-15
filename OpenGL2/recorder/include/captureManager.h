@@ -92,6 +92,12 @@ public:
     return {first, first + 1};
   }
 
+  // CreateCommandKeyPair() for `count` keys: reserves {first, ..., first + count - 1} atomically
+  // and returns `first`.
+  [[nodiscard]] uint64_t CreateCommandKeyRange(uint64_t count) {
+    return m_CommandKey.fetch_add(count, std::memory_order_relaxed) + 1;
+  }
+
   // Independent counter from CreateCommandKey() above - mirrors Vulkan's CaptureManager,
   // which also keeps command ordering keys and object handle keys in separate sequences.
   // Used by HandleMapService<HandleT> (see common/services/handleMapService.h) to mint a
@@ -204,6 +210,20 @@ public:
     }
   }
 
+  // Same handoff as SetPendingPreHookKey()/TakePendingPreHookKey(), for generator_recorder.py's
+  // PRE_SWAP_TEXTURE_KEY_COMMANDS: the swap's wrapper reserves this key ahead of its pre-hook
+  // pair, for the mapped-texture update MappedTextureLayer records (or skips) before the swap.
+  void SetPendingMappedTextureKey(uint64_t key) {
+    GITS_ASSERT(s_PendingMappedTextureKey == 0);
+    s_PendingMappedTextureKey = key;
+  }
+  uint64_t TakePendingMappedTextureKey() {
+    GITS_ASSERT(s_PendingMappedTextureKey != 0);
+    const uint64_t key = s_PendingMappedTextureKey;
+    s_PendingMappedTextureKey = 0;
+    return key;
+  }
+
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;
   }
@@ -242,6 +262,7 @@ private:
   // non-static member, since C++ does not allow a non-static thread_local class member at all.
   static thread_local uint64_t s_PendingPreHookKey;
   static thread_local uint64_t s_PendingPostHookKey;
+  static thread_local uint64_t s_PendingMappedTextureKey;
 };
 
 } // namespace gits::opengl2

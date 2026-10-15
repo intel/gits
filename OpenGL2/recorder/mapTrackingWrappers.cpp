@@ -11,6 +11,7 @@
 #include "clientMemoryCapture.h"
 #include "glEnumsAuto.h"
 #include "mapTrackingService.h"
+#include "mappedTextureService.h"
 #include "openglDriversAuto.h"
 #include "recursionGuard.h"
 
@@ -188,6 +189,37 @@ GLboolean APIENTRY CustomWrapper_UnmapNamedBuffer(GLuint buffer) {
       &ReadNamedBufferSubData<GetSubDataEntry, ResolveGetSubDataThunk>);
 }
 
+// GL_INTEL_map_texture: the calls themselves are not recorded - MappedTextureService captures
+// the mapped contents and the player maps, writes and unmaps the level itself.
+void* APIENTRY CustomWrapper_glMapTexture2DINTEL(
+    GLuint texture, GLint level, GLbitfield access, GLint* stride, GLenum* layout) {
+  const RecursionGuard guard;
+  auto realFunction = g_DispatchTable.glMapTexture2DINTEL.load(std::memory_order_acquire);
+  // MappedTextureService reads the mapping, which a write-only mapping does not guarantee.
+  const GLbitfield realAccess = guard.IsNested() ? access : access | GL_MAP_READ_BIT;
+  void* result = realFunction(texture, level, realAccess, stride, layout);
+  if (!guard.IsNested() && result != nullptr && stride != nullptr) {
+    MappedTextureService::Get().OnMap(texture, level, access, result, *stride);
+  }
+  return result;
+}
+
+void APIENTRY CustomWrapper_glUnmapTexture2DINTEL(GLuint texture, GLint level) {
+  const RecursionGuard guard;
+  if (!guard.IsNested()) {
+    MappedTextureService::Get().CaptureOnUnmap(texture, level);
+  }
+  g_DispatchTable.glUnmapTexture2DINTEL.load(std::memory_order_acquire)(texture, level);
+}
+
+void APIENTRY CustomWrapper_glSyncTextureINTEL(GLuint texture) {
+  const RecursionGuard guard;
+  if (!guard.IsNested()) {
+    MappedTextureService::Get().CaptureOnSync(texture);
+  }
+  g_DispatchTable.glSyncTextureINTEL.load(std::memory_order_acquire)(texture);
+}
+
 constexpr char UNMAP_NAMED_BUFFER[] = "glUnmapNamedBuffer";
 constexpr char UNMAP_NAMED_BUFFER_EXT[] = "glUnmapNamedBufferEXT";
 
@@ -235,6 +267,9 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
                                          &ResolveAndCall_glMapNamedBufferRangeEXT,
                                          &OpenGLDispatchTable::glGetNamedBufferSubDataEXT,
                                          &ResolveAndCall_glGetNamedBufferSubDataEXT>)},
+    {"glMapTexture2DINTEL", reinterpret_cast<void*>(&CustomWrapper_glMapTexture2DINTEL)},
+    {"glUnmapTexture2DINTEL", reinterpret_cast<void*>(&CustomWrapper_glUnmapTexture2DINTEL)},
+    {"glSyncTextureINTEL", reinterpret_cast<void*>(&CustomWrapper_glSyncTextureINTEL)},
 };
 
 } // namespace

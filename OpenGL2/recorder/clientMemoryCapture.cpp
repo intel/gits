@@ -334,6 +334,8 @@ std::mutex g_CopyBufferFeatureMutex;
 std::unordered_map<GITSKey, bool> g_CopyBufferFeatureByContext;
 std::mutex g_DirectStateAccessFeatureMutex;
 std::unordered_map<GITSKey, bool> g_DirectStateAccessFeatureByContext;
+std::mutex g_InternalformatQuery2FeatureMutex;
+std::unordered_map<GITSKey, bool> g_InternalformatQuery2FeatureByContext;
 } // namespace
 
 bool ContextSupportsCopyBuffer() {
@@ -345,6 +347,12 @@ bool ContextSupportsDirectStateAccess() {
   return ContextSupportsGLFeature(g_DirectStateAccessFeatureMutex,
                                   g_DirectStateAccessFeatureByContext, "GL_ARB_direct_state_access",
                                   4, 5);
+}
+
+bool ContextSupportsInternalformatQuery2() {
+  return ContextSupportsGLFeature(g_InternalformatQuery2FeatureMutex,
+                                  g_InternalformatQuery2FeatureByContext,
+                                  "GL_ARB_internalformat_query2", 4, 3);
 }
 
 bool ElementArrayBufferIsBound() {

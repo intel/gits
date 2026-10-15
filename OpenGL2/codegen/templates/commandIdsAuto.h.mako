@@ -39,6 +39,9 @@ enum class CommandId {
   // Capture-time uniform array facts for a glGetUniformLocation - see UniformArrayMetaCommand
   // (common/layer_interface/uniformArrayMetaTypes.h).
   ID_META_UNIFORM_ARRAY = 0xF0005,
+  // Contents of a glMapTexture2DINTEL mapping - see MappedTextureDataMetaCommand
+  // (common/layer_interface/mappedTextureDataMetaTypes.h).
+  ID_META_MAPPED_TEXTURE_DATA = 0xF0006,
 
   // ID_META_BEGIN + 0x500
   ID_GL_BEGIN = 0xF0500,

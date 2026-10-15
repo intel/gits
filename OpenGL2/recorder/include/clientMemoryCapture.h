@@ -123,6 +123,10 @@ bool ContextSupportsCopyBuffer();
 // Cached per context, like ContextSupportsCopyBuffer().
 bool ContextSupportsDirectStateAccess();
 
+// Whether the current context has glGetInternalformativ's format queries (GL 4.3 /
+// ARB_internalformat_query2). Cached per context, like ContextSupportsCopyBuffer().
+bool ContextSupportsInternalformatQuery2();
+
 // (major, minor) parsed from the current context's GL_VERSION; (0, 0) if it cannot be parsed,
 // which callers treat as "supports nothing".
 std::pair<int, int> CurrentContextGLVersion();

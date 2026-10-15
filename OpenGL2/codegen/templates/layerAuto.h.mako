@@ -13,6 +13,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandsAuto.h"
 #include "layerBase.h"
 #include "mappedDataMetaTypes.h"
+#include "mappedTextureDataMetaTypes.h"
 #include "uniformArrayMetaTypes.h"
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryMetaTypes.h"
@@ -82,6 +83,12 @@ public:
     Pre(static_cast<Command&>(command));
   }
   virtual void Post(UniformArrayMetaCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
+  virtual void Pre(MappedTextureDataMetaCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(MappedTextureDataMetaCommand& command) {
     Post(static_cast<Command&>(command));
   }
 };
