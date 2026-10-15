@@ -16,8 +16,8 @@ namespace gits::opengl2 {
 
 // Computes the byte size of a client-memory pixel transfer buffer (glTexImage2D's `pixels`,
 // and any future glTex*Image*/glReadPixels-family command that shares the same
-// format/type/dimensions shape), i.e. gl.xml's COMPSIZE(format,type,width,height) pseudo-length
-// - see pointer_metadata.py's LengthSourceKind.PIXEL_TRANSFER_SIZE. GL itself does not expose
+// format/type/dimensions shape), i.e. gl.xml's COMPSIZE(format,type,width,height[,depth])
+// pseudo-length - see pointer_metadata.py's LengthSourceKind.PIXEL_TRANSFER_SIZE. GL itself does not expose
 // this as a queryable value; the driver derives it internally from `format`+`type` (bytes per
 // pixel) times `width`*`height` (pixel count), so this reimplements that derivation for the
 // common, non-packed component/type combinations real GL 3.2+ core-profile callers actually use.
@@ -40,34 +40,169 @@ namespace gits::opengl2 {
 // that set (which should never happen from a real driver query) falls back to GL's own default
 // of 4 rather than risk a division-adjacent computation on a nonsensical value.
 //
-// Still does NOT account for GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/
-// GL_(UN)PACK_SKIP_PIXELS - tracking those is out of scope for this increment (see
-// docs/development/opengl2-player-skeleton-plan.md's Decision 10). An app that uses a non-zero
-// ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS before an IN-direction pixel transfer with a non-null
-// pointer or an OUT-direction one may still have its payload captured a few bytes short/long;
-// this is a known, documented limitation, not a silent correctness assumption - unlike the
-// original no-padding-at-all computation, and unlike always assuming the default alignment
-// regardless of real pixel-store state, it no longer produces a wrong result for the
-// overwhelmingly common cases of an app that never touches pixel-store state at all, or one
-// that only changes alignment (without ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS).
+// GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are now
+// GATED, exactly like GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES below - see
+// `rowLength`/`skipRows`/`skipPixels`'s own comment further down for the full rationale and
+// why this now applies uniformly to every pixel-transfer call (1D, 2D, AND 3D alike), not just
+// a 3D-shaped one. This paragraph used to document a real, then-out-of-scope "a few bytes
+// short/long" gap here instead (see docs/development/opengl2-player-skeleton-plan.md's
+// Decision 10) - it was NOT a regression introduced by this backend's 3D pixel-transfer
+// extension (commit c59605a2e): the exact same gap already existed for the plain 2D/1D path
+// from the very first version of this function, well before any `depth`/`imageHeight`/
+// `skipImages` parameter existed at all, because the original formula never queried or
+// accounted for any of these three pixel-store parameters in the first place - only
+// `alignment` was ever read from real GL state. c59605a2e's own 3D extension left this
+// pre-existing 2D/1D gap exactly as it found it (it only added a NEW, separate gate for the
+// 3D-specific IMAGE_HEIGHT/SKIP_IMAGES state, and did not touch the row/skip-pixel state at
+// all) - so the concrete review example (a 1x2 RGBA transfer with ROW_LENGTH=1024 computing
+// only 8 bytes instead of the real 4,100) would have misfired identically on this function's
+// very first, 2D-only revision, not merely on today's 3D-capable one.
 //
-// Returns 0 for an unrecognized `format`/`type` combination, a non-positive `width`/`height`,
-// or an intermediate/final size computation that
-// would overflow uint64_t - rather than guessing, or silently returning a wrapped-around value
-// that no longer reflects the real transfer size. Callers must treat 0 as "size unknown",
-// matching how ArrayArgument<T> already treats a null pointer (see arguments.h): the
-// constructor never dereferences the pointer when count is 0 either, so any of these cases
-// degrades to an empty/lost payload instead of an out-of-bounds read, an oversized allocation,
-// or a crash.
+// Returns 0 for a non-positive `width`/`height`/`depth` (a genuine, real zero-byte transfer -
+// see below), an unrecognized `format`/`type`
+// combination, non-default/untracked pixel-store state, or
+// an intermediate/final size computation that would overflow uint64_t - rather than
+// guessing, or silently returning a wrapped-around value that no longer reflects the real
+// transfer size.
 //
-// Returns uint64_t, not a 32-bit type: width/height/bytesPerPixel's product can legitimately
-// approach or exceed 4 GiB for a large-enough transfer, and the sole caller (ArrayArgument<T>'s
-// own templated, size_t-based constructor/Capture()) already accepts any integer width, so
-// there is no reason to narrow this function's own result before returning it - see
-// pixelTransferSize.cpp's own comment on why the arithmetic itself is done in uint64_t too,
-// rather than merely widening the final cast.
-uint64_t ComputePixelTransferByteSize(
-    GLenum format, GLenum type, GLsizei width, GLsizei height, GLint alignment);
+// A caller must NOT treat every 0 return the same way.
+// Non-positive `width`/`height`/`depth` is the ONE case where 0 genuinely means "this call
+// transfers zero real bytes, no matter what" - GL itself will not read or write a single byte
+// through the data pointer for such a call, so it remains perfectly safe (and, for a command
+// with real state-mutating side effects beyond the pixel copy itself - e.g. glTexImage2D
+// resizing/reformatting a texture level even at width=0 - necessary for replay fidelity) to
+// still issue the real driver call with an empty/null-equivalent buffer. Every OTHER 0-
+// returning case above means the size genuinely COULD NOT be determined, and is generally
+// nonzero at replay time - issuing the real driver call there against an empty captured
+// buffer risks exactly the out-of-bounds read/write, heap corruption, or crash this function
+// was written to avoid in the first place. See PixelTransferSizeIsUnknown() immediately below
+// for the one, shared, correct way every caller must tell these two cases apart - do not
+// re-derive this distinction ad hoc at a call site.
+//
+// Returns uint64_t, not a 32-bit type: width/height/depth/bytesPerPixel's product can
+// legitimately approach or exceed 4 GiB for a large-enough transfer, and the sole caller
+// (ArrayArgument<T>'s own templated, size_t-based constructor/Capture()) already accepts any
+// integer width, so there is no reason to narrow this function's own result before returning
+// it - see pixelTransferSize.cpp's own comment on why the arithmetic itself is done in
+// uint64_t too, rather than merely widening the final cast.
+//
+// `depth` defaults to 1 for the plain 2D shape (glTexImage2D/glReadPixels/glTexSubImage2D:
+// COMPSIZE(format,type,width,height), no third dimension at all in gl.xml) - a real 3D
+// transfer (glTexImage3D/glTexSubImage3D: COMPSIZE(format,type,width,height,depth)) passes its
+// own `depth` sibling instead. Per the GL pixel-store spec's own multi-image formula, each
+// image below the last is a full `height` rows of full `rowStride` each (the next image starts
+// immediately after, so even that image's own last row needs full padding); only the very
+// last row of the very last image needs no trailing padding past its own pixel data. That
+// collapses to the same closed form as the plain 2D case with `height` replaced by
+// `depth * height` - see pixelTransferSize.cpp's own comment at the one line that changed.
+//
+// `imageHeight`/`skipImages` (default 0/0, GL's own defaults) are GL_UNPACK_IMAGE_HEIGHT/
+// GL_UNPACK_SKIP_IMAGES (or, for an OUT-direction transfer, their GL_PACK_* counterparts) -
+// see QueryUnpackImageHeight()/QueryUnpackSkipImages()/QueryPackImageHeight()/
+// QueryPackSkipImages() below. Unlike ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS above (a bounded,
+// documented "a few bytes short/long" limitation), an app that sets a non-default
+// GL_UNPACK_IMAGE_HEIGHT (which changes how many rows each layer of a 3D transfer actually
+// occupies in client memory) or a non-zero GL_UNPACK_SKIP_IMAGES (which shifts every captured
+// layer's real offset later by that many full layers) before a 3D transfer would make the
+// plain `depth * height` formula UNDER-count by a multiple of a full image's worth of rows -
+// not a few bytes, but potentially the entire remainder of the buffer.
+// Rather than guess at incorporating these into the byte-range arithmetic
+// without a way to verify the result against a real driver, this function takes the safe,
+// conservative option instead - if either is non-default for a call that actually has a third
+// dimension (i.e. a real caller passed a non-zero `imageHeight`/`skipImages` argument; see
+// commandsAuto.h.mako/recorderWrappersAuto.cpp.mako, which only ever do this for a command with
+// its own `depth` param), this function returns 0 (this header's own existing "size unknown,
+// capture degrades gracefully" sentinel - see this comment's paragraph on that above) instead
+// of a wrong, under-counted byte range, and logs a single warning per unique `commandName` (via
+// LOG_WARNING - see pixelTransferSize.cpp) so the gap is visible rather than silent. A 2D-or-1D
+// caller never passes a non-zero `imageHeight`/`skipImages` at all (GL_UNPACK_IMAGE_HEIGHT/
+// GL_UNPACK_SKIP_IMAGES have no effect on a 2D-or-1D transfer regardless of their live value),
+// so this can never fire for one - only a genuine 3D transfer with actually non-default
+// pixel-store state loses capture, not every 3D transfer unconditionally.
+//
+// `rowLength`/`skipRows`/`skipPixels` (default 0/0/0, GL's own defaults) are
+// GL_UNPACK_ROW_LENGTH/GL_UNPACK_SKIP_ROWS/GL_UNPACK_SKIP_PIXELS (or, for an OUT-direction
+// transfer, their GL_PACK_* counterparts) - see QueryUnpackRowLength()/QueryUnpackSkipRows()/
+// QueryUnpackSkipPixels()/QueryPackRowLength()/QueryPackSkipRows()/QueryPackSkipPixels()
+// below. Unlike IMAGE_HEIGHT/SKIP_IMAGES above (which GL ignores entirely for
+// a transfer with no third dimension), these three affect EVERY pixel transfer - 1D, 2D, and
+// 3D alike (GL_UNPACK_ROW_LENGTH overrides the row stride used to advance between rows for a
+// transfer with more than one row; GL_UNPACK_SKIP_ROWS/SKIP_PIXELS shift where in the supplied
+// buffer the driver starts reading, for a transfer with any width/height at all) - so unlike
+// that gate, this one is queried and applied UNCONDITIONALLY by every Mako call site (see
+// commandsAuto.h.mako/recorderWrappersAuto.cpp.mako), regardless of whether the specific
+// command has a `depth`/`height` param at all. The concrete motivating case:
+// a 1x2 RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
+// actually touches 4,100 bytes of real client memory (1024 bytes for the row ROW_LENGTH
+// describes, plus 4 bytes for the second row's own real pixel data), but the plain width*height
+// formula below computes only 8 bytes (2 rows x 4 bytes/pixel x 1 pixel/row) - captured too
+// short, and replay would then reapply the ORIGINAL (real) pixel-store state against an
+// undersized captured buffer, an out-of-bounds read relative to what was actually captured.
+// Exactly like the IMAGE_HEIGHT/SKIP_IMAGES gate above, this function does not attempt to
+// incorporate these into the byte-range arithmetic itself (that would require a full
+// row-stride-vs-transfer-stride reconciliation this function has no way to verify against a
+// real driver without live testing); instead, if any of the three is non-default, this
+// function returns 0 (the same "size unknown" sentinel) and logs its own single warning per
+// unique `commandName`, via a distinct warn-once set from the IMAGE_HEIGHT/SKIP_IMAGES one
+// above (see pixelTransferSize.cpp) - the two gates are independent, and a caller wanting to
+// know which one specifically fired should watch the log text, not just the zero return value.
+//
+// `commandName` (default nullptr) is used only for the two diagnostics above - never part of
+// the size computation itself. Given the previous paragraph, a caller now risks the gated case
+// on every call (not just a 3D one), so every enabled pixel-transfer call site
+// (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) always passes it explicitly; omitting it
+// is only meaningful for a hypothetical caller outside the generated code path that can
+// independently guarantee every one of GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS/
+// IMAGE_HEIGHT/SKIP_IMAGES is already at its GL default.
+uint64_t ComputePixelTransferByteSize(GLenum format,
+                                      GLenum type,
+                                      GLsizei width,
+                                      GLsizei height,
+                                      GLint alignment,
+                                      GLsizei depth = 1,
+                                      GLint imageHeight = 0,
+                                      GLint skipImages = 0,
+                                      GLint rowLength = 0,
+                                      GLint skipRows = 0,
+                                      GLint skipPixels = 0,
+                                      const char* commandName = nullptr);
+
+// The required companion predicate to
+// ComputePixelTransferByteSize() above: distinguishes its one truly-safe 0 return (a genuine,
+// real zero-byte transfer - non-positive `width`/`height`/`depth`) from every other 0 return
+// (untracked pixel-store state, an unrecognized `format`/`type` combination, or an overflowing
+// size computation), none of which mean "call away with an empty buffer, GL will not touch
+// it" - see that function's own header comment above for the full rationale.
+//
+// Takes the EXACT same parameter list (names, order, types, defaults) as
+// ComputePixelTransferByteSize() above, by design - every call site
+// (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) shares one argument-list expression for
+// both calls, so the two can never silently drift out of sync with each other at a given call
+// site. Implemented purely in terms of that same function (see pixelTransferSize.cpp) - this
+// is not a second, independent size/gating computation to keep in sync by hand.
+//
+// Returns true when the captured size is unknown/unreplayable (every case above OTHER than
+// non-positive `width`/`height`/`depth`) - commandRunnersAuto.cpp.mako's Run() checks this on
+// every PIXEL_TRANSFER_SIZE-shaped parameter (see generator_helpers.py's
+// pointer_needs_pixel_transfer_unknown_flag()) before issuing the real driver call, and skips
+// the call entirely (logging a degraded-fidelity warning) whenever any of them answers true,
+// rather than replaying against a buffer whose captured size does not match what the driver
+// will actually read/write. Returns false for a genuine zero-byte transfer (the real driver
+// call is safe, and for some commands necessary for replay fidelity - see
+// ComputePixelTransferByteSize()'s own header comment) and for a genuine, successfully
+// computed nonzero size alike - both are "known", just possibly zero.
+bool PixelTransferSizeIsUnknown(GLenum format,
+                                GLenum type,
+                                GLsizei width,
+                                GLsizei height,
+                                GLint alignment,
+                                GLsizei depth = 1,
+                                GLint imageHeight = 0,
+                                GLint skipImages = 0,
+                                GLint rowLength = 0,
+                                GLint skipRows = 0,
+                                GLint skipPixels = 0,
+                                const char* commandName = nullptr);
 
 // Queries the real, current GL_UNPACK_ALIGNMENT/GL_PACK_ALIGNMENT via glGetIntegerv, for use as
 // ComputePixelTransferByteSize()'s `alignment` argument - see that function's own comment for
@@ -83,6 +218,34 @@ uint64_t ComputePixelTransferByteSize(
 GLint QueryUnpackAlignment();
 GLint QueryPackAlignment();
 
+// Queries the real, current GL_UNPACK_IMAGE_HEIGHT/GL_UNPACK_SKIP_IMAGES (or their GL_PACK_*
+// counterparts) via glGetIntegerv, for use as ComputePixelTransferByteSize()'s `imageHeight`/
+// `skipImages` arguments - see that function's own comment for why these matter and when a
+// caller must pass them. Same forward-declared-here/defined-in-mapTrackingWrappers.cpp
+// convention as QueryUnpackAlignment()/QueryPackAlignment() above, for the same reason. Only
+// ever called by a Mako-emitted call site for a command with an actual `depth` dimension (see
+// commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) - a 2D-or-1D command has no reason to
+// query either, since GL ignores both for a transfer with no third dimension.
+GLint QueryUnpackImageHeight();
+GLint QueryUnpackSkipImages();
+GLint QueryPackImageHeight();
+GLint QueryPackSkipImages();
+
+// Queries the real, current GL_UNPACK_ROW_LENGTH/GL_UNPACK_SKIP_ROWS/
+// GL_UNPACK_SKIP_PIXELS (or their GL_PACK_* counterparts) via glGetIntegerv, for use as
+// ComputePixelTransferByteSize()'s `rowLength`/`skipRows`/`skipPixels` arguments - see that
+// function's own comment for why these matter and why, unlike QueryUnpackImageHeight() et al.
+// above, every enabled pixel-transfer call site queries and passes all three unconditionally
+// (1D/2D/3D alike), not just a command with a `depth` param. Same forward-declared-here/
+// defined-in-mapTrackingWrappers.cpp convention as every other Query*() in this header, for
+// the same reason (real driver dispatch table access).
+GLint QueryUnpackRowLength();
+GLint QueryUnpackSkipRows();
+GLint QueryUnpackSkipPixels();
+GLint QueryPackRowLength();
+GLint QueryPackSkipRows();
+GLint QueryPackSkipPixels();
+
 // Computes the element count of glClearBufferfv/glClearBufferiv/glClearBufferuiv's `value`
 // array (gl.xml's COMPSIZE(buffer) pseudo-length) - see pointer_metadata.py's
 // LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT. 4 for GL_COLOR (RGBA), 1 for GL_DEPTH/
@@ -90,5 +253,43 @@ GLint QueryPackAlignment();
 // since unlike a pixel-transfer format/type combination there is no meaningful "unrecognized"
 // case in practice - `buffer` only ever takes one of these three values for a well-formed call.
 uint32_t ComputeClearBufferValueCount(GLenum buffer);
+
+// Computes the element count of glTexParameterfv/glTexParameteriv/glSamplerParameterfv's
+// `params`/`param` array (gl.xml's COMPSIZE(pname) pseudo-length) - see pointer_metadata.py's
+// LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT. 4 for GL_TEXTURE_BORDER_COLOR (a
+// SamplerParameterF-group pname, legal for both the Tex- and Sampler- variants) and
+// GL_TEXTURE_SWIZZLE_RGBA (a TextureParameterName-only pname, legal only for the Tex-
+// variants - passing it to glSamplerParameterfv is itself a GL_INVALID_ENUM client error the
+// real driver call must reject, not something this helper needs to special-case), 1 for every
+// other legal pname. Returns 1 (a safe, non-zero default matching
+// ComputeClearBufferValueCount()'s own fallback) for any other `pname` value rather than 0.
+uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname);
+
+// Computes the element count of glPatchParameterfv's `values` array (gl.xml's
+// COMPSIZE(pname) pseudo-length) - see pointer_metadata.py's
+// LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT. 4 for GL_PATCH_DEFAULT_OUTER_LEVEL, 2 for
+// GL_PATCH_DEFAULT_INNER_LEVEL - the only two legal pnames. Returns 1 (a safe, non-zero
+// default) for any other `pname` value rather than 0.
+uint32_t ComputePatchParameterValueCount(GLenum pname);
+
+// Computes the element count of glGetVertexAttribiv's `params` array - see pointer_metadata.py's
+// LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT. Unlike every other
+// COMPSIZE(pname)-shaped helper above, this is NOT a gl.xml COMPSIZE annotation at all - gl.xml
+// gives glGetVertexAttribiv's own `params` a flat, unconditional len="4" (see that
+// LengthSourceKind's own comment for why this registry annotation is actually wrong for the
+// overwhelming majority of this command's legal pnames). Returns 4 only for
+// GL_CURRENT_VERTEX_ATTRIB (0x8626) - the generic vertex attribute's own x/y/z/w, the sole
+// member of gl.xml's VertexAttribPropertyARB enum group (the exact group glGetVertexAttribiv's
+// own `pname` <param> carries) that is not a single scalar array-state property. Returns 1 for
+// every other legal VertexAttribPropertyARB member (GL_VERTEX_ATTRIB_ARRAY_ENABLED/SIZE/
+// STRIDE/TYPE/NORMALIZED/INTEGER/LONG/DIVISOR/BUFFER_BINDING, GL_VERTEX_ATTRIB_BINDING,
+// GL_VERTEX_ATTRIB_RELATIVE_OFFSET - verified exhaustively against every
+// third_party/OpenGL-Registry/xml/gl.xml <enum> tag carrying group="VertexAttribPropertyARB"),
+// and, matching ComputeClearBufferValueCount()/ComputeTexOrSamplerParameterValueCount()'s own
+// fallback convention, for any other/unrecognized `pname` value too (a safe, non-zero default
+// rather than 0 - an out-of-bounds read one element short is a much smaller residual risk than
+// a spurious "size unknown, skip capture" for a value this function simply doesn't recognize
+// yet).
+uint32_t ComputeVertexAttribParameterValueCount(GLenum pname);
 
 } // namespace gits::opengl2

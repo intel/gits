@@ -40,10 +40,17 @@ class ArrayOfArraysOverride:
     element_length_param: name of the sibling single-indirection pointer parameter giving each
         element's length (e.g. glShaderSource's `length`) - absorbed into this parameter's own
         wrapper (arguments.h's ArrayOfArrays<T>) and given no Command member of its own; see
-        consumed_pointer_params() below.
+        consumed_pointer_params() below. None when gl.xml genuinely gives the doubly-indirect
+        parameter no length-array sibling at all (glCreateShaderProgramv's `strings`,
+        glTransformFeedbackVaryings' `varyings` - both take only an outer `count`, no `length`
+        parameter exists anywhere in either command's own signature) - the real driver call
+        itself has no lengths to pass either in that case, so arguments.h's ArrayOfArrays<T>
+        constructor falls back to scanning each element for its own null terminator instead of
+        trusting a per-element length (see that constructor's own comment) rather than this
+        being a gap in what this backend tracks.
     """
     outer_count_param: str
-    element_length_param: str
+    element_length_param: str | None = None
 
 
 # (command_name, param_name) -> classification, param_name always the *doubly*-indirect
@@ -52,6 +59,16 @@ class ArrayOfArraysOverride:
 ARRAY_OF_ARRAYS_PARAM_OVERRIDES: dict[tuple[str, str], ArrayOfArraysOverride] = {
     ('glShaderSource', 'string'): ArrayOfArraysOverride(
         outer_count_param='count', element_length_param='length'),
+
+    # glCreateShaderProgramv(type, count, strings)/glTransformFeedbackVaryings(program, count,
+    # varyings, bufferMode): both `strings`/`varyings` are `const GLchar *const*` with
+    # len="count" - same doubly-indirect shape as glShaderSource's `string`, but gl.xml gives
+    # neither command an element-length-array sibling at all (verified: each has only 3-4
+    # params total, none named `length`) - element_length_param stays None; see that field's
+    # own comment above for why ArrayOfArrays<T> still handles this correctly (null-terminated
+    # element scan).
+    ('glCreateShaderProgramv', 'strings'): ArrayOfArraysOverride(outer_count_param='count'),
+    ('glTransformFeedbackVaryings', 'varyings'): ArrayOfArraysOverride(outer_count_param='count'),
 }
 
 
@@ -67,11 +84,14 @@ def consumed_pointer_params(command_name: str) -> frozenset[str]:
     ArrayOfArrays<T> wrapper and therefore get no Command member of their own, even though
     they are themselves TypeFacts.is_array_element_eligible pointers that would otherwise need
     their own POINTER_PARAM_OVERRIDES entry to be considered capturable - see
-    intermediates_creator.py's _is_param_capturable."""
+    intermediates_creator.py's _is_param_capturable. Omits entries whose element_length_param
+    is None (glCreateShaderProgramv/glTransformFeedbackVaryings above) - there is no sibling
+    parameter to exclude from Command members in that case; the doubly-indirect parameter
+    itself absorbs nothing."""
     return frozenset(
         override.element_length_param
         for (cmd, _param_name), override in ARRAY_OF_ARRAYS_PARAM_OVERRIDES.items()
-        if cmd == command_name
+        if cmd == command_name and override.element_length_param is not None
     )
 
 

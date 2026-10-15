@@ -17,6 +17,16 @@ ${AUTO_GENERATED_HEADER}
 // array_of_arrays_metadata.py's consumed_pointer_params() - e.g. glShaderSource's `length`)
 // has no m_<name> member at all (commandsAuto.h.mako skips it too) and is walked over here,
 // same as commandsAuto.h.mako/commandRunnersAuto.cpp.mako.
+//
+// A parameter meeting pointer_needs_raw_offset_capture() (generator_
+// helpers.py) additionally walks its companion m_<param>RawPointer member right after its own
+// m_<param> - see that predicate's own header comment and commandsAuto.h.mako's matching
+// member-declaration branch.
+//
+// A parameter meeting pointer_needs_pixel_transfer_
+// unknown_flag() (generator_helpers.py) additionally walks two more companions right after:
+// m_<param>SizeUnknown, then m_<param>IsBufferOffset - see that predicate's own header comment
+// and commandsAuto.h.mako's matching member-declaration branch.
 
 #include "argumentCoders.h"
 #include "commandCodersAuto.h"
@@ -35,6 +45,15 @@ uint64_t GetSize(const ${cmd.name}Command& command) {
 % if p.name not in consumed_pointer_params(cmd.name):
  +
          GetSize(command.m_${p.name})\
+% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
+ +
+         GetSize(command.m_${p.name}RawPointer)\
+% endif
+% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
+ +
+         GetSize(command.m_${p.name}SizeUnknown) +
+         GetSize(command.m_${p.name}IsBufferOffset)\
+% endif
 % endif
 % endfor
 % if not is_void:
@@ -51,6 +70,13 @@ void Encode(const ${cmd.name}Command& command, char* dest) {
 % for p in cmd.params:
 % if p.name not in consumed_pointer_params(cmd.name):
   Encode(dest, offset, command.m_${p.name});
+% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
+  Encode(dest, offset, command.m_${p.name}RawPointer);
+% endif
+% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
+  Encode(dest, offset, command.m_${p.name}SizeUnknown);
+  Encode(dest, offset, command.m_${p.name}IsBufferOffset);
+% endif
 % endif
 % endfor
 % if not is_void:
@@ -65,6 +91,13 @@ void Decode(const char* src, ${cmd.name}Command& command) {
 % for p in cmd.params:
 % if p.name not in consumed_pointer_params(cmd.name):
   Decode(src, offset, command.m_${p.name});
+% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
+  Decode(src, offset, command.m_${p.name}RawPointer);
+% endif
+% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
+  Decode(src, offset, command.m_${p.name}SizeUnknown);
+  Decode(src, offset, command.m_${p.name}IsBufferOffset);
+% endif
 % endif
 % endfor
 % if not is_void:

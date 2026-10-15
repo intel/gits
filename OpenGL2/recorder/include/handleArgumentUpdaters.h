@@ -55,26 +55,21 @@ inline uint64_t CurrentShareGroup() {
 // The bucketing identity ObjectNameMapService should use for `kind`'s recorder-direction
 // (name -> key) map - see that service's own header comment on why a GLuint name is only
 // unique within *some* scope narrower than the whole process, and ShareGroupService's header
-// comment for the GL spec's own "Shared Objects and Multiple Contexts" rule this implements:
-// Framebuffer and VertexArray objects are explicitly never shared between contexts, even two
-// contexts in the same share group that share every other object type (buffers, textures,
-// programs, shaders, queries, ...) - so bucketing them by share group like every other kind
-// would let two sharing contexts' independently-created FBO/VAO name 1 collide in the same map
-// bucket. Framebuffer/VertexArray are instead bucketed by the current context's own raw
-// identity (its live HGLRC value, always distinct across live contexts, sharing or not) rather
-// than by CurrentShareGroup()'s share-group id, which two sharing contexts would otherwise
-// have in common. Every other kind continues to use the share group, since those object types
-// genuinely are shared and must collide-check across the whole group.
-//
-// ProgramPipeline joins Framebuffer/VertexArray in the per-context bucket for the same reason,
-// per the GL spec's own "Shared Objects and Multiple Contexts" rule: program pipeline objects
-// are container objects, never shared between contexts even within a share group - unlike
-// Renderbuffer/Sampler (added alongside ProgramPipeline),
-// which that same spec rule says genuinely ARE shared, so both stay on the default
-// share-group-keyed path below like Texture/Buffer/Program/Shader/Query.
+// comment for the GL spec's own "Shared Objects and Multiple Contexts" rule this implements.
+// That rule's list of container objects never shared between contexts - not even two contexts
+// in the same share group that share every other object type (buffers, textures, programs,
+// shaders, renderbuffers, samplers, ...) - is exactly {framebuffer, program pipeline, query,
+// transform feedback, vertex array}: bucketing any of these five by share group like every
+// other kind would let two sharing contexts' independently-created object of the same name
+// collide in the same map bucket. All five are instead bucketed by the current context's own
+// raw identity (its live HGLRC value, always distinct across live contexts, sharing or not)
+// rather than by CurrentShareGroup()'s share-group id, which two sharing contexts would
+// otherwise have in common. Every other kind continues to use the share group, since those
+// object types genuinely are shared and must collide-check across the whole group.
 inline uint64_t GroupIdentityFor(GLObjectKind kind) {
   if (kind == GLObjectKind::Framebuffer || kind == GLObjectKind::VertexArray ||
-      kind == GLObjectKind::ProgramPipeline) {
+      kind == GLObjectKind::ProgramPipeline || kind == GLObjectKind::TransformFeedback ||
+      kind == GLObjectKind::Query) {
     auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
     return reinterpret_cast<uint64_t>(realFunction ? realFunction() : nullptr);
   }

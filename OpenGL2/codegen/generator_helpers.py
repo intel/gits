@@ -32,6 +32,7 @@ from object_name_lifecycle import (
     ObjectNameRole,
     resolve_object_name_override,
 )
+from pixel_transfer_metadata import derive_pixel_transfer_override
 from pointer_metadata import (
     POINTER_PARAM_OVERRIDES,
     LengthSourceKind,
@@ -152,10 +153,96 @@ def member_cpp_type(
     return param.type
 
 
-def pointer_override_for(cmd_name: str, param_name: str) -> PointerParamOverride | None:
-    """Thin wrapper around POINTER_PARAM_OVERRIDES.get(...), for use directly from Mako
-    templates (see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako)."""
-    return POINTER_PARAM_OVERRIDES.get((cmd_name, param_name))
+def pointer_needs_raw_offset_capture(override: PointerParamOverride | None) -> bool:
+    """True for a pointer-shaped parameter whose ArrayArgument<T> capture
+    is routed through one of the buffer-object-aware guards (GuardUnpackPixelsPointer/
+    GuardPackPixelsPointer for PIXEL_TRANSFER_SIZE and unpack_pbo_guard, GuardQueryBufferPointer
+    for query_buffer_guard - see mapTrackingWrappers.cpp) - i.e. every case where a bound
+    buffer object can turn this parameter's real, live value into a byte offset rather than a
+    dereferenceable client pointer, and the guard responds by suppressing the ArrayArgument<T>
+    byte-array capture (Data stays empty, HasValue stays false) rather than risk dereferencing
+    that offset as an address.
+    
+    Suppressing the byte-array capture is correct and necessary, but on its own it silently
+    discards the parameter's own raw bit pattern too - the ACTUAL byte offset the app passed -
+    which the replayed call still needs verbatim (the buffer binding itself replays correctly;
+    only the offset WITHIN that buffer was ever at risk). A parameter meeting this predicate
+    gets an extra, unconditionally-populated companion member (commandsAuto.h.mako's own
+    `m_<param>RawPointer`, an Argument<uintptr_t>) alongside its normal ArrayArgument<T> one,
+    capturing reinterpret_cast<uintptr_t>(<param>) - the parameter's ORIGINAL, unguarded value -
+    every time, guard or no guard. commandRunnersAuto.cpp.mako's call_arg() then falls back to
+    that raw value, instead of nullptr, whenever the ArrayArgument's own HasValue is false -
+    see that function's own comment for why nullptr on its own silently corrupts the offset a
+    query-buffer or pixel-buffer write should have landed at."""
+    if override is None:
+        return False
+    return (override.unpack_pbo_guard or override.query_buffer_guard or
+            override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE)
+
+
+def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | None) -> bool:
+    """True for a PIXEL_TRANSFER_SIZE-shaped parameter
+    (glTexImage2D-/glReadPixels-shaped - see pointer_metadata.py's
+    LengthSourceKind.PIXEL_TRANSFER_SIZE), i.e. the one parameter shape whose captured length
+    comes from ComputePixelTransferByteSize()/PixelTransferSizeIsUnknown()
+    (OpenGL2/common/layer_interface/pixelTransferSize.h) rather than a sibling parameter's own
+    value.
+
+    ComputePixelTransferByteSize() returning 0 does not always mean "this call transfers zero
+    real bytes" - it is also the exact same sentinel returned for non-default/untracked
+    pixel-store state, an unrecognized format/type combination, or an overflowing size
+    computation, none of which are safe to treat as "empty buffer, call away" at replay time
+    (see PixelTransferSizeIsUnknown()'s own header comment for exactly how the two categories
+    are told apart). A parameter meeting this predicate gets an extra, unconditionally-
+    populated companion member (commandsAuto.h.mako's own `m_<param>SizeUnknown`, an
+    Argument<bool>) alongside its normal ArrayArgument<T> one, which
+    commandRunnersAuto.cpp.mako's Run() checks BEFORE issuing the real driver call - skipping
+    it entirely (with a degraded-fidelity warning, mirroring
+    UnsupportedCommandRunner::Run()'s own wording/warn-once convention) whenever true, rather
+    than calling the driver with a captured buffer whose size does not match what it will
+    actually read/write.
+
+    SizeUnknown alone is not enough to decide
+    whether to skip - a parameter meeting this SAME predicate also gets a second companion
+    member, `m_<param>IsBufferOffset` (also an Argument<bool>, declared and walked immediately
+    after `m_<param>SizeUnknown` - see commandsAuto.h.mako/commandCodersAuto.cpp.mako),
+    populated from UnpackPixelsPointerIsBufferOffset()/PackPixelsPointerIsBufferOffset()
+    (mapTrackingWrappers.h) instead of PixelTransferSizeIsUnknown(). SizeUnknown and
+    IsBufferOffset are orthogonal - PixelTransferSizeIsUnknown() knows nothing about buffer
+    bindings, and IsBufferOffset knows nothing about format/type/dimensions/pixel-store state -
+    so both are always captured, and commandRunnersAuto.cpp.mako's skip gate ANDs
+    `SizeUnknown && !IsBufferOffset` per parameter (bypassing the skip, regardless of
+    SizeUnknown, whenever IsBufferOffset is true for that parameter) rather than trusting
+    SizeUnknown on its own.
+    """
+    return override is not None and override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE
+
+
+def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride | None:
+    """Resolve a (command, param) pointer classification, for use directly from Mako templates
+    (see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako/commandRunnersAuto.cpp.mako). An
+    explicit POINTER_PARAM_OVERRIDES entry always wins; if none exists, falls back to
+    pixel_transfer_metadata.py's derive_pixel_transfer_override() for the one narrow,
+    exhaustively-audited COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes (see
+    that module's own header comment for exactly what it requires before returning non-None).
+    This mirrors intermediates_creator.py's _is_param_capturable, which gates the `enabled`
+    flag with the exact same precedence (explicit table, then the pixel-transfer fallback) - a
+    command's generated code and its enabled-ness must never disagree about which override
+    applies, or a Mako template would either silently drop a real override or try to use one
+    _is_param_capturable never validated.
+
+    `cmd` is the full Command object, not just its name - unlike a plain table lookup, the
+    fallback needs every sibling parameter (to resolve and validate the format/type/dimension
+    names a COMPSIZE(...) expression references), which only the full param list provides.
+    """
+    override = POINTER_PARAM_OVERRIDES.get((cmd.name, param_name))
+    if override is not None:
+        return override
+    param = next((p for p in cmd.params if p.name == param_name), None)
+    if param is None:
+        return None
+    other_params = [p for p in cmd.params if p.name != param_name]
+    return derive_pixel_transfer_override(param, other_params)
 
 
 def mako_render(inpath: str, **kwargs) -> str | None:
@@ -173,6 +260,8 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'array_element_cpp_type': array_element_cpp_type,
         'member_cpp_type': member_cpp_type,
         'pointer_override_for': pointer_override_for,
+        'pointer_needs_raw_offset_capture': pointer_needs_raw_offset_capture,
+        'pointer_needs_pixel_transfer_unknown_flag': pointer_needs_pixel_transfer_unknown_flag,
         'PointerDirection': PointerDirection,
         'LengthSourceKind': LengthSourceKind,
         'object_name_override_for': object_name_override_for,

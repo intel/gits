@@ -13,6 +13,7 @@ from pathlib import Path
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
+from generator_helpers import pointer_needs_raw_offset_capture
 from intermediates import Api, Parameter
 from intermediates_creator import (
     FILE_TO_API,
@@ -125,6 +126,22 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         # Should not raise.
         _validate_pointer_override('glDrawElements', param, override, other_params=[])
 
+    def test_opaque_bit_pattern_array_override_must_be_in_direction(self) -> None:
+        # Mirrors test_opaque_bit_pattern_override_must_be_in_direction above - see
+        # _validate_pointer_override's own OPAQUE_BIT_PATTERN_ARRAY direction check and that
+        # LengthSourceKind's own comment (pointer_metadata.py) for why an OUT-direction "array
+        # of opaque values the driver produces" shape does not exist.
+        param = Parameter(name='indices', type='const void * const *')
+        sibling = Parameter(name='drawcount', type='GLsizei')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT,
+            length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY,
+            length_source_value='drawcount')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override(
+                'glMultiDrawElementsBaseVertex', param, override, other_params=[sibling])
+
     def test_opaque_bit_pattern_array_override_requires_existing_sibling(self) -> None:
         param = Parameter(name='indices', type='const void * const *')
         override = PointerParamOverride(
@@ -179,6 +196,152 @@ class ValidatePointerOverrideTests(unittest.TestCase):
 
         # Should not raise.
         _validate_pointer_override('glUniform1fv', param, override, other_params=[sibling])
+
+    def test_vertex_attrib_parameter_value_count_accepts_out_direction(self) -> None:
+        # glGetVertexAttribiv's `params` is written by the driver, so this
+        # kind must be OUT-direction, unlike TEX_SAMPLER_PARAMETER_VALUE_COUNT/
+        # PATCH_PARAMETER_VALUE_COUNT above (both IN-only setters).
+        param = Parameter(name='params', type='GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT,
+            length_source_kind=LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        # Should not raise.
+        _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
+
+    def test_vertex_attrib_parameter_value_count_rejects_in_direction(self) -> None:
+        param = Parameter(name='params', type='GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
+
+    def test_vertex_attrib_parameter_value_count_requires_pname_param(self) -> None:
+        param = Parameter(name='params', type='GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT,
+            length_source_kind=LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
+
+    def test_unpack_pbo_guard_requires_in_direction(self) -> None:
+        # GL_PIXEL_UNPACK_BUFFER only ever redirects an IN-direction parameter -
+        # an OUT-direction user would leave the flag silently inert (nothing checks it there).
+        param = Parameter(name='data', type='const void *')
+        image_size = Parameter(name='imageSize', type='GLsizei')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.SIBLING_PARAM,
+            length_source_value='imageSize', unpack_pbo_guard=True)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override(
+                'glCompressedTexImage2D', param, override, other_params=[image_size])
+
+    def test_unpack_pbo_guard_accepts_in_direction_sibling_param(self) -> None:
+        param = Parameter(name='data', type='const void *')
+        image_size = Parameter(name='imageSize', type='GLsizei')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
+            length_source_value='imageSize', unpack_pbo_guard=True)
+
+        # Should not raise.
+        _validate_pointer_override(
+            'glCompressedTexImage2D', param, override, other_params=[image_size])
+
+    def test_unpack_pbo_guard_rejects_pixel_transfer_size_combination(self) -> None:
+        # Redundant with (and potentially confusable against) PIXEL_TRANSFER_SIZE's own
+        # unconditional guard - see PointerParamOverride.unpack_pbo_guard's own comment.
+        param = Parameter(name='pixels', type='const void *')
+        fmt = Parameter(name='format', type='GLenum', group='PixelFormat')
+        typ = Parameter(name='type', type='GLenum', group='PixelType')
+        width = Parameter(name='width', type='GLsizei')
+        height = Parameter(name='height', type='GLsizei')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.PIXEL_TRANSFER_SIZE,
+            pixel_format_param='format', pixel_type_param='type', pixel_width_param='width',
+            pixel_height_param='height', unpack_pbo_guard=True)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override(
+                'glTexImage2D', param, override, other_params=[fmt, typ, width, height])
+
+    def test_query_buffer_guard_requires_out_direction(self) -> None:
+        # GL_QUERY_BUFFER only ever redirects an OUT-direction (driver-written)
+        # result - an IN-direction user would leave the flag silently inert.
+        param = Parameter(name='params', type='GLint64 *')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.FIXED_COUNT,
+            length_source_value='1', query_buffer_guard=True)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glGetQueryObjecti64v', param, override, other_params=[])
+
+    def test_query_buffer_guard_accepts_out_direction_fixed_count(self) -> None:
+        param = Parameter(name='params', type='GLint64 *')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.FIXED_COUNT,
+            length_source_value='1', query_buffer_guard=True)
+
+        # Should not raise.
+        _validate_pointer_override('glGetQueryObjecti64v', param, override, other_params=[])
+
+
+class PointerNeedsRawOffsetCaptureTests(unittest.TestCase):
+    """pointer_needs_raw_offset_capture() (generator_helpers.py) - which
+    pointer-shaped parameters get a companion m_<param>RawPointer field so the player can
+    reconstruct the app's original bit pattern even when a buffer-object guard suppressed the
+    normal client-memory capture. See that predicate's own header comment for the full
+    rationale."""
+
+    def test_none_override_is_not_raw_offset_capturable(self) -> None:
+        self.assertFalse(pointer_needs_raw_offset_capture(None))
+
+    def test_unpack_pbo_guard_needs_raw_offset_capture(self) -> None:
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
+            length_source_value='imageSize', unpack_pbo_guard=True)
+        self.assertTrue(pointer_needs_raw_offset_capture(override))
+
+    def test_query_buffer_guard_needs_raw_offset_capture(self) -> None:
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.FIXED_COUNT,
+            length_source_value='1', query_buffer_guard=True)
+        self.assertTrue(pointer_needs_raw_offset_capture(override))
+
+    def test_pixel_transfer_size_needs_raw_offset_capture(self) -> None:
+        # PIXEL_TRANSFER_SIZE is unconditionally routed through GuardUnpackPixelsPointer/
+        # GuardPackPixelsPointer (recorderWrappersAuto.cpp.mako) even without either guard
+        # flag explicitly set - see that LengthSourceKind's own comment.
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.PIXEL_TRANSFER_SIZE,
+            pixel_format_param='format', pixel_type_param='type', pixel_width_param='width')
+        self.assertTrue(pointer_needs_raw_offset_capture(override))
+
+    def test_plain_sibling_param_does_not_need_raw_offset_capture(self) -> None:
+        # An ordinary SIBLING_PARAM array (e.g. glGenTextures' `textures`) has no buffer-object
+        # duality at all - no guard ever runs for it, so no companion field is needed.
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.SIBLING_PARAM,
+            length_source_value='n')
+        self.assertFalse(pointer_needs_raw_offset_capture(override))
+
+    def test_opaque_bit_pattern_does_not_need_raw_offset_capture(self) -> None:
+        # OPAQUE_BIT_PATTERN (glVertexAttribPointer's `pointer`, glDrawElements' `indices`)
+        # already captures its own raw bit pattern unconditionally via its own, separate
+        # mechanism (commandsAuto.h.mako's m_<param>(reinterpret_cast<uintptr_t>(...)) - see
+        # that LengthSourceKind's own comment) - it must not ALSO be treated as needing this
+        # predicate's companion field (it has no ArrayArgument<T>/m_<param>.HasValue at all).
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN)
+        self.assertFalse(pointer_needs_raw_offset_capture(override))
 
 
 class IsParamCapturableTests(unittest.TestCase):
@@ -315,6 +478,37 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glGenQueries',
             'glDeleteQueries',
             'glReadPixels',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_ogl_samples_sweep_round_commands_are_enabled(self) -> None:
+        # Regression coverage for the ogl-samples sweep round: every command that round added
+        # a POINTER_PARAM_OVERRIDES entry for (directly, or via consumed_pointer_params()'s own
+        # array-of-arrays absorption - see array_of_arrays_metadata.py) now enables. Each
+        # individual entry's own comment in pointer_metadata.py documents exactly why it is
+        # safe; this test only pins down the end result across the whole round at once, rather
+        # than one assertion per command scattered across many small test methods.
+        for name in (
+            'glDeleteBuffers',
+            'glCompressedTexImage1D', 'glCompressedTexImage2D', 'glCompressedTexImage3D',
+            'glCompressedTexSubImage1D', 'glCompressedTexSubImage2D', 'glCompressedTexSubImage3D',
+            'glGetActiveUniform', 'glGetActiveAttrib', 'glGetTransformFeedbackVarying',
+            'glGetActiveUniformBlockName', 'glGetActiveUniformName',
+            'glGetProgramInfoLog', 'glGetProgramPipelineInfoLog', 'glGetShaderInfoLog',
+            'glGetQueryiv', 'glGetQueryObjecti64v', 'glGetQueryObjectui64v', 'glGetQueryObjectuiv',
+            'glGetProgramStageiv', 'glGetProgramPipelineiv', 'glGetVertexAttribiv',
+            'glViewportIndexedfv',
+            'glTexParameterfv', 'glTexParameteriv', 'glSamplerParameterfv',
+            'glPatchParameterfv',
+            'glUniform4dv', 'glUniformMatrix4dv',
+            'glProgramUniform4dv', 'glProgramUniformMatrix4dv', 'glProgramUniformMatrix4fv',
+            'glUniformSubroutinesuiv',
+            'glVertexAttribIPointer', 'glVertexAttribLPointer',
+            'glDrawElementsIndirect', 'glDrawElementsInstancedBaseVertexBaseInstance',
+            'glDrawBuffers',
+            'glGetSubroutineIndex', 'glGetSubroutineUniformLocation', 'glGetAttribLocation',
+            'glGenTransformFeedbacks', 'glDeleteTransformFeedbacks',
         ):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)

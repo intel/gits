@@ -176,6 +176,34 @@ struct ArrayArgument {
     }
   }
 
+  // Same eager-copy timing as the IN constructor above, for the opaque-pointer-array shape
+  // (glMultiDrawElementsBaseVertex's `indices` - see pointer_metadata.py's
+  // LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY, and commandsAuto.h.mako's own construction
+  // branch for it). Takes `const void* const*` directly and converts each element with its
+  // own reinterpret_cast<uintptr_t>(...) - a well-defined pointer-to-integer conversion
+  // ([expr.reinterpret.cast]) - rather than the call site reinterpreting the whole array's
+  // pointer type first (`reinterpret_cast<const uintptr_t*>(v)`) and bulk-copying through
+  // that via the plain `ArrayArgument(const T*, SizeT)` constructor above: that would read
+  // each element's stored bytes through a type (uintptr_t) other than the one they were
+  // actually stored as (const void*) - a strict-aliasing violation ([basic.lval]), not merely
+  // a style concern. A real compiler's alias analysis is entitled to treat such a read as not
+  // aliasing the original `const void*` store, which can silently miscompile exactly this
+  // bulk-copy-through-a-reinterpreted-pointer pattern (undefined behavior is not "usually
+  // works," even where it happens to on today's compilers/flags). Only ever instantiated with
+  // T = uintptr_t in practice (this repo's sole OPAQUE_BIT_PATTERN_ARRAY user) - kept generic
+  // in T anyway for consistency with every other constructor in this class.
+  template <typename SizeT>
+  ArrayArgument(const void* const* v, SizeT count) {
+    if (v) {
+      HasValue = true;
+      const size_t safeCount = ClampCountToSizeT(count);
+      Data.resize(safeCount);
+      for (size_t i = 0; i < safeCount; ++i) {
+        Data[i] = static_cast<T>(reinterpret_cast<uintptr_t>(v[i]));
+      }
+    }
+  }
+
   // Populates an OUT-direction parameter after the real driver call has written into the
   // application's own buffer. Deliberately a plain method, not a constructor - an OUT
   // parameter's Command member is default-constructed (empty, HasValue == false) at

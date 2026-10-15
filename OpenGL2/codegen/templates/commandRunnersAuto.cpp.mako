@@ -64,11 +64,21 @@ ${AUTO_GENERATED_HEADER}
 //     std::vector<const void*> ("<param>Ptrs") just before the call, same as ArrayOfArrays<T>
 //     above but one level shallower (each element is reinterpret_cast directly, never copied
 //     byte-by-byte through a per-element length).
+//
+// PIXEL_TRANSFER_SIZE (glTexImage2D's/glReadPixels'
+// `pixels`): checked BEFORE the real driver call runs, not just used as captured. Its
+// companion m_<param>SizeUnknown member (see pointer_needs_pixel_transfer_unknown_flag()'s own
+// header comment, generator_helpers.py) distinguishes "this call genuinely transfers zero real
+// bytes" from "this call's real byte range could not be determined at capture time" - the real
+// driver call is skipped entirely (with a degraded-fidelity warning) whenever the latter,
+// since an empty-but-HasValue-true captured Data buffer would otherwise stand in for a buffer
+// the driver actually reads/writes a real, nonzero range through at replay time.
 
 #include "commandRunnersAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
+#include "log.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
@@ -123,9 +133,26 @@ namespace gits::opengl2 {
   # (each element is reinterpreted directly, never copied byte-by-byte).
   opaque_bit_pattern_array_params = [
       p for p in cmd.params
-      if (pointer_override_for(cmd.name, p.name) is not None and
-          pointer_override_for(cmd.name, p.name).length_source_kind ==
+      if (pointer_override_for(cmd, p.name) is not None and
+          pointer_override_for(cmd, p.name).length_source_kind ==
               LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
+  ]
+
+  # Every PIXEL_TRANSFER_SIZE-shaped parameter (glTexImage2D-
+  # /glReadPixels-shaped) this command has, i.e. every parameter with its own companion
+  # m_<param>SizeUnknown member (see pointer_needs_pixel_transfer_unknown_flag()'s own header
+  # comment, generator_helpers.py, and commandsAuto.h.mako's matching member-declaration
+  # branch). Checked immediately below, before the real driver call: an
+  # empty-but-HasValue-true captured Data buffer for one of these params does NOT mean "this
+  # call transfers zero real bytes" unless m_<param>SizeUnknown.Value is false - see
+  # PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h) for the full
+  # rationale. In practice at most one such parameter exists per enabled command today, but
+  # this is written to cover every one of them uniformly rather than assume that.
+  pixel_transfer_size_params = [
+      p for p in cmd.params
+      if (pointer_override_for(cmd, p.name) is not None and
+          pointer_override_for(cmd, p.name).length_source_kind ==
+              LengthSourceKind.PIXEL_TRANSFER_SIZE)
   ]
 
   # Any command with a GLint parameter literally named 'location' is one of the
@@ -170,7 +197,7 @@ namespace gits::opengl2 {
           # their own comment for why an empty-but-HasValue-false container's .data() must not
           # be forwarded to the driver unconditionally.
           return f'(command.m_{p.name}.HasValue ? {p.name}Ptrs.data() : nullptr)'
-      ptr_override = pointer_override_for(cmd.name, p.name)
+      ptr_override = pointer_override_for(cmd, p.name)
       if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
           # Same HasValue guard as the ArrayArgument branch below, same rationale - see that
           # branch's own comment. ${p.name}Ptrs is rebuilt from the captured bit patterns just
@@ -191,8 +218,24 @@ namespace gits::opengl2 {
           # nullptr by the standard, so forwarding it unconditionally can hand the driver a
           # non-null-but-non-dereferenceable pointer for a parameter whose captured value was
           # actually a null pointer (a legal call for some commands, e.g. wglCreateContextAttribsARB's
-          # attribList - "use default attributes") - see the alignment plan doc's A.2 finding
-          # and WglSetPixelFormatRunner::Run()'s hand-written precedent (commandRunnersCustom.cpp).
+          # attribList - "use default attributes") - see
+          # WglSetPixelFormatRunner::Run()'s hand-written precedent (commandRunnersCustom.cpp).
+          #
+          # For a pointer_needs_raw_offset_capture() parameter (glTexImage2D-
+          # shaped/glCompressedTexImage2D-shaped/glGetQueryObject*-shaped - see that predicate's
+          # own header comment, generator_helpers.py), a HasValue-false Command was NOT
+          # necessarily a genuine null pointer at capture time - it may equally be a real,
+          # non-null buffer-relative offset that GuardUnpackPixelsPointer/GuardPackPixelsPointer/
+          # GuardQueryBufferPointer deliberately declined to dereference. Falling back to a bare
+          # nullptr here (offset 0) in that case would silently replay the call against the
+          # WRONG offset within whichever buffer object ends up bound at replay time. Falling
+          # back to the companion m_<param>RawPointer field instead reconstructs the app's own
+          # original bit pattern verbatim - correct whether it turns out to be a genuine null
+          # pointer (RawPointer.Value == 0, identical to the plain nullptr fallback below) or a
+          # real offset (RawPointer.Value == that offset, exactly reproducing the original call).
+          if pointer_needs_raw_offset_capture(ptr_override):
+              return (f'(command.m_{p.name}.HasValue ? command.m_{p.name}.Data.data() : '
+                      f'reinterpret_cast<{p.type}>(command.m_{p.name}RawPointer.Value))')
           return f'(command.m_{p.name}.HasValue ? command.m_{p.name}.Data.data() : nullptr)'
       if w == 'HandleArrayArgument':
           # Same HasValue guard as the ArrayArgument branch above, same rationale - see that
@@ -246,7 +289,7 @@ void ${cmd.name}Runner::Run() {
   // Single, stable dummy element shared by every empty-AND-zero-length entry below (never read
   // through - see the Lengths[i] == 0 gate just below for why that combination, specifically,
   // can never be dereferenced by the real driver call). Value[i].empty() alone is NOT a safe
-  // substitution trigger on its own: ArrayOfArrays<T>'s own constructor
+  // substitution trigger on its own - ArrayOfArrays<T>'s own constructor
   // (arguments.h) preserves Lengths[i] as whatever explicit length (or -1, "null-terminated")
   // the app actually passed for element i even when v[i] itself was nullptr (Value[i] stays
   // empty in that case purely because there was nothing to copy FROM, not because element i's
@@ -304,10 +347,56 @@ void ${cmd.name}Runner::Run() {
   }
 % endfor
   auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
+% if pixel_transfer_size_params:
+  // See pixel_transfer_size_params' own comment above and
+  // PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h). An
+  // empty-but-HasValue-true captured Data buffer here does not mean this call safely
+  // transfers zero real bytes - only m_<param>SizeUnknown.Value == false means that. Skip the
+  // real driver call entirely (never partially - there is no way to safely call with only
+  // SOME of a multi-parameter command's pointers replaced by a correctly-sized buffer) rather
+  // than risk it against a buffer whose captured size does not match what the driver would
+  // actually read/write, mirroring UnsupportedCommandRunner::Run()'s own warn-once, degraded-
+  // fidelity wording/convention.
+  //
+  // m_<param>SizeUnknown.Value == true does NOT
+  // always mean "must skip" - m_<param>IsBufferOffset.Value == true (this exact call's pointer
+  // was actually a buffer-relative offset, per UnpackPixelsPointerIsBufferOffset()/
+  // PackPixelsPointerIsBufferOffset()'s own header comment, mapTrackingWrappers.h) means the
+  // real driver call needs no captured size at all - call_arg() above already falls back to
+  // this same parameter's m_<param>RawPointer.Value (the preserved offset) whenever
+  // m_<param>.HasValue is false, so the call below is safe and correct to make. The two flags
+  // are orthogonal (SizeUnknown reasons about format/type/dimensions/pixel-store state only;
+  // IsBufferOffset reasons about buffer bindings only), so each parameter's own contribution to
+  // this skip gate is `SizeUnknown && !IsBufferOffset` - buffer-offset mode always takes
+  // priority over an otherwise-unknown size, never the other way around.
+  const bool ${cmd.name}PixelTransferSizeUnknown = \
+% for p in pixel_transfer_size_params:
+% if not loop.first:
+ || \
+% endif
+(command.m_${p.name}SizeUnknown.Value && !command.m_${p.name}IsBufferOffset.Value)\
+% endfor
+;
+  if (${cmd.name}PixelTransferSizeUnknown) {
+    static bool alreadyWarned = false;
+    if (!alreadyWarned) {
+      alreadyWarned = true;
+      LOG_WARNING << "Replay skipped ${cmd.name} call (degraded fidelity): this call's "
+                     "pixel-transfer byte size could not be determined at record time "
+                     "(non-default pixel-store state, an unrecognized format/type "
+                     "combination, or an overflowing size computation), so no captured buffer "
+                     "can safely stand in for the real, unknown-sized transfer this call "
+                     "would otherwise perform.";
+    }
+  } else {
+% endif
 % if is_void:
   realFunction(${call_args});
 % else:
   command.m_Return.Value = realFunction(${call_args});
+% endif
+% if pixel_transfer_size_params:
+  }
 % endif
 % if is_handle_creating:
   UpdateOutputHandle(command.m_Return);

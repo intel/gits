@@ -55,11 +55,14 @@ namespace gits::opengl2 {
 // modern-opengl-backend-architecture.md's "Reduce replay warning noise" decision).
 //
 // Renderbuffer/Sampler/ProgramPipeline were added for glGenRenderbuffers/glGenSamplers/
-// glGenProgramPipelines and their Bind/Delete counterparts, closing a real correctness gap:
-// glBindRenderbuffer/glBindSampler/
+// glGenProgramPipelines and their Bind/Delete counterparts: glBindRenderbuffer/glBindSampler/
 // glBindProgramPipeline were already enabled (scalar-only) with no lifecycle tracking for
 // their own object namespace at all, so their GLuint name was passed straight through to the
 // replay driver unresolved - see object_name_lifecycle.py's matching GLObjectKind comment.
+//
+// TransformFeedback was added for glGenTransformFeedbacks/glDeleteTransformFeedbacks/
+// glBindTransformFeedback/glIsTransformFeedback/glDrawTransformFeedback(Stream(Instanced)) -
+// see object_name_lifecycle.py's matching GLObjectKind comment.
 //
 // Share-group identity (see modern-opengl-backend-architecture.md's share-group decision
 // record and common/services/shareGroupService.h): a GLuint object name is unique only within
@@ -70,13 +73,13 @@ namespace gits::opengl2 {
 // never collides across share groups on its own - only the *name*-keyed forward lookup does.
 //
 // `shareGroup` is an opaque bucketing identity from this service's point of view - it does not
-// have to be a true, multi-context share-group id. Framebuffer/VertexArray objects are never
-// shared between contexts even within a share group that shares everything else (see the GL
-// spec's "Shared Objects and Multiple Contexts" rule), so callers pass those two kinds a raw
-// per-context identity instead of a real share-group id - see
-// recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(), the only place that decides
-// which identity a given GLObjectKind gets. This service itself stays kind-agnostic about that
-// choice; it only ever compares whatever uint64_t it is given for equality.
+// have to be a true, multi-context share-group id. Framebuffer/VertexArray/ProgramPipeline/
+// Query/TransformFeedback objects are never shared between contexts even within a share group
+// that shares everything else (see the GL spec's "Shared Objects and Multiple Contexts" rule),
+// so callers pass those five kinds a raw per-context identity instead of a real share-group id
+// - see recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(), the only place that
+// decides which identity a given GLObjectKind gets. This service itself stays kind-agnostic
+// about that choice; it only ever compares whatever uint64_t it is given for equality.
 enum class GLObjectKind : uint8_t {
   Texture,
   Buffer,
@@ -88,6 +91,7 @@ enum class GLObjectKind : uint8_t {
   Renderbuffer,
   Sampler,
   ProgramPipeline,
+  TransformFeedback,
   kCount, // Not a real bucket - array size sentinel only.
 };
 
@@ -155,8 +159,8 @@ public:
   // cleanup is not load-bearing within a single run" trade-offs elsewhere in this backend
   // (e.g. ContextHandleMapService::Erase's own comment).
   //
-  // GLObjectKind::TransformFeedback keeps its mapping alive here too,
-  // for a related but DIFFERENT reason than Program/Shader above:
+  // GLObjectKind::TransformFeedback keeps its mapping alive here too, for a related but
+  // DIFFERENT reason than Program/Shader above:
   // glDeleteTransformFeedbacks itself can fail outright with GL_INVALID_OPERATION if any name
   // in `ids` names the currently bound AND active (i.e. mid glBeginTransformFeedback/
   // glEndTransformFeedback) transform feedback object - unlike Program/Shader's genuine

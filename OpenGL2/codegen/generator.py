@@ -27,6 +27,7 @@ from intermediates_creator import (
     get_bitmask_groups,
     load_registries_and_extract_xml_data,
 )
+from pointer_length_derivation import find_pointer_length_mismatches
 from xml_data_exploration import (
     check_function_groups_against_enums,
     detect_duplicate_enum_values,
@@ -44,6 +45,18 @@ def main() -> None:
     enums: dict[Api, list[EnumValue]]
     commands: dict[Api, list[Command]]
     enums, commands = load_registries_and_extract_xml_data(FILE_TO_API)
+
+    # Cross-validate every hand-authored POINTER_PARAM_OVERRIDES/ARRAY_OF_ARRAYS_PARAM_OVERRIDES
+    # entry's length-source against what gl.xml's own len= attribute would independently derive
+    # for the same (command, param) - pure lint, never changes what gets generated (see
+    # pointer_length_derivation.py's find_pointer_length_mismatches() for what "mismatch" can
+    # and cannot mean here).
+    pointer_length_mismatches = find_pointer_length_mismatches(commands)
+    if pointer_length_mismatches:
+        print(f'WARNING: {len(pointer_length_mismatches)} pointer length-source mismatch(es) '
+              f'against gl.xml len=:')
+        for mismatch in pointer_length_mismatches:
+            print(f'  {mismatch}')
 
     # IDs/typed classes are generated from the same post-rename, filtered command list the
     # interceptor and recorder wrappers use (GL + real WGL exports, e.g. "wglSwapBuffers" rather

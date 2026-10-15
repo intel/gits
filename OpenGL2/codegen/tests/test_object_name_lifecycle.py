@@ -387,10 +387,9 @@ class EndToEndClassificationTests(unittest.TestCase):
                 self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArrayArgument')
 
     def test_renderbuffer_sampler_program_pipeline_bind_commands_are_remapped(self) -> None:
-        # The exact three commands found unmapped
-        # (glBindRenderbuffer/glBindSampler/glBindProgramPipeline) - each was already
+        # glBindRenderbuffer/glBindSampler/glBindProgramPipeline - each was already
         # `enabled=True` (scalar-only, no pointer to gate on) with no lifecycle tracking for
-        # its own object namespace at all previously.
+        # its own object namespace at all.
         for cmd_name, param_name, kind in (
             ('glBindRenderbuffer', 'renderbuffer', GLObjectKind.RENDERBUFFER),
             ('glBindSampler', 'sampler', GLObjectKind.SAMPLER),
@@ -448,6 +447,18 @@ class EndToEndClassificationTests(unittest.TestCase):
         self.assertEqual(override.kind, GLObjectKind.TRANSFORM_FEEDBACK)
         self.assertEqual(override.role, ObjectNameRole.DELETE)
 
+    def test_query_kind_is_classified_alongside_transform_feedback(self) -> None:
+        # object_name_lifecycle.py's own GLObjectKind classification must agree with the C++
+        # GroupIdentityFor() bucketing GroupIdentityForCppSourceTests below verifies - both
+        # must treat Query the same way they already treat TransformFeedback.
+        cmd = self._get_command(Api.GL, 'glGenQueries')
+        self.assertTrue(cmd.enabled)
+        param = next(p for p in cmd.params if p.name == 'ids')
+        override = object_name_override_for('glGenQueries', 'ids', param.class_)
+        self.assertIsNotNone(override)
+        assert override is not None
+        self.assertEqual(override.kind, GLObjectKind.QUERY)
+
 
 class ObjectNameMapServiceDeleteCppSourceTests(unittest.TestCase):
     """Source-text regression coverage:
@@ -486,6 +497,45 @@ class ObjectNameMapServiceDeleteCppSourceTests(unittest.TestCase):
         self.assertLess(condition_match.end(), erase_pos,
                         'The Program/Shader/TransformFeedback early return must run before '
                         'the unconditional NameToKey.erase() call')
+
+
+class GroupIdentityForCppSourceTests(unittest.TestCase):
+    """Source-text regression coverage: GroupIdentityFor() (recorder/include/
+    handleArgumentUpdaters.h) must bucket GLObjectKind::Query by per-context identity, not by
+    share group - per the GL spec's "Shared Objects and Multiple Contexts" rule, query objects
+    are container objects never shared between contexts, exactly like Framebuffer/VertexArray/
+    ProgramPipeline/TransformFeedback. There is no C++ unit test infrastructure in this repo
+    (see AGENTS.md's hard build/test constraints), so this parses the actual hand-written C++
+    text the same way ObjectNameMapServiceDeleteCppSourceTests above does."""
+
+    _HANDLE_ARGUMENT_UPDATERS_H = (
+        CODEGEN_DIR.parent / 'recorder' / 'include' / 'handleArgumentUpdaters.h')
+
+    def test_group_identity_for_buckets_query_per_context(self) -> None:
+        source = self._HANDLE_ARGUMENT_UPDATERS_H.read_text(encoding='utf-8')
+        match = re.search(
+            r'inline uint64_t GroupIdentityFor\(GLObjectKind kind\) \{(.*?)\n\}',
+            source, re.DOTALL)
+        self.assertIsNotNone(match, 'GroupIdentityFor() definition not found')
+        assert match is not None
+        body = match.group(1)
+        condition_match = re.search(
+            r'if \((.*?GLObjectKind::Framebuffer.*?)\)\s*\{', body, re.DOTALL)
+        self.assertIsNotNone(
+            condition_match,
+            'No per-context-bucket "if (kind == GLObjectKind::Framebuffer || ...)" condition '
+            'found in GroupIdentityFor()')
+        assert condition_match is not None
+        condition = condition_match.group(1)
+        self.assertIn('GLObjectKind::Framebuffer', condition)
+        self.assertIn('GLObjectKind::VertexArray', condition)
+        self.assertIn('GLObjectKind::ProgramPipeline', condition)
+        self.assertIn('GLObjectKind::TransformFeedback', condition)
+        self.assertIn('GLObjectKind::Query', condition,
+                      'GLObjectKind::Query must be bucketed per-context alongside '
+                      'Framebuffer/VertexArray/ProgramPipeline/TransformFeedback - query '
+                      'objects are container objects never shared between contexts per the GL '
+                      'spec\'s "Shared Objects and Multiple Contexts" rule')
 
 
 if __name__ == '__main__':

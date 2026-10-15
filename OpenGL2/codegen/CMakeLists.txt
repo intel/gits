@@ -25,6 +25,8 @@ set(SCRIPTS_SRC
   generator_recorder.py
   handle_lifecycle.py
   object_name_lifecycle.py
+  pixel_transfer_metadata.py
+  pointer_length_derivation.py
   pointer_metadata.py
   xml_data_exploration.py
   registry.py

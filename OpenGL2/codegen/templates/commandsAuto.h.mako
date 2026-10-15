@@ -51,7 +51,7 @@ public:
 % for p in cmd.params:
 % if p.name not in consumed_pointer_params(cmd.name):
 <%
-  override = pointer_override_for(cmd.name, p.name)
+  override = pointer_override_for(cmd, p.name)
   aoa_override = array_of_arrays_override_for(cmd.name, p.name)
   # 'const void *' blob params (glBufferData et al.) need an explicit cast to the
   # substituted element type (see array_element_cpp_type()) - void* has no implicit
@@ -68,8 +68,12 @@ public:
 ## negative count to zero via ClampCountToSizeT() before narrowing to size_t (see arguments.h's
 ## own comment on that helper) - a negative count is a GL client error the real driver call
 ## below must still receive unmodified, not something this constructor may crash turning into
-## a huge allocation via a naive static_cast.
-, m_${p.name}(${p.name}, ${aoa_override.outer_count_param}, ${aoa_override.element_length_param})\
+## a huge allocation via a naive static_cast. element_length_param is None for
+## glCreateShaderProgramv/glTransformFeedbackVaryings (no length-array sibling exists at all
+## in gl.xml - see ArrayOfArraysOverride's own comment); pass a literal nullptr in that case so
+## the constructor falls back to its own null-terminated-element scan.
+, m_${p.name}(${p.name}, ${aoa_override.outer_count_param}, \
+${aoa_override.element_length_param if aoa_override.element_length_param else 'nullptr'})\
 % elif override is None:
 , m_${p.name}(${p.name})\
 % elif override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
@@ -80,12 +84,13 @@ public:
 % elif override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
 ## Doubly-indirect pointer whose own elements are opaque bit patterns, never dereferenced
 ## (e.g. glMultiDrawElementsBaseVertex's `indices`) - see that LengthSourceKind's own comment
-## (pointer_metadata.py). Reinterpret the incoming `const void* const*` as `const uintptr_t*`
-## (both are arrays of pointer-sized elements) and reuse ArrayArgument<uintptr_t>'s existing
-## SizeT-templated constructor directly, exactly like every plain SIBLING_PARAM array above -
-## no new capture mechanism needed, just a different element type than this pointer's own
-## declared one.
-, m_${p.name}(reinterpret_cast<const uintptr_t*>(${p.name}), ${override.length_source_value})\
+## (pointer_metadata.py). Passed straight through (no cast at this call site) to
+## ArrayArgument<uintptr_t>'s dedicated `const void* const*` constructor overload
+## (arguments.h), which converts each element with its own reinterpret_cast<uintptr_t>(...) -
+## see that constructor's own comment for why this must be a per-element pointer-to-integer
+## conversion rather than reinterpreting the whole array's pointer type and bulk-copying
+## through it (a strict-aliasing violation this call site used to have).
+, m_${p.name}(${p.name}, ${override.length_source_value})\
 ## OUT-direction: default-constructed, no eager read of not-yet-written app memory.
 % elif override.direction == PointerDirection.OUT:
 % elif override.length_source_kind == LengthSourceKind.NULL_TERMINATED:
@@ -96,18 +101,53 @@ public:
 ## element.
 , m_${p.name}(${arg_expr}, KeyValueList)\
 % elif override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE:
-## COMPSIZE(format,type,width,height) has no single sibling to read directly - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. This branch is
-## only ever reached for an IN-direction PIXEL_TRANSFER_SIZE param (the OUT-direction branch
-## above already returns before this point) - i.e. glTexImage2D-shaped commands, which read
-## GL_UNPACK_ALIGNMENT, never GL_PACK_ALIGNMENT.
+## COMPSIZE(format,type,width[,height[,depth]]) has no single sibling to read directly - see
+## that LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. This
+## branch is only ever reached for an IN-direction PIXEL_TRANSFER_SIZE param (the OUT-direction
+## branch above already returns before this point) - i.e. glTexImage2D-shaped commands, which
+## read GL_UNPACK_ALIGNMENT, never GL_PACK_ALIGNMENT. pixel_height_param is None for a 1D-only
+## COMPSIZE(format,type,width) command (pass the literal 1 - ComputePixelTransferByteSize's own
+## height parameter, not a sibling read); pixel_depth_param is None for the plain 2D shape
+## (ComputePixelTransferByteSize's own `depth` parameter defaults to 1 - see that function's
+## header comment - so it is simply omitted from the call rather than passed explicitly). Only
+## when pixel_depth_param IS set (a genuine 3D transfer) do we also query and pass
+## GL_UNPACK_IMAGE_HEIGHT/GL_UNPACK_SKIP_IMAGES - see ComputePixelTransferByteSize's own header
+## comment for why a 3D transfer with non-default pixel-store state there
+## gates capture off instead of under-counting it; a 2D-or-1D command never needs to query
+## either (GL ignores both without a third dimension), so those two args are simply omitted
+## (defaulting to 0, 0) rather than queried needlessly. GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/
+## SKIP_PIXELS and this command's own name, by contrast (see
+## ComputePixelTransferByteSize's own header comment for the full rationale), are ALWAYS
+## queried and passed, for every dimensionality alike - those three affect every pixel
+## transfer, not just a 3D one, so (unlike imageHeight/skipImages) there is no 2D-or-1D case
+## that may skip them.
 , m_${p.name}(${arg_expr}, ComputePixelTransferByteSize(\
 ${override.pixel_format_param}, ${override.pixel_type_param}, \
-${override.pixel_width_param}, ${override.pixel_height_param}, QueryUnpackAlignment()))\
+${override.pixel_width_param}, \
+${override.pixel_height_param if override.pixel_height_param else '1'}, \
+QueryUnpackAlignment(), \
+${override.pixel_depth_param if override.pixel_depth_param else '1'}, \
+% if override.pixel_depth_param:
+QueryUnpackImageHeight(), QueryUnpackSkipImages(), \
+% else:
+0, 0, \
+% endif
+QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "${cmd.name}"\
+))\
 % elif override.length_source_kind == LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
 ## COMPSIZE(buffer) depends on the sibling enum's *value*, not just its presence - see that
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h.
 , m_${p.name}(${arg_expr}, ComputeClearBufferValueCount(${override.clear_buffer_param}))\
+% elif override.length_source_kind == LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
+## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
+## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
+## only - see _validate_pointer_override's own direction check for this kind.
+, m_${p.name}(${arg_expr}, ComputeTexOrSamplerParameterValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT:
+## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
+## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
+## only - see _validate_pointer_override's own direction check for this kind.
+, m_${p.name}(${arg_expr}, ComputePatchParameterValueCount(${override.pname_param}))\
 % else:
 ## Passed as the sibling's own type verbatim, times length_multiplier as a plain int
 ## (no unsigned 'u' suffix) - no cast needed here at all: ArrayArgument<T>/
@@ -125,10 +165,44 @@ ${override.pixel_width_param}, ${override.pixel_height_param}, QueryUnpackAlignm
 % for p in cmd.params:
 % if p.name not in consumed_pointer_params(cmd.name):
 <%
-  member_ptr_override = pointer_override_for(cmd.name, p.name)
+  member_ptr_override = pointer_override_for(cmd, p.name)
   member_aoa_override = array_of_arrays_override_for(cmd.name, p.name)
 %>\
   ${wrapper_for(p.type_facts, object_name_override_for(cmd.name, p.name, p.class_), member_ptr_override, member_aoa_override)}<${member_cpp_type(p, member_ptr_override, member_aoa_override)}> m_${p.name};
+% if pointer_needs_raw_offset_capture(member_ptr_override):
+  // See pointer_needs_raw_offset_capture()'s own header comment
+  // (generator_helpers.py). Populated unconditionally with reinterpret_cast<uintptr_t>(the
+  // ORIGINAL, unguarded ${p.name}) by recorderWrappersAuto.cpp.mako, independently of whatever
+  // m_${p.name} itself captured (or didn't, if a buffer object guard suppressed it) - so the
+  // player can still reconstruct the exact buffer-relative offset the app passed, instead of
+  // always falling back to nullptr/offset-0, whenever m_${p.name}.HasValue is false. Never
+  // dereferenced on either side, exactly like OPAQUE_BIT_PATTERN's own m_<param> field.
+  Argument<uintptr_t> m_${p.name}RawPointer;
+% endif
+% if pointer_needs_pixel_transfer_unknown_flag(member_ptr_override):
+  // See pointer_needs_pixel_transfer_unknown_flag()'s own
+  // header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
+  // comment (pixelTransferSize.h). Populated unconditionally by
+  // recorderWrappersAuto.cpp.mako, independently of whatever m_${p.name} itself captured, so
+  // the player can tell "this call genuinely transfers zero real bytes" (false - the real
+  // driver call is safe, m_${p.name}.HasValue's empty-but-true Data buffer notwithstanding)
+  // apart from "this call's real byte range could not be determined at capture time" (true -
+  // commandRunnersAuto.cpp.mako's Run() skips the real driver call entirely for this command
+  // when true, rather than risk it against a buffer whose captured size does not match what
+  // the driver would actually read/write).
+  Argument<bool> m_${p.name}SizeUnknown;
+  // See pointer_needs_pixel_transfer_unknown_
+  // flag()'s own header comment (generator_helpers.py) and UnpackPixelsPointerIsBufferOffset()/
+  // PackPixelsPointerIsBufferOffset()'s own header comment (mapTrackingWrappers.h). Populated
+  // unconditionally by recorderWrappersAuto.cpp.mako, independently of m_${p.name}SizeUnknown
+  // above: true iff this call's ${p.name} was actually a buffer-relative offset (a pixel
+  // (un)pack buffer object was bound), in which case commandRunnersAuto.cpp.mako's Run() must
+  // proceed with the real driver call - using m_${p.name}RawPointer's preserved offset - even
+  // when m_${p.name}SizeUnknown is also true, since a bound buffer needs no captured size at
+  // all and SizeUnknown alone cannot tell "buffer-offset, size irrelevant" apart from "client
+  // memory, size genuinely could not be determined".
+  Argument<bool> m_${p.name}IsBufferOffset;
+% endif
 % endif
 % endfor
 % if not is_void:

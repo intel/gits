@@ -8,11 +8,66 @@
 
 #include "pixelTransferSize.h"
 
+#include "log.h"
+
 #include <limits>
+#include <mutex>
+#include <string>
+#include <unordered_set>
 
 namespace gits::opengl2 {
 
 namespace {
+
+// Warn-once state for the ComputePixelTransferByteSize() gating below -
+// mirrors OpenGL2/recorder/mapTrackingWrappers.cpp's own warn-once conventions (e.g.
+// g_WarnedPixelBufferGuardCommands), kept local to this translation unit since this is the
+// only place that needs it.
+std::mutex g_PixelStoreWarningMutex;
+std::unordered_set<std::string> g_WarnedPixelStoreCommands;
+
+// Logs a single warning per unique `commandName` when ComputePixelTransferByteSize() gates a
+// 3D transfer's capture off because of non-default GL_(UN)PACK_IMAGE_HEIGHT/
+// GL_(UN)PACK_SKIP_IMAGES state - see that function's own header comment for
+// why this is the safe choice rather than guessing at the full formula.
+void WarnNonDefaultImagePixelStoreState(const char* commandName) {
+  std::lock_guard<std::mutex> lock(g_PixelStoreWarningMutex);
+  const std::string key = commandName != nullptr ? commandName : "<unknown pixel-transfer call>";
+  if (g_WarnedPixelStoreCommands.insert(key).second) {
+    LOG_WARNING << key
+                << ": non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES pixel-store "
+                   "state on a 3D pixel-transfer call - this recorder does not track those two "
+                   "parameters (see pixelTransferSize.h's own comment), and computing this "
+                   "call's captured byte range without them would silently under-count it, "
+                   "risking an out-of-bounds read/write on replay. Skipping capture for this "
+                   "call (0 bytes) instead of guessing at the wrong size.";
+  }
+}
+
+// Warn-once state for the row/skip-pixel gate below, kept separate from
+// g_PixelStoreWarningMutex/g_WarnedPixelStoreCommands above (and its own distinct message) so
+// the two gates remain independently diagnosable from the log alone - see
+// ComputePixelTransferByteSize()'s own header comment (pixelTransferSize.h) for why they are
+// two separate checks rather than one combined one.
+std::mutex g_RowPixelStoreWarningMutex;
+std::unordered_set<std::string> g_WarnedRowPixelStoreCommands;
+
+void WarnNonDefaultRowPixelStoreState(const char* commandName) {
+  std::lock_guard<std::mutex> lock(g_RowPixelStoreWarningMutex);
+  const std::string key = commandName != nullptr ? commandName : "<unknown pixel-transfer call>";
+  if (g_WarnedRowPixelStoreCommands.insert(key).second) {
+    LOG_WARNING << key
+                << ": non-default GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/"
+                   "GL_(UN)PACK_SKIP_PIXELS pixel-store state on a pixel-transfer call - this "
+                   "recorder does not track these three parameters (see pixelTransferSize.h's "
+                   "own comment), and computing this call's captured byte range without them "
+                   "would silently under- or over-count it (unlike GL_(UN)PACK_IMAGE_HEIGHT/"
+                   "GL_(UN)PACK_SKIP_IMAGES, which only affect a 3D transfer, these three "
+                   "affect every pixel transfer regardless of dimensionality), risking an "
+                   "out-of-bounds read/write on replay. Skipping capture for this call (0 "
+                   "bytes) instead of guessing at the wrong size.";
+  }
+}
 
 // Returns true if `a * b` would overflow uint64_t, without computing the (potentially wrapped)
 // product itself: a naive uint64_t multiply/add chain
@@ -112,9 +167,38 @@ uint32_t ComponentCount(GLenum format) {
 
 } // namespace
 
-uint64_t ComputePixelTransferByteSize(
-    GLenum format, GLenum type, GLsizei width, GLsizei height, GLint alignment) {
-  if (width <= 0 || height <= 0) {
+uint64_t ComputePixelTransferByteSize(GLenum format,
+                                      GLenum type,
+                                      GLsizei width,
+                                      GLsizei height,
+                                      GLint alignment,
+                                      GLsizei depth,
+                                      GLint imageHeight,
+                                      GLint skipImages,
+                                      GLint rowLength,
+                                      GLint skipRows,
+                                      GLint skipPixels,
+                                      const char* commandName) {
+  if (width <= 0 || height <= 0 || depth <= 0) {
+    return 0;
+  }
+  // GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES gating - see this function's own header
+  // comment for the full rationale. Only ever non-zero when the caller
+  // (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) queried a genuinely live, non-default
+  // value for a command that actually has a `depth` dimension - a 2D-or-1D caller never passes
+  // anything but the defaults (0, 0), so this can never fire for one.
+  if (imageHeight != 0 || skipImages != 0) {
+    WarnNonDefaultImagePixelStoreState(commandName);
+    return 0;
+  }
+  // GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS gating -
+  // see this function's own header comment (pixelTransferSize.h) for the full rationale.
+  // Unlike the IMAGE_HEIGHT/SKIP_IMAGES gate above, this one is queried and checked
+  // UNCONDITIONALLY by every Mako call site regardless of dimensionality (these three affect
+  // every pixel transfer, not just a 3D one) - so this can fire for a 1D or 2D call too, not
+  // only a 3D one.
+  if (rowLength != 0 || skipRows != 0 || skipPixels != 0) {
+    WarnNonDefaultRowPixelStoreState(commandName);
     return 0;
   }
   // GL only ever allows 1/2/4/8 here (see this function's own header comment) - a caller-
@@ -175,10 +259,13 @@ uint64_t ComputePixelTransferByteSize(
   // anywhere in [0, 2^64)), so a wrapped size can still drive a memcpy-style copy past the real
   // buffer's bounds exactly like the pre-64-bit-widening bug this function was originally fixed
   // for (see MultiplyOverflows' own comment). Every multiplication below is therefore checked
-  // explicitly; on overflow this returns 0, reusing the same "size unknown/unsupported, caller
-  // degrades gracefully" sentinel already used above for width/height <= 0 and an unrecognized
-  // format/type combination - callers never treat 0 as "capture zero bytes of a real transfer",
-  // only as "this call's payload size could not be determined."
+  // explicitly; on overflow this returns 0, the same sentinel value already used above for an
+  // unrecognized format/type combination and non-default pixel-store state - but, per this
+  // function's own header comment and unlike THOSE cases, NOT the same
+  // sentinel used for width/height/depth <= 0 further up: that one specific 0 is a genuine,
+  // real zero-byte transfer, not "size could not be determined". See
+  // PixelTransferSizeIsUnknown() immediately below for the single, correct way callers tell
+  // these two 0-returning categories apart - never by re-inspecting this return value alone.
   const uint64_t rowAlignment = static_cast<uint64_t>(alignment);
   const uint64_t widthU64 = static_cast<uint64_t>(width);
   if (MultiplyOverflows(uint64_t{bytesPerPixel}, widthU64)) {
@@ -197,11 +284,29 @@ uint64_t ComputePixelTransferByteSize(
   }
   const uint64_t rowStride = rowStrideUnits * rowAlignment;
 
-  const uint64_t heightMinusOne = static_cast<uint64_t>(height) - 1;
-  if (MultiplyOverflows(rowStride, heightMinusOne)) {
+  // 3D-aware generalization of the plain 2D case (see this function's own header comment for
+  // the derivation): every image below the last needs a full `height` rows of full padded
+  // `rowStride` (the next image starts immediately after, so even that image's own last row
+  // needs full padding), and only the very last row of the very last image needs no trailing
+  // padding past its own pixel data - i.e. (depth*height - 1) fully-padded rows plus one
+  // unpadded final row, collapsing to the plain 2D formula when depth == 1
+  // (depth*height - 1 == height - 1). Only reached once the imageHeight/skipImages gating
+  // above has already passed (both 0, i.e. GL's own defaults) - `height` is therefore already
+  // known to be the real per-layer row count this transfer uses, not merely assumed to be.
+  // Checked the same way as every other multiply/add here:
+  // depth and height are each already known <= INT32_MAX (GLsizei), so their product alone
+  // cannot overflow uint64_t, but it is still checked explicitly for consistency with every
+  // other step in this function rather than relied on by inspection.
+  const uint64_t depthU64 = static_cast<uint64_t>(depth);
+  const uint64_t heightU64 = static_cast<uint64_t>(height);
+  if (MultiplyOverflows(depthU64, heightU64)) {
     return 0;
   }
-  const uint64_t totalRowBytes = rowStride * heightMinusOne;
+  const uint64_t imageRowsMinusOne = depthU64 * heightU64 - 1;
+  if (MultiplyOverflows(rowStride, imageRowsMinusOne)) {
+    return 0;
+  }
+  const uint64_t totalRowBytes = rowStride * imageRowsMinusOne;
 
   // totalRowBytes + unpaddedRowBytes: both operands are already known to be < UINT64_MAX (each
   // passed its own overflow check above), but their *sum* is a separate addition that can still
@@ -210,6 +315,39 @@ uint64_t ComputePixelTransferByteSize(
     return 0;
   }
   return totalRowBytes + unpaddedRowBytes;
+}
+
+bool PixelTransferSizeIsUnknown(GLenum format,
+                                GLenum type,
+                                GLsizei width,
+                                GLsizei height,
+                                GLint alignment,
+                                GLsizei depth,
+                                GLint imageHeight,
+                                GLint skipImages,
+                                GLint rowLength,
+                                GLint skipRows,
+                                GLint skipPixels,
+                                const char* commandName) {
+  // Mirrors ComputePixelTransferByteSize()'s own very first check verbatim (this is the ONE
+  // case its 0 return genuinely means "zero real bytes", not "size unknown" - see this
+  // function's own header comment, pixelTransferSize.h) - checked independently here, rather
+  // than inferred from the call below, so this short-circuit never depends on the sentinel
+  // value ComputePixelTransferByteSize() happens to return for it.
+  if (width <= 0 || height <= 0 || depth <= 0) {
+    return false;
+  }
+  // Every other 0 return from here on IS the "size unknown/unreplayable" sentinel (untracked
+  // pixel-store state, an unrecognized format/type combination, or an overflowing size
+  // computation) - see that function's own header comment. Calling it again here (rather than
+  // threading its already-computed result through) is deliberate: it keeps this predicate a
+  // thin, always-in-sync wrapper with no size/gating logic of its own to drift out of step,
+  // and every gate it might hit warns at most once per commandName regardless of how many
+  // times it is called (see WarnNonDefaultImagePixelStoreState()/WarnNonDefaultRowPixelStoreState()
+  // above), so this second call never double-logs.
+  return ComputePixelTransferByteSize(format, type, width, height, alignment, depth, imageHeight,
+                                      skipImages, rowLength, skipRows, skipPixels,
+                                      commandName) == 0;
 }
 
 uint32_t ComputeClearBufferValueCount(GLenum buffer) {
@@ -221,6 +359,53 @@ uint32_t ComputeClearBufferValueCount(GLenum buffer) {
     return 1;
   default:
     return 1; // See this function's own header comment.
+  }
+}
+
+uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname) {
+  switch (pname) {
+  case 0x1004: // GL_TEXTURE_BORDER_COLOR
+  case 0x8E46: // GL_TEXTURE_SWIZZLE_RGBA
+    return 4;
+  default:
+    return 1; // See this function's own header comment.
+  }
+}
+
+uint32_t ComputePatchParameterValueCount(GLenum pname) {
+  switch (pname) {
+  case 0x8E74: // GL_PATCH_DEFAULT_OUTER_LEVEL
+    return 4;
+  case 0x8E73: // GL_PATCH_DEFAULT_INNER_LEVEL
+    return 2;
+  default:
+    return 1; // See this function's own header comment.
+  }
+}
+
+uint32_t ComputeVertexAttribParameterValueCount(GLenum pname) {
+  switch (pname) {
+  case 0x8626: // GL_CURRENT_VERTEX_ATTRIB - the sole 4-element member of VertexAttribPropertyARB
+               // (see this function's own header comment) - every other member below (and any
+               // unrecognized pname - see default:) returns exactly one GLint.
+    return 4;
+  case 0x82D4: // GL_VERTEX_ATTRIB_BINDING
+  case 0x82D5: // GL_VERTEX_ATTRIB_RELATIVE_OFFSET
+  case 0x8622: // GL_VERTEX_ATTRIB_ARRAY_ENABLED
+  case 0x8623: // GL_VERTEX_ATTRIB_ARRAY_SIZE
+  case 0x8624: // GL_VERTEX_ATTRIB_ARRAY_STRIDE
+  case 0x8625: // GL_VERTEX_ATTRIB_ARRAY_TYPE
+  case 0x874E: // GL_VERTEX_ATTRIB_ARRAY_LONG
+  case 0x886A: // GL_VERTEX_ATTRIB_ARRAY_NORMALIZED
+  case 0x889F: // GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING
+  case 0x88FD: // GL_VERTEX_ATTRIB_ARRAY_INTEGER
+  case 0x88FE: // GL_VERTEX_ATTRIB_ARRAY_DIVISOR
+    return 1;
+  default:
+    return 1; // See this function's own header comment - every legal VertexAttribPropertyARB
+              // member is already listed explicitly above; this default exists only for a
+              // value this function does not recognize at all (a real GL_INVALID_ENUM client
+              // error the driver itself will reject without writing `params`).
   }
 }
 

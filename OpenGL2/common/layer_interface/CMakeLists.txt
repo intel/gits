@@ -44,6 +44,7 @@ target_include_directories(OpenGL2_layer_interface PUBLIC
 
 target_link_libraries(OpenGL2_layer_interface PUBLIC
   stream
+  log
 )
 
 # Groups this target under an "OpenGL2_common" virtual folder in the IDE, matching how

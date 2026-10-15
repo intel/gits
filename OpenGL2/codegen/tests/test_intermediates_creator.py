@@ -8,8 +8,8 @@
 
 """Tests for intermediates_creator.py's systemic "GLuint object name requires a resolvable
 object-name classification to stay enabled" gate (see _requires_object_name_override's own
-docstring) - the gate generalizing the earlier one-off, per-command audit into
-an enforced rule the generator itself checks on every run. Since the object-name-auto-
+docstring), an enforced rule the generator itself checks on every run rather than relying on a
+one-off, per-command audit. Since the object-name-auto-
 derivation rewrite (see object_name_lifecycle.py's header comment), "resolvable" almost always
 means auto-derived from gl.xml's own class="..." annotation plus the command's name, not a
 hand-written table entry - these tests exercise the gate itself, not the (now much smaller)
@@ -112,7 +112,7 @@ class IsParamCapturableGateTests(unittest.TestCase):
         # array_element_eligible/POINTER_PARAM_OVERRIDES-satisfied on its own, but its class_
         # tag has no matching OBJECT_NAME_PARAM_OVERRIDES entry for this made-up command name -
         # must still be rejected, mirroring the real glDeleteBuffers-shaped gap this gate was
-        # written to catch (see object_name_lifecycle.py's own B.1 comment).
+        # written to catch (see object_name_lifecycle.py's own comment).
         param = Parameter(name='buffers', type='const GLuint *', class_='buffer')
         self.assertFalse(_is_param_capturable('glDeleteTextures', param, []))
 
@@ -127,12 +127,12 @@ class IsParamCapturableGateTests(unittest.TestCase):
 
 
 class EndToEndSystemicGateTests(unittest.TestCase):
-    """Confirms the gate's effect against real registry data: commands the gate
-    targets (or that the quick-win overrides cover) come out enabled with the right
+    """Confirms the gate's effect against real registry data: commands with a resolvable
+    object-name classification come out enabled with the right
     override, and commands deliberately left in the deferred list stay disabled."""
 
     def test_glbindtextureunit_is_now_enabled(self) -> None:
-        # The exact command found unmapped.
+        # A command with a resolvable object-name classification that was previously unmapped.
         cmd = get_command(Api.GL, 'glBindTextureUnit')
         self.assertTrue(cmd.enabled)
         texture_param = next(p for p in cmd.params if p.name == 'texture')
@@ -179,8 +179,11 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             'glGenLists',            # display list - no GLObjectKind at all.
             'glCallList',            # display list.
             'glDeleteLists',         # display list.
-            'glBindTransformFeedback',  # transform feedback - no GLObjectKind at all.
-            'glIsTransformFeedback',
+            # glBindTransformFeedback/glIsTransformFeedback USED TO be listed here too
+            # ("transform feedback - no GLObjectKind at all"). GLObjectKind.TRANSFORM_FEEDBACK
+            # now exists (object_name_lifecycle.py), so both are now genuinely enabled - see
+            # EndToEndAutoDerivationTests' test_transform_feedback_lifecycle_commands_are_now_enabled
+            # below.
             'glBeginPerfQueryINTEL',  # perf query handle - no GLObjectKind at all.
             # Object-name field(s) auto-derive fine (kind IS supported), but a *different*,
             # independent parameter (a plain string/pointer with no POINTER_PARAM_OVERRIDES
@@ -207,17 +210,21 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             self.assertTrue(param.type_facts.is_scalar)
 
     def test_return_value_object_name_gate(self) -> None:
-        # glCreateShaderProgramv's return value (class="program", CREATE-shaped name) now
-        # auto-derives fine on its own - the object-name gate is satisfied. The command stays
+        # glCreateShaderProgramv's return value (class="program", CREATE-shaped name) auto-
+        # derives fine on its own - the object-name gate is satisfied. The command USED TO stay
         # disabled anyway for a completely unrelated, independent reason: its `strings`
         # parameter is an array-of-arrays (const GLchar* const*) with no
         # ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry (see array_of_arrays_metadata.py) - confirming
-        # auto-derivation removed exactly the gap it was meant to and nothing more.
+        # auto-derivation removed exactly the gap it was meant to and nothing more. That second
+        # gap has since been closed too: array_of_arrays_metadata.py now has a `strings` entry
+        # with element_length_param=None - gl.xml gives this command no `length` sibling at
+        # all, so ArrayOfArrays<T>'s null-terminated-element-scan fallback is used instead - so
+        # the command is now fully enabled.
         cmd = get_command(Api.GL, 'glCreateShaderProgramv')
         self.assertEqual(cmd.return_value.class_, 'program')
         self.assertFalse(
             _requires_object_name_override('glCreateShaderProgramv', cmd.return_value))
-        self.assertFalse(cmd.enabled)
+        self.assertTrue(cmd.enabled)
 
     def test_is_fully_capturable_command_rejects_unmapped_return_value(self) -> None:
         # class_="sync" has no GLObjectKind/ObjectNameMapService support - stays unresolvable
@@ -267,16 +274,64 @@ class EndToEndAutoDerivationTests(unittest.TestCase):
         self.assertTrue(cmd.enabled)
 
     def test_unsupported_kind_commands_stay_disabled_even_with_perfect_naming(self) -> None:
-        # glGenTransformFeedbacks/glCreateTransformFeedbacks/glDeleteTransformFeedbacks all
-        # match the CREATE/DELETE naming heuristic perfectly, but transform feedback objects
-        # have no GLObjectKind - confirms naming alone never overrides kind support.
-        for cmd_name in (
-            'glGenTransformFeedbacks', 'glCreateTransformFeedbacks',
-            'glDeleteTransformFeedbacks',
-        ):
+        # glCreatePerfQueryINTEL/glDeletePerfQueryINTEL both match the CREATE/DELETE naming
+        # heuristic perfectly, but perf query id/handle objects have no GLObjectKind - confirms
+        # naming alone never overrides kind support. (This test USED TO list
+        # glGenTransformFeedbacks/glCreateTransformFeedbacks/glDeleteTransformFeedbacks here
+        # instead: GLObjectKind.TRANSFORM_FEEDBACK now exists (object_name_lifecycle.py), so
+        # that trio no longer demonstrates "unsupported kind" -
+        # glGenTransformFeedbacks/glDeleteTransformFeedbacks are now genuinely enabled (see
+        # test_transform_feedback_lifecycle_commands_are_now_enabled below); only
+        # glCreateTransformFeedbacks itself still stays disabled, but for the unrelated,
+        # missing-POINTER_PARAM_OVERRIDES-entry reason
+        # test_create_transform_feedbacks_stays_disabled_pending_pointer_override covers.)
+        for cmd_name in ('glCreatePerfQueryINTEL', 'glDeletePerfQueryINTEL'):
             with self.subTest(command=cmd_name):
                 cmd = get_command(Api.GL, cmd_name)
                 self.assertFalse(cmd.enabled)
+
+    def test_transform_feedback_lifecycle_commands_are_now_enabled(self) -> None:
+        # GLObjectKind.TRANSFORM_FEEDBACK now exists (object_name_lifecycle.py), so every
+        # transform-feedback-object command auto-enables the same way any other supported
+        # kind's commands do.
+        # glGenTransformFeedbacks/glDeleteTransformFeedbacks additionally needed a new
+        # POINTER_PARAM_OVERRIDES entry each (pointer_metadata.py) for their `ids` array; the
+        # scalar-`id`-only lookup commands (glBindTransformFeedback/glIsTransformFeedback/
+        # glDrawTransformFeedback(Instanced/Stream(Instanced))) needed no entries here at all -
+        # the object-name gate alone was already enough for a plain scalar field.
+        for cmd_name, param_name, role in (
+            ('glGenTransformFeedbacks', 'ids', ObjectNameRole.CREATE),
+            ('glDeleteTransformFeedbacks', 'ids', ObjectNameRole.DELETE),
+            ('glBindTransformFeedback', 'id', ObjectNameRole.LOOKUP),
+            ('glIsTransformFeedback', 'id', ObjectNameRole.LOOKUP),
+            ('glDrawTransformFeedback', 'id', ObjectNameRole.LOOKUP),
+            ('glDrawTransformFeedbackInstanced', 'id', ObjectNameRole.LOOKUP),
+            ('glDrawTransformFeedbackStream', 'id', ObjectNameRole.LOOKUP),
+            ('glDrawTransformFeedbackStreamInstanced', 'id', ObjectNameRole.LOOKUP),
+        ):
+            with self.subTest(command=cmd_name):
+                cmd = get_command(Api.GL, cmd_name)
+                self.assertTrue(cmd.enabled)
+                param = next(p for p in cmd.params if p.name == param_name)
+                override = object_name_override_for(cmd_name, param_name, param.class_)
+                self.assertIsNotNone(override)
+                assert override is not None
+                self.assertEqual(override.kind, GLObjectKind.TRANSFORM_FEEDBACK)
+                self.assertEqual(override.role, role)
+
+    def test_create_transform_feedbacks_stays_disabled_pending_pointer_override(self) -> None:
+        # Unlike glGenTransformFeedbacks/glDeleteTransformFeedbacks above, the DSA variant
+        # glCreateTransformFeedbacks' own `ids` (GLuint *, CREATE role, no `n`-named sibling
+        # consumed any differently) has no POINTER_PARAM_OVERRIDES entry - nobody added one,
+        # since no tested sample calls this specific DSA entry point. The object-name gate is
+        # already satisfied (kind auto-derives fine, exactly like its Gen/Delete siblings), so
+        # this is purely the missing-pointer-classification reason, independent of kind
+        # support - add a POINTER_PARAM_OVERRIDES entry once a real caller needs it.
+        cmd = get_command(Api.GL, 'glCreateTransformFeedbacks')
+        self.assertFalse(cmd.enabled)
+        param = next(p for p in cmd.params if p.name == 'ids')
+        self.assertEqual(param.class_, 'transform feedback')
+        self.assertFalse(_requires_object_name_override('glCreateTransformFeedbacks', param))
 
 
 if __name__ == '__main__':

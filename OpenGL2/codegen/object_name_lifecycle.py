@@ -23,16 +23,11 @@
 # object name - the ATTRIBUTE'S OWN STRING VALUE names its exact namespace: `class="texture"`,
 # `class="buffer"`, `class="vertex array"`, `class="program pipeline"`, and so on - the same
 # eleven values GLObjectKind's own enumerators mirror one-for-one (`str.title().replace(' ',
-# '')`, e.g. "vertex array" -> "VertexArray", "program pipeline" -> "ProgramPipeline"). Found
-# concretely while investigating why B.1's systemic gate silently disabled glFramebufferTexture
-# (see modern-opengl-backend-architecture.md's B.1 incident writeup): the analysis that
-# prompted this rewrite pointed out that Vulkan's vk.xml makes handle *kind* free (every handle
-# is its own C++ type - see Vulkan/codegen/intermediates_creator.py's parse_handles/
-# handle_names), and asked, correctly, whether gl.xml has an equivalent this module was simply
-# not using yet. It does, for `class=`; auditing every gl.xml command confirmed this (see
-# docs/development/modern-opengl-backend-architecture.md's auto-derivation decision for the
-# full audit results) - zero disagreements between the old 80-entry hand table and (class_,
-# naming) auto-derivation across every field the old table covered.
+# '')`, e.g. "vertex array" -> "VertexArray", "program pipeline" -> "ProgramPipeline"). Auditing
+# every gl.xml command confirmed this (see docs/development/modern-opengl-backend-
+# architecture.md's auto-derivation decision for the full audit results) - zero disagreements
+# between the old 80-entry hand table and (class_, naming) auto-derivation across every field
+# the old table covered.
 #
 # ROLE (CREATE/LOOKUP/DELETE) still comes from the command's own NAME, not from `class=` (which
 # only ever says *which* namespace, never *what this specific call does* to it) - but that,
@@ -51,9 +46,9 @@
 # intermediates_creator.py / generator_helpers.py call into (replacing direct
 # OBJECT_NAME_PARAM_OVERRIDES.get() lookups): it auto-derives from (class_, command_name) and
 # consults _EXPLICIT_OVERRIDES only for a documented, individually-justified exception the
-# metadata itself cannot resolve (see _EXPLICIT_OVERRIDES's own header comment) - the
-# systemic-gate parallel to how B.1 itself already made "no override -> stays disabled" the
-# structural default, just now with almost nothing left that needs a manual override at all.
+# metadata itself cannot resolve (see _EXPLICIT_OVERRIDES's own header comment) - "no override
+# -> stays disabled" remains the structural default, just now with almost nothing left that
+# needs a manual override at all.
 
 import re
 from dataclasses import dataclass
@@ -81,7 +76,7 @@ class GLObjectKind(StrEnum):
     note below); _CLASS_TO_KIND's entry for that same gl.xml class string is added in the same
     change, never speculatively ahead of it.
 
-    FRAMEBUFFER/VERTEX_ARRAY do have entries below now (see the FBO-pipeline round,
+    FRAMEBUFFER/VERTEX_ARRAY do have entries below now (see
     docs/development/opengl2-player-skeleton-plan.md's Decision 10) - both kinds were declared
     here (and in the C++ enum) ahead of their first real use precisely so the bucketed
     service's shape would not need to change again the moment a Gen command for either was
@@ -91,7 +86,11 @@ class GLObjectKind(StrEnum):
     QUERY was added for glGenQueries/glDeleteQueries (see modern-opengl-backend-architecture.md's
     "Reduce replay warning noise" decision) - both are exercised by every tested application (the
     g-truc ogl-samples framework's `test` base class creates one timer query per window and
-    deletes it on shutdown).
+    deletes it on shutdown). Per the GL spec's "Shared Objects and Multiple Contexts" rule (see
+    shareGroupService.h's own header comment), query objects are container objects never shared
+    between contexts, like FRAMEBUFFER/VERTEX_ARRAY/PROGRAM_PIPELINE/TRANSFORM_FEEDBACK below -
+    see recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(), which buckets this kind
+    by per-context identity for exactly this reason.
     """
     TEXTURE = 'Texture'
     BUFFER = 'Buffer'
@@ -100,19 +99,25 @@ class GLObjectKind(StrEnum):
     FRAMEBUFFER = 'Framebuffer'
     VERTEX_ARRAY = 'VertexArray'
     QUERY = 'Query'
-    # glBindRenderbuffer/glBindSampler/
-    # glBindProgramPipeline were already `enabled=True` (scalar-only) with zero lifecycle
-    # tracking for their own object namespace - the same latent gap glBindBufferBase/
-    # glBindFragDataLocation/... had before earlier rounds' own audits fixed those.
+    # glBindRenderbuffer/glBindSampler/glBindProgramPipeline were already `enabled=True`
+    # (scalar-only) with zero lifecycle tracking for their own object namespace, so their GLuint
+    # name was passed straight through to the replay driver unresolved.
     RENDERBUFFER = 'Renderbuffer'
     SAMPLER = 'Sampler'
     # Per the GL spec's "Shared Objects and Multiple Contexts" rule (see
     # shareGroupService.h's own header comment), program pipeline objects are, like
-    # FRAMEBUFFER/VERTEX_ARRAY, container objects never shared between contexts - unlike
+    # FRAMEBUFFER/VERTEX_ARRAY/QUERY, container objects never shared between contexts - unlike
     # RENDERBUFFER/SAMPLER above, which (per that same rule) genuinely are shared. See
     # recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(), which buckets this kind
     # by per-context identity for exactly this reason.
     PROGRAM_PIPELINE = 'ProgramPipeline'
+    # glGenTransformFeedbacks/glDeleteTransformFeedbacks/glBindTransformFeedback/
+    # glIsTransformFeedback/glDrawTransformFeedback(Stream(Instanced)). Per the GL spec's
+    # "Shared Objects and Multiple Contexts" rule, transform feedback objects are, like
+    # FRAMEBUFFER/VERTEX_ARRAY/QUERY/PROGRAM_PIPELINE above, container objects never shared
+    # between contexts - see recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(),
+    # which buckets this kind by per-context identity for exactly this reason.
+    TRANSFORM_FEEDBACK = 'TransformFeedback'
 
 
 class ObjectNameRole(StrEnum):
@@ -168,13 +173,13 @@ _CLASS_TO_KIND: dict[str, GLObjectKind | None] = {
     'renderbuffer': GLObjectKind.RENDERBUFFER,
     'sampler': GLObjectKind.SAMPLER,
     'program pipeline': GLObjectKind.PROGRAM_PIPELINE,
+    'transform feedback': GLObjectKind.TRANSFORM_FEEDBACK,
     # No GLObjectKind/ObjectNameMapService support yet - no tested sample needs any of these
-    # namespaces (see modern-opengl-backend-architecture.md's deferred-scope section for why
-    # each stays deferred). Listed explicitly (not just absent) so a field tagged with one of
-    # these is a *documented*, deliberate "not yet" rather than indistinguishable from a
+    # remaining namespaces (see modern-opengl-backend-architecture.md's deferred-scope section
+    # for why each stays deferred). Listed explicitly (not just absent) so a field tagged with
+    # one of these is a *documented*, deliberate "not yet" rather than indistinguishable from a
     # gl.xml class= value nobody has ever looked at.
     'sync': None,
-    'transform feedback': None,
     'display list': None,
     'perf query handle': None,
     'perf query id': None,

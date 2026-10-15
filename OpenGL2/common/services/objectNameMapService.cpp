@@ -38,12 +38,13 @@ const char* KindName(GLObjectKind kind) {
     return "Sampler";
   case GLObjectKind::ProgramPipeline:
     return "ProgramPipeline";
+  case GLObjectKind::TransformFeedback:
+    return "TransformFeedback";
   case GLObjectKind::kCount:
     break;
-    // No default: (an audit once caught
-    // Renderbuffer/Sampler/ProgramPipeline missing here right after they were added, purely
-    // because a `default:` branch had silently absorbed them into "Unknown" instead of letting
-    // -Wswitch catch the gap at compile time) - an exhaustive switch with no default is the one
+    // No default: - a `default:` branch would silently absorb any future GLObjectKind
+    // enumerator into "Unknown" instead of letting -Wswitch catch the gap at compile time -
+    // an exhaustive switch with no default is the one
     // way a *future* new GLObjectKind enumerator is guaranteed to fail the build here instead
     // of silently misnaming itself in every warning log line.
   }
