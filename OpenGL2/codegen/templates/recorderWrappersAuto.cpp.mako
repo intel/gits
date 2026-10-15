@@ -168,9 +168,13 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     # are mutually exclusive in practice; written as two independent checks anyway (rather than
     # one combined boolean) so each stays independently readable at this call site.
     is_unpack_pbo_guard_in = in_override is not None and in_override.unpack_pbo_guard
+    is_indirect_in = (in_override is not None and
+                      in_override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
 %>\
 % if is_pixel_transfer_in or is_unpack_pbo_guard_in:
 , static_cast<${p.type}>(GuardUnpackPixelsPointer("${cmd.name}", ${p.name}))\
+% elif is_indirect_in:
+, GuardDrawIndirectPointer(${p.name})\
 % else:
 , ${p.name}\
 % endif

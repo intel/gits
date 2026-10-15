@@ -570,6 +570,32 @@ def _validate_pointer_override(
                     f"{command_name}.{param.name}: TEXEL_BYTE_SIZE's {field_name} must name a "
                     f"plain scalar sibling (got {sibling_name!r})"
                 )
+    elif override.length_source_kind is LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
+        if override.direction is not PointerDirection.IN:
+            raise ValueError(
+                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE override must be IN "
+                f"direction - the driver only reads draw commands"
+            )
+        if override.indirect_command_size <= 0:
+            raise ValueError(
+                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE needs a positive "
+                f"indirect_command_size"
+            )
+        if (override.length_source_value is None) != (override.indirect_stride_param is None):
+            raise ValueError(
+                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE needs both a count "
+                f"and a stride sibling, or neither (a single draw command)"
+            )
+        for field_name in ('length_source_value', 'indirect_stride_param'):
+            sibling_name = getattr(override, field_name)
+            if sibling_name is None:
+                continue
+            sibling = next((p for p in other_params if p.name == sibling_name), None)
+            if sibling is None or not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE's {field_name} "
+                    f"must name a plain scalar sibling (got {sibling_name!r})"
+                )
     elif override.length_source_kind is LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
         if override.direction is not PointerDirection.IN:
             raise ValueError(

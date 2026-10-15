@@ -232,6 +232,13 @@ class LengthSourceKind(StrEnum):
         # COMPSIZE(pname) setter (glLightfv, glFogfv, glTexEnvfv, ...) via the generated
         # gits::opengl2::ComputePnameValueCount(). Only derived for pname groups audited in
         # pname_value_counts.py.
+    INDIRECT_COMMANDS_BYTE_SIZE = 'indirect_commands_byte_size'  # gl[Multi]Draw*Indirect's
+        # `indirect`: client memory only when no GL_DRAW_INDIRECT_BUFFER is bound, otherwise a
+        # byte offset into it. length_source_value names the draw-count sibling (None: exactly
+        # one command), `indirect_stride_param` the stride sibling (None: tightly packed), and
+        # `indirect_command_size` the size of one Draw*IndirectCommand. See
+        # gits::opengl2::ComputeIndirectCommandsByteSize() (pixelTransferSize.h) and
+        # GuardDrawIndirectPointer() (clientMemoryCapture.h). IN direction only.
     LIST_NAME_ARRAY_BYTE_SIZE = 'list_name_array_byte_size'  # glCallLists' COMPSIZE(n,type):
         # length_source_value names the count sibling, `list_type_param` the ListNameType enum
         # sibling (GL_UNSIGNED_BYTE, GL_2_BYTES, ...). See
@@ -289,6 +296,11 @@ class PointerParamOverride:
     # Only meaningful when length_source_kind is LIST_NAME_ARRAY_BYTE_SIZE - the sibling `type`
     # enum param name ComputeListNameArrayByteSize() needs. None for every other kind.
     list_type_param: str | None = None
+
+    # Only meaningful when length_source_kind is INDIRECT_COMMANDS_BYTE_SIZE - see that kind's
+    # comment. None/0 for every other kind.
+    indirect_stride_param: str | None = None
+    indirect_command_size: int = 0
 
     # Only meaningful when length_source_kind is TEX_SAMPLER_PARAMETER_VALUE_COUNT,
     # PATCH_PARAMETER_VALUE_COUNT, MATERIAL_PARAMETER_VALUE_COUNT, POINT_PARAMETER_VALUE_COUNT,
@@ -1073,14 +1085,11 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glVertexAttribLPointer', 'pointer'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
 
-    # glDrawElementsIndirect's `indirect`: no len= at all - and, unlike glDrawElements'
-    # client-memory-or-offset duality, core GL (4.0+) REQUIRES a buffer bound to
-    # GL_DRAW_INDIRECT_BUFFER for this call (spec: an error is generated otherwise) - `indirect`
-    # is therefore ALWAYS a buffer-relative byte offset, never a genuine client-memory pointer,
-    # so this is unambiguously OPAQUE_BIT_PATTERN, not merely "same shape as glDrawElements by
-    # analogy".
-    ('glDrawElementsIndirect', 'indirect'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    # glDrawElementsIndirect's `indirect` USED TO be OPAQUE_BIT_PATTERN here, on the assumption
+    # that a GL_DRAW_INDIRECT_BUFFER is always bound. That holds only for core profiles: a
+    # compatibility profile sources the command from client memory when none is bound. The
+    # whole indirect-draw family is now derived as INDIRECT_COMMANDS_BYTE_SIZE - see
+    # pointer_length_derivation.py's derive_indirect_draw_override().
 
     # glDrawElementsInstancedBaseVertexBaseInstance's `indices`: len="count" structurally, but
     # (like glDrawElements/glDrawElementsInstanced/glDrawElementsInstancedBaseVertex above) the

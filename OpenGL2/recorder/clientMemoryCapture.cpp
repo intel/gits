@@ -361,6 +361,10 @@ const void* GuardQueryBufferPointer(const char* commandName, const void* params)
   return nullptr;
 }
 
+const void* GuardDrawIndirectPointer(const void* indirect) {
+  return QueryBoundBufferQuiet(GL_DRAW_INDIRECT_BUFFER_BINDING) != 0 ? nullptr : indirect;
+}
+
 GLint QueryUnpackAlignment() {
   GLint value = 4;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);

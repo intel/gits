@@ -365,6 +365,40 @@ def derive_discarded_output_override(
         direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT)
 
 
+# gl[Multi]Draw{Arrays,Elements}Indirect[EXT|AMD]. Excluded: the *Count variants (the real draw
+# count lives in a GL_PARAMETER_BUFFER, so only maxdrawcount bounds the array and copying that
+# many commands could read past the application's allocation) and the NV bindless variants
+# (commands embed GPU addresses).
+_INDIRECT_DRAW_RE = re.compile(r'^gl(Multi)?Draw(Arrays|Elements)Indirect(?:EXT|AMD)?$')
+
+# sizeof(DrawArraysIndirectCommand) and sizeof(DrawElementsIndirectCommand): 4 and 5 GLuints.
+_INDIRECT_COMMAND_SIZE: dict[str, int] = {'Arrays': 16, 'Elements': 20}
+
+
+def derive_indirect_draw_override(
+    command_name: str, param: Parameter, other_params: list[Parameter],
+) -> PointerParamOverride | None:
+    """INDIRECT_COMMANDS_BYTE_SIZE override for an indirect draw's `indirect`, or None."""
+    match = _INDIRECT_DRAW_RE.match(command_name)
+    if match is None or param.name != 'indirect' or param.type != 'const void *':
+        return None
+    names = {p.name for p in other_params if p.type_facts.is_scalar}
+    count_param = None
+    stride_param = None
+    if match.group(1):
+        count_param = next((n for n in ('drawcount', 'primcount') if n in names), None)
+        stride_param = 'stride' if 'stride' in names else None
+        if count_param is None or stride_param is None:
+            return None
+    return PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE,
+        length_source_value=count_param,
+        indirect_stride_param=stride_param,
+        indirect_command_size=_INDIRECT_COMMAND_SIZE[match.group(2)],
+    )
+
+
 def derive_pointer_param_override(
     command_name: str, param: Parameter, other_params: list[Parameter],
 ) -> PointerParamOverride | None:
@@ -394,6 +428,9 @@ def derive_pointer_param_override(
     """
     if command_name in _GENERIC_DERIVATION_DENYLIST:
         return None
+    indirect = derive_indirect_draw_override(command_name, param, other_params)
+    if indirect is not None:
+        return indirect
     facts = param.type_facts
     if facts.pointer_depth != 1:
         return None

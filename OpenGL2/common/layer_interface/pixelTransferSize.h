@@ -293,6 +293,14 @@ uint32_t ComputePnameValueCount(GLenum pname);
 // `n` 4-byte elements can exceed 4 GiB.
 uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type);
 
+// Bytes the driver reads for `count` indirect draw commands of `commandSize` bytes each, `stride`
+// bytes apart (0: tightly packed) - see pointer_metadata.py's
+// LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE. The last command ends at its own size, not at the
+// next stride, so an application allocating exactly that much is never over-read. Returns 0 for
+// a non-positive `count`, or a negative `stride` or one that is not a multiple of four, which the
+// driver rejects without reading.
+uint64_t ComputeIndirectCommandsByteSize(GLsizei count, GLsizei stride, uint32_t commandSize);
+
 // Distinguishes the two command families that share ComputeTexOrSamplerParameterValueCount()
 // below - see that function's own comment for why this matters.
 // GL_TEXTURE_SWIZZLE_RGBA (and its single-channel GL_TEXTURE_SWIZZLE_R/G/B/A siblings) is a

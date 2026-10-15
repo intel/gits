@@ -498,6 +498,14 @@ uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type) {
   return static_cast<uint64_t>(n) * elementBytes;
 }
 
+uint64_t ComputeIndirectCommandsByteSize(GLsizei count, GLsizei stride, uint32_t commandSize) {
+  if (count <= 0 || stride < 0 || stride % 4 != 0) {
+    return 0;
+  }
+  const uint64_t step = stride == 0 ? commandSize : static_cast<uint64_t>(stride);
+  return (static_cast<uint64_t>(count) - 1) * step + commandSize;
+}
+
 uint32_t ComputeClearBufferValueCount(GLenum buffer) {
   switch (buffer) {
   case 0x1800: // GL_COLOR

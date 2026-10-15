@@ -95,6 +95,14 @@ bool PackPixelsPointerIsBufferOffset(const void* pixels);
 // against the correct byte range instead of silently defaulting to offset 0.
 const void* GuardQueryBufferPointer(const char* commandName, const void* params);
 
+// Returns nullptr when a GL_DRAW_INDIRECT_BUFFER is bound, in which case an indirect draw's
+// `indirect` is a byte offset into that buffer; returns `indirect` unchanged otherwise (client
+// memory, compatibility profiles only). No warning: both forms replay correctly, since the
+// wrapper also records the raw pointer (see pointer_needs_raw_offset_capture(),
+// generator_helpers.py). Needs no feature probe, unlike the guards above: every command this
+// guards exists only where GL_DRAW_INDIRECT_BUFFER_BINDING is a legal enum.
+const void* GuardDrawIndirectPointer(const void* indirect);
+
 // glGetBufferParameteriv of the buffer bound to `target`, through the core entry point or, on a
 // context exposing only ARB_vertex_buffer_object, glGetBufferParameterivARB. False (and `value`
 // untouched) if neither resolved.

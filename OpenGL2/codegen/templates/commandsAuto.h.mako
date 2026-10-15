@@ -180,6 +180,11 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 % elif override.length_source_kind == LengthSourceKind.PNAME_VALUE_COUNT:
 ## Audited COMPSIZE(pname) setter - see pname_value_counts.py. IN direction only.
 , m_${p.name}(${arg_expr}, ComputePnameValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
+## Draw commands read from client memory; null (no capture) when the recorder's
+## GuardDrawIndirectPointer() found a GL_DRAW_INDIRECT_BUFFER bound. IN direction only.
+, m_${p.name}(${arg_expr}, ComputeIndirectCommandsByteSize(\
+${override.length_source_value or '1'}, ${override.indirect_stride_param or '0'}, ${override.indirect_command_size}u))\
 % elif override.length_source_kind == LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
 ## glCallLists' COMPSIZE(n,type). IN direction only.
 , m_${p.name}(${arg_expr}, ComputeListNameArrayByteSize(${override.length_source_value}, ${override.list_type_param}))\

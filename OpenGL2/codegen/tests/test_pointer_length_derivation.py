@@ -211,6 +211,58 @@ class DerivePointerParamOverrideTests(unittest.TestCase):
         self.assertIsNone(derive_pointer_param_override('glGetnTexImage', param, [sibling]))
 
 
+class DeriveIndirectDrawOverrideTests(unittest.TestCase):
+    _INDIRECT = Parameter(name='indirect', type='const void *', len='COMPSIZE(drawcount,stride)')
+    _SIBLINGS = [
+        Parameter(name='mode', type='GLenum'),
+        Parameter(name='drawcount', type='GLsizei'),
+        Parameter(name='stride', type='GLsizei'),
+    ]
+
+    def test_multi_draw_elements_uses_count_stride_and_command_size(self) -> None:
+        override = derive_pointer_param_override(
+            'glMultiDrawElementsIndirect', self._INDIRECT, self._SIBLINGS)
+        self.assertEqual(override.direction, PointerDirection.IN)
+        self.assertEqual(
+            override.length_source_kind, LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
+        self.assertEqual(override.length_source_value, 'drawcount')
+        self.assertEqual(override.indirect_stride_param, 'stride')
+        self.assertEqual(override.indirect_command_size, 20)
+
+    def test_single_draw_arrays_is_one_command(self) -> None:
+        indirect = Parameter(name='indirect', type='const void *')
+        override = derive_pointer_param_override(
+            'glDrawArraysIndirect', indirect, [Parameter(name='mode', type='GLenum')])
+        self.assertIsNone(override.length_source_value)
+        self.assertIsNone(override.indirect_stride_param)
+        self.assertEqual(override.indirect_command_size, 16)
+
+    def test_amd_variant_uses_primcount(self) -> None:
+        siblings = [Parameter(name='primcount', type='GLsizei'),
+                    Parameter(name='stride', type='GLsizei')]
+        override = derive_pointer_param_override(
+            'glMultiDrawArraysIndirectAMD', self._INDIRECT, siblings)
+        self.assertEqual(override.length_source_value, 'primcount')
+
+    def test_count_and_bindless_variants_are_not_derived(self) -> None:
+        for name in ('glMultiDrawElementsIndirectCount', 'glMultiDrawArraysIndirectBindlessNV'):
+            with self.subTest(command=name):
+                self.assertIsNone(
+                    derive_pointer_param_override(name, self._INDIRECT, self._SIBLINGS))
+
+    def test_registry_family_is_enabled(self) -> None:
+        commands = {c.name: c for c in load_all_commands()[Api.GL]}
+        for name in (
+            'glDrawArraysIndirect', 'glDrawElementsIndirect',
+            'glMultiDrawArraysIndirect', 'glMultiDrawElementsIndirect',
+            'glMultiDrawArraysIndirectEXT', 'glMultiDrawElementsIndirectEXT',
+            'glMultiDrawArraysIndirectAMD', 'glMultiDrawElementsIndirectAMD',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(commands[name].enabled)
+        self.assertFalse(commands['glMultiDrawElementsIndirectCount'].enabled)
+
+
 class FindPointerLengthMismatchesTests(unittest.TestCase):
     """End-to-end: cross-validates every real POINTER_PARAM_OVERRIDES/
     ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry against real registry data - mirrors
