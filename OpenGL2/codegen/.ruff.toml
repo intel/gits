@@ -1,0 +1,13 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2026 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+# Aim at 80-90 chars, unless there are reasons to keep longer lines.
+line-length = 100
+
+# Minimum supported Python version.
+target-version = "py310"

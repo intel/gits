@@ -1,0 +1,15 @@
+; ===================== begin_copyright_notice ============================
+;
+; Copyright (C) 2023-2026 Intel Corporation
+;
+; SPDX-License-Identifier: MIT
+;
+; ===================== end_copyright_notice ==============================
+
+${AUTO_GENERATED_HEADER.replace('//',';')}
+
+LIBRARY OpenGL32.dll
+EXPORTS
+% for cmd in commands:
+	${cmd.name}
+% endfor

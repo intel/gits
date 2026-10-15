@@ -88,6 +88,11 @@ OpenGL/recorder/openglRecorderWrapperAuto.cpp
 /OpenGL/GLIPlugin/GLIPlugin64.def
 /OpenGL/GLIPlugin/include/gitsPluginPrePostAuto.h
 
+# OpenGL2
+OpenGL2/**/*Auto.cpp
+OpenGL2/**/*Auto.h
+OpenGL2/**/*Auto.def
+
 # VulkanLegacy
 VulkanLegacy/common/include/vulkanArgumentsAuto.h
 VulkanLegacy/common/include/vulkanDriversAuto.inl
