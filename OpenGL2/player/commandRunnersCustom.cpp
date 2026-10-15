@@ -236,6 +236,7 @@ void RunUseProgram(CommandT& command,
 void WglCreateContextRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hDc.Value);
   HDC real_hDc = HdcVirtualizationService::Get().Resolve(command.m_hDc.Value);
   // Defensive fallback for an app that never called (or that called an unsupported variant
   // of) SetPixelFormat before creating its context - see
@@ -245,7 +246,7 @@ void WglCreateContextRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    HdcVirtualizationService::Get().EnsurePixelFormatSet(nullptr);
+    HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_hDc.Value, nullptr);
     auto realFunction = player::g_DispatchTable.wglCreateContext.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hDc);
     UpdateOutputHandle(command.m_Return);
@@ -259,6 +260,7 @@ void WglCreateContextAttribsARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_hShareContext);
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hDC.Value);
   HDC real_hDC = HdcVirtualizationService::Get().Resolve(command.m_hDC.Value);
   // Defensive fallback for an app that never called (or that called an unsupported variant
   // of) SetPixelFormat before creating its context - see
@@ -268,7 +270,7 @@ void WglCreateContextAttribsARBRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    HdcVirtualizationService::Get().EnsurePixelFormatSet(nullptr);
+    HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_hDC.Value, nullptr);
     auto realFunction =
         player::g_DispatchTable.wglCreateContextAttribsARB.load(std::memory_order_acquire);
     // command.m_attribList.HasValue (not just .Data.data()) is the correct null check here - a
@@ -293,13 +295,14 @@ void WglMakeCurrentRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_newContext);
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hDc.Value);
   // A recorded wglMakeCurrent(NULL, NULL) - the Win32 API's own "detach the current context"
-  // form - has a null captured HDC. HdcVirtualizationService::Resolve() unconditionally maps
-  // any recorded HDC (null or not) onto the one player-owned real HDC, so blindly resolving
-  // here would turn a detach into wglMakeCurrent(real_hdc, NULL), which is not a valid detach
-  // call and fails, leaving whatever context was previously current still current instead -
-  // corrupting every later command that assumes the recorded detach actually happened. Pass a
-  // literal null HDC straight through in that case instead of resolving it.
+  // form - has a null captured HDC. HdcVirtualizationService::Resolve() maps any recorded HDC
+  // (null or not) onto a player window's real HDC, so blindly resolving here would turn a detach
+  // into wglMakeCurrent(real_hdc, NULL), which is not a valid detach call and fails, leaving
+  // whatever context was previously current still current instead - corrupting every later
+  // command that assumes the recorded detach actually happened. Pass a literal null HDC straight
+  // through in that case instead of resolving it.
   HDC real_hDc =
       command.m_hDc.Value ? HdcVirtualizationService::Get().Resolve(command.m_hDc.Value) : nullptr;
   for (Layer* layer : manager.GetPreLayers()) {
@@ -330,6 +333,41 @@ void WglMakeCurrentRunner::Run() {
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
   }
+}
+
+namespace {
+template <typename MakeContextCurrentCommand, typename RealFunction>
+void RunMakeContextCurrent(MakeContextCurrentCommand& command, RealFunction& realFunction) {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_hglrc);
+  auto& hdcService = HdcVirtualizationService::Get();
+  hdcService.BindSampledWindows(command.m_hDrawDC.Value, command.m_hReadDC.Value);
+  HDC real_hDrawDC = hdcService.Resolve(command.m_hDrawDC.Value);
+  HDC real_hReadDC = hdcService.Resolve(command.m_hReadDC.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    command.m_Return.Value = realFunction.load(std::memory_order_acquire)(
+        real_hDrawDC, real_hReadDC, command.m_hglrc.Value);
+    if (command.m_Return.Value) {
+      InvalidateReplayContextCaps();
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+} // namespace
+
+void WglMakeContextCurrentARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunMakeContextCurrent(command, player::g_DispatchTable.wglMakeContextCurrentARB);
+}
+
+void WglMakeContextCurrentEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunMakeContextCurrent(command, player::g_DispatchTable.wglMakeContextCurrentEXT);
 }
 
 void GlGetUniformLocationRunner::Run() {
@@ -368,6 +406,7 @@ void GlUseProgramObjectARBRunner::Run() {
 void WglSetPixelFormatRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hdc.Value, true);
   HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
@@ -400,11 +439,9 @@ void WglSetPixelFormatRunner::Run() {
       // PIXELFORMATDESCRIPTOR request instead of replaying that index verbatim (mirrors
       // OpenGL/common/wglFunctions.cpp's CwglSetPixelFormat::Run(), which does the same
       // re-derivation for the legacy backend - see Decision 9). EnsurePixelFormatSet() itself
-      // enforces "at most once", so replaying more than one recorded wglSetPixelFormat call (e.g.
-      // a create-dummy-context-first bootstrap that sets a format twice on two different HDCs,
-      // both virtualized onto this one real HDC) is safe.
-      command.m_Return.Value =
-          HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_ppfd.Data.data());
+      // enforces "at most once" per player window.
+      command.m_Return.Value = HdcVirtualizationService::Get().EnsurePixelFormatSet(
+          command.m_hdc.Value, command.m_ppfd.Data.data());
     }
   }
   for (Layer* layer : manager.GetPostLayers()) {
@@ -423,16 +460,13 @@ void GlViewportRunner::Run() {
     realFunction(command.m_x.Value, command.m_y.Value, command.m_width.Value,
                  command.m_height.Value);
     // See HdcVirtualizationService::GrowToFit()'s own header comment for the full rationale:
-    // this is a DEFENSIVE FALLBACK ONLY. This backend's single skeleton window starts at an
-    // arbitrary, hardcoded 640x480 solely as Resolve()'s own fallback default - for a stream
-    // with successful Win32 geometry capture (WindowGeometryTrackingService), SetGeometry()
-    // normally supplies the real size before Resolve() ever creates the window, and GrowToFit()
-    // then stays permanently disabled (see m_HasRealGeometry). Only when that capture never
-    // happened (an older stream, or one where WindowFromDC/GetClientRect failed) does the window
-    // actually start at 640x480 and need growing - GrowToFit() is called unconditionally here
-    // regardless, since it already no-ops correctly once real geometry is in effect; an
-    // origin-anchored (x==0, y==0) glViewport call remains the substitute signal for that
-    // fallback case, same as before this capture existed.
+    // this is a DEFENSIVE FALLBACK ONLY. It sizes only the fallback window, which starts at an
+    // arbitrary, hardcoded 640x480 and is used only when no recorded window is known (an older
+    // stream, or one where WindowFromDC/GetClientRect failed); windows identified by
+    // WindowGeometryTrackingService samples take their real size from those samples.
+    // GrowToFit() is called unconditionally here regardless, since it no-ops unless the fallback
+    // window is the current draw window; an origin-anchored (x==0, y==0) glViewport call remains
+    // the substitute signal for that fallback case, same as before this capture existed.
     // Deliberately unconditional on which framebuffer is currently bound: this player does not
     // track framebuffer-binding state (a real per-context GL_DRAW_FRAMEBUFFER_BINDING query would
     // require an extra live driver call on every glViewport just to decide whether to skip this),
@@ -440,7 +474,9 @@ void GlViewportRunner::Run() {
     // no-op (the default framebuffer is simply larger than the app ever draws into) - unlike
     // never growing it at all, which is the actual bug this fixes.
     if (command.m_x.Value == 0 && command.m_y.Value == 0) {
-      HdcVirtualizationService::Get().GrowToFit(command.m_width.Value, command.m_height.Value);
+      HdcVirtualizationService::Get().GrowToFit(
+          player::g_DispatchTable.wglGetCurrentDC.load(std::memory_order_acquire)(),
+          command.m_width.Value, command.m_height.Value);
     }
   }
   for (Layer* layer : manager.GetPostLayers()) {
@@ -451,18 +487,12 @@ void GlViewportRunner::Run() {
 void WglSwapBuffersRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hdc.Value);
   HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
-  // See HdcVirtualizationService::ShouldSuppressSwap()'s own declaration comment
-  // (hdcVirtualizationService.h) - skip the real driver call (and therefore the actual
-  // front/back buffer flip) entirely for a swap whose immediately-preceding geometry sample
-  // belongs to a recorded window other than the main one. command.m_Return.Value is left as the
-  // decoded (real, capture-time) value in that case - there is nothing further to report here
-  // beyond what capture already observed, and this call never happened for real on replay.
-  if (manager.ExecuteCommands() && !command.m_Skip &&
-      !HdcVirtualizationService::Get().ShouldSuppressSwap()) {
+  if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.wglSwapBuffers.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hdc);
   }
@@ -474,14 +504,12 @@ void WglSwapBuffersRunner::Run() {
 void WglSwapLayerBuffersRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
+  HdcVirtualizationService::Get().BindSampledWindow(command.m_hdc.Value);
   HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
-  // See WglSwapBuffersRunner::Run()'s own comment above - identical suppression, same
-  // rationale.
-  if (manager.ExecuteCommands() && !command.m_Skip &&
-      !HdcVirtualizationService::Get().ShouldSuppressSwap()) {
+  if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.wglSwapLayerBuffers.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hdc, command.m_fuFlags.Value);
   }

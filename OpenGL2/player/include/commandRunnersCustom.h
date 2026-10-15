@@ -29,8 +29,8 @@
 namespace gits::opengl2 {
 
 // wglCreateContext's Run() - see docs/development/opengl2-player-skeleton-plan.md's Decision 9:
-// a defensive EnsurePixelFormatSet(nullptr) fallback runs before the real call, for an app that
-// never called (or that called an unsupported variant of) SetPixelFormat before creating its
+// a defensive EnsurePixelFormatSet(hdc, nullptr) fallback runs before the real call, for an app
+// that never called (or that called an unsupported variant of) SetPixelFormat before creating its
 // context. A no-op if a real, replayed wglSetPixelFormat command (see WglSetPixelFormatRunner
 // below) already set one.
 class WglCreateContextRunner : public stream::CommandRunner {
@@ -78,6 +78,34 @@ protected:
 
 private:
   wglMakeCurrentCommand command;
+};
+
+// wglMakeContextCurrentARB/EXT's Run() - binds the recorded draw and read DCs to the windows of
+// their geometry samples (HdcVirtualizationService::BindSampledWindows()) before resolving either.
+class WglMakeContextCurrentARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglMakeContextCurrentARBCommand command;
+};
+
+class WglMakeContextCurrentEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglMakeContextCurrentEXTCommand command;
 };
 
 // wglSetPixelFormat's Run() - re-negotiates the captured PIXELFORMATDESCRIPTOR request instead
@@ -163,8 +191,8 @@ private:
   glUseProgramObjectARBCommand command;
 };
 
-// glViewport's Run() - beyond the generic real-call forward, also grows the player's single
-// skeleton window to fit this call's (width, height) when it targets the window origin - see
+// glViewport's Run() - beyond the generic real-call forward, also grows the player's fallback
+// window to fit this call's (width, height) when it targets the window origin - see
 // HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
 //
 // DEFENSIVE FALLBACK ONLY as of WindowGeometryMetaCommand/WindowGeometryMetaRunner (see
@@ -172,12 +200,9 @@ private:
 // time (WindowGeometryTrackingService, mirroring the legacy OpenGL backend's own
 // OpenGL/common/wglFunctions.cpp's GetWindowParams()/CwglSetPixelFormat capture, and DX12/
 // Vulkan's own CreateWindowMetaCommand-shaped idiom), so a stream recorded after this change
-// reaches HdcVirtualizationService::Resolve() with the correct real size already known - this
-// glViewport-inferred substitute signal never actually fires a visible resize for such a
-// stream (GrowToFit() only grows past whatever SetGeometry() already set, and the real size is
-// never smaller than any legitimate full-window glViewport call). Kept, not removed, only for
-// a stream recorded BEFORE this change, or one where WindowFromDC/GetClientRect failed at
-// capture time.
+// gives every recorded window its real size, and the fallback window this grows is not used.
+// Kept, not removed, only for a stream recorded BEFORE this change, or one where
+// WindowFromDC/GetClientRect failed at capture time.
 class GlViewportRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -191,13 +216,8 @@ private:
   glViewportCommand command;
 };
 
-// wglSwapBuffers's Run() - skips the real driver call entirely when
-// HdcVirtualizationService::ShouldSuppressSwap() says so - see that method's own declaration
-// comment (hdcVirtualizationService.h) and HdcVirtualizationService::SetGeometry()'s own header
-// comment (hdcVirtualizationService.cpp) for the concrete repro and full rationale: a second,
-// permanently zero-area window/context in the same recorded process shares this player's one
-// real window/HDC with the real main window, and presenting its swaps would otherwise overwrite
-// the main window's just-rendered frame on every other swap.
+// wglSwapBuffers's Run() - binds the recorded HDC to the window of the geometry sample taken for
+// this swap (HdcVirtualizationService::BindSampledWindow()) before presenting that window.
 class WglSwapBuffersRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -211,8 +231,7 @@ private:
   wglSwapBuffersCommand command;
 };
 
-// wglSwapLayerBuffers's Run() - see WglSwapBuffersRunner's own comment above; identical
-// suppression, same rationale.
+// wglSwapLayerBuffers's Run() - see WglSwapBuffersRunner's own comment above.
 class WglSwapLayerBuffersRunner : public stream::CommandRunner {
 public:
   void Run() override;

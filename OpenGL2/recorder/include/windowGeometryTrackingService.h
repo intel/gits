@@ -9,8 +9,10 @@
 #pragma once
 
 #include <cstdint>
+#include <initializer_list>
 #include <mutex>
-#include <unordered_set>
+#include <optional>
+#include <unordered_map>
 #include <vector>
 
 namespace gits::opengl2 {
@@ -31,16 +33,23 @@ namespace gits::opengl2 {
 // used from every hook point. Samples themselves are never deduplicated: see Capture()'s own
 // header comment below for why an earlier, stateful skip-if-unchanged version of this method
 // was removed rather than fixed a third time. The only state kept is the set of sampled windows,
-// to report which of them are destroyed or hidden at every sample (m_ClosedWindows).
+// to sample all of them at every capture and to report which were destroyed since the previous
+// one (m_DestroyedWindows).
 class WindowGeometryTrackingService {
 public:
   static WindowGeometryTrackingService& Get();
 
-  // `hdc` is a real, live, capture-time HDC (never a recorded/replayed value - this class is
-  // recorder-only). Resolves its owning HWND via WindowFromDC and queries real Win32 geometry
-  // via GetClientRect/GetWindowRect/IsWindowVisible, then unconditionally records a
-  // WindowGeometryMetaCommand for every successful query - see below for why this no longer
-  // tries to dedup identical, unchanged samples the way Vulkan's RecordUpdateIfChanged does.
+  // `hdcs` are the real, live, capture-time HDCs of one WGL call (never recorded/replayed values -
+  // this class is recorder-only): its draw and read DCs for wglMakeContextCurrentARB/EXT, its one
+  // DC otherwise. Resolves each owning HWND via WindowFromDC and queries real Win32 geometry via
+  // GetClientRect/GetWindowRect/IsWindowVisible, then unconditionally records one
+  // WindowGeometryMetaCommand with a sample per HDC, followed by a sample of every other sampled
+  // window - see below for why this no longer tries to dedup identical, unchanged samples the way
+  // Vulkan's RecordUpdateIfChanged does.
+  //
+  // Sampled windows found destroyed are reported in a second WindowGeometryMetaCommand, under a
+  // key reserved once their destruction was seen: `geometryKey` was reserved earlier, possibly
+  // before other threads recorded their last uses of those windows.
   //
   // HISTORY - why there is no cache/skip-if-unchanged logic here despite two prior attempts at
   // one: an earlier version recorded a WindowGeometryMetaCommand only when the sample differed
@@ -70,9 +79,9 @@ public:
   // a larger but always-correct stream beats a smaller, sometimes-wrong one.
   //
   // Records a sample with window 0 and no geometry (never throws, never logs more than once) if
-  // `hdc`'s owning window cannot be resolved or queried - see .cpp for the specific, once-only
-  // warning this emits. The player still needs it: it decides each swap from the sample taken
-  // for that swap, and must not reuse an earlier window's decision. GlViewportRunner's own
+  // an HDC's owning window cannot be resolved or queried - see .cpp for the specific, once-only
+  // warning this emits. The player still needs it: it decides each call from the samples taken
+  // for that call, and must not reuse an earlier call's decision. GlViewportRunner's own
   // glViewport-inferred fallback (player/include/commandRunnersCustom.h) still applies on replay
   // for a stream where this capture never succeeded.
   //
@@ -80,27 +89,54 @@ public:
   // CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for why
   // this key is minted as part of an atomic PAIR at the caller's own wrapper-entry point,
   // together with the hooked WGL command's own key, rather than freshly here: every caller
-  // (WindowGeometryTrackingLayer's four Pre() overrides, via
+  // (WindowGeometryTrackingLayer's Pre() overrides, via
   // CaptureManager::TakePendingPreHookKey()) already has one ready by the time it calls this
   // method. This method takes ownership of `geometryKey` unconditionally from here on - on
   // EVERY return path, `geometryKey` is consumed by a WindowGeometryMetaCommand this method
   // records - never silently dropped (see CaptureManager::SkipCommandKey's own header comment
   // for why a dropped key would stall OrderingRecorder forever).
-  void Capture(uint32_t threadId, void* hdc, uint64_t geometryKey);
+  void Capture(uint32_t threadId, std::initializer_list<void*> hdcs, uint64_t geometryKey);
 
 private:
   WindowGeometryTrackingService() = default;
 
-  // Every window sampled so far, other than `sampled` (0: none), that is destroyed or hidden now;
-  // then adds `sampled` to them. Captures reach the mutex out of key order, so nothing here is a
-  // one-time transition: each sample reports the full current set, and a report replayed out of
-  // real-time order is corrected by the next sample.
-  std::vector<uint64_t> ClosedWindows(uint64_t sampled);
+  struct Sample {
+    uint64_t Window{};
+    int32_t X{};
+    int32_t Y{};
+    int32_t Width{};
+    int32_t Height{};
+    bool Visible{};
+  };
+  struct OtherWindows {
+    std::vector<Sample> Samples;
+    std::vector<uint64_t> Destroyed;
+  };
+
+  // Adds `window` (an HWND) to the sampled windows and returns its identity, or 0 if it is
+  // destroyed. A window's identity is its HWND in the low 32 bits (Win32 handles are 32-bit
+  // values) and its lifetime in the high 32 bits: the first sample of a window tags it with a new
+  // lifetime through a window property, so a window that reuses a destroyed window's HWND gets a
+  // new identity, and the destroyed one is reported destroyed.
+  uint64_t Track(void* window);
+
+  // The sample of `hdc`'s window, with window 0 when it cannot be identified and queried.
+  Sample Query(void* hdc);
+
+  // The sample of `window` (an HWND) under `identity`, or none if its geometry cannot be queried
+  // or its lifetime changed meanwhile. Takes no lock.
+  std::optional<Sample> Measure(void* window, uint64_t identity);
+
+  // Samples of the sampled windows other than `sampled`, and those destroyed since the previous
+  // scan, which are forgotten. Captures reach the mutex out of key order, so a sample replayed out
+  // of real-time order is corrected by the next capture. Destruction is final, and is reported
+  // once.
+  OtherWindows ScanOtherWindows(const std::vector<uint64_t>& sampled);
 
   std::mutex m_WindowsMutex;
-  // Capture-time HWND of every sampled window. Never pruned: a capture stalled with a smaller key
-  // could otherwise re-show a destroyed window on replay with no later sample reporting it.
-  std::unordered_set<uint64_t> m_Windows;
+  // Capture-time HWND of every sampled window not yet reported destroyed, by identity.
+  std::unordered_map<uint64_t, uint64_t> m_Windows;
+  uint32_t m_LastLifetime{0};
 };
 
 } // namespace gits::opengl2

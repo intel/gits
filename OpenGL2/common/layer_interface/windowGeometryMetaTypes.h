@@ -18,7 +18,7 @@
 namespace gits::opengl2 {
 
 // Captures the application's REAL Win32 window geometry at record time, so the player can
-// size/position its single skeleton window (HdcVirtualizationService::Resolve()) correctly
+// size/position its window for each recorded window (HdcVirtualizationService) correctly
 // from the very first frame instead of starting at a hardcoded 640x480 and inferring the real
 // size later from glViewport calls (see GlViewportRunner/HdcVirtualizationService::GrowToFit(),
 // player/include/commandRunnersCustom.h - kept as a defensive fallback for streams recorded
@@ -33,12 +33,10 @@ namespace gits::opengl2 {
 // docs/development/modern-opengl-backend-architecture.md's explicit callout of that Vulkan
 // precedent for exactly this kind of "capture a native HWND/geometry with no gl.xml/vk.xml
 // counterpart of its own" case. Collapsed into a SINGLE command here, rather than DX12/
-// Vulkan's separate Create/Update pair, because those backends must decide whether a given
-// swapchain/surface needs a brand-new player window (there can be several); OpenGL2 has
-// exactly one, always-one, player-owned skeleton window for the whole replay
-// (HdcVirtualizationService's own "Decision 1" - see that header's class comment), so there
+// Vulkan's separate Create/Update pair: the OpenGL2 player creates a recorded window's player
+// window lazily, when a DC bound to it is first used (see HdcVirtualizationService), so there
 // is nothing to distinguish "create" from "update" - one idempotent "here is the current real
-// geometry" record, captured on change, covers both.
+// geometry" record covers both.
 //
 // This backend's own investigation (see docs/development/modern-opengl-backend-architecture.md
 // and this command's own capture-side WindowGeometryTrackingService) confirmed there is no
@@ -66,21 +64,30 @@ public:
   WindowGeometryMetaCommand() : Command(CommandId::ID_META_WINDOW_GEOMETRY) {}
 
 public:
-  // The sampled window's capture-time HWND, an opaque identity only (see the architecture page's
-  // "Capture native OS handles as opaque scalar values"), so the player can tell the recorded
-  // windows apart. 0 when the HDC had no window or its geometry could not be queried; the other
-  // fields are then unset, and the sample only tells the player the next swap's window is unknown.
-  Argument<uint64_t> m_Window{};
-  Argument<int32_t> m_X{};
-  Argument<int32_t> m_Y{};
-  Argument<int32_t> m_Width{};
-  Argument<int32_t> m_Height{};
-  Argument<bool> m_Visible{};
-  // Every other window sampled so far that is destroyed or hidden at this sample, reported by
-  // every sample so a report replayed out of real-time order is corrected by the next one. Lets
-  // the player tell that its main window stopped presenting even when that window records no
-  // sample of its own again.
-  ArrayArgument<uint64_t> m_ClosedWindows{};
+  // The first m_CallSamples samples are one per DC of the WGL call this command is recorded right
+  // before: two for wglMakeContextCurrentARB/EXT, draw DC first, and one for the other sampled
+  // calls. A sample of every other live window sampled so far follows, so a window that records
+  // no sample of its own again still follows its recorded window's geometry and visibility. Every
+  // command reports them all, so a report replayed out of real-time order is corrected by the
+  // next one. None in a command that only reports destroyed windows.
+  //
+  // m_Windows holds each sampled window's identity: its capture-time HWND qualified by its
+  // lifetime, so a window reusing a destroyed window's HWND is a different window (see
+  // WindowGeometryTrackingService::Track). Opaque (see the architecture page's "Capture native OS
+  // handles as opaque scalar values"), so the player can tell the recorded windows apart. 0 when
+  // the HDC had no window, or its geometry could not be queried for that window's lifetime; its
+  // other fields are then 0, and the sample only tells the player the call's window is unknown.
+  Argument<uint32_t> m_CallSamples{};
+  ArrayArgument<uint64_t> m_Windows{};
+  ArrayArgument<int32_t> m_X{};
+  ArrayArgument<int32_t> m_Y{};
+  ArrayArgument<int32_t> m_Width{};
+  ArrayArgument<int32_t> m_Height{};
+  ArrayArgument<uint8_t> m_Visible{};
+  // Sampled windows found destroyed, each reported once, in a command of its own keyed after the
+  // destruction was seen and so after every recorded use of those windows. A destroyed identity
+  // never comes back, so the player hides its player window for good.
+  ArrayArgument<uint64_t> m_DestroyedWindows{};
 };
 
 // Hand-assembled from the same generic, per-field GetSize/Encode/Decode overloads every
@@ -88,35 +95,38 @@ public:
 // rationale (mappedDataMetaTypes.h): there is no gl.xml/wgl-registry counterpart for this
 // command, so there is no per-command loop to add it to.
 inline uint64_t GetSize(const WindowGeometryMetaCommand& command) {
-  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Window) +
-         GetSize(command.m_X) + GetSize(command.m_Y) + GetSize(command.m_Width) +
-         GetSize(command.m_Height) + GetSize(command.m_Visible) + GetSize(command.m_ClosedWindows);
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_CallSamples) +
+         GetSize(command.m_Windows) + GetSize(command.m_X) + GetSize(command.m_Y) +
+         GetSize(command.m_Width) + GetSize(command.m_Height) + GetSize(command.m_Visible) +
+         GetSize(command.m_DestroyedWindows);
 }
 
 inline void Encode(const WindowGeometryMetaCommand& command, char* dest) {
   uint64_t offset = 0;
   Encode(dest, offset, command.m_Key);
   Encode(dest, offset, command.m_ThreadId);
-  Encode(dest, offset, command.m_Window);
+  Encode(dest, offset, command.m_CallSamples);
+  Encode(dest, offset, command.m_Windows);
   Encode(dest, offset, command.m_X);
   Encode(dest, offset, command.m_Y);
   Encode(dest, offset, command.m_Width);
   Encode(dest, offset, command.m_Height);
   Encode(dest, offset, command.m_Visible);
-  Encode(dest, offset, command.m_ClosedWindows);
+  Encode(dest, offset, command.m_DestroyedWindows);
 }
 
 inline void Decode(const char* src, WindowGeometryMetaCommand& command) {
   uint64_t offset = 0;
   Decode(src, offset, command.m_Key);
   Decode(src, offset, command.m_ThreadId);
-  Decode(src, offset, command.m_Window);
+  Decode(src, offset, command.m_CallSamples);
+  Decode(src, offset, command.m_Windows);
   Decode(src, offset, command.m_X);
   Decode(src, offset, command.m_Y);
   Decode(src, offset, command.m_Width);
   Decode(src, offset, command.m_Height);
   Decode(src, offset, command.m_Visible);
-  Decode(src, offset, command.m_ClosedWindows);
+  Decode(src, offset, command.m_DestroyedWindows);
 }
 
 class WindowGeometryMetaSerializer : public stream::CommandSerializer {

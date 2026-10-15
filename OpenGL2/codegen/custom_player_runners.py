@@ -42,6 +42,10 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'wglCreateContext': 'WglCreateContextRunner',
     'wglCreateContextAttribsARB': 'WglCreateContextAttribsARBRunner',
     'wglMakeCurrent': 'WglMakeCurrentRunner',
+    # Bind both DCs to the windows of their geometry samples before resolving either - see
+    # HdcVirtualizationService::BindSampledWindows().
+    'wglMakeContextCurrentARB': 'WglMakeContextCurrentARBRunner',
+    'wglMakeContextCurrentEXT': 'WglMakeContextCurrentEXTRunner',
     # Registers the real, replay-time location the driver just returned into
     # UniformLocationMapService, keyed by the captured location this call's Command originally
     # decoded - see that service's own header comment and
@@ -57,10 +61,9 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # table of hand-written exceptions).
     'glUseProgram': 'GlUseProgramRunner',
     'glUseProgramObjectARB': 'GlUseProgramObjectARBRunner',
-    # Grows the player's single skeleton window (created at an arbitrary, hardcoded 640x480
-    # fallback default by HdcVirtualizationService::Resolve() - see
-    # docs/development/opengl2-player-skeleton-plan.md's Decision 1) to fit the app's real
-    # rendering resolution - see GlViewportRunner::Run()'s own comment and
+    # Grows the player's fallback window (created at an arbitrary, hardcoded 640x480 default by
+    # HdcVirtualizationService::Resolve() when no recorded window is known) to fit the app's
+    # real rendering resolution - see GlViewportRunner::Run()'s own comment and
     # HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
     #
     # DEFENSIVE FALLBACK ONLY: this backend now captures the app's REAL Win32 window geometry
@@ -72,15 +75,9 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # that capture existed, or one where WindowFromDC/GetClientRect failed at capture time; not
     # because glViewport remains the only size signal available.
     'glViewport': 'GlViewportRunner',
-    # Skip the real driver call entirely when HdcVirtualizationService::ShouldSuppressSwap()
-    # says the geometry sample that was just sampled for this exact swap (an atomic pre-hook-key
-    # pair with WindowGeometryTrackingLayer's per-frame poll - see that layer's own header
-    # comment) belongs to a recorded window other than the main one - see
-    # HdcVirtualizationService::SetGeometry()'s own header comment for the concrete repro (a
-    # second, permanently zero-area window/context in the same recorded process, aliased onto
-    # the one real player window along with the real main window - see this backend's own
-    # single-window HDC virtualization design) and why presenting its swaps would otherwise
-    # overwrite the main window's just-rendered frame on every other swap.
+    # Bind the recorded HDC to the window of the geometry sample taken for this exact swap (an
+    # atomic pre-hook-key pair with WindowGeometryTrackingLayer's per-frame poll - see that
+    # layer's own header comment) - see HdcVirtualizationService::BindSampledWindow().
     'wglSwapBuffers': 'WglSwapBuffersRunner',
     'wglSwapLayerBuffers': 'WglSwapLayerBuffersRunner',
     # Re-chooses the captured pixel format on the replay driver, and maps recorded pbuffer DCs

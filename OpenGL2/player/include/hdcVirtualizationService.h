@@ -10,237 +10,158 @@
 
 #include "glTypes.h"
 
-#include <atomic>
 #include <cstdint>
 #include <mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace gits::opengl2 {
 
-// Scopes every recorded HDC value onto a single, player-owned real HDC - see
-// docs/development/opengl2-player-skeleton-plan.md's Decision 4 and
-// modern-opengl-backend-architecture.md's "Capture native OS handles as opaque scalar
-// values, defer remapping" decision, which anticipates exactly this: "derive a replay-time
-// HDC from a replay-time window the same way the legacy backend's UpdateHDC() does, rather
-// than by remapping the raw value directly."
+// Maps recorded HDC values onto real DCs of player-owned windows, one window per recorded window
+// lifetime (the identity a WindowGeometryMetaCommand carries), as the legacy backend and the
+// DirectX and Vulkan players do. Each window gets its own pixel format, geometry and visibility,
+// so a throwaway window an application uses only to load WGL extensions cannot impose its pixel
+// format on the window the application renders to.
 //
-// Deliberately does not key off the recorded value (pbuffer DCs aside - see Resolve()): every
-// distinct recorded HDC maps to the same one live HDC (see the plan's Decision 1 - single
-// player-owned window for the skeleton). Generalizing this into a real per-recorded-value window pool is the named
-// follow-on once a real scenario needs a second simultaneous window - Resolve(HDC)'s
-// signature is already shaped for that backward-compatible extension.
+// The recorder takes a geometry sample right before every wglSetPixelFormat, wglCreateContext,
+// wglCreateContextAttribsARB, wglMakeCurrent, wglSwapBuffers and wglSwapLayerBuffers, and one per
+// DC before wglMakeContextCurrentARB/EXT, with nothing recorded in between, so their runners bind
+// the call's recorded HDCs to the sampled windows (BindSampledWindow(), BindSampledWindows()).
+// A DC used before any binding stays on the window it was first
+// used on: the most recently bound one or, with no window known at all (a stream recorded
+// without geometry samples, or one whose samples could not identify their window), one shared
+// fallback window, sized by GrowToFit(). wglSetPixelFormat always rebinds, since applications
+// reuse DC values across windows; the other calls move a DC only where its contexts can follow
+// (see BindSampledWindow()).
+//
+// A player window is shown while its recorded window is visible with a positive client area, so
+// zero-area helper windows stay hidden. The fallback window starts hidden and is shown once a
+// sampled call uses it, so a query issued before the first binding does not show it.
+// windowMode, forceWindowSize, forceWindowPos and showWindowsWA apply to every window, as in the
+// other players.
+//
+// A destroyed recorded window's identity is never used again: samples of it replayed after its
+// destruction was reported are ignored, and its player window stays hidden. Like the other
+// players, player windows live until the end of replay.
+//
+// Recorded values are never dereferenced or compared against live handles.
 class HdcVirtualizationService {
 public:
   static HdcVirtualizationService& Get();
 
-  // Returns the one player-owned, real HDC for any recorded (opaque, process-foreign) HDC
-  // value - creating the player's window and deriving its HDC on first call, then returning
-  // the same HDC for every subsequent call regardless of which recorded value is passed. The
-  // recorded value itself is never dereferenced or compared against a live handle. The one
-  // exception is a recorded pbuffer DC (wglGetPbufferDCARB/EXT), which resolves to the real DC of
-  // its replayed pbuffer - see PbufferService (pbufferService.h) - or to nullptr if replay failed
-  // to get that DC, so the calls using it fail as they would on any invalid DC.
+  // The real DC of the player window the recorded DC is bound to, creating the window on first
+  // use. A recorded pbuffer DC (wglGetPbufferDCARB/EXT) resolves to the real DC of its replayed
+  // pbuffer instead - see PbufferService (pbufferService.h) - or to nullptr if replay failed to
+  // get that DC, so the calls using it fail as they would on any invalid DC.
   HDC Resolve(HDC recordedValue);
 
-  // Sets a real pixel format on the player-owned HDC, retrying on a later call if an earlier
-  // one failed - see docs/development/opengl2-player-skeleton-plan.md's Decision 9. Guarded by
-  // a mutex plus an explicit success flag rather than std::call_once: call_once's "once" flag
-  // is consumed as soon as the callable returns, regardless of whether ChoosePixelFormat/
-  // SetPixelFormat inside it actually succeeded, which would permanently wedge the HDC after a
-  // single transient failure - a later, potentially
-  // compatible wglSetPixelFormat request could then never retry. Once a format has actually
-  // been set, Win32 forbids setting a second one on the same HDC, so success latches
-  // permanently; failure does not latch anything and simply allows the next call to retry.
+  // Binds a recorded DC to the window of the geometry sample replayed right before the call
+  // using it, and consumes that sample. Called by the runners of the sampled calls, before
+  // Resolve(); a null DC only consumes. A sample with no window (0), or of a destroyed window,
+  // leaves the binding unchanged.
   //
-  // requestedPfd, if non-null, is a real, replayed wglSetPixelFormat command's captured
-  // PIXELFORMATDESCRIPTOR - the request the app itself made at capture time, re-negotiated
-  // against the real replay-time driver via ChoosePixelFormat/SetPixelFormat exactly the way
-  // OpenGL/common/wglFunctions.cpp's SelectPixelFormat()/CwglSetPixelFormat::Run() re-negotiate
-  // the legacy backend's own captured attribs, rather than reusing the app's original numeric
-  // format index verbatim (meaningless on a different driver's format table).
-  //
-  // A null requestedPfd means "no real request is available, please pick a generic fallback" -
-  // it is NOT a substitute for "the captured call's ppfd was itself null". Only
-  // wglCreateContext(ARB)'s runner is meant to pass null here, defensively, for an app that
-  // never called SetPixelFormat at all before creating its context - in that case a generic
-  // RGBA/double-buffered/depth format is chosen instead, exactly as before this decision.
-  // WglSetPixelFormatRunner must NOT forward a captured null ppfd straight through to this
-  // parameter: a captured `wglSetPixelFormat(hdc,
-  // format, nullptr)` is itself an invalid request that failed at capture (no format was set,
-  // no state changed), and conflating that with "pick a fallback" would incorrectly set/latch
-  // a real pixel format for a call that made no state change at capture - which can then block
-  // a later, legitimately-formatted wglSetPixelFormat call, since Windows only allows setting a
-  // format once per HDC. WglSetPixelFormatRunner checks command.m_ppfd.HasValue itself and
-  // never calls this method at all when the captured ppfd was null, preserving that failure.
-  //
-  // Returns whether a pixel format is set on the real HDC once this call returns (true even
-  // when this call itself was a no-op because an earlier call already succeeded).
-  bool EnsurePixelFormatSet(const PIXELFORMATDESCRIPTOR* requestedPfd);
+  // Unless `settingPixelFormat`, a DC whose window already has a pixel format moves only to a
+  // window that has one too, since its contexts were created for that format. When that window
+  // is the fallback and the sampled window has no player window yet, the fallback becomes the
+  // sampled window's player window instead, taking its recorded geometry.
+  void BindSampledWindow(HDC recordedValue, bool settingPixelFormat = false);
 
-  // Grows the player's single skeleton window's client area to be at least (width, height),
-  // never shrinks it - see docs/development/opengl2-player-skeleton-plan.md's Decision 1.
-  // Resolve() (above) creates the window at (10, 10)/640x480 only as its OWN, hardcoded
-  // fallback default for m_WindowX/Y/m_ClientWidth/m_ClientHeight/m_InitialVisible - see that
-  // method's own comment (hdcVirtualizationService.cpp): this backend now captures the app's
-  // REAL Win32 window geometry at record time (WindowGeometryTrackingService, unlike the
-  // legacy OpenGL backend's GetWindowParams(), OpenGL/common/wglFunctions.cpp, which this
-  // mirrors), and normally overwrites those defaults via SetGeometry() below before Resolve()
-  // ever actually creates the window - see WindowGeometryTrackingLayer's own header comment
-  // for the ordering guarantee that makes that the common case. GrowToFit() below is this
-  // service's fallback for the remaining case: a stream recorded before that capture existed,
-  // or one where WindowFromDC/GetClientRect failed at capture time, leaving Resolve() with only
-  // its own hardcoded default to create the window at.
-  //
-  // GlViewportRunner (commandRunnersCustom.cpp) calls this for every recorded
-  // glViewport(0, 0, width, height) - a full, origin-anchored viewport call is not guaranteed to
-  // equal the app's actual window/backbuffer size (partial/split-screen viewports, or an
-  // off-screen FBO that happens to also start at the origin, would under- or over-report it),
-  // but it is the closest substitute signal already present in every OpenGL2 stream without a
-  // capture-side/schema change, and real apps reliably issue at least one full-window
-  // glViewport(0, 0, W, H) call against the default framebuffer (most commonly once at startup
-  // and/or once per frame for the main pass) - see this repro's own evidence (a stream
-  // recorded through this backend: window was stuck at the hardcoded
-  // 640x480 and its HUD, laid out in screen-space for a much larger real resolution, appeared
-  // corrupted/overlapping until
-  // the window actually grew to match). Only ever grows (never shrinks) so a later, smaller
-  // partial-viewport call cannot undo an earlier, correct full-window one.
-  //
-  // DEMOTED TO A DEFENSIVE FALLBACK now that WindowGeometryMetaRunner/SetGeometry() below feed
-  // this service the application's REAL, captured Win32 window geometry (see
-  // WindowGeometryMetaCommand's own header comment, windowGeometryMetaTypes.h) - kept, not removed,
-  // only for a stream recorded before that capture existed, or one where WindowFromDC/
-  // GetClientRect failed at capture time (WindowGeometryTrackingService's own once-only
-  // warning covers that case) - see this method's own remaining caller for the exact condition.
-  // Enforced, not just documented: once SetGeometry() below has actually applied real geometry
-  // at least once, this method permanently no-ops (see m_HasRealGeometry) - otherwise a later,
-  // origin-anchored viewport call against something other than the default framebuffer (e.g. a
-  // large off-screen FBO/shadow map bound at (0, 0)) would grow the window past its already-
-  // correct real size, and nothing would ever shrink it back (SetGeometry() only fires on an
-  // actual captured change, and the real application window itself never changed in that case).
-  void GrowToFit(int width, int height);
+  // BindSampledWindow() for wglMakeContextCurrentARB/EXT, whose draw and read DCs each have a
+  // sample, the draw DC's first.
+  void BindSampledWindows(HDC drawDc, HDC readDc);
 
-  // Sets the player's window geometry directly from a WindowGeometryMetaCommand decoded by
-  // WindowGeometryMetaRunner (player/include/windowGeometryMetaRunner.h) - the real,
-  // authoritative Win32 geometry captured at record time (see that command's own header
-  // comment), replacing GrowToFit()'s glViewport-inferred substitute signal above wherever a
-  // stream actually has one.
+  // Sets a pixel format on the player window the recorded DC is bound to, at most once per window
+  // (Win32 allows one SetPixelFormat per window). A failed attempt latches nothing, so a later
+  // request can retry.
   //
-  // Two cases, distinguished by whether Resolve() has created the player window yet:
-  //   - Before Resolve() ever runs (the common case: WindowGeometryTrackingLayer captures in
-  //     Pre(), giving its WindowGeometryMetaCommand a lower ordering key - and therefore an
-  //     earlier replay position - than the wglMakeCurrent/wglCreateContext call that will
-  //     first trigger Resolve(), see that layer's own header comment) - just updates
-  //     m_ClientWidth/m_ClientHeight, the size Resolve() itself creates the window at, so the
-  //     window is created at the REAL size immediately, with no growing.
-  //   - After Resolve() has already created the window (a later resize/move, captured by
-  //     WindowGeometryTrackingLayer's per-frame poll on wglSwapBuffers/wglSwapLayerBuffers) -
-  //     resizes/repositions the already-live window directly. Unlike GrowToFit(), this can also
-  //     SHRINK the window: this is real, authoritative captured geometry, not an inferred lower
-  //     bound, so there is no risk of a smaller, non-representative call undoing a larger,
-  //     correct one.
+  // requestedPfd is a replayed wglSetPixelFormat command's captured PIXELFORMATDESCRIPTOR, which
+  // the recorder takes from DescribePixelFormat of the format actually set (see
+  // PixelFormatCaptureLayer). It is re-negotiated with ChoosePixelFormat on the replay driver, as
+  // the legacy backend's SelectPixelFormat() does, since the captured format index means nothing
+  // in another driver's format table.
   //
-  // x/y are the recorded window's screen position - see WindowManager::MoveWindow(), the same
-  // shared primitive Vulkan's WindowService::MoveWin32Window() already delegates to. Live-
-  // verified: before this parameter existed, a real
-  // capture+replay round trip reproduced the correct SIZE (matching a mid-run resize) but the
-  // player window still opened at Resolve()'s hardcoded (10, 10) instead of the app's actual
-  // captured position - m_X/m_Y were encoded into WindowGeometryMetaCommand but
-  // WindowGeometryMetaRunner::Run() never forwarded them here. Fixed by threading x/y through
-  // exactly like width/height, immediately below.
+  // Null means no request is available: wglCreateContext(ARB)'s runners pass it, defensively, for
+  // an application that never set a pixel format before creating its context, and a generic
+  // RGBA/double-buffered/depth format is chosen. WglSetPixelFormatRunner never passes null: a
+  // captured wglSetPixelFormat(hdc, format, nullptr) failed at capture and must not set a format
+  // that would block the window's real request.
   //
-  // `window` is the sample's recorded window identity (WindowGeometryMetaCommand::m_Window); only
-  // the main window's samples change the player window (see the .cpp). 0 is a sample the
-  // recorder could not capture: it changes nothing but still belongs to the next swap.
-  // `closedWindows` (m_ClosedWindows) are the other sampled windows destroyed or hidden at this
-  // sample; the main window among them gives up its role.
-  void SetGeometry(uint64_t window,
-                   int x,
-                   int y,
-                   int width,
-                   int height,
-                   bool visible,
-                   const std::vector<uint64_t>& closedWindows);
+  // Returns whether the window has a pixel format once this call returns.
+  bool EnsurePixelFormatSet(HDC recordedValue, const PIXELFORMATDESCRIPTOR* requestedPfd);
 
-  // Whether the swap about to run should skip its real driver call entirely, because it presents
-  // a window other than the main one - see SetGeometry()'s and this method's own comments
-  // (hdcVirtualizationService.cpp) for the concrete repro and rationale. Called once per swap by
-  // WglSwapBuffersRunner/WglSwapLayerBuffersRunner (player/commandRunnersCustom.cpp), which -
-  // thanks to WindowGeometryTrackingLayer's atomic pre-hook-key-pair guarantee (that layer's own
-  // header comment) - always run immediately after the SetGeometry() call sampled for that exact
-  // swap. Consumes that sample, so no swap is ever decided by an earlier swap's sample.
-  bool ShouldSuppressSwap();
+  // Grows the fallback window's client area to at least (width, height), never shrinking it, if
+  // `drawDc` (the real current draw DC) is the fallback's. GlViewportRunner calls this for every
+  // glViewport(0, 0, width, height): for a stream without geometry samples, an origin-anchored
+  // viewport is the closest available signal for the application's window size. Windows
+  // identified by samples take their size from those samples only.
+  void GrowToFit(HDC drawDc, int width, int height);
+
+  // One sample of a WindowGeometryMetaCommand: a recorded window identity (m_Windows) and its
+  // recorded screen position, client size and visibility.
+  struct WindowSample {
+    uint64_t Window{};
+    int X{};
+    int Y{};
+    int Width{};
+    int Height{};
+    bool Visible{};
+  };
+
+  // Applies a WindowGeometryMetaCommand. Each sample's window is recorded before its player
+  // window exists, or applied to it once it does. Like the DirectX and Vulkan players, a window
+  // is created with its recorded geometry even when its client area is empty; once it exists, an
+  // empty client area (a minimized window, say) hides it instead of resizing it. A sample of
+  // window 0, one the recorder could not capture, changes no window, as does a sample of a window
+  // already reported destroyed. The first `callSamples` (m_CallSamples), if any, become the
+  // samples the next sampled call binds; the rest are of other windows, and only update them.
+  // `destroyedWindows` (m_DestroyedWindows) hide their player windows for good, and a DC first
+  // used after its window was destroyed no longer inherits that window.
+  void SetGeometry(const std::vector<WindowSample>& samples,
+                   size_t callSamples,
+                   const std::vector<uint64_t>& destroyedWindows);
 
 private:
   HdcVirtualizationService() = default;
 
-  struct WindowSample {
-    int X = 0;
-    int Y = 0;
-    int Width = 0;
-    int Height = 0;
-    bool Visible = false;
-
-    bool HasUsableSize() const {
-      return Width > 0 && Height > 0;
-    }
-    bool IsShown() const {
-      return Visible && HasUsableSize();
-    }
+  struct PlayerWindow {
+    HDC RealHdc{};
+    uint64_t NativeDisplay{};
+    uint64_t NativeWindow{};
+    bool PixelFormatSet{false};
+    // Recorded windows take their geometry from a sample, so these only place the fallback window.
+    int X{10};
+    int Y{10};
+    int ClientWidth{640};
+    int ClientHeight{480};
+    // A sample gave the window a positive client area.
+    bool HasGeometry{false};
+    bool Shown{false};
+    // Window-vs-client size delta measured right after creation: WindowManager::ResizeWindow()
+    // sizes the whole window, while CreatePlayerWindow() takes a client size.
+    int BorderExtraWidth{0};
+    int BorderExtraHeight{0};
   };
 
-  // Apply a sample's geometry (when it has a usable size) and visibility to the player window,
-  // or record them for Resolve() before it exists. m_ResizeMutex must be held.
-  void ApplySample(const WindowSample& sample);
-  void ApplyVisibility(bool visible);
+  // m_Mutex must be held by the following.
+  void Bind(HDC recordedValue, bool pbufferDc, uint64_t window, bool settingPixelFormat);
+  PlayerWindow& WindowFor(HDC recordedValue);
+  void AdoptFallback(uint64_t window);
+  void Create(PlayerWindow& window);
+  void MeasureBorder(PlayerWindow& window);
+  void ApplyGeometry(PlayerWindow& window, int x, int y, int clientWidth, int clientHeight);
+  void Resize(PlayerWindow& window, int clientWidth, int clientHeight);
+  void ApplyVisibility(PlayerWindow& window, bool shown);
 
-  std::once_flag m_Init;
-  std::mutex m_PixelFormatMutex;
-  std::atomic<bool> m_PixelFormatSet{false};
-  HDC m_RealHdc{};
-
-  // Set once, in Resolve()'s std::call_once block, alongside m_RealHdc - see GrowToFit()'s own
-  // comment for why these exist. m_BorderExtraWidth/Height is the one-time (title bar + frame)
-  // window-vs-client-size delta measured right after window creation (WindowManager::
-  // ResizeWindow()/PlayerWindowWin::Resize() resizes the whole window, not just its client area,
-  // unlike CreatePlayerWindow()'s width/height, which IS a client size - see playerWindowWin.cpp's
-  // constructor's own AdjustWindowRectEx call - so GrowToFit() must re-add this delta itself
-  // before calling ResizeWindow(), or the client area would shrink by it on every resize).
-  std::mutex m_ResizeMutex;
-  // Set by ApplySample() the first time it applies a sample with a usable size to the player
-  // window (from SetGeometry(), including when a new window takes over the main-window role),
-  // and never cleared. Samples that are ignored or carry no usable size - a hidden zero-area
-  // helper window, say - leave it unset, so GrowToFit() stays available. Disables GrowToFit()'s
-  // glViewport-inferred fallback for good once the application's REAL, authoritative Win32
-  // geometry has actually been applied. Without this, a later origin-anchored viewport call
-  // against something other than the default framebuffer (e.g. a large off-screen FBO/shadow
-  // map bound at (0, 0)) would still grow the window past its already-correct real size - and
-  // nothing would ever shrink it back, since SetGeometry() only fires on a genuine captured
-  // change, and the captured application window itself never changed in that scenario.
-  bool m_HasRealGeometry{false};
-  // The recorded window whose samples describe the player window: the first one shown, until it
-  // is destroyed or hidden, then the next one shown (see SetGeometry()). 0 when there is none.
-  uint64_t m_MainWindow{0};
-  // Some window has held the main-window role. From then on only a shown window's sample can
-  // change the player window, and other windows' swaps stay suppressed while the role is vacant.
-  bool m_HadMainWindow{false};
-  // Window of the sample taken for the next swap (0: none, or not captured); consumed by it.
-  uint64_t m_SampledWindow{0};
-  // Last visibility applied to the live window, so unchanged samples cause no Win32 call.
-  bool m_WindowVisible{true};
-  uint64_t m_NativeDisplay{};
-  uint64_t m_NativeWindow{};
-  int m_BorderExtraWidth{0};
-  int m_BorderExtraHeight{0};
-  int m_ClientWidth{640};
-  int m_ClientHeight{480};
-  // Screen position Resolve()'s CreatePlayerWindow() call creates the window at - was
-  // hardcoded (10, 10) until SetGeometry() below learned to also carry position (see that
-  // method's own header comment for the live-verification finding that motivated this).
-  int m_WindowX{10};
-  int m_WindowY{10};
-  // Read by Resolve()'s CreatePlayerWindow() call, written only by SetGeometry() before
-  // Resolve() has run - see that method's own header comment.
-  bool m_InitialVisible{true};
+  std::mutex m_Mutex;
+  // Keyed by recorded window identity; 0 is the fallback window.
+  std::unordered_map<uint64_t, PlayerWindow> m_Windows;
+  std::unordered_map<HDC, uint64_t> m_DcWindows;
+  uint64_t m_LastBoundWindow{0};
+  // Windows of the samples taken for the next sampled call, one per DC (0: unknown).
+  std::vector<uint64_t> m_SampledWindows;
+  // Identities reported destroyed.
+  std::unordered_set<uint64_t> m_DestroyedWindows;
 };
 
 } // namespace gits::opengl2

@@ -39,8 +39,8 @@
 // immediately, with no growing. Second: a resize/move/visibility change sampled for the SAME
 // present it is hooked on (wglSwapBuffers/wglSwapLayerBuffers) must reach
 // WindowGeometryMetaRunner no later than that present - otherwise the change applies one frame
-// late. Both cases need the exact same fix, and all four commands below get it the exact same
-// way: generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS lists all four, so each one's own
+// late. Both cases need the exact same fix, and all commands below get it the exact same
+// way: generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS lists all of them, so each one's own
 // Wrapper_<cmd> (recorderWrappersAuto.cpp.mako) reserves its own ordering key TOGETHER with a
 // second, spare key - via CaptureManager::CreateCommandKeyPair(), one atomic operation, before
 // either key is ever exposed to another thread - and hands the spare key to this layer via
@@ -68,7 +68,7 @@ public:
   // class doesn't redeclare. Without this, this class's own Pre(Command&) calls below (each
   // typed override's required fallback into the generic hook, matching every generated Pre/
   // Post body's own shape) fail to compile - overload resolution only sees this class's own
-  // four typed overloads, none of which accept a plain Command&.
+  // typed overloads, none of which accept a plain Command&.
   using Layer::Post;
   using Layer::Pre;
 
@@ -79,6 +79,13 @@ public:
   // format on one HDC/thread but only later makes it current).
   void Pre(wglSetPixelFormatCommand& command) override;
   void Pre(wglMakeCurrentCommand& command) override;
+  // One sample per DC, so the player binds the draw and the read DC before resolving either.
+  void Pre(wglMakeContextCurrentARBCommand& command) override;
+  void Pre(wglMakeContextCurrentEXTCommand& command) override;
+  // Context creation, so the player creates the context on the window its HDC belongs to even
+  // when the application got a fresh DC for that window after setting its pixel format.
+  void Pre(wglCreateContextCommand& command) override;
+  void Pre(wglCreateContextAttribsARBCommand& command) override;
 
   // Per-frame poll hook points - mirrors Vulkan's WindowTrackingService::UpdateWindowsForPresent
   // (called on every vkQueuePresentKHR); catches a real resize/move/visibility change that

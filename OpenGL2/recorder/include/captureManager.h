@@ -158,8 +158,8 @@ public:
 
   // Thread-local handoff from a generated Wrapper_<cmd> (recorderWrappersAuto.cpp.mako's
   // PRE_HOOK_KEY_PAIR_COMMANDS handling) to the Pre layer that consumes the SPARE key of a
-  // CreateCommandKeyPair() reservation - today, exclusively WindowGeometryTrackingLayer's four
-  // hooked WGL commands (see that layer's own header comment). thread_local, not a single
+  // CreateCommandKeyPair() reservation - e.g. WindowGeometryTrackingLayer's hooked WGL
+  // commands (see that layer's own header comment). thread_local, not a single
   // shared slot: the wrapper sets this immediately before entering the (whole-process-shared)
   // Pre layer loop, on the SAME thread that will consume it a few lines later, with no other
   // GITS code running on that thread in between - so there is no cross-thread interference to
@@ -223,7 +223,6 @@ public:
     s_PendingMappedTextureKey = 0;
     return key;
   }
-
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;
   }

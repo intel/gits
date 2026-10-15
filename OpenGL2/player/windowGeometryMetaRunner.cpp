@@ -13,6 +13,9 @@
 #include "playerManager.h"
 #include "threadContextService.h"
 
+#include <algorithm>
+#include <vector>
+
 namespace gits::opengl2 {
 
 void WindowGeometryMetaRunner::Run() {
@@ -23,9 +26,17 @@ void WindowGeometryMetaRunner::Run() {
   }
 
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    HdcVirtualizationService::Get().SetGeometry(
-        command.m_Window.Value, command.m_X.Value, command.m_Y.Value, command.m_Width.Value,
-        command.m_Height.Value, command.m_Visible.Value, command.m_ClosedWindows.Data);
+    const size_t count = (std::min)({command.m_Windows.Data.size(), command.m_X.Data.size(),
+                                     command.m_Y.Data.size(), command.m_Width.Data.size(),
+                                     command.m_Height.Data.size(), command.m_Visible.Data.size()});
+    std::vector<HdcVirtualizationService::WindowSample> samples(count);
+    for (size_t i = 0; i < count; ++i) {
+      samples[i] = {command.m_Windows.Data[i], command.m_X.Data[i],
+                    command.m_Y.Data[i],       command.m_Width.Data[i],
+                    command.m_Height.Data[i],  command.m_Visible.Data[i] != 0};
+    }
+    HdcVirtualizationService::Get().SetGeometry(samples, command.m_CallSamples.Value,
+                                                command.m_DestroyedWindows.Data);
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

@@ -15,7 +15,7 @@ ${AUTO_GENERATED_HEADER}
 //     immediately before the call (see handleArgumentUpdaters.h; named identically to the
 //     recorder-side copy's own UpdateHandle/UpdateOutputHandle, matching Vulkan's convention -
 //     see docs/development/opengl2-layer-architecture-alignment-plan.md's Phase A).
-//   - Argument<HDC>: HdcVirtualizationService::Resolve() substitutes the one player-owned
+//   - Argument<HDC>: HdcVirtualizationService::Resolve() substitutes a player-owned window's
 //     real HDC for the recorded, process-foreign value.
 //   - HandleArgument<GLuint>/HandleArrayArgument<GLuint> (see object_name_lifecycle.py): a
 //     LOOKUP/DELETE-role field resolves its decoded Key(s) to live, player-local name(s) via

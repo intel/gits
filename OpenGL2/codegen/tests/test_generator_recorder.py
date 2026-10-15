@@ -82,7 +82,7 @@ def extract_wrapper_body(rendered: str, name: str) -> str:
 
 
 class PreHookKeyPairCommandsTableTests(unittest.TestCase):
-    """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's four hooked WGL
+    """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's hooked WGL
     commands (see that layer's own header comment) plus PixelFormatCaptureLayer's
     wglCreatePbufferARB/EXT - any other membership silently breaks the
     SetPendingPreHookKey()/TakePendingPreHookKey() 1:1 contract at runtime, not at compile time,
@@ -91,8 +91,10 @@ class PreHookKeyPairCommandsTableTests(unittest.TestCase):
     def test_exact_membership(self) -> None:
         self.assertEqual(
             PRE_HOOK_KEY_PAIR_COMMANDS,
-            frozenset({'wglSetPixelFormat', 'wglMakeCurrent', 'wglSwapBuffers',
-                       'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT'}))
+            frozenset({'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB',
+                       'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
+                       'wglCreatePbufferARB', 'wglCreatePbufferEXT',
+                       'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT'}))
 
 
 class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
@@ -102,9 +104,9 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        # 'wglCreateContext' is a real WGL command deliberately NOT in
+        # 'wglDeleteContext' is a real WGL command deliberately NOT in
         # PRE_HOOK_KEY_PAIR_COMMANDS - the control for the single-key `else` branch.
-        command_names = (*sorted(PRE_HOOK_KEY_PAIR_COMMANDS), 'wglCreateContext')
+        command_names = (*sorted(PRE_HOOK_KEY_PAIR_COMMANDS), 'wglDeleteContext')
         cls.rendered = render_wrappers(command_names, PRE_HOOK_KEY_PAIR_COMMANDS)
 
     def test_every_pre_hook_key_pair_command_reserves_a_pair_and_hands_off_the_spare_key(
@@ -125,7 +127,7 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
 
     def test_a_command_outside_the_table_reserves_a_single_key_with_no_pending_hookup(
             self) -> None:
-        body = extract_wrapper_body(self.rendered, 'wglCreateContext')
+        body = extract_wrapper_body(self.rendered, 'wglDeleteContext')
         self.assertIn(
             'const uint64_t orderingKey = record ? CaptureManager::Get().CreateCommandKey() : 0;',
             body)
@@ -137,7 +139,7 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
         # (see test_handle_lifecycle.py's own HypotheticalThirdHandleTypeTests for the same
         # rationale): a command named 'SoleHypotheticalCommand', reserving under a LOCAL,
         # single-entry table, must still take the pair branch - proving the template dispatches
-        # on table membership alone, not on any of these four real names being hardcoded
+        # on table membership alone, not on any of these real names being hardcoded
         # anywhere in the template itself.
         rendered = render_wrappers(
             ('SoleHypotheticalCommand',), frozenset({'SoleHypotheticalCommand'}))
@@ -183,7 +185,6 @@ class PreSwapTextureKeyTests(unittest.TestCase):
         other = extract_wrapper_body(rendered, 'wglMakeCurrent')
         self.assertIn('CaptureManager::Get().CreateCommandKeyPair()', other)
         self.assertNotIn('SetPendingMappedTextureKey', other)
-
 
 def registry_command(name: str) -> Command:
     path = next(path for path, api in FILE_TO_API.items() if api == Api.GL)

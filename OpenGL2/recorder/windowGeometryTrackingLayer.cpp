@@ -34,7 +34,7 @@ namespace gits::opengl2 {
 // (a command reserving a pair with nothing to consume it, or vice versa) - see that method's
 // own header comment.
 void WindowGeometryTrackingLayer::Pre(wglSetPixelFormatCommand& command) {
-  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hdc.Value},
                                                CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
@@ -48,7 +48,34 @@ void WindowGeometryTrackingLayer::Pre(wglMakeCurrentCommand& command) {
   // already does internally.
   //
   // See Pre(wglSetPixelFormatCommand&) above for where this pre-hook key comes from.
-  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hDc.Value,
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hDc.Value},
+                                               CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(wglMakeContextCurrentARBCommand& command) {
+  // One sample per DC, the draw DC's first, in one command.
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId,
+                                               {command.m_hDrawDC.Value, command.m_hReadDC.Value},
+                                               CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(wglMakeContextCurrentEXTCommand& command) {
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId,
+                                               {command.m_hDrawDC.Value, command.m_hReadDC.Value},
+                                               CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(wglCreateContextCommand& command) {
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hDc.Value},
+                                               CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(wglCreateContextAttribsARBCommand& command) {
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hDC.Value},
                                                CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
@@ -62,14 +89,14 @@ void WindowGeometryTrackingLayer::Pre(wglSwapBuffersCommand& command) {
   // THIS present must decode/replay no later than the swap itself, or it would apply one frame
   // late - the same atomic-pair guarantee that protects the two first-capture hooks above
   // applies here for that reason.
-  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hdc.Value},
                                                CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
 
 void WindowGeometryTrackingLayer::Pre(wglSwapLayerBuffersCommand& command) {
   // See Pre(wglSwapBuffersCommand&) above - same per-frame poll, same pre-hook key contract.
-  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, {command.m_hdc.Value},
                                                CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }

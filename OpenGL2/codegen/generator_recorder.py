@@ -29,7 +29,7 @@ from intermediates import Command
 # Commands whose Wrapper_<cmd> must reserve its ordering key TOGETHER with a second, "spare"
 # key - via CaptureManager::CreateCommandKeyPair(), one atomic fetch_add(2), not two separate
 # CreateCommandKey() calls - rather than the single CreateCommandKey() every other command
-# reserves. Exclusively WindowGeometryTrackingLayer's four hooked WGL commands today (see that
+# reserves. Mostly WindowGeometryTrackingLayer's hooked WGL commands (see that
 # layer's own header comment, OpenGL2/recorder/include/windowGeometryTrackingLayer.h): each may
 # need to record a SEPARATE, synthetic WindowGeometryMetaCommand that must decode/replay
 # strictly BEFORE the hooked call itself, and the only race-free way to guarantee that ordering
@@ -47,13 +47,16 @@ from intermediates import Command
 #
 # wglCreatePbufferARB/EXT are the other entries: PixelFormatCaptureLayer::Pre() records their
 # PbufferPixelFormatMetaCommand (pbufferPixelFormatMetaTypes.h) under the spare key.
+# wglMakeContextCurrentARB/EXT record one geometry sample per DC, both in the metacommand
+# recorded under the spare key.
 #
 # A plain Python set, not a dict, unlike CONTEXT_SHARE_PARAM/SHARE_LISTS_COMMANDS above:
 # membership alone is everything the template needs here (there is no per-command payload to
 # carry - every entry is handled completely uniformly).
 PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
-    'wglSetPixelFormat', 'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
-    'wglCreatePbufferARB', 'wglCreatePbufferEXT',
+    'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB', 'wglMakeCurrent',
+    'wglSwapBuffers', 'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT',
+    'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT',
 })
 
 

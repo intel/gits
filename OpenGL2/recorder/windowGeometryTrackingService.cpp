@@ -23,6 +23,7 @@
 // avoidance actually happens.
 #include <windows.h>
 
+#include <algorithm>
 #include <utility>
 
 namespace gits::opengl2 {
@@ -32,32 +33,38 @@ std::mutex g_WarnOnceMutex;
 bool g_WarnedWindowFromDcFailure = false;
 bool g_WarnedGeometryQueryFailure = false;
 
-void RecordSample(uint32_t threadId,
-                  uint64_t key,
-                  HWND hwnd,
-                  const RECT* client,
-                  const RECT* window,
-                  bool visible,
-                  std::vector<uint64_t> closedWindows) {
-  WindowGeometryMetaCommand command(threadId);
-  command.m_Key = key;
-  command.m_Window.Value = reinterpret_cast<uint64_t>(hwnd);
-  command.m_ClosedWindows.Data = std::move(closedWindows);
-  command.m_ClosedWindows.HasValue = true;
-  if (client != nullptr && window != nullptr) {
-    // Matches window_handle::get_dimensions's own math (OpenGL/common/windowing.cpp) - the
-    // legacy backend's equivalent capture: position is the window rect's origin offset by the
-    // client rect's own (usually zero) origin, size is the client rect's extent (excludes the
-    // title bar/border, matching what the player's client-area-sized window creation actually
-    // wants - see HdcVirtualizationService's own m_ClientWidth/m_ClientHeight, which are
-    // explicitly a client size, not a window size).
-    command.m_X.Value = window->left + client->left;
-    command.m_Y.Value = window->top + client->top;
-    command.m_Width.Value = client->right - client->left;
-    command.m_Height.Value = client->bottom - client->top;
-    command.m_Visible.Value = visible;
+LPCSTR LifetimeProperty() {
+  static const ATOM atom = GlobalAddAtomA("GITS_OpenGL2_WindowLifetime");
+  return MAKEINTATOM(atom);
+}
+
+uint32_t Lifetime(HWND hwnd) {
+  return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(GetPropA(hwnd, LifetimeProperty())));
+}
+
+uint64_t Identity(HWND hwnd, uint32_t lifetime) {
+  return (static_cast<uint64_t>(lifetime) << 32) |
+         static_cast<uint32_t>(reinterpret_cast<uintptr_t>(hwnd));
+}
+
+class LastErrorGuard {
+public:
+  ~LastErrorGuard() {
+    SetLastError(m_Error);
   }
-  CaptureManager::Get().RecordCommand(command, new WindowGeometryMetaSerializer(command));
+
+private:
+  DWORD m_Error = GetLastError();
+};
+
+void SetPresent(WindowGeometryMetaCommand& command) {
+  command.m_Windows.HasValue = true;
+  command.m_X.HasValue = true;
+  command.m_Y.HasValue = true;
+  command.m_Width.HasValue = true;
+  command.m_Height.HasValue = true;
+  command.m_Visible.HasValue = true;
+  command.m_DestroyedWindows.HasValue = true;
 }
 } // namespace
 
@@ -66,23 +73,24 @@ WindowGeometryTrackingService& WindowGeometryTrackingService::Get() {
   return instance;
 }
 
-std::vector<uint64_t> WindowGeometryTrackingService::ClosedWindows(uint64_t sampled) {
-  std::vector<uint64_t> closed;
+uint64_t WindowGeometryTrackingService::Track(void* window) {
+  const HWND hwnd = static_cast<HWND>(window);
   std::lock_guard<std::mutex> lock(m_WindowsMutex);
-  if (sampled != 0) {
-    m_Windows.insert(sampled);
-  }
-  for (uint64_t window : m_Windows) {
-    const HWND hwnd = reinterpret_cast<HWND>(window);
-    if (window != sampled && (IsWindow(hwnd) == 0 || IsWindowVisible(hwnd) == 0)) {
-      closed.push_back(window);
+  uint32_t lifetime = Lifetime(hwnd);
+  if (lifetime == 0) {
+    if (SetPropA(hwnd, LifetimeProperty(),
+                 reinterpret_cast<HANDLE>(static_cast<uintptr_t>(m_LastLifetime + 1))) == 0) {
+      return 0; // Destroyed before it could be tagged.
     }
+    lifetime = ++m_LastLifetime;
   }
-  return closed;
+  const uint64_t identity = Identity(hwnd, lifetime);
+  m_Windows.try_emplace(identity, reinterpret_cast<uint64_t>(hwnd));
+  return identity;
 }
 
-void WindowGeometryTrackingService::Capture(uint32_t threadId, void* hdc, uint64_t geometryKey) {
-  HWND hwnd = WindowFromDC(static_cast<HDC>(hdc));
+WindowGeometryTrackingService::Sample WindowGeometryTrackingService::Query(void* hdc) {
+  const HWND hwnd = WindowFromDC(static_cast<HDC>(hdc));
   if (hwnd == nullptr) {
     // Common and expected for an HDC that isn't a real, on-screen window DC (e.g. a
     // memory/bitmap DC, or an already-destroyed window) - not every wglMakeCurrent/
@@ -96,12 +104,21 @@ void WindowGeometryTrackingService::Capture(uint32_t threadId, void* hdc, uint64
                      "GlViewportRunner's glViewport-inferred fallback will apply on replay "
                      "instead";
     }
-    // Still recorded, as an unknown window: the player decides each swap from the sample taken
-    // for it, and must not reuse an earlier window's decision.
-    RecordSample(threadId, geometryKey, nullptr, nullptr, nullptr, false, ClosedWindows(0));
-    return;
+    return {};
   }
 
+  // The lifetime is taken before the geometry and checked again after it, so geometry queried
+  // while the window was destroyed, or its HWND reused, is never recorded under either identity.
+  const uint64_t identity = Track(hwnd);
+  if (identity == 0) {
+    return {};
+  }
+  return Measure(hwnd, identity).value_or(Sample{});
+}
+
+std::optional<WindowGeometryTrackingService::Sample> WindowGeometryTrackingService::Measure(
+    void* window, uint64_t identity) {
+  const HWND hwnd = static_cast<HWND>(window);
   RECT clientRect{};
   RECT windowRect{};
   if (!GetClientRect(hwnd, &clientRect) || !GetWindowRect(hwnd, &windowRect)) {
@@ -113,22 +130,97 @@ void WindowGeometryTrackingService::Capture(uint32_t threadId, void* hdc, uint64
                      "for it; GlViewportRunner's glViewport-inferred fallback will apply on "
                      "replay instead";
     }
-    // See the WindowFromDC-failure branch above.
-    RecordSample(threadId, geometryKey, nullptr, nullptr, nullptr, false, ClosedWindows(0));
-    return;
+    return std::nullopt;
   }
-
   // IsWindowVisible's own contract only promises a nonzero return on success, never
   // specifically TRUE (1) - comparing with `== TRUE` would silently record a visible window as
   // hidden if it ever returned some other nonzero value, so normalize with a nonzero check
   // instead (`!= 0`, not `== TRUE`).
   const bool visible = IsWindowVisible(hwnd) != 0;
+  if (Identity(hwnd, Lifetime(hwnd)) != identity) {
+    return std::nullopt;
+  }
 
+  // Matches window_handle::get_dimensions's own math (OpenGL/common/windowing.cpp) - the
+  // legacy backend's equivalent capture: position is the window rect's origin offset by the
+  // client rect's own (usually zero) origin, size is the client rect's extent (excludes the
+  // title bar/border, matching what the player's client-area-sized window creation actually
+  // wants - see HdcVirtualizationService's own m_ClientWidth/m_ClientHeight, which are
+  // explicitly a client size, not a window size).
+  Sample sample;
+  sample.Window = identity;
+  sample.X = windowRect.left + clientRect.left;
+  sample.Y = windowRect.top + clientRect.top;
+  sample.Width = clientRect.right - clientRect.left;
+  sample.Height = clientRect.bottom - clientRect.top;
+  sample.Visible = visible;
+  return sample;
+}
+
+WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanOtherWindows(
+    const std::vector<uint64_t>& sampled) {
+  OtherWindows others;
+  std::lock_guard<std::mutex> lock(m_WindowsMutex);
+  for (auto it = m_Windows.begin(); it != m_Windows.end();) {
+    const uint64_t identity = it->first;
+    const HWND hwnd = reinterpret_cast<HWND>(it->second);
+    if (std::find(sampled.begin(), sampled.end(), identity) != sampled.end()) {
+      ++it;
+      continue;
+    }
+    if (IsWindow(hwnd) == 0 || Identity(hwnd, Lifetime(hwnd)) != identity) {
+      others.Destroyed.push_back(identity);
+      it = m_Windows.erase(it);
+      continue;
+    }
+    if (const std::optional<Sample> sample = Measure(hwnd, identity)) {
+      others.Samples.push_back(*sample);
+    }
+    ++it;
+  }
+  return others;
+}
+
+void WindowGeometryTrackingService::Capture(uint32_t threadId,
+                                            std::initializer_list<void*> hdcs,
+                                            uint64_t geometryKey) {
+  const LastErrorGuard lastErrorGuard;
+  WindowGeometryMetaCommand command(threadId);
+  command.m_Key = geometryKey;
+  SetPresent(command);
   // Unconditional - no cache, no skip-if-unchanged - see this method's own header comment
   // (windowGeometryTrackingService.h) for why a stateful dedup here is unsafe against a
-  // smaller, not-yet-processed geometryKey still in flight on another thread.
-  RecordSample(threadId, geometryKey, hwnd, &clientRect, &windowRect, visible,
-               ClosedWindows(reinterpret_cast<uint64_t>(hwnd)));
+  // smaller, not-yet-processed geometryKey still in flight on another thread. A DC whose window
+  // is unknown is still sampled, as window 0: the player decides each call from the samples
+  // taken for it, and must not reuse an earlier call's.
+  const auto add = [&command](const Sample& sample) {
+    command.m_Windows.Data.push_back(sample.Window);
+    command.m_X.Data.push_back(sample.X);
+    command.m_Y.Data.push_back(sample.Y);
+    command.m_Width.Data.push_back(sample.Width);
+    command.m_Height.Data.push_back(sample.Height);
+    command.m_Visible.Data.push_back(sample.Visible ? 1 : 0);
+  };
+  for (void* hdc : hdcs) {
+    add(Query(hdc));
+  }
+  command.m_CallSamples.Value = static_cast<uint32_t>(hdcs.size());
+  OtherWindows others = ScanOtherWindows(command.m_Windows.Data);
+  for (const Sample& sample : others.Samples) {
+    add(sample);
+  }
+  auto& captureManager = CaptureManager::Get();
+  captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
+
+  if (!others.Destroyed.empty()) {
+    // geometryKey may predate uses of these windows recorded by other threads; a key reserved now,
+    // after their destruction was seen, follows every such use.
+    WindowGeometryMetaCommand destroyed(threadId);
+    destroyed.m_Key = captureManager.CreateCommandKey();
+    SetPresent(destroyed);
+    destroyed.m_DestroyedWindows.Data = std::move(others.Destroyed);
+    captureManager.RecordCommand(destroyed, new WindowGeometryMetaSerializer(destroyed));
+  }
 }
 
 } // namespace gits::opengl2
