@@ -19,6 +19,7 @@ source_group("Generated Files" FILES ${GENERATED_SRC})
 add_library(OpenGL2_player STATIC
   ${GENERATED_SRC}
   include/openGL2CommandFactory.h
+  include/playerLayerManager.h
   include/playerManager.h
   include/realDriver.h
   include/hdcVirtualizationService.h
@@ -29,6 +30,8 @@ add_library(OpenGL2_player STATIC
   include/windowGeometryMetaRunner.h
   include/commandRunnersCustom.h
   realDriver.cpp
+  playerLayerManager.cpp
+  playerManager.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   unsupportedCommandRunner.cpp
@@ -46,7 +49,7 @@ target_include_directories(OpenGL2_player
 
 target_link_libraries(OpenGL2_player
   PUBLIC OpenGL2_layer_interface
-  PRIVATE OpenGL2_services stream windowing log gdi32
+  PRIVATE OpenGL2_services stream windowing log common_interface gdi32
 )
 
 set_target_properties(OpenGL2_player PROPERTIES FOLDER OpenGL2)
