@@ -40,22 +40,26 @@ namespace gits::opengl2 {
 // that set (which should never happen from a real driver query) falls back to GL's own default
 // of 4 rather than risk a division-adjacent computation on a nonsensical value.
 //
-// GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are
-// GATED, exactly like GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES below - see
-// `rowLength`/`skipRows`/`skipPixels`'s own comment further down for the full rationale and
-// why this applies uniformly to every pixel-transfer call (1D, 2D, AND 3D alike), not just
-// a 3D-shaped one: without this gate, an app that sets a non-default GL_(UN)PACK_ROW_LENGTH
-// before a 2D transfer (e.g. a 1x2 RGBA transfer with ROW_LENGTH=1024) would have this function
-// compute only 8 bytes instead of the real 4,100, because the plain width*height*bytesPerPixel
-// formula never queried or accounted for any of these three pixel-store parameters at all -
-// only `alignment` was ever read from real GL state.
+// GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are incorporated
+// directly into the byte-range arithmetic below, exactly per the GL pixel-store spec's own
+// addressing formula - see `rowLength`/`skipRows`/`skipPixels`'s own comment further down for
+// the full derivation and the live-testing verification behind it (this applies uniformly to
+// every pixel-transfer call, 1D/2D/3D alike, not just a 3D-shaped one: a sub-rectangle upload
+// via glTexSubImage2D whose source data is embedded in a larger, non-default-ROW_LENGTH image
+// - a very common real-world pattern - is the concrete motivating case). Unlike
+// GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES below (still gated - see that pair's own
+// comment for why), these three are never a source of "size unknown" on their own; only a
+// negative value (which a spec-conforming driver can never actually produce - see
+// pixelTransferSize.cpp's own comment) still gates capture off, as a defensive can't-happen
+// guard rather than a real, expected-in-practice limitation.
 //
 // Returns 0 for a non-positive `width`/`height`/`depth` (a genuine, real zero-byte transfer -
 // see this function's own comment below), an unrecognized `format`/`type`
-// combination, non-default/untracked pixel-store state, or an intermediate/final size
-// computation that would overflow uint64_t - rather than
-// guessing, or silently returning a wrapped-around value that no longer reflects the real
-// transfer size.
+// combination, non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES state on a 3D
+// transfer (still gated - see below), a negative GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS
+// (a can't-happen defensive guard - see above), or an intermediate/final size computation that
+// would overflow uint64_t - rather than guessing, or silently returning a wrapped-around value
+// that no longer reflects the real transfer size.
 //
 // A caller must NOT treat every 0 return the same way.
 // Non-positive `width`/`height`/`depth` is the ONE case where 0 genuinely means "this call
@@ -120,24 +124,34 @@ namespace gits::opengl2 {
 // a transfer with no third dimension), these three affect EVERY pixel transfer - 1D, 2D, and
 // 3D alike (GL_UNPACK_ROW_LENGTH overrides the row stride used to advance between rows for a
 // transfer with more than one row; GL_UNPACK_SKIP_ROWS/SKIP_PIXELS shift where in the supplied
-// buffer the driver starts reading, for a transfer with any width/height at all) - so unlike
-// that gate, this one is queried and applied UNCONDITIONALLY by every Mako call site (see
+// buffer the driver starts reading, for a transfer with any width/height at all) - so this
+// function queries and applies all three UNCONDITIONALLY at every Mako call site (see
 // commandsAuto.h.mako/recorderWrappersAuto.cpp.mako), regardless of whether the specific
 // command has a `depth`/`height` param at all. The concrete motivating case: a 1x2
 // RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
 // actually touches 4,100 bytes of real client memory (1024 bytes for the row ROW_LENGTH
-// describes, plus 4 bytes for the second row's own real pixel data), but the plain width*height
-// formula below computes only 8 bytes (2 rows x 4 bytes/pixel x 1 pixel/row) - captured too
-// short, and replay would then reapply the ORIGINAL (real) pixel-store state against an
-// undersized captured buffer, an out-of-bounds read relative to what was actually captured.
-// Exactly like the IMAGE_HEIGHT/SKIP_IMAGES gate above, this function does not attempt to
-// incorporate these into the byte-range arithmetic itself (that would require a full
-// row-stride-vs-transfer-stride reconciliation this function has no way to verify against a
-// real driver without live testing); instead, if any of the three is non-default, this
-// function returns 0 (the same "size unknown" sentinel) and logs its own single warning per
-// unique `commandName`, via a distinct warn-once set from the IMAGE_HEIGHT/SKIP_IMAGES one
-// above (see pixelTransferSize.cpp) - the two gates are independent, and a caller wanting to
-// know which one specifically fired should watch the log text, not just the zero return value.
+// describes, plus 4 bytes for the second row's own real pixel data), which is exactly what
+// this function computes: the GL pixel-store spec's own addressing formula for the memory
+// offset of pixel (i, j) in an unpacked image is
+//     rowStride = roundUpToAlignment(bytesPerPixel * (ROW_LENGTH > 0 ? ROW_LENGTH : width))
+//     byteOffset(row) = (SKIP_ROWS + row) * rowStride + SKIP_PIXELS * bytesPerPixel
+// - i.e. GL_UNPACK_ROW_LENGTH only ever changes the STRIDE used to advance between rows (never
+// how many real bytes the final row itself contributes), and GL_UNPACK_SKIP_ROWS/SKIP_PIXELS
+// only ever shift where within the client-supplied buffer reading starts (never how many bytes
+// are read). Since the exact same pixel-store state this function read at capture time is
+// itself captured (as an ordinary glPixelStorei call) and replayed before the pixel-transfer
+// call it applies to, a captured buffer covering every byte from the client pointer's offset 0
+// up through the last real byte of the final row - i.e. this formula evaluated at
+// row = SKIP_ROWS + depth*height - 1, plus `width` more bytes of that row's own real pixel
+// data - is both necessary and sufficient for replay to read back byte-for-byte identical
+// data through the very same addressing the original driver used; there is no reconciliation
+// against a different, replay-time buffer layout to get wrong. Verified against a live capture/
+// replay round-trip with a non-default GL_UNPACK_ROW_LENGTH sub-rectangle upload (see this
+// change's own commit message for the exact repro and result) rather than derived from the
+// spec text alone. A negative value for any of the three (see this header's own top comment,
+// and pixelTransferSize.cpp's own comment) is the one remaining case that still gates capture
+// off, logging its own single warning per unique `commandName` (see pixelTransferSize.cpp) -
+// distinct from, and independent of, the IMAGE_HEIGHT/SKIP_IMAGES gate above.
 //
 // `commandName` (default nullptr) is used only for the two diagnostics above - never part of
 // the size computation itself. Given the previous paragraph, a caller now risks the gated case

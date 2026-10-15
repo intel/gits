@@ -44,11 +44,12 @@ void WarnNonDefaultImagePixelStoreState(const char* commandName) {
   }
 }
 
-// Warn-once state for the row/skip-pixel gate below, kept separate from
+// Warn-once state for the defensive negative-pixel-store-value guard below, kept separate from
 // g_PixelStoreWarningMutex/g_WarnedPixelStoreCommands above (and its own distinct message) so
 // the two gates remain independently diagnosable from the log alone - see
-// ComputePixelTransferByteSize()'s own header comment (pixelTransferSize.h) for why they are
-// two separate checks rather than one combined one.
+// ComputePixelTransferByteSize()'s own header comment (pixelTransferSize.h). Unlike that
+// gate (a genuine, expected-in-practice 3D-only limitation), this one guards a state that a
+// spec-conforming driver can never actually produce - see this function's own comment.
 std::mutex g_RowPixelStoreWarningMutex;
 std::unordered_set<std::string> g_WarnedRowPixelStoreCommands;
 
@@ -57,15 +58,13 @@ void WarnNonDefaultRowPixelStoreState(const char* commandName) {
   const std::string key = commandName != nullptr ? commandName : "<unknown pixel-transfer call>";
   if (g_WarnedRowPixelStoreCommands.insert(key).second) {
     LOG_WARNING << key
-                << ": non-default GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/"
-                   "GL_(UN)PACK_SKIP_PIXELS pixel-store state on a pixel-transfer call - this "
-                   "recorder does not track these three parameters (see pixelTransferSize.h's "
-                   "own comment), and computing this call's captured byte range without them "
-                   "would silently under- or over-count it (unlike GL_(UN)PACK_IMAGE_HEIGHT/"
-                   "GL_(UN)PACK_SKIP_IMAGES, which only affect a 3D transfer, these three "
-                   "affect every pixel transfer regardless of dimensionality), risking an "
-                   "out-of-bounds read/write on replay. Skipping capture for this call (0 "
-                   "bytes) instead of guessing at the wrong size.";
+                << ": GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS "
+                   "query returned a negative value on a pixel-transfer call - a "
+                   "spec-conforming driver never allows any of the three to be set negative "
+                   "(glPixelStorei itself rejects a negative value for any of them with "
+                   "GL_INVALID_VALUE), so this should never happen in practice. Skipping "
+                   "capture for this call (0 bytes) rather than feeding a nonsensical negative "
+                   "value into this call's byte-range computation.";
   }
 }
 
@@ -191,13 +190,18 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
     WarnNonDefaultImagePixelStoreState(commandName);
     return 0;
   }
-  // GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS gating -
-  // see this function's own header comment (pixelTransferSize.h) for the full rationale.
-  // Unlike the IMAGE_HEIGHT/SKIP_IMAGES gate above, this one is queried and checked
-  // UNCONDITIONALLY by every Mako call site regardless of dimensionality (these three affect
-  // every pixel transfer, not just a 3D one) - so this can fire for a 1D or 2D call too, not
-  // only a 3D one.
-  if (rowLength != 0 || skipRows != 0 || skipPixels != 0) {
+  // GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are incorporated
+  // directly into the byte-range arithmetic below (see this function's own header comment,
+  // pixelTransferSize.h, for the exact GL pixel-store spec formula this implements and the
+  // live-testing verification that replaced the previous, more conservative "gate to unknown"
+  // behavior for these three). The only thing checked here defensively is that none of them is
+  // negative - glPixelStorei itself rejects a negative ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS with
+  // GL_INVALID_VALUE and leaves the corresponding state unchanged, so a live glGetIntegerv
+  // query should never observe one; if it somehow did, feeding a negative value into the
+  // unsigned arithmetic below would be a can't-happen-but-must-not-silently-misbehave case, so
+  // this treats it exactly like every other genuinely unknown/unrecognized input: skip capture
+  // and warn, rather than guess.
+  if (rowLength < 0 || skipRows < 0 || skipPixels < 0) {
     WarnNonDefaultRowPixelStoreState(commandName);
     return 0;
   }
@@ -219,6 +223,16 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
     bytesPerPixel = components * componentBytes;
   }
 
+  // Effective row length, in PIXELS, per the GL pixel-store spec: GL_(UN)PACK_ROW_LENGTH when
+  // it is greater than 0, otherwise the transfer's own `width` (GL's own default, meaning
+  // "tightly packed to the image's own width") - see this function's own header comment
+  // (pixelTransferSize.h) for the concrete motivating case (a sub-rectangle upload whose
+  // source data is embedded in a larger, non-default-ROW_LENGTH source image, e.g.
+  // glTexSubImage2D uploading a sub-region). This is the ONLY place `rowLength` feeds into the
+  // computation - the row STRIDE below - never `width` directly once ROW_LENGTH is non-default.
+  const uint64_t effectiveRowLengthPixels =
+      rowLength > 0 ? static_cast<uint64_t>(rowLength) : static_cast<uint64_t>(width);
+
   // Row stride, rounded up to the real, current GL_PACK_ALIGNMENT/GL_UNPACK_ALIGNMENT the
   // caller queried and passed in - see this function's own header comment. Naively
   // multiplying width*height*bytesPerPixel with no
@@ -229,7 +243,9 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   // rows and, for a multi-row image, ends up computing a different (usually smaller, sometimes
   // larger) total than the driver's actual buffer footprint. The last row does not need
   // trailing padding past its own pixel data (matching the GL spec's own image-size formula),
-  // so total size is (rowStride * (height - 1)) + unpaddedRowBytes, not rowStride * height.
+  // so total size is (rowStride * (height - 1)) + unpaddedRowBytes, not rowStride * height -
+  // see the ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS generalization of this further down for the real,
+  // non-default-pixel-store-state version of that statement.
   //
   // Computed entirely in uint64_t, and returned as uint64_t (see this function's own header
   // declaration): every multiplicand here (bytesPerPixel <= 16, width/height each up to
@@ -267,18 +283,22 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   // PixelTransferSizeIsUnknown() immediately below for the single, correct way callers tell
   // these two 0-returning categories apart - never by re-inspecting this return value alone.
   const uint64_t rowAlignment = static_cast<uint64_t>(alignment);
-  const uint64_t widthU64 = static_cast<uint64_t>(width);
-  if (MultiplyOverflows(uint64_t{bytesPerPixel}, widthU64)) {
+  // Row STRIDE uses `effectiveRowLengthPixels` (ROW_LENGTH, or width if ROW_LENGTH is the GL
+  // default of 0) - this is what actually determines how far apart consecutive rows are in the
+  // client-supplied buffer (see this function's own header comment for the concrete motivating
+  // case). This is the one place `width` alone would be wrong once ROW_LENGTH is non-default.
+  if (MultiplyOverflows(uint64_t{bytesPerPixel}, effectiveRowLengthPixels)) {
     return 0;
   }
-  const uint64_t unpaddedRowBytes = uint64_t{bytesPerPixel} * widthU64;
+  const uint64_t unpaddedRowStrideBytes = uint64_t{bytesPerPixel} * effectiveRowLengthPixels;
 
-  // unpaddedRowBytes + (rowAlignment - 1) cannot overflow given the bound just established
-  // above (bytesPerPixel <= 16, width <= INT32_MAX puts unpaddedRowBytes on the order of 2^35,
-  // nowhere near UINT64_MAX - 8), but the subsequent rounding-up multiply by rowAlignment (up to
-  // 8x) is checked anyway rather than relied on to stay within that same margin by inspection.
-  const uint64_t roundedUpRowBytes = unpaddedRowBytes + rowAlignment - 1;
-  const uint64_t rowStrideUnits = roundedUpRowBytes / rowAlignment;
+  // unpaddedRowStrideBytes + (rowAlignment - 1) cannot overflow given the bound just
+  // established above (bytesPerPixel <= 16, effectiveRowLengthPixels <= INT32_MAX puts
+  // unpaddedRowStrideBytes on the order of 2^35, nowhere near UINT64_MAX - 8), but the
+  // subsequent rounding-up multiply by rowAlignment (up to 8x) is checked anyway rather than
+  // relied on to stay within that same margin by inspection.
+  const uint64_t roundedUpRowStrideBytes = unpaddedRowStrideBytes + rowAlignment - 1;
+  const uint64_t rowStrideUnits = roundedUpRowStrideBytes / rowAlignment;
   if (MultiplyOverflows(rowStrideUnits, rowAlignment)) {
     return 0;
   }
@@ -302,19 +322,54 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   if (MultiplyOverflows(depthU64, heightU64)) {
     return 0;
   }
-  const uint64_t imageRowsMinusOne = depthU64 * heightU64 - 1;
-  if (MultiplyOverflows(rowStride, imageRowsMinusOne)) {
+  const uint64_t totalRows = depthU64 * heightU64;
+
+  // GL_(UN)PACK_SKIP_ROWS shifts the whole transfer's starting row later, within the
+  // client-supplied buffer, by `skipRows` full, fully-padded rows (see this function's own
+  // header comment) - a skipped row needs exactly the same full-`rowStride` treatment as any
+  // other non-final row, so it is folded directly into the same "every row but the very last
+  // needs a full padded rowStride" count the totalRows-1 term below already computes, rather
+  // than kept as a separate multiply/add term. skipRowsU64 is already known non-negative
+  // (checked at this function's own entry above); totalRows is already known >= 1 (`height`/
+  // `depth` were both checked > 0 above), so `totalRows - 1` cannot underflow.
+  const uint64_t skipRowsU64 = static_cast<uint64_t>(skipRows);
+  const uint64_t imageRowsMinusOne = totalRows - 1;
+  if (skipRowsU64 > (std::numeric_limits<uint64_t>::max)() - imageRowsMinusOne) {
     return 0;
   }
-  const uint64_t totalRowBytes = rowStride * imageRowsMinusOne;
+  const uint64_t rowsNeedingFullStride = skipRowsU64 + imageRowsMinusOne;
+  if (MultiplyOverflows(rowStride, rowsNeedingFullStride)) {
+    return 0;
+  }
+  const uint64_t totalRowBytes = rowStride * rowsNeedingFullStride;
 
-  // totalRowBytes + unpaddedRowBytes: both operands are already known to be < UINT64_MAX (each
+  // The final row's own real pixel data: GL_(UN)PACK_SKIP_PIXELS shifts where in EVERY row the
+  // real pixel data starts by `skipPixels` pixels (see this function's own header comment) -
+  // only the very last row's own span needs to appear in the total (every earlier row's own
+  // skip offset already lands well inside that row's own full, already-counted `rowStride`),
+  // covering `width` real pixels (never `effectiveRowLengthPixels` - the last row needs no
+  // padding past its own actual pixel data, exactly like the already-existing no-skip case).
+  if (MultiplyOverflows(uint64_t{bytesPerPixel}, static_cast<uint64_t>(skipPixels))) {
+    return 0;
+  }
+  const uint64_t skipPixelsBytes = uint64_t{bytesPerPixel} * static_cast<uint64_t>(skipPixels);
+  const uint64_t widthU64 = static_cast<uint64_t>(width);
+  if (MultiplyOverflows(uint64_t{bytesPerPixel}, widthU64)) {
+    return 0;
+  }
+  const uint64_t unpaddedRowBytes = uint64_t{bytesPerPixel} * widthU64;
+  if (skipPixelsBytes > (std::numeric_limits<uint64_t>::max)() - unpaddedRowBytes) {
+    return 0;
+  }
+  const uint64_t finalRowBytes = skipPixelsBytes + unpaddedRowBytes;
+
+  // totalRowBytes + finalRowBytes: both operands are already known to be < UINT64_MAX (each
   // passed its own overflow check above), but their *sum* is a separate addition that can still
   // overflow independently - check it explicitly rather than assume headroom.
-  if (totalRowBytes > (std::numeric_limits<uint64_t>::max)() - unpaddedRowBytes) {
+  if (totalRowBytes > (std::numeric_limits<uint64_t>::max)() - finalRowBytes) {
     return 0;
   }
-  return totalRowBytes + unpaddedRowBytes;
+  return totalRowBytes + finalRowBytes;
 }
 
 bool PixelTransferSizeIsUnknown(GLenum format,
