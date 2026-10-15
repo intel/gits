@@ -63,6 +63,8 @@ GLenum BufferBindingPname(GLenum target) {
     return GL_QUERY_BUFFER_BINDING;
   case GL_TEXTURE_BUFFER:
     return GL_TEXTURE_BUFFER_BINDING;
+  case GL_PARAMETER_BUFFER:
+    return GL_PARAMETER_BUFFER_BINDING;
   default:
     return 0;
   }
@@ -226,7 +228,9 @@ void BufferShadowService::OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfi
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Shadows.find({shareGroup, buffer});
   if (it != m_Shadows.end()) {
-    it->second.KnownBeforeMap = it->second.Known && (access & GL_MAP_INVALIDATE_BUFFER_BIT) == 0;
+    it->second.KnownBeforeMap =
+        it->second.Known &&
+        (access & (GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_INVALIDATE_RANGE_BIT)) == 0;
     it->second.Known = false;
   }
 }

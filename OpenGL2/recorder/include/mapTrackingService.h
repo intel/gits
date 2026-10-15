@@ -8,9 +8,8 @@
 
 #pragma once
 
-// Recorder-side buffer-map tracking: remembers mapped ranges and captures written bytes at
-// unmap as MappedDataMetaCommands. It does not track writes continuously, explicit flushes,
-// or persistent mappings.
+// Recorder-side buffer-map tracking: captures implicit writes at unmap and explicit writes at
+// flush as MappedDataMetaCommands. It does not track writes continuously or persistent mappings.
 //
 // Lives under recorder/ rather than common/services/, mirroring Vulkan and DirectX: capturing a
 // mapped range needs the recorder's own real-driver dispatch table and CaptureManager, neither of
@@ -26,6 +25,7 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -33,9 +33,8 @@ class MapTrackingService {
 public:
   static MapTrackingService& Get();
 
-  // Registers a just-succeeded glMapBufferRange so the matching unmap can capture whatever the
-  // application writes through `mappedPointer`. Does nothing if no buffer is bound.
-  void OnMapBufferRange(
+  // Registers a successful glMapBufferRange and returns the application-visible pointer.
+  void* OnMapBufferRange(
       GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
 
   // Performs the application-visible glUnmapBuffer and returns its result unchanged, snapshotting
@@ -66,8 +65,18 @@ public:
                         NamedBufferSizeFn querySize);
 
   // Registers a successful core or EXT named-buffer range map.
-  void OnMapNamedBufferRange(
+  void* OnMapNamedBufferRange(
       GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
+
+  void OnDelete(GLsizei count, const GLuint* buffers);
+
+  GLuint BoundBuffer(GLenum target);
+  void FlushMappedRange(GLuint buffer,
+                        GLintptr offset,
+                        GLsizeiptr length,
+                        uint64_t key,
+                        const std::function<void()>& realFlush);
+  void AssertNoShadowPointerQuery(GLuint buffer, void* pointer);
 
   // Uses its own real driver entry point; glUnmapBuffer and glUnmapBufferARB may resolve
   // independently.
@@ -87,10 +96,12 @@ public:
 private:
   MapTrackingService() = default;
 
-  // A currently-active glMapBufferRange mapping. Pointer/Offset/Length/Access are exactly that
-  // call's own parameters, Pointer being its return value.
+  // For write-only invalidating explicit maps, ApplicationPointer points into GITS-owned
+  // shadow memory while DriverPointer retains the real GL mapping. Otherwise they are equal.
   struct MappedRange {
-    void* Pointer{nullptr};
+    void* DriverPointer{nullptr};
+    void* ApplicationPointer{nullptr};
+    std::vector<uint8_t> Shadow;
     GLintptr Offset{0};
     GLsizeiptr Length{0};
     GLbitfield Access{0};
@@ -118,12 +129,13 @@ private:
   // target, for an untracked target or one with nothing bound.
   GLuint ResolveBoundBuffer(GLenum target);
 
-  void ReportUnsupportedCoherentMapping(GLuint buffer);
+  void* RegisterRange(
+      GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* driverPointer);
 
   // Overwrites any previous entry for the same (share group, buffer) without warning: GL
   // forbids mapping an already-mapped buffer, so the driver itself already enforces that at
   // most one mapping per buffer is live.
-  void StoreMappedRange(uint64_t shareGroup, GLuint buffer, const MappedRange& range);
+  void StoreMappedRange(uint64_t shareGroup, GLuint buffer, MappedRange range);
 
   // "Take", not "peek": a tracked mapping is valid for at most one matching unmap. Returns
   // std::nullopt when the buffer has no tracked mapping in that share group.
@@ -175,7 +187,6 @@ private:
   std::mutex m_WarnedTargetsMutex;
   std::unordered_set<GLenum> m_WarnedUnrecognizedTargets;
   std::unordered_set<GLenum> m_WarnedNoBufferBound;
-  std::once_flag m_WarnedCoherentMapping;
 };
 
 } // namespace gits::opengl2

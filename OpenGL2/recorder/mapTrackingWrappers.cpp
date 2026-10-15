@@ -8,8 +8,10 @@
 
 #include "mapTrackingWrappers.h"
 
+#include "captureManager.h"
 #include "clientMemoryCapture.h"
 #include "glEnumsAuto.h"
+#include "log.h"
 #include "mapTrackingService.h"
 #include "mappedTextureService.h"
 #include "openglDriversAuto.h"
@@ -30,9 +32,24 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
   auto realFunction = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* result = realFunction(target, offset, length, access);
   if (record && result != nullptr) {
-    MapTrackingService::Get().OnMapBufferRange(target, offset, length, access, result);
+    return MapTrackingService::Get().OnMapBufferRange(target, offset, length, access, result);
   }
   return result;
+}
+
+// GL_EXT_map_buffer_range is a GLES extension whose unmap uses glUnmapBufferOES, which this
+// desktop map-tracking path does not support. Do not treat its EXT suffix as a DSA alias.
+void* APIENTRY CustomWrapper_glMapBufferRangeEXT(GLenum target,
+                                                 GLintptr offset,
+                                                 GLsizeiptr length,
+                                                 GLbitfield access) {
+  const RecursionGuard guard;
+  if (guard.IsNested()) {
+    return g_DispatchTable.glMapBufferRangeEXT.load(std::memory_order_acquire)(target, offset,
+                                                                               length, access);
+  }
+  GITS_ASSERT(false, "Target-EXT buffer range maps are not supported");
+  return nullptr;
 }
 
 GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
@@ -148,9 +165,93 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
   void* result = (g_DispatchTable.*MapRangeEntry)
                      .load(std::memory_order_acquire)(buffer, offset, length, access);
   if (record && result != nullptr) {
-    MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result);
+    return MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result);
   }
   return result;
+}
+
+template <auto FlushEntry>
+void APIENTRY CustomWrapper_FlushMappedBufferRange(GLenum target,
+                                                   GLintptr offset,
+                                                   GLsizeiptr length) {
+  const RecursionGuard guard;
+  auto realFlush = (g_DispatchTable.*FlushEntry).load(std::memory_order_acquire);
+  if (guard.IsNested()) {
+    realFlush(target, offset, length);
+    return;
+  }
+  const uint64_t key = CaptureManager::Get().CreateCommandKey();
+  MapTrackingService::Get().FlushMappedRange(MapTrackingService::Get().BoundBuffer(target), offset,
+                                             length, key,
+                                             [=] { realFlush(target, offset, length); });
+}
+
+// The matching GLES flush also needs the unsupported OES map/unmap lifecycle.
+void APIENTRY CustomWrapper_glFlushMappedBufferRangeEXT(GLenum target,
+                                                        GLintptr offset,
+                                                        GLsizeiptr length) {
+  const RecursionGuard guard;
+  if (guard.IsNested()) {
+    g_DispatchTable.glFlushMappedBufferRangeEXT.load(std::memory_order_acquire)(target, offset,
+                                                                                length);
+    return;
+  }
+  GITS_ASSERT(false, "Target-EXT mapped-buffer flushes are not supported");
+}
+
+template <auto FlushEntry>
+void APIENTRY CustomWrapper_FlushMappedNamedBufferRange(GLuint buffer,
+                                                        GLintptr offset,
+                                                        GLsizeiptr length) {
+  const RecursionGuard guard;
+  auto realFlush = (g_DispatchTable.*FlushEntry).load(std::memory_order_acquire);
+  if (guard.IsNested()) {
+    realFlush(buffer, offset, length);
+    return;
+  }
+  const uint64_t key = CaptureManager::Get().CreateCommandKey();
+  MapTrackingService::Get().FlushMappedRange(buffer, offset, length, key,
+                                             [=] { realFlush(buffer, offset, length); });
+}
+
+template <auto GetEntry>
+void APIENTRY CustomWrapper_GetBufferPointerv(GLenum target, GLenum pname, void** params) {
+  const RecursionGuard guard;
+  (g_DispatchTable.*GetEntry).load(std::memory_order_acquire)(target, pname, params);
+  if (!guard.IsNested() && pname == GL_BUFFER_MAP_POINTER && params != nullptr) {
+    MapTrackingService::Get().AssertNoShadowPointerQuery(
+        MapTrackingService::Get().BoundBuffer(target), *params);
+  }
+}
+
+template <auto GetEntry>
+void APIENTRY CustomWrapper_GetNamedBufferPointerv(GLuint buffer, GLenum pname, void** params) {
+  const RecursionGuard guard;
+  (g_DispatchTable.*GetEntry).load(std::memory_order_acquire)(buffer, pname, params);
+  if (!guard.IsNested() && pname == GL_BUFFER_MAP_POINTER && params != nullptr) {
+    MapTrackingService::Get().AssertNoShadowPointerQuery(buffer, *params);
+  }
+}
+
+void APIENTRY CustomWrapper_glBufferParameteriAPPLE(GLenum target, GLenum pname, GLint param) {
+  const RecursionGuard guard;
+  if (guard.IsNested()) {
+    g_DispatchTable.glBufferParameteriAPPLE.load(std::memory_order_acquire)(target, pname, param);
+    return;
+  }
+  GITS_ASSERT(false, "APPLE flush-on-unmap buffer mappings are not supported");
+}
+
+void APIENTRY CustomWrapper_glFlushMappedBufferRangeAPPLE(GLenum target,
+                                                          GLintptr offset,
+                                                          GLsizeiptr length) {
+  const RecursionGuard guard;
+  if (guard.IsNested()) {
+    g_DispatchTable.glFlushMappedBufferRangeAPPLE.load(std::memory_order_acquire)(target, offset,
+                                                                                  length);
+    return;
+  }
+  GITS_ASSERT(false, "APPLE mapped-buffer range flushes are not supported");
 }
 
 template <auto MapRangeEntry, auto MapEntry, auto ResolveThunk>
@@ -230,6 +331,36 @@ struct CustomWrapper {
 
 const CustomWrapper CUSTOM_WRAPPERS[] = {
     {"glMapBufferRange", reinterpret_cast<void*>(&CustomWrapper_glMapBufferRange)},
+    {"glMapBufferRangeEXT", reinterpret_cast<void*>(&CustomWrapper_glMapBufferRangeEXT)},
+    {"glFlushMappedBufferRange",
+     reinterpret_cast<void*>(
+         &CustomWrapper_FlushMappedBufferRange<&OpenGLDispatchTable::glFlushMappedBufferRange>)},
+    {"glFlushMappedBufferRangeEXT",
+     reinterpret_cast<void*>(&CustomWrapper_glFlushMappedBufferRangeEXT)},
+    {"glFlushMappedNamedBufferRange",
+     reinterpret_cast<void*>(&CustomWrapper_FlushMappedNamedBufferRange<
+                             &OpenGLDispatchTable::glFlushMappedNamedBufferRange>)},
+    {"glFlushMappedNamedBufferRangeEXT",
+     reinterpret_cast<void*>(&CustomWrapper_FlushMappedNamedBufferRange<
+                             &OpenGLDispatchTable::glFlushMappedNamedBufferRangeEXT>)},
+    {"glBufferParameteriAPPLE", reinterpret_cast<void*>(&CustomWrapper_glBufferParameteriAPPLE)},
+    {"glFlushMappedBufferRangeAPPLE",
+     reinterpret_cast<void*>(&CustomWrapper_glFlushMappedBufferRangeAPPLE)},
+    {"glGetBufferPointerv",
+     reinterpret_cast<void*>(
+         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointerv>)},
+    {"glGetBufferPointervARB",
+     reinterpret_cast<void*>(
+         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointervARB>)},
+    {"glGetBufferPointervOES",
+     reinterpret_cast<void*>(
+         &CustomWrapper_GetBufferPointerv<&OpenGLDispatchTable::glGetBufferPointervOES>)},
+    {"glGetNamedBufferPointerv",
+     reinterpret_cast<void*>(
+         &CustomWrapper_GetNamedBufferPointerv<&OpenGLDispatchTable::glGetNamedBufferPointerv>)},
+    {"glGetNamedBufferPointervEXT",
+     reinterpret_cast<void*>(
+         &CustomWrapper_GetNamedBufferPointerv<&OpenGLDispatchTable::glGetNamedBufferPointervEXT>)},
     {"glUnmapBuffer", reinterpret_cast<void*>(&CustomWrapper_glUnmapBuffer)},
     {"glMapBuffer", reinterpret_cast<void*>(&CustomWrapper_glMapBuffer)},
     {"glMapBufferARB", reinterpret_cast<void*>(&CustomWrapper_glMapBufferARB)},

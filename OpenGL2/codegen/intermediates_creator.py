@@ -878,24 +878,20 @@ def _is_param_capturable(
 # says "this command's shape is perfectly capturable, but replaying it generically is actively
 # incorrect against this backend's own replay model" - see each entry's own comment.
 _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
-    # glFlushMappedBufferRange(target, offset, length) is only valid GL usage when `target`
-    # currently has an active mapping obtained with GL_MAP_FLUSH_EXPLICIT_BIT - but this
-    # backend's buffer-map tracking (see OpenGL2/recorder/mapTrackingWrappers.cpp and
-    # docs/development/opengl2-buffer-map-tracking-plan.md) never replays a real, ongoing
-    # map/flush/unmap sequence at all: glMapBufferRange/glUnmapBuffer are bypassed by custom
-    # recorder wrappers that record one synthetic, already-complete MappedDataMetaCommand
-    # instead (mappedDataMetaRunner.cpp replays it as its own self-contained internal
-    # map+memcpy+unmap against GL_COPY_WRITE_BUFFER, never leaving `target` mapped afterwards).
-    # A generically-replayed glFlushMappedBufferRange would therefore always run against
-    # replay-time buffer state that is never actually mapped, and fail with
-    # GL_INVALID_OPERATION on every call. Properly
-    # supporting it needs the custom map-tracking lifecycle extended to record real
-    # per-command flushed sub-ranges (and, for a GL_MAP_FLUSH_EXPLICIT_BIT mapping, snapshot
-    # only those flushed sub-ranges instead of the whole mapped range on unmap) - out of scope
-    # here. The named-buffer forms flush a mapping the player never leaves open either.
+    # These result in a MappedDataMetaCommand and should not be replayed directly.
+    # A generic flush on replay would target an unmapped buffer and fail.
     'glFlushMappedBufferRange',
     'glFlushMappedNamedBufferRange',
     'glFlushMappedNamedBufferRangeEXT',
+
+    # GL_EXT_map_buffer_range is a GLES extension requiring the untracked OES unmap lifecycle;
+    # the recorder rejects its target-addressed map and flush calls.
+    'glFlushMappedBufferRangeEXT',
+
+    # GL_APPLE_flush_buffer_range is likely used only on Apple platforms, which this backend does
+    # not support. Its flush-on-unmap semantics differ; the recorder rejects it rather than
+    # replaying a flush against a buffer with no live mapping.
+    'glFlushMappedBufferRangeAPPLE',
 
     # glImportSyncEXT(external_sync_type, external_sync, flags) -> GLsync (GL_EXT_EGL_sync)
     # creates a new sync object by importing an EXTERNAL fence - `external_sync` is a raw OS

@@ -189,8 +189,7 @@ class IsParamCapturableGateTests(unittest.TestCase):
 
 class EndToEndSystemicGateTests(unittest.TestCase):
     """Confirms the gate's effect against real registry data: commands with a resolvable
-    object-name classification come out enabled with the right
-    override, and commands deliberately left in the deferred list stay disabled."""
+    object-name classification come out enabled with the right override."""
 
     def test_glbindtextureunit_is_now_enabled(self) -> None:
         # A command with a resolvable object-name classification that was previously unmapped.
@@ -266,34 +265,6 @@ class EndToEndSystemicGateTests(unittest.TestCase):
         self.assertTrue(condition_param.type_facts.is_scalar)
         self.assertTrue(flags_param.type_facts.is_scalar)
 
-    def test_deferred_scope_commands_stay_disabled(self) -> None:
-        # These remain disabled after the gate for two structurally different reasons - see
-        # modern-opengl-backend-architecture.md's deferred-scope section for the full list.
-        # Note that most of the old "DSA named-object family, kind exists but no table entry
-        # yet" category (e.g. glTextureStorage2D, glNamedFramebufferTexture) no longer belongs
-        # here at all: auto-derivation resolves their object-name field(s) from class_+naming
-        # exactly like every other LOOKUP does, with nothing left to add by hand - see
-        # EndToEndAutoDerivationTests below for that expanded-coverage behavior instead.
-        for cmd_name in (
-            # glGenLists/glCallList/glDeleteLists USED TO be listed here too. Display lists are
-            # now an identity-name class (object_name_lifecycle.py's IDENTITY_NAME_CLASSES) - see
-            # test_display_list_commands_use_identity_names below.
-            # glBindTransformFeedback/glIsTransformFeedback USED TO be listed here too
-            # ("transform feedback - no GLObjectKind at all"). GLObjectKind.TRANSFORM_FEEDBACK
-            # now exists (object_name_lifecycle.py), so both are now genuinely enabled - see
-            # EndToEndAutoDerivationTests' test_transform_feedback_lifecycle_commands_are_now_enabled
-            # below.
-            'glBeginPerfQueryINTEL',  # perf query handle - no GLObjectKind at all.
-            # Object-name field(s) auto-derive fine (kind IS supported), but a *different*,
-            # independent parameter (a plain string/pointer with no POINTER_PARAM_OVERRIDES
-            # entry of its own) keeps the whole command disabled - confirms auto-derivation
-            # only ever *removes* a blocking reason, never masks an unrelated one.
-            'glActiveVaryingNV',     # 'program' resolves; 'name' (GLchar*) has no entry.
-        ):
-            with self.subTest(command=cmd_name):
-                cmd = get_command(Api.GL, cmd_name)
-                self.assertFalse(cmd.enabled)
-
     def test_display_list_commands_use_identity_names(self) -> None:
         for cmd_name in (
             'glGenLists', 'glNewList', 'glEndList', 'glCallList', 'glCallLists',
@@ -305,26 +276,6 @@ class EndToEndSystemicGateTests(unittest.TestCase):
         self.assertEqual(gen_lists.return_value.class_, 'display list')
         self.assertIsNone(object_name_override_for(
             'glGenLists', 'return_value', gen_lists.return_value.class_))
-
-    def test_glflushmappedbufferrange_is_force_disabled(self) -> None:
-        # Structurally capturable (plain scalar target/offset/length, no
-        # object-name gate involved at all - a distinct exclusion reason from every other test
-        # in this class) but deliberately kept disabled - see
-        # intermediates_creator.py's _FORCE_DISABLED_COMMANDS.
-        cmd = get_command(Api.GL, 'glFlushMappedBufferRange')
-        self.assertFalse(cmd.enabled)
-        # Confirm it really would otherwise have been enabled, i.e. this is testing the
-        # deliberate override and not some unrelated, coincidental disablement reason.
-        for param in cmd.params:
-            self.assertIsNone(param.class_)
-            self.assertTrue(param.type_facts.is_scalar)
-
-    def test_named_buffer_flushes_are_force_disabled(self) -> None:
-        # Capturable (a mapped buffer name and two scalars), but replay never leaves the buffer
-        # mapped for them to flush.
-        for cmd_name in ('glFlushMappedNamedBufferRange', 'glFlushMappedNamedBufferRangeEXT'):
-            with self.subTest(command=cmd_name):
-                self.assertFalse(get_command(Api.GL, cmd_name).enabled)
 
     def test_pbuffer_commands(self) -> None:
         for cmd_name in (

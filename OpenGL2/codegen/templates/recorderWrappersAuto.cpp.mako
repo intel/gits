@@ -57,6 +57,7 @@ ${AUTO_GENERATED_HEADER}
 #include "handleArgumentUpdaters.h"
 #include "handleMapService.h"
 #include "layerAuto.h"
+#include "mapTrackingService.h"
 #include "mapTrackingWrappers.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
@@ -332,6 +333,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // Reported whether or not this command is enabled - see buffer_content_hooks.py.
   if (record${f' && {hook.guard}' if hook.guard else ''}) {
     BufferShadowService::Get().${hook.call};
+% if cmd.name in ('glDeleteBuffers', 'glDeleteBuffersARB'):
+    MapTrackingService::Get().OnDelete(n, buffers);
+% endif
   }
 % endif
   if (record) {
