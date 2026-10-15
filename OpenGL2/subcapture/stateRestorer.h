@@ -50,12 +50,13 @@ public:
   // Sets the state CaptureListCompileState writes back to its initial values, where the current
   // context has it changed.
   ListCompileState ResetListCompileState();
-  // The buffer, texture or renderbuffer `key` of the share group current on `threadId`, read
-  // back before its deletion; empty for one no container keeps once it is deleted, and for one
-  // GL has no object for, or cannot read.
+  // The buffer, texture, renderbuffer or sampler `key` of the share group current on `threadId`,
+  // read back before its deletion; empty for one no container nor resident handle keeps once it
+  // is deleted, and for one GL has no object for, or cannot read.
   ObjectSnapshot CaptureDeleted(uint32_t threadId, GLObjectKind kind, GITSKey key);
-  // The deleted buffers, textures and renderbuffers the context current on `threadId` deleted,
-  // which none of its containers, nor a buffer texture, references any more.
+  // The deleted buffers, textures, renderbuffers and samplers the context current on `threadId`
+  // deleted, which none of its containers, nor a buffer texture, references any more, and no
+  // resident handle keeps.
   std::vector<GITSKey> DetachedDeleted(uint32_t threadId);
 
 private:

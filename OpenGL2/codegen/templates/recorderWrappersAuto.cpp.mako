@@ -509,7 +509,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 <%
     share_param = context_share_param.get(cmd.name)
 %>\
-    // See recorder/include/shareGroupService.h's own header comment and
+    // See common/services/shareGroupService.h's own header comment and
     // codegen/handle_lifecycle.py's CONTEXT_SHARE_PARAM for why a newly-created context must
     // join its share context's group (if any) right away, using the real, recorder-process
     // HGLRC values (ShareGroupService is process-local, unserialized bookkeeping - see that
@@ -544,7 +544,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     share_lists_params = share_lists_commands.get(cmd.name)
 %>\
 % if share_lists_params is not None:
-    // See recorder/include/shareGroupService.h's own header comment and
+    // See common/services/shareGroupService.h's own header comment and
     // codegen/handle_lifecycle.py's SHARE_LISTS_COMMANDS - only merge on success, matching
     // wglShareLists' own documented failure semantics (no sharing takes effect).
     if (result) {

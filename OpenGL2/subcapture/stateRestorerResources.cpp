@@ -242,12 +242,14 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
     if (mapped && (access & GL_MAP_PERSISTENT_BIT) == 0) {
       return snapshot;
     }
-  } else if (kind == GLObjectKind::Texture ? !GL_FN(glIsTexture)(name)
-                                           : !GL_FN(glIsRenderbuffer)(name)) {
+  } else if (kind == GLObjectKind::Texture   ? !GL_FN(glIsTexture)(name)
+             : kind == GLObjectKind::Sampler ? !GL_FN(glIsSampler)(name)
+                                             : !GL_FN(glIsRenderbuffer)(name)) {
     return snapshot;
   }
   const auto owner = m_State.CurrentShareGroup(threadId);
-  if (!Attached(owner.first, owner.second, kind, name, true)) {
+  if (!m_State.HasResidentHandle(key) &&
+      (kind == GLObjectKind::Sampler || !Attached(owner.first, owner.second, kind, name, true))) {
     return snapshot;
   }
 
@@ -259,6 +261,8 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
     RestoreBuffer(key, name);
   } else if (kind == GLObjectKind::Texture) {
     RestoreTexture(key, name, object->Target);
+  } else if (kind == GLObjectKind::Sampler) {
+    RestoreSampler(key, name);
   } else {
     RestoreRenderbuffer(key, name);
   }
@@ -313,7 +317,9 @@ std::vector<GITSKey> StateRestorer::DetachedDeleted(uint32_t threadId) {
   ReadVersion();
   std::erase_if(detached, [&](GITSKey key) {
     const ObjectState& object = *m_State.Object(key);
-    return Attached(shareGroup, context, object.Kind, object.LiveName, false);
+    return m_State.HasResidentHandle(key) ||
+           (object.Kind != GLObjectKind::Sampler &&
+            Attached(shareGroup, context, object.Kind, object.LiveName, false));
   });
   return detached;
 }
@@ -340,6 +346,13 @@ void StateRestorer::RestoreSharedObjects(GITSKey shareGroup) {
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreRenderbuffer(key, name); });
   restore(GLObjectKind::Sampler,
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreSampler(key, name); });
+  // A handle makes the state of its texture and sampler immutable, so it is created after them.
+  for (const auto& [handle, state] : m_State.Handles()) {
+    const ObjectState* texture = m_State.Object(state.Texture);
+    if (texture != nullptr && texture->Owner == shareGroup) {
+      state.Creation->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+    }
+  }
   restore(GLObjectKind::Shader,
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreShader(key, name); });
   restore(GLObjectKind::Program,

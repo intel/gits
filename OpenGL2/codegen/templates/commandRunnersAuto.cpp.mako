@@ -68,6 +68,7 @@ ${AUTO_GENERATED_HEADER}
 // the driver actually reads/writes a real, nonzero range through at replay time.
 
 #include "commandRunnersAuto.h"
+#include "bindlessHandleMapService.h"
 #include "discardedOutputElements.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
@@ -76,6 +77,7 @@ ${AUTO_GENERATED_HEADER}
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "shareGroupService.h"
 #include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
@@ -125,6 +127,14 @@ T* DiscardedOutputScratch(size_t listElements) {
       p for p in cmd.params
       if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
           object_name_override_for(cmd.name, p.name, p.class_).role != ObjectNameRole.CREATE)
+  ]
+  # Deleting a program pipeline unbinds it, so once the real call ran, UniformLocationMapService
+  # no longer resolves classic glUniform*() calls against its active program.
+  deleted_pipeline_params = [
+      p for p in resolve_object_name_params
+      if (object_name_override_for(cmd.name, p.name, p.class_).kind ==
+              GLObjectKind.PROGRAM_PIPELINE and
+          object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.DELETE)
   ]
   register_object_name_array_params = [
       p for p in cmd.params
@@ -190,6 +200,16 @@ T* DiscardedOutputScratch(size_t listElements) {
   # command with both a Program-kind object-name parameter and a 'location' parameter), not a
   # per-command-name table, for the same reason as is_uniform_location_param above. The
   # parameter is `program` in core and `programObj` in GL_ARB_shader_objects.
+  # Bindless texture and image handles are assigned by the driver - see
+  # BindlessHandleMapService. A glGet*Handle* command returns one; a scalar GLuint64 `handle`,
+  # or the `value` of a glUniformHandleui64* or glProgramUniformHandleui64* setter, passes one.
+  returns_bindless_handle = (not is_void and 'Handle' in cmd.name and
+                             cmd.return_value.type_facts.base_type == 'GLuint64')
+
+  def is_bindless_handle_param(p):
+      return (p.type_facts.base_type == 'GLuint64' and p.type_facts.is_scalar and
+              (p.name == 'handle' or (p.name == 'value' and 'UniformHandleui64' in cmd.name)))
+
   def explicit_program_param():
       for p in cmd.params:
           override = object_name_override_for(cmd.name, p.name, p.class_)
@@ -212,6 +232,8 @@ T* DiscardedOutputScratch(size_t listElements) {
                       f'command.m_{program_param.name}.Key, command.m_{p.name}.Value)')
           return (f'UniformLocationMapService::Get().Resolve(CurrentContext(), '
                   f'command.m_{p.name}.Value)')
+      if is_bindless_handle_param(p):
+          return f'BindlessHandleMapService::Get().Resolve(command.m_{p.name}.Value)'
       if p.name in hdc_names:
           return f'real_{p.name}'
       owner = consumed_param_owner(cmd.name, p.name)
@@ -330,6 +352,9 @@ void ${cmd.name}Runner::Run() {
 % for p in hdc_params:
   HDC real_${p.name} = HdcVirtualizationService::Get().Resolve(command.m_${p.name}.Value);
 % endfor
+% if returns_bindless_handle:
+  const GLuint64 capturedHandle = command.m_Return.Value;
+% endif
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -459,12 +484,25 @@ ${call_indent}realFunction(${call_args});
 % endif
 % if is_handle_creating:
     UpdateOutputHandle(command.m_Return);
+% elif returns_bindless_handle:
+    BindlessHandleMapService::Get().Register(capturedHandle, command.m_Return.Value);
 % elif is_object_name_creating:
     UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
 % endif
 % for p in register_object_name_array_params:
     UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${object_name_override_for(cmd.name, p.name, p.class_).kind.value});
 % endfor
+% for p in deleted_pipeline_params:
+    for (GITSKey key : command.m_${p.name}.Key) {
+      UniformLocationMapService::Get().DeleteProgramPipeline(key);
+    }
+% endfor
+% if cmd.name in share_lists_commands:
+    if (command.m_Return.Value) {
+      ShareGroupService::Get().MergeGroups(command.m_${share_lists_commands[cmd.name][0]}.Value,
+                                            command.m_${share_lists_commands[cmd.name][1]}.Value);
+    }
+% endif
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);

@@ -197,6 +197,7 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
 
   const std::unordered_map<GLint, std::vector<GLint>> captured =
       UniformLocationMapService::Get().CapturedLocations(key);
+  const ProgramState* tracked = m_State.FindProgram(key);
   GLint uniforms = 0;
   GLint maxLength = 0;
   GL_FN(glGetProgramiv)(program, GL_ACTIVE_UNIFORMS, &uniforms);
@@ -233,14 +234,40 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
       const auto it = captured.find(location);
       const std::vector<GLint> capturedLocations =
           it != captured.end() ? it->second : std::vector<GLint>{m_NextUnusedLocation++};
-      for (GLint capturedLocation : capturedLocations) {
+      const auto emitLookup = [&](GLint capturedLocation) {
         glGetUniformLocationCommand lookup;
         lookup.m_program.Key = key;
         lookup.m_name = ArrayArgument<GLchar>(elementName.c_str(), NullTerminated);
         lookup.m_Return.Value = capturedLocation;
         Emit<glGetUniformLocationCommandSerializer>(lookup);
+      };
+      const StoredCommand* handleSetter = nullptr;
+      for (GLint capturedLocation : capturedLocations) {
+        emitLookup(capturedLocation);
+        if (tracked != nullptr) {
+          if (const auto setter = tracked->HandleUniforms.find(capturedLocation);
+              setter != tracked->HandleUniforms.end()) {
+            handleSetter = setter->second.get();
+          }
+        }
       }
-      EmitUniform(program, location, capturedLocations.front(), type);
+      // A handle set through a location the shader declares needs no lookup, so its setter is
+      // found by the location the player resolved it to, and gets a lookup of its own.
+      if (handleSetter == nullptr && tracked != nullptr) {
+        for (const auto& [capturedLocation, setter] : tracked->HandleUniforms) {
+          if (UniformLocationMapService::Get().ResolveForProgram(key, capturedLocation) ==
+              location) {
+            emitLookup(capturedLocation);
+            handleSetter = setter.get();
+            break;
+          }
+        }
+      }
+      if (handleSetter != nullptr) {
+        handleSetter->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+      } else {
+        EmitUniform(program, location, capturedLocations.front(), type);
+      }
     }
   }
 

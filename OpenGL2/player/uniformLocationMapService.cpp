@@ -32,7 +32,7 @@ void UniformLocationMapService::Register(GITSKey programKey,
 }
 
 GLint UniformLocationMapService::Resolve(HGLRC context, GLint capturedLocation) {
-  return ResolveForProgram(GetCurrentProgram(context), capturedLocation);
+  return ResolveForProgram(GetUniformProgram(context), capturedLocation);
 }
 
 GLint UniformLocationMapService::ResolveForProgram(GITSKey programKey, GLint capturedLocation) {
@@ -85,10 +85,8 @@ void UniformLocationMapService::SetCurrentProgram(HGLRC context, GITSKey program
   // PurgeProgram()'s own comment. Nothing to do if `context` is re-binding the same program it
   // already had (outgoing == programKey - not a real transition) or was not current anywhere
   // to begin with.
-  if (outgoing != 0 && outgoing != programKey && m_PendingDeletion.count(outgoing) != 0 &&
-      !IsCurrentInAnyContextLocked(outgoing)) {
-    ErasePurgeProgramLocked(outgoing);
-    m_PendingDeletion.erase(outgoing);
+  if (outgoing != programKey) {
+    ReleaseProgramLocked(outgoing);
   }
 }
 
@@ -96,6 +94,56 @@ GITSKey UniformLocationMapService::GetCurrentProgram(HGLRC context) const {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_CurrentProgramByContext.find(context);
   return it != m_CurrentProgramByContext.end() ? it->second : 0;
+}
+
+void UniformLocationMapService::BindProgramPipeline(HGLRC context, GITSKey pipelineKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_PipelineByContext[context] = pipelineKey;
+}
+
+void UniformLocationMapService::SetActiveProgram(GITSKey pipelineKey, GITSKey programKey) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  GITSKey& active = m_ActiveProgramByPipeline[pipelineKey];
+  const GITSKey outgoing = active;
+  active = programKey;
+  if (outgoing != programKey) {
+    ReleaseProgramLocked(outgoing);
+  }
+}
+
+void UniformLocationMapService::DeleteProgramPipeline(GITSKey pipelineKey) {
+  if (pipelineKey == 0) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const GITSKey active = ActiveProgramLocked(pipelineKey);
+  m_ActiveProgramByPipeline.erase(pipelineKey);
+  std::erase_if(m_PipelineByContext,
+                [pipelineKey](const auto& entry) { return entry.second == pipelineKey; });
+  ReleaseProgramLocked(active);
+}
+
+GITSKey UniformLocationMapService::GetUniformProgram(HGLRC context) const {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (const auto program = m_CurrentProgramByContext.find(context);
+      program != m_CurrentProgramByContext.end() && program->second != 0) {
+    return program->second;
+  }
+  const auto pipeline = m_PipelineByContext.find(context);
+  return pipeline != m_PipelineByContext.end() ? ActiveProgramLocked(pipeline->second) : 0;
+}
+
+GITSKey UniformLocationMapService::ActiveProgramLocked(GITSKey pipelineKey) const {
+  const auto active = m_ActiveProgramByPipeline.find(pipelineKey);
+  return active != m_ActiveProgramByPipeline.end() ? active->second : 0;
+}
+
+void UniformLocationMapService::ReleaseProgramLocked(GITSKey programKey) {
+  if (programKey != 0 && m_PendingDeletion.count(programKey) != 0 &&
+      !IsCurrentInAnyContextLocked(programKey)) {
+    ErasePurgeProgramLocked(programKey);
+    m_PendingDeletion.erase(programKey);
+  }
 }
 
 void UniformLocationMapService::PurgeProgram(GITSKey programKey) {
@@ -115,6 +163,12 @@ void UniformLocationMapService::PurgeProgram(GITSKey programKey) {
 
 bool UniformLocationMapService::IsCurrentInAnyContextLocked(GITSKey programKey) const {
   for (const auto& entry : m_CurrentProgramByContext) {
+    if (entry.second == programKey) {
+      return true;
+    }
+  }
+  // The active program of a pipeline stays usable by glUniform*() calls once the pipeline is bound.
+  for (const auto& entry : m_ActiveProgramByPipeline) {
     if (entry.second == programKey) {
       return true;
     }

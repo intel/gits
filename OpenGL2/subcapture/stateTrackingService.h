@@ -100,11 +100,12 @@ struct ObjectState {
   GLenum Target{};
   // A shader still attached or a program still in use when deleted stays live, under this name,
   // until GL reclaims it. A deleted buffer, texture or renderbuffer stays live while a container
-  // or a buffer texture references it; it is tracked, under this name, while one does.
+  // or a buffer texture references it, and a texture or sampler while one of its handles is
+  // resident; it is tracked, under this name, while one does.
   bool DeletePending{};
   GLuint LiveName{};
-  // The deleted buffer, texture or renderbuffer as it was before its deletion, and the context
-  // that deleted it.
+  // The deleted buffer, texture, renderbuffer or sampler as it was before its deletion, and the
+  // context that deleted it.
   ObjectSnapshot Snapshot;
   GITSKey DeletedIn{};
 };
@@ -120,6 +121,10 @@ struct ProgramState {
   std::shared_ptr<StoredCommand> Creation;
   // The glProgramBinary call that loaded the program, until it is linked again.
   std::shared_ptr<StoredCommand> Binary;
+  // The glUniformHandle* or glProgramUniformHandle* call that set each sampler or image uniform
+  // holding a bindless handle, by recorded location. Reading a uniform back gives only the low
+  // 32 bits of its handle.
+  std::map<GLint, std::shared_ptr<StoredCommand>> HandleUniforms;
 };
 
 // An ARB assembly program. Its names are separate from those of GLSL programs.
@@ -141,6 +146,14 @@ struct ListCompileState {
 struct DisplayList {
   std::vector<std::shared_ptr<StoredCommand>> Commands;
   std::vector<GITSKey> Buffers;
+};
+
+// A bindless texture or image handle of `Texture`, and `Sampler` for a texture sampler handle.
+// `Creation` keeps the handle the recording returned.
+struct BindlessHandle {
+  GITSKey Texture{};
+  GITSKey Sampler{};
+  std::shared_ptr<StoredCommand> Creation;
 };
 
 // The display lists a wglUseFontBitmaps call created, followed by the glDeleteLists that deleted
@@ -173,8 +186,8 @@ public:
 
   void CreateObject(GLObjectKind kind, uint32_t threadId, GITSKey key);
   // `liveName` is the name of a deleted shader or program GL keeps until it is detached or no
-  // longer in use, or of a deleted buffer, texture or renderbuffer read back into `snapshot`
-  // before `context` deleted it; 0 for an object deleted at once.
+  // longer in use, or of a deleted buffer, texture, renderbuffer or sampler read back into
+  // `snapshot` before `context` deleted it; 0 for an object deleted at once.
   void DeleteObject(GLObjectKind kind,
                     GITSKey key,
                     GLuint liveName = 0,
@@ -183,9 +196,9 @@ public:
   // Forgets the delete-pending shader or program whose name GL gave to the shader or program just
   // created, since GL reclaimed it first.
   void ForgetReclaimed(uint32_t threadId, GLuint name);
-  // Forgets the deleted buffer, texture or renderbuffer no container references any more.
+  // Forgets the deleted buffer, texture, renderbuffer or sampler nothing keeps alive any more.
   void ForgetDeleted(GITSKey key);
-  // Whether `name` is the name of a tracked deleted buffer, texture or renderbuffer of
+  // Whether `name` is the name of a tracked deleted buffer, texture, renderbuffer or sampler of
   // `shareGroup`.
   bool IsDeletedName(GITSKey shareGroup, GLObjectKind kind, GLuint name) const {
     return m_DeletedNames.contains({shareGroup, kind, name});
@@ -199,6 +212,16 @@ public:
   void CreateArbProgram(uint32_t threadId, GITSKey key);
   void SetArbProgramTarget(GITSKey key, GLenum target);
   void DeleteArbProgram(GITSKey key);
+
+  // Handles are deleted with their texture or sampler. A resident handle keeps a deleted texture
+  // or sampler alive, so its handles are kept until it is forgotten.
+  void CreateHandle(GLuint64 handle, BindlessHandle state);
+  // Residency is per context; `command` makes the handle resident again. GL rejects making a
+  // resident handle resident, so the first command is kept until MakeNonResident().
+  void MakeResident(uint32_t threadId, GLuint64 handle, std::shared_ptr<StoredCommand> command);
+  void MakeNonResident(uint32_t threadId, GLuint64 handle);
+  // Whether a handle of the texture or sampler `object` is resident in any context.
+  bool HasResidentHandle(GITSKey object) const;
 
   // `newList` is written in place of the glNewList that starts the list.
   void BeginList(uint32_t threadId,
@@ -241,6 +264,16 @@ public:
   const std::map<GITSKey, ArbProgramState>& ArbPrograms() const {
     return m_ArbPrograms;
   }
+  // By share group and the handle the recording returned, which is unique only within its share
+  // group.
+  const std::map<std::pair<GITSKey, GLuint64>, BindlessHandle>& Handles() const {
+    return m_Handles;
+  }
+  // By context and handle.
+  const std::map<GITSKey, std::map<GLuint64, std::shared_ptr<StoredCommand>>>& ResidentHandles()
+      const {
+    return m_ResidentHandles;
+  }
   // By share group and list name.
   const std::map<std::pair<GITSKey, GLuint>, DisplayList>& DisplayLists() const {
     return m_DisplayLists;
@@ -253,6 +286,9 @@ public:
 private:
   GITSKey CurrentContext(uint32_t threadId) const;
   GITSKey OwnerFor(GLObjectKind kind, uint32_t threadId) const;
+  GITSKey ShareGroupOf(GITSKey context) const;
+  // Deletes the handles of the texture or sampler `object`.
+  void DeleteHandles(GITSKey object);
 
   std::shared_ptr<StoredCommand> m_Geometry;
   std::vector<SampledCommand> m_Topology;
@@ -262,12 +298,15 @@ private:
   // Recorded pbuffer DC to its pbuffer.
   std::map<HDC, GITSKey> m_PbufferDcs;
   std::map<GITSKey, ObjectState> m_Objects;
-  // Share group, kind and name of the tracked deleted buffers, textures and renderbuffers.
+  // Share group, kind and name of the tracked deleted buffers, textures, renderbuffers and
+  // samplers.
   std::multiset<std::tuple<GITSKey, GLObjectKind, GLuint>> m_DeletedNames;
   std::unordered_map<GITSKey, ProgramState> m_Programs;
   // Sync object key to its share group.
   std::map<GITSKey, GITSKey> m_Syncs;
   std::map<GITSKey, ArbProgramState> m_ArbPrograms;
+  std::map<std::pair<GITSKey, GLuint64>, BindlessHandle> m_Handles;
+  std::map<GITSKey, std::map<GLuint64, std::shared_ptr<StoredCommand>>> m_ResidentHandles;
   std::map<std::pair<GITSKey, GLuint>, DisplayList> m_DisplayLists;
   // Thread to the list it compiles and its share group.
   std::map<uint32_t, std::pair<std::pair<GITSKey, GLuint>, DisplayList>> m_CompilingLists;

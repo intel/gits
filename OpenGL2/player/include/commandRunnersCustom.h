@@ -191,6 +191,62 @@ private:
   glUseProgramObjectARBCommand command;
 };
 
+// glBindProgramPipeline's and glActiveShaderProgram's Run(), and those of their EXT variants:
+// with no program in use, classic glUniform*() calls set uniforms of the active program of the
+// bound program pipeline, so UniformLocationMapService tracks both, as GlUseProgramRunner does
+// the program in use.
+class GlBindProgramPipelineRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindProgramPipelineCommand command;
+};
+
+class GlBindProgramPipelineEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindProgramPipelineEXTCommand command;
+};
+
+class GlActiveShaderProgramRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glActiveShaderProgramCommand command;
+};
+
+class GlActiveShaderProgramEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glActiveShaderProgramEXTCommand command;
+};
+
 // glViewport's Run() - beyond the generic real-call forward, also grows the player's fallback
 // window to fit this call's (width, height) when it targets the window origin - see
 // HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.

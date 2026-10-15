@@ -54,6 +54,9 @@ void StateTrackingService::ShareLists(GITSKey context, GITSKey otherContext) {
   }
   const GITSKey oldGroup = target->second.ShareGroup;
   const GITSKey newGroup = source->second.ShareGroup;
+  if (oldGroup == newGroup) {
+    return;
+  }
   for (auto& [key, state] : m_Contexts) {
     if (state.ShareGroup == oldGroup) {
       state.ShareGroup = newGroup;
@@ -92,10 +95,19 @@ void StateTrackingService::ShareLists(GITSKey context, GITSKey otherContext) {
       font.ShareGroup = newGroup;
     }
   }
+  for (auto handle = m_Handles.begin(); handle != m_Handles.end();) {
+    if (handle->first.first == oldGroup) {
+      m_Handles[{newGroup, handle->first.second}] = std::move(handle->second);
+      handle = m_Handles.erase(handle);
+    } else {
+      ++handle;
+    }
+  }
 }
 
 void StateTrackingService::DeleteContext(GITSKey context) {
   m_Contexts.erase(context);
+  m_ResidentHandles.erase(context);
   std::erase_if(m_Objects, [context](const auto& entry) {
     return IsContainerKind(entry.second.Kind) && entry.second.Owner == context;
   });
@@ -164,9 +176,10 @@ std::pair<GITSKey, GITSKey> StateTrackingService::CurrentShareGroup(uint32_t thr
 
 GITSKey StateTrackingService::OwnerFor(GLObjectKind kind, uint32_t threadId) const {
   const GITSKey context = CurrentContext(threadId);
-  if (IsContainerKind(kind)) {
-    return context;
-  }
+  return IsContainerKind(kind) ? context : ShareGroupOf(context);
+}
+
+GITSKey StateTrackingService::ShareGroupOf(GITSKey context) const {
   const auto state = m_Contexts.find(context);
   return state != m_Contexts.end() ? state->second.ShareGroup : 0;
 }
@@ -201,6 +214,10 @@ void StateTrackingService::DeleteObject(
   if (object->second.DeletePending) {
     return;
   }
+  if ((kind == GLObjectKind::Texture || kind == GLObjectKind::Sampler) &&
+      (liveName == 0 || !HasResidentHandle(key))) {
+    DeleteHandles(key);
+  }
   if (liveName != 0) {
     object->second.DeletePending = true;
     object->second.LiveName = liveName;
@@ -224,6 +241,10 @@ void StateTrackingService::ForgetDeleted(GITSKey key) {
       m_DeletedNames.find({object->second.Owner, object->second.Kind, object->second.LiveName});
   if (name != m_DeletedNames.end()) {
     m_DeletedNames.erase(name);
+  }
+  if (object->second.Kind == GLObjectKind::Texture ||
+      object->second.Kind == GLObjectKind::Sampler) {
+    DeleteHandles(key);
   }
   m_Objects.erase(object);
 }
@@ -291,6 +312,57 @@ void StateTrackingService::SetArbProgramTarget(GITSKey key, GLenum target) {
 
 void StateTrackingService::DeleteArbProgram(GITSKey key) {
   m_ArbPrograms.erase(key);
+}
+
+void StateTrackingService::CreateHandle(GLuint64 handle, BindlessHandle state) {
+  const auto texture = m_Objects.find(state.Texture);
+  if (handle != 0 && texture != m_Objects.end()) {
+    m_Handles[{texture->second.Owner, handle}] = std::move(state);
+  }
+}
+
+void StateTrackingService::MakeResident(uint32_t threadId,
+                                        GLuint64 handle,
+                                        std::shared_ptr<StoredCommand> command) {
+  if (m_Handles.contains({OwnerFor(GLObjectKind::Texture, threadId), handle})) {
+    m_ResidentHandles[CurrentContext(threadId)].try_emplace(handle, std::move(command));
+  }
+}
+
+void StateTrackingService::MakeNonResident(uint32_t threadId, GLuint64 handle) {
+  const auto resident = m_ResidentHandles.find(CurrentContext(threadId));
+  if (resident != m_ResidentHandles.end()) {
+    resident->second.erase(handle);
+  }
+}
+
+bool StateTrackingService::HasResidentHandle(GITSKey object) const {
+  for (const auto& [context, resident] : m_ResidentHandles) {
+    const GITSKey shareGroup = ShareGroupOf(context);
+    for (const auto& [handle, command] : resident) {
+      const auto state = m_Handles.find({shareGroup, handle});
+      if (state != m_Handles.end() &&
+          (state->second.Texture == object || state->second.Sampler == object)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void StateTrackingService::DeleteHandles(GITSKey object) {
+  for (auto handle = m_Handles.begin(); handle != m_Handles.end();) {
+    if (handle->second.Texture != object && handle->second.Sampler != object) {
+      ++handle;
+      continue;
+    }
+    for (auto& [context, resident] : m_ResidentHandles) {
+      if (ShareGroupOf(context) == handle->first.first) {
+        resident.erase(handle->first.second);
+      }
+    }
+    handle = m_Handles.erase(handle);
+  }
 }
 
 void StateTrackingService::BeginList(uint32_t threadId,

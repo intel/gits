@@ -61,6 +61,12 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # table of hand-written exceptions).
     'glUseProgram': 'GlUseProgramRunner',
     'glUseProgramObjectARB': 'GlUseProgramObjectARBRunner',
+    # With no program in use, classic glUniform*() calls set uniforms of the active program of
+    # the bound program pipeline, so UniformLocationMapService tracks both after the real call.
+    'glBindProgramPipeline': 'GlBindProgramPipelineRunner',
+    'glBindProgramPipelineEXT': 'GlBindProgramPipelineEXTRunner',
+    'glActiveShaderProgram': 'GlActiveShaderProgramRunner',
+    'glActiveShaderProgramEXT': 'GlActiveShaderProgramEXTRunner',
     # Grows the player's fallback window (created at an arbitrary, hardcoded 640x480 default by
     # HdcVirtualizationService::Resolve() when no recorded window is known) to fit the app's
     # real rendering resolution - see GlViewportRunner::Run()'s own comment and

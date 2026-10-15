@@ -229,6 +229,12 @@ void StateRestorer::Restore() {
     RestoreContextState();
     RestoreBindings();
     RestoreActiveQueries();
+    if (const auto resident = m_State.ResidentHandles().find(key);
+        resident != m_State.ResidentHandles().end()) {
+      for (const auto& [handle, command] : resident->second) {
+        command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+      }
+    }
     if (const int errors = DrainErrors()) {
       LOG_WARNING << "Subcapture: restoring state of context " << key << " raised " << errors
                   << " GL errors";
@@ -284,9 +290,9 @@ void StateRestorer::RestoreReadDrawable(const MakeCurrent& current) {
 }
 
 // Programs deleted while in use are deleted again once the restored contexts use them. Deleted
-// objects restored for the containers that reference them are deleted again once the containers
-// are restored, in the context that deleted them. No container is bound to it meanwhile, as one
-// would lose its references to them.
+// objects restored for the containers that reference them, or the resident handles that keep
+// them, are deleted again once the containers and residency are restored, in the context that
+// deleted them. No container is bound to it meanwhile, as one would lose its references to them.
 void StateRestorer::DeletePendingObjects(
     const std::map<GITSKey, std::shared_ptr<MakeCurrent>>& shareGroups) {
   std::map<GITSKey, std::vector<std::pair<GITSKey, GLObjectKind>>> pending;
@@ -361,6 +367,13 @@ void StateRestorer::DeletePendingObjects(
         command.m_textures.Value = {0};
         command.m_textures.HasValue = true;
         Emit<glDeleteTexturesCommandSerializer>(command);
+      } else if (kind == GLObjectKind::Sampler) {
+        glDeleteSamplersCommand command;
+        command.m_count.Value = 1;
+        command.m_samplers.Key = {key};
+        command.m_samplers.Value = {0};
+        command.m_samplers.HasValue = true;
+        Emit<glDeleteSamplersCommandSerializer>(command);
       } else {
         glDeleteRenderbuffersCommand command;
         command.m_n.Value = 1;
@@ -706,6 +719,14 @@ void StateRestorer::CollectRequired(
   }
   if (m_Analysis.Optimize()) {
     m_Required = m_Analysis.Objects();
+  }
+  // Shaders reach textures through handles in uniforms and buffers the analysis cannot follow,
+  // and a handle can be all that keeps a deleted texture or sampler.
+  for (const auto& [handle, state] : m_State.Handles()) {
+    m_Required.insert(state.Texture);
+    if (state.Sampler != 0) {
+      m_Required.insert(state.Sampler);
+    }
   }
   m_Collecting = true;
   // Bindings first, so the containers they reference are required when their own references

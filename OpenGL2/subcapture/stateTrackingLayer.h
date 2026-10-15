@@ -18,8 +18,8 @@ namespace gits::opengl2 {
 
 // Feeds StateTrackingService from replayed commands, before the subcapture range starts. Tracks
 // what state restore cannot query from the driver: contexts, which objects exist, texture
-// targets, program link inputs, syncs, display lists and deleted objects containers may still
-// reference. RecordingLayer adds the commands compiled into a display list.
+// targets, program link inputs, syncs, bindless handles, display lists and deleted objects
+// containers may still reference. RecordingLayer adds the commands compiled into a display list.
 class StateTrackingLayer : public Layer {
 public:
   StateTrackingLayer(StateTrackingService& state,
@@ -98,7 +98,39 @@ public:
   // ---- Samplers ---------------------------------------------------------
   void Post(glGenSamplersCommand& command) override;
   void Post(glCreateSamplersCommand& command) override;
-  void Post(glDeleteSamplersCommand& command) override;
+  void Pre(glDeleteSamplersCommand& command) override;
+
+  // ---- Bindless handles -------------------------------------------------
+  void Pre(glGetTextureHandleARBCommand& command) override;
+  void Pre(glGetTextureHandleNVCommand& command) override;
+  void Pre(glGetTextureHandleIMGCommand& command) override;
+  void Pre(glGetTextureSamplerHandleARBCommand& command) override;
+  void Pre(glGetTextureSamplerHandleNVCommand& command) override;
+  void Pre(glGetTextureSamplerHandleIMGCommand& command) override;
+  void Pre(glGetImageHandleARBCommand& command) override;
+  void Pre(glGetImageHandleNVCommand& command) override;
+  void Post(glMakeTextureHandleResidentARBCommand& command) override;
+  void Post(glMakeTextureHandleResidentNVCommand& command) override;
+  void Post(glMakeTextureHandleNonResidentARBCommand& command) override;
+  void Post(glMakeTextureHandleNonResidentNVCommand& command) override;
+  void Post(glMakeImageHandleResidentARBCommand& command) override;
+  void Post(glMakeImageHandleResidentNVCommand& command) override;
+  void Post(glMakeImageHandleNonResidentARBCommand& command) override;
+  void Post(glMakeImageHandleNonResidentNVCommand& command) override;
+  void Post(glUniformHandleui64ARBCommand& command) override;
+  void Post(glUniformHandleui64NVCommand& command) override;
+  void Post(glUniformHandleui64IMGCommand& command) override;
+  void Post(glProgramUniformHandleui64ARBCommand& command) override;
+  void Post(glProgramUniformHandleui64NVCommand& command) override;
+  void Post(glProgramUniformHandleui64IMGCommand& command) override;
+  void Post(glUniform1iCommand& command) override;
+  void Post(glUniform1iARBCommand& command) override;
+  void Post(glUniform1ivCommand& command) override;
+  void Post(glUniform1ivARBCommand& command) override;
+  void Post(glProgramUniform1iCommand& command) override;
+  void Post(glProgramUniform1iEXTCommand& command) override;
+  void Post(glProgramUniform1ivCommand& command) override;
+  void Post(glProgramUniform1ivEXTCommand& command) override;
 
   // ---- Shaders and programs ---------------------------------------------
   void Post(glCreateShaderCommand& command) override;
@@ -138,7 +170,6 @@ public:
   void Post(glCreateProgramPipelinesCommand& command) override;
   void Post(glDeleteProgramPipelinesCommand& command) override;
   void Post(glDeleteProgramPipelinesEXTCommand& command) override;
-
   // ---- Vertex arrays ----------------------------------------------------
   void Post(glGenVertexArraysCommand& command) override;
   void Post(glGenVertexArraysAPPLECommand& command) override;

@@ -125,7 +125,7 @@ public:
   // named `location` on a command with no explicit `program` parameter of its own - see
   // commandRunnersAuto.cpp.mako's is_uniform_location_param/is_explicit_program_uniform_command)
   // before the real call, substituting the captured location for its replay-time equivalent
-  // under `context`'s current program (see GetCurrentProgram()) - callers pass CurrentContext()
+  // under `context`'s current program (see GetUniformProgram()) - callers pass CurrentContext()
   // (handleArgumentUpdaters.h), the real context this call is about to run against. Falls back
   // to `capturedLocation` unchanged - with a one-time warning per (program, location) pair - if
   // this exact location was never registered via Register() (see this class's own header
@@ -172,6 +172,18 @@ public:
 
   GITSKey GetCurrentProgram(HGLRC context) const;
 
+  // Called by GlBindProgramPipeline(EXT)Runner after GL bound `pipelineKey` on `context`.
+  void BindProgramPipeline(HGLRC context, GITSKey pipelineKey);
+  // Called by GlActiveShaderProgram(EXT)Runner after GL made `programKey` the active program of
+  // `pipelineKey`.
+  void SetActiveProgram(GITSKey pipelineKey, GITSKey programKey);
+  // Called by the glDeleteProgramPipelines(EXT) runners after the real call, which also unbinds
+  // the pipeline.
+  void DeleteProgramPipeline(GITSKey pipelineKey);
+  // The program classic glUniform*() calls on `context` set uniforms of: its current program, or
+  // with none, the active program of its bound program pipeline. Resolve() resolves against it.
+  GITSKey GetUniformProgram(HGLRC context) const;
+
   // Called by glDeleteProgramRunner's Run() (commandRunnersAuto.cpp.mako, generated from
   // any resolve_object_name_params entry whose ObjectNameOverride is
   // (kind=GLObjectKind.PROGRAM, role=ObjectNameRole.DELETE) - a structural, kind/role-driven
@@ -194,7 +206,8 @@ public:
   // against m_PendingDeletion on every glUseProgram() call and actually purges the moment one
   // drops to zero remaining contexts. If the program is not current anywhere already (the
   // common case - most deletes happen well after the app itself has moved on), this purges
-  // immediately exactly as before.
+  // immediately exactly as before. The active program of a program pipeline counts as current
+  // too, so SetActiveProgram() and DeleteProgramPipeline() re-check the program they release.
   //
   // Residual gap, deliberately left as a documented limitation rather than fully closed here:
   // a context being destroyed (wglDeleteContext) does not, on its own, update
@@ -212,10 +225,15 @@ public:
 private:
   UniformLocationMapService() = default;
 
-  // Both must be called with m_Mutex already held - internal helpers shared by PurgeProgram()
-  // and SetCurrentProgram(), see their own comments above.
+  // All must be called with m_Mutex already held - internal helpers shared by PurgeProgram(),
+  // SetCurrentProgram() and the pipeline methods, see their own comments above.
+  // Also counts the active program of any pipeline.
   bool IsCurrentInAnyContextLocked(GITSKey programKey) const;
   void ErasePurgeProgramLocked(GITSKey programKey);
+  GITSKey ActiveProgramLocked(GITSKey pipelineKey) const;
+  // Completes a deferred PurgeProgram() of `programKey` once nothing keeps it current; called
+  // when a context or a pipeline stops referencing it.
+  void ReleaseProgramLocked(GITSKey programKey);
 
   struct Key {
     GITSKey ProgramKey;
@@ -241,9 +259,12 @@ private:
   // GL_CURRENT_PROGRAM's own "no program in use" value 0, and object_name_lifecycle.py's
   // "zero name -> zero key" convention) for it, same as a fresh real GL context would report.
   std::unordered_map<HGLRC, GITSKey> m_CurrentProgramByContext;
+  // Per-context program pipeline binding, and the active program of each pipeline, by GITSKey.
+  std::unordered_map<HGLRC, GITSKey> m_PipelineByContext;
+  std::unordered_map<GITSKey, GITSKey> m_ActiveProgramByPipeline;
   // Programs glDeleteProgram has already run against but that were still current in at least
-  // one context at that point - see PurgeProgram()'s own comment. Removed once
-  // SetCurrentProgram() observes the program has dropped to zero remaining current contexts.
+  // one context or active in a pipeline at that point - see PurgeProgram()'s own comment.
+  // Removed once nothing keeps the program current any more.
   std::unordered_set<GITSKey> m_PendingDeletion;
 };
 

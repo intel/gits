@@ -16,6 +16,7 @@
 #include "pbufferService.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
+#include "shareGroupService.h"
 #include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
@@ -222,6 +223,64 @@ void RunUseProgram(CommandT& command,
     layer->Post(command);
   }
 }
+
+// As RunUseProgram, the binding is tracked only once GL reports it.
+template <typename CommandT, typename RealFunctionT>
+void RunBindProgramPipeline(CommandT& command,
+                            const std::atomic<RealFunctionT>& realFunction,
+                            const char* commandName) {
+  auto& manager = PlayerManager::Get();
+  if (!UpdateHandle(command.m_pipeline, GLObjectKind::ProgramPipeline)) {
+    SkipUnmappedObjectNameCall(command, commandName);
+  }
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    realFunction.load(std::memory_order_acquire)(command.m_pipeline.Value);
+    GLint pipeline = 0;
+    player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(
+        GL_PROGRAM_PIPELINE_BINDING, &pipeline);
+    if (static_cast<GLuint>(pipeline) == command.m_pipeline.Value) {
+      UniformLocationMapService::Get().BindProgramPipeline(CurrentContext(),
+                                                           command.m_pipeline.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+// GL keeps the previous active program if `program` is not linked, so it is queried back.
+template <typename CommandT, typename RealFunctionT, typename QueryFunctionT>
+void RunActiveShaderProgram(CommandT& command,
+                            const std::atomic<RealFunctionT>& realFunction,
+                            const std::atomic<QueryFunctionT>& queryFunction,
+                            const char* commandName) {
+  auto& manager = PlayerManager::Get();
+  if (!UpdateHandle(command.m_pipeline, GLObjectKind::ProgramPipeline)) {
+    SkipUnmappedObjectNameCall(command, commandName);
+  }
+  if (!UpdateHandle(command.m_program, GLObjectKind::Program)) {
+    SkipUnmappedObjectNameCall(command, commandName);
+  }
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    realFunction.load(std::memory_order_acquire)(command.m_pipeline.Value, command.m_program.Value);
+    GLint program = 0;
+    queryFunction.load(std::memory_order_acquire)(command.m_pipeline.Value, GL_ACTIVE_PROGRAM,
+                                                  &program);
+    if (static_cast<GLuint>(program) == command.m_program.Value) {
+      UniformLocationMapService::Get().SetActiveProgram(command.m_pipeline.Key,
+                                                        command.m_program.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
 } // namespace
 
 void WglCreateContextRunner::Run() {
@@ -241,6 +300,7 @@ void WglCreateContextRunner::Run() {
     auto realFunction = player::g_DispatchTable.wglCreateContext.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hDc);
     UpdateOutputHandle(command.m_Return);
+    ShareGroupService::Get().RegisterNewContext(command.m_Return.Value, nullptr);
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
@@ -276,6 +336,8 @@ void WglCreateContextAttribsARBRunner::Run() {
         realFunction(real_hDC, command.m_hShareContext.Value,
                      command.m_attribList.HasValue ? command.m_attribList.Data.data() : nullptr);
     UpdateOutputHandle(command.m_Return);
+    ShareGroupService::Get().RegisterNewContext(command.m_Return.Value,
+                                                command.m_hShareContext.Value);
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
@@ -392,6 +454,31 @@ void GlUseProgramObjectARBRunner::Run() {
                   return player::g_DispatchTable.glGetHandleARB.load(std::memory_order_acquire)(
                       GL_PROGRAM_OBJECT_ARB);
                 });
+}
+
+void GlBindProgramPipelineRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunBindProgramPipeline(command, player::g_DispatchTable.glBindProgramPipeline,
+                         "glBindProgramPipeline");
+}
+
+void GlBindProgramPipelineEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunBindProgramPipeline(command, player::g_DispatchTable.glBindProgramPipelineEXT,
+                         "glBindProgramPipelineEXT");
+}
+
+void GlActiveShaderProgramRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunActiveShaderProgram(command, player::g_DispatchTable.glActiveShaderProgram,
+                         player::g_DispatchTable.glGetProgramPipelineiv, "glActiveShaderProgram");
+}
+
+void GlActiveShaderProgramEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunActiveShaderProgram(command, player::g_DispatchTable.glActiveShaderProgramEXT,
+                         player::g_DispatchTable.glGetProgramPipelineivEXT,
+                         "glActiveShaderProgramEXT");
 }
 
 void WglSetPixelFormatRunner::Run() {

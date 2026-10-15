@@ -8,16 +8,12 @@
 
 #pragma once
 
-// Lives under recorder/ rather than common/services/, mirroring MapTrackingService's own
-// recorder/ placement (see recorder/include/mapTrackingService.h's header comment): every
-// caller (ObjectNameMapService's/MapTrackingService's recorder-direction name->key lookups,
-// via recorder/include/handleArgumentUpdaters.h's CurrentShareGroup()/GroupIdentityFor(), and
-// recorderWrappersAuto.cpp.mako's wglCreateContextAttribsARB/wglShareLists handling) is
-// recorder-only. The player has no counterpart, and by design never will: ObjectNameMapService's
-// player-direction (GITSKey -> live GLuint, see that header's SetHandle()/GetHandle()) is
-// already globally unique by construction and takes no share-group parameter at all - only the
-// recorder-direction (name -> key) lookups this service exists to disambiguate are ever
-// share-group-scoped.
+// The recorder groups its contexts for ObjectNameMapService's/MapTrackingService's name->key
+// lookups (via recorder/include/handleArgumentUpdaters.h's CurrentShareGroup()/
+// GroupIdentityFor()), registering them in recorderWrappersAuto.cpp.mako's context-creating
+// and wglShareLists handling. The player groups its replay contexts the same way, from its
+// context-creating and wglShareLists runners, for BindlessHandleMapService: a bindless handle,
+// unlike a GITSKey, is only unique within its share group.
 
 #include "glTypes.h"
 
@@ -39,13 +35,13 @@ namespace gits::opengl2 {
 // context's name 1 silently overwrite the first context's mapping.
 //
 // Process-local, real-HGLRC-keyed bookkeeping - deliberately NOT stream-serialized, unlike
-// ContextHandleMapService's GITSKey. Scoped to the recorder's own process-local HGLRC values
-// (real, captured-process contexts) - nothing here needs to match numerically against the
-// player's own, separate replay-process contexts: the GL objects' actual cross-process identity
-// already flows through GITSKey via ObjectNameMapService/MapTrackingService's existing
-// Register/GetKey/SetHandle/GetHandle calls. This service only partitions the recorder's own
-// name->key (or name->data) maps so two same-process, non-sharing contexts' identically-named
-// objects don't collide - it plays no role in matching a recorded name to its replayed one.
+// ContextHandleMapService's GITSKey. Scoped to the HGLRC values of the process it runs in -
+// nothing here needs to match numerically between the recorder's and the player's contexts: the
+// GL objects' actual cross-process identity already flows through GITSKey via
+// ObjectNameMapService/MapTrackingService's existing Register/GetKey/SetHandle/GetHandle calls.
+// This service only partitions each process's own maps so two same-process, non-sharing
+// contexts' identically-named objects or handles don't collide - it plays no role in matching a
+// recorded name to its replayed one.
 //
 // Scope decision (see modern-opengl-backend-architecture.md's own copy of this note): supports
 // the common initial-sharing case (wglCreateContextAttribsARB's hShareContext at context-

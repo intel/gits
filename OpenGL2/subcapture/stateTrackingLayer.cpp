@@ -9,9 +9,15 @@
 #include "stateTrackingLayer.h"
 
 #include "commandSerializersAuto.h"
+#include "handleArgumentUpdaters.h"
 #include "liveGl.h"
 #include "pbufferPixelFormatMetaTypes.h"
 #include "stateRestorer.h"
+#include "uniformLocationMapService.h"
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -84,6 +90,7 @@ void ReplaceExecutable(ProgramState& tracked, GITSKey key) {
     tracked.Creation = nullptr;
   }
   tracked.Binary = nullptr;
+  tracked.HandleUniforms.clear();
   tracked.LinkedShaders.clear();
   tracked.LinkedSetupCount = tracked.LinkSetup.size();
 }
@@ -449,15 +456,257 @@ void StateTrackingLayer::Pre(glDeleteRenderbuffersOESCommand& command) {
 // ---- Samplers -----------------------------------------------------------
 
 void StateTrackingLayer::Post(glGenSamplersCommand& command) {
+  Rename(GLObjectKind::Sampler, command.m_ThreadId, command.m_samplers, GL_FN(glGenSamplers));
   CreateObjects(m_State, GLObjectKind::Sampler, command.m_ThreadId, command.m_samplers);
 }
 
 void StateTrackingLayer::Post(glCreateSamplersCommand& command) {
+  Rename(GLObjectKind::Sampler, command.m_ThreadId, command.m_samplers, GL_FN(glCreateSamplers));
   CreateObjects(m_State, GLObjectKind::Sampler, command.m_ThreadId, command.m_samplers);
 }
 
-void StateTrackingLayer::Post(glDeleteSamplersCommand& command) {
-  DeleteObjects(m_State, GLObjectKind::Sampler, command.m_samplers);
+void StateTrackingLayer::Pre(glDeleteSamplersCommand& command) {
+  DeleteReadBack(GLObjectKind::Sampler, command.m_ThreadId, command.m_samplers);
+}
+
+// ---- Bindless handles ---------------------------------------------------
+
+namespace {
+
+// The runner overwrites m_Return with the replay handle, so the recorded one is read in Pre.
+template <typename SerializerT, typename CommandT>
+void CreateHandle(StateTrackingService& state, const CommandT& command, GITSKey sampler = 0) {
+  state.CreateHandle(command.m_Return.Value,
+                     {command.m_texture.Key, sampler, Store<SerializerT>(command)});
+}
+
+template <typename SerializerT, typename CommandT>
+void MakeResident(StateTrackingService& state, const CommandT& command) {
+  state.MakeResident(command.m_ThreadId, command.m_handle.Value, Store<SerializerT>(command));
+}
+
+} // namespace
+
+void StateTrackingLayer::Pre(glGetTextureHandleARBCommand& command) {
+  CreateHandle<glGetTextureHandleARBCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Pre(glGetTextureHandleNVCommand& command) {
+  CreateHandle<glGetTextureHandleNVCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Pre(glGetTextureSamplerHandleARBCommand& command) {
+  CreateHandle<glGetTextureSamplerHandleARBCommandSerializer>(m_State, command,
+                                                              command.m_sampler.Key);
+}
+
+void StateTrackingLayer::Pre(glGetTextureHandleIMGCommand& command) {
+  CreateHandle<glGetTextureHandleIMGCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Pre(glGetTextureSamplerHandleNVCommand& command) {
+  CreateHandle<glGetTextureSamplerHandleNVCommandSerializer>(m_State, command,
+                                                             command.m_sampler.Key);
+}
+
+void StateTrackingLayer::Pre(glGetTextureSamplerHandleIMGCommand& command) {
+  CreateHandle<glGetTextureSamplerHandleIMGCommandSerializer>(m_State, command,
+                                                              command.m_sampler.Key);
+}
+
+void StateTrackingLayer::Pre(glGetImageHandleARBCommand& command) {
+  CreateHandle<glGetImageHandleARBCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Pre(glGetImageHandleNVCommand& command) {
+  CreateHandle<glGetImageHandleNVCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Post(glMakeTextureHandleResidentARBCommand& command) {
+  MakeResident<glMakeTextureHandleResidentARBCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Post(glMakeTextureHandleResidentNVCommand& command) {
+  MakeResident<glMakeTextureHandleResidentNVCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Post(glMakeTextureHandleNonResidentARBCommand& command) {
+  m_State.MakeNonResident(command.m_ThreadId, command.m_handle.Value);
+}
+
+void StateTrackingLayer::Post(glMakeTextureHandleNonResidentNVCommand& command) {
+  m_State.MakeNonResident(command.m_ThreadId, command.m_handle.Value);
+}
+
+void StateTrackingLayer::Post(glMakeImageHandleResidentARBCommand& command) {
+  MakeResident<glMakeImageHandleResidentARBCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Post(glMakeImageHandleResidentNVCommand& command) {
+  MakeResident<glMakeImageHandleResidentNVCommandSerializer>(m_State, command);
+}
+
+void StateTrackingLayer::Post(glMakeImageHandleNonResidentARBCommand& command) {
+  m_State.MakeNonResident(command.m_ThreadId, command.m_handle.Value);
+}
+
+void StateTrackingLayer::Post(glMakeImageHandleNonResidentNVCommand& command) {
+  m_State.MakeNonResident(command.m_ThreadId, command.m_handle.Value);
+}
+
+namespace {
+
+// glUniform* calls set uniforms of the program in use, or without one, of the active program of
+// the bound program pipeline.
+GITSKey ProgramInUse() {
+  return UniformLocationMapService::Get().GetUniformProgram(CurrentContext());
+}
+
+// The locations a call with `count` values sets from the live `location` on. GL ignores values
+// past the end of the array `location` is an element of, so the following uniforms keep theirs.
+std::vector<GLint> SetLocations(GITSKey program, GLint location, GLsizei count) {
+  std::vector<GLint> set{location};
+  const GLuint name = ObjectNameMapService::Get().TryGetHandle(GLObjectKind::Program, program);
+  GLint linked = GL_FALSE;
+  if (name != 0) {
+    GL_FN(glGetProgramiv)(name, GL_LINK_STATUS, &linked);
+  }
+  if (linked == GL_FALSE) {
+    return set;
+  }
+  GLint uniforms = 0;
+  GLint maxLength = 0;
+  GL_FN(glGetProgramiv)(name, GL_ACTIVE_UNIFORMS, &uniforms);
+  GL_FN(glGetProgramiv)(name, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxLength);
+  std::vector<GLchar> buffer(static_cast<size_t>(maxLength > 0 ? maxLength : 1));
+  for (GLint i = 0; i < uniforms; ++i) {
+    GLsizei length = 0;
+    GLint size = 0;
+    GLenum type = 0;
+    GL_FN(glGetActiveUniform)
+    (name, static_cast<GLuint>(i), static_cast<GLsizei>(buffer.size()), &length, &size, &type,
+     buffer.data());
+    const std::string uniform(buffer.data(), static_cast<size_t>(length));
+    if (size < 2 || !uniform.ends_with("[0]")) {
+      continue;
+    }
+    const std::string base = uniform.substr(0, uniform.size() - 3);
+    std::vector<GLint> elements;
+    for (GLint element = 0; element < size; ++element) {
+      const std::string elementName = base + "[" + std::to_string(element) + "]";
+      elements.push_back(GL_FN(glGetUniformLocation)(name, elementName.c_str()));
+    }
+    const auto start = std::find(elements.begin(), elements.end(), location);
+    if (start != elements.end()) {
+      const auto end = elements.end() - start > count ? start + count : elements.end();
+      return std::vector<GLint>(start, end);
+    }
+  }
+  return set;
+}
+
+// Forgets the handle setters of the uniforms a call with `count` values sets from the captured
+// `location` on. Several captured locations can resolve to the same uniform, so setters are
+// matched by the resolved location.
+void EraseHandleUniforms(ProgramState& tracked, GITSKey program, GLint location, GLsizei count) {
+  auto& locations = UniformLocationMapService::Get();
+  const GLint first = locations.ResolveForProgram(program, location);
+  const auto resolve = [&](const auto& setter) {
+    return locations.ResolveForProgram(program, setter.first);
+  };
+  // Only a setter past the first location needs the program's arrays.
+  const bool past = std::any_of(tracked.HandleUniforms.begin(), tracked.HandleUniforms.end(),
+                                [&](const auto& setter) {
+                                  const GLint resolved = resolve(setter);
+                                  return resolved > first && resolved - first < count;
+                                });
+  const std::vector<GLint> set =
+      past ? SetLocations(program, first, count) : std::vector<GLint>{first};
+  std::erase_if(tracked.HandleUniforms, [&](const auto& setter) {
+    return std::find(set.begin(), set.end(), resolve(setter)) != set.end();
+  });
+}
+
+// GL ignores location -1, so it changes no uniform.
+template <typename SerializerT, typename CommandT>
+void SetHandleUniform(StateTrackingService& state, GITSKey program, const CommandT& command) {
+  ProgramState* tracked = state.Program(program);
+  if (tracked == nullptr || command.m_location.Value < 0) {
+    return;
+  }
+  EraseHandleUniforms(*tracked, program, command.m_location.Value, 1);
+  tracked->HandleUniforms[command.m_location.Value] = Store<SerializerT>(command);
+}
+
+// A sampler or image uniform set to a texture unit no longer holds a handle. A call with no
+// values or a negative count changes no uniform.
+void SetUnitUniforms(StateTrackingService& state, GITSKey program, GLint location, GLsizei count) {
+  ProgramState* tracked = state.Program(program);
+  if (tracked == nullptr || tracked->HandleUniforms.empty() || location < 0 || count <= 0) {
+    return;
+  }
+  EraseHandleUniforms(*tracked, program, location, count);
+}
+
+} // namespace
+
+void StateTrackingLayer::Post(glUniformHandleui64ARBCommand& command) {
+  SetHandleUniform<glUniformHandleui64ARBCommandSerializer>(m_State, ProgramInUse(), command);
+}
+
+void StateTrackingLayer::Post(glUniformHandleui64NVCommand& command) {
+  SetHandleUniform<glUniformHandleui64NVCommandSerializer>(m_State, ProgramInUse(), command);
+}
+
+void StateTrackingLayer::Post(glUniformHandleui64IMGCommand& command) {
+  SetHandleUniform<glUniformHandleui64IMGCommandSerializer>(m_State, ProgramInUse(), command);
+}
+
+void StateTrackingLayer::Post(glProgramUniformHandleui64ARBCommand& command) {
+  SetHandleUniform<glProgramUniformHandleui64ARBCommandSerializer>(m_State, command.m_program.Key,
+                                                                   command);
+}
+
+void StateTrackingLayer::Post(glProgramUniformHandleui64NVCommand& command) {
+  SetHandleUniform<glProgramUniformHandleui64NVCommandSerializer>(m_State, command.m_program.Key,
+                                                                  command);
+}
+
+void StateTrackingLayer::Post(glProgramUniformHandleui64IMGCommand& command) {
+  SetHandleUniform<glProgramUniformHandleui64IMGCommandSerializer>(m_State, command.m_program.Key,
+                                                                   command);
+}
+
+void StateTrackingLayer::Post(glUniform1iCommand& command) {
+  SetUnitUniforms(m_State, ProgramInUse(), command.m_location.Value, 1);
+}
+
+void StateTrackingLayer::Post(glUniform1iARBCommand& command) {
+  SetUnitUniforms(m_State, ProgramInUse(), command.m_location.Value, 1);
+}
+
+void StateTrackingLayer::Post(glUniform1ivCommand& command) {
+  SetUnitUniforms(m_State, ProgramInUse(), command.m_location.Value, command.m_count.Value);
+}
+
+void StateTrackingLayer::Post(glUniform1ivARBCommand& command) {
+  SetUnitUniforms(m_State, ProgramInUse(), command.m_location.Value, command.m_count.Value);
+}
+
+void StateTrackingLayer::Post(glProgramUniform1iCommand& command) {
+  SetUnitUniforms(m_State, command.m_program.Key, command.m_location.Value, 1);
+}
+
+void StateTrackingLayer::Post(glProgramUniform1iEXTCommand& command) {
+  SetUnitUniforms(m_State, command.m_program.Key, command.m_location.Value, 1);
+}
+
+void StateTrackingLayer::Post(glProgramUniform1ivCommand& command) {
+  SetUnitUniforms(m_State, command.m_program.Key, command.m_location.Value, command.m_count.Value);
+}
+
+void StateTrackingLayer::Post(glProgramUniform1ivEXTCommand& command) {
+  SetUnitUniforms(m_State, command.m_program.Key, command.m_location.Value, command.m_count.Value);
 }
 
 // ---- Shaders and programs -----------------------------------------------
