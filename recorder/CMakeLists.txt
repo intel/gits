@@ -17,6 +17,10 @@ if(MSVC)
     "EXPORTS\n"
     "  Configure\n"
     "  GITSRecorderOpenGL\n")
+  if(WITH_OPENGL2)
+    file(APPEND ${recorder_DEF}
+      "  GITSRecorderOpenGL2\n")
+  endif()
   if(WITH_OPENCL)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderOpenCL\n")
@@ -68,6 +72,9 @@ if(UNIX)
 endif()
 
 set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL_recorder)
+if(WITH_OPENGL2)
+  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL2_recorder)
+endif()
 set(recorderCommonLibs ${recorderCommonLibs} OpenGL_common)
 set(frameworks ${frameworks} "-framework OpenGL")
 

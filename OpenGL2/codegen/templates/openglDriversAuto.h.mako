@@ -9,8 +9,8 @@ ${AUTO_GENERATED_HEADER}
 
 // Flat dispatch table holding one real opengl32.dll function pointer per
 // intercepted command (see codegen/generator_interceptor.py). Single global
-// instance `drv` - no per-instance/per-device tiers, unlike Vulkan's
-// dispatch tables, since GL has no such concept.
+// instance `g_DispatchTable` - no per-instance/per-device tiers, unlike
+// Vulkan's dispatch tables, since GL has no such concept.
 //
 // Each member starts out pointing at its own generated resolve-thunk (see
 // openglDriversAuto.cpp). The first time a member is called, its thunk
@@ -30,6 +30,8 @@ ${AUTO_GENERATED_HEADER}
 
 #include "glTypes.h"
 
+#include <atomic>
+
 namespace gits::opengl2 {
 
 % for cmd in commands:
@@ -40,17 +42,18 @@ namespace gits::opengl2 {
 ${ret} APIENTRY ResolveAndCall_${cmd.name}(${param_decls});
 % endfor
 
-struct OpenglDrivers {
+struct OpenGLDispatchTable {
 % for cmd in commands:
 <%
     ret = cmd.return_value.type.strip()
     param_types = ', '.join(p.type for p in cmd.params)
 %>\
-  ${ret} (APIENTRY *${cmd.name})(${param_types}) = &ResolveAndCall_${cmd.name};
+  using ${cmd.name}Ptr = ${ret} (APIENTRY*)(${param_types});
+  std::atomic<${cmd.name}Ptr> ${cmd.name}{&ResolveAndCall_${cmd.name}};
 % endfor
 };
 
-extern OpenglDrivers drv;
+extern OpenGLDispatchTable g_DispatchTable;
 
 // Stores an already-known-good real function pointer directly into the
 // dispatch-table member for `name`, if we have one - a no-op otherwise.
@@ -61,6 +64,6 @@ extern OpenglDrivers drv;
 // trampoline we handed out would instead trigger that member's own
 // resolve-thunk from scratch, which can fail if conditions have changed
 // since (e.g. the bootstrap context was already destroyed).
-void SetResolved(const char* name, void* value);
+bool TryCacheRealFunction(const char* name, void* value);
 
 } // namespace gits::opengl2

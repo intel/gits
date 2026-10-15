@@ -18,6 +18,7 @@ set(SCRIPTS_SRC
   generator_helpers.py
   generator.py
   generator_interceptor.py
+  generator_recorder.py
   xml_data_exploration.py
   registry.py
 )
@@ -41,13 +42,17 @@ set(OPENGL2_SCRIPTS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(OPENGL2_INTERCEPTOR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../interceptor)
 set(OPENGL2_GENERATED_INTERCEPTOR_FILES
   ${OPENGL2_INTERCEPTOR_DIR}/interceptorAuto.cpp
-  ${OPENGL2_INTERCEPTOR_DIR}/openglDriversAuto.h
-  ${OPENGL2_INTERCEPTOR_DIR}/openglDriversAuto.cpp
   ${OPENGL2_INTERCEPTOR_DIR}/interceptorAuto.def
+)
+set(OPENGL2_RECORDER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../recorder)
+set(OPENGL2_GENERATED_RECORDER_FILES
+  ${OPENGL2_RECORDER_DIR}/include/openglDriversAuto.h
+  ${OPENGL2_RECORDER_DIR}/openglDriversAuto.cpp
+  ${OPENGL2_RECORDER_DIR}/recorderWrappersAuto.cpp
 )
 
 add_custom_command(
-  OUTPUT ${STAMP_FILE} ${OPENGL2_GENERATED_INTERCEPTOR_FILES}
+  OUTPUT ${STAMP_FILE} ${OPENGL2_GENERATED_INTERCEPTOR_FILES} ${OPENGL2_GENERATED_RECORDER_FILES}
   COMMAND ${CMAKE_COMMAND} -E echo "Running OpenGL2 code generation script..."
   COMMAND ${Python3_EXECUTABLE} ${OPENGL2_SCRIPTS_DIR}/generator.py
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}

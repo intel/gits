@@ -14,18 +14,31 @@
 // through it. Excluded from the generated interceptorAuto.cpp - see
 // codegen/generator_interceptor.py.
 
+#include "glTypes.h"
+#include "interceptorExports.h"
 #include "logging.h"
 #include "log.h"
-#include "openglDriversAuto.h"
-#include "realDriver.h"
+#include "recorderLoader.h"
 
+#include <mutex>
 #include <string>
 #include <unordered_set>
 
-extern "C" PROC APIENTRY wglGetProcAddress(LPCSTR name) {
-  gits::opengl2::LogFunctionName("wglGetProcAddress");
+namespace gits::opengl2 {
 
-  PROC realProc = gits::opengl2::drv.wglGetProcAddress(name);
+PROC WglGetProcAddress(LPCSTR name) {
+  IRecorder& recorder = GetRecorder();
+  if (name == nullptr) {
+    return nullptr;
+  }
+
+  using WglGetProcAddressPtr = PROC(APIENTRY*)(LPCSTR);
+  auto realWglGetProcAddress =
+      reinterpret_cast<WglGetProcAddressPtr>(recorder.ResolveRealFunction("wglGetProcAddress"));
+  if (realWglGetProcAddress == nullptr) {
+    FatalRecorderError("real wglGetProcAddress resolution", "Function is unavailable");
+  }
+  PROC realProc = realWglGetProcAddress(name);
   if (realProc == nullptr) {
     // The real driver doesn't have this function either - report that
     // faithfully rather than pretending otherwise.
@@ -40,7 +53,7 @@ extern "C" PROC APIENTRY wglGetProcAddress(LPCSTR name) {
   // resolve this name again from scratch the first time the app actually
   // calls it - by which point the bootstrap context may already be gone,
   // causing a resolution failure for a function that's genuinely available.
-  gits::opengl2::SetResolved(name, reinterpret_cast<void*>(realProc));
+  bool knownFunction = recorder.SetResolvedFunction(name, reinterpret_cast<void*>(realProc));
 
   // If we generated our own trampoline for this name, hand that out instead
   // of the raw real pointer, so calls made through it are still logged and
@@ -49,14 +62,26 @@ extern "C" PROC APIENTRY wglGetProcAddress(LPCSTR name) {
   // registries we parsed), fall back to the raw real pointer - we can't
   // wrap what we have no generated trampoline for, but the app must still
   // be able to call it.
-  PROC ownProc = reinterpret_cast<PROC>(gits::opengl2::GetOwnProcAddress(name));
-  if (ownProc == nullptr) {
+  if (!knownFunction) {
+    static std::mutex warningMutex;
     static std::unordered_set<std::string> alreadyWarnedNames;
+    const std::lock_guard lock(warningMutex);
     if (alreadyWarnedNames.insert(name).second) {
-      gits::opengl2::EnsureLoggingInitialized();
+      EnsureLoggingInitialized();
       LOG_WARNING << "Unknown OpenGL function: " << name << ", passing unmodified driver function.";
     }
     return realProc;
   }
+  PROC ownProc = reinterpret_cast<PROC>(GetInterceptorProcAddress(name));
+  if (ownProc == nullptr) {
+    FatalRecorderError("interceptor trampoline lookup", name);
+  }
   return ownProc;
+}
+
+} // namespace gits::opengl2
+
+extern "C" PROC APIENTRY wglGetProcAddress(LPCSTR name) {
+  return gits::opengl2::InvokeRecorderOrDie("wglGetProcAddress",
+                                            [&] { return gits::opengl2::WglGetProcAddress(name); });
 }

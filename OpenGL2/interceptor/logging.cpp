@@ -37,11 +37,4 @@ void EnsureLoggingInitialized() {
   });
 }
 
-void LogFunctionName(const char* name) {
-  // TODO: Remove name-only call logging when layers or the recorder consume
-  // intercepted calls.
-  EnsureLoggingInitialized();
-  LOG_INFO << name;
-}
-
 } // namespace gits::opengl2

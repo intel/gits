@@ -8,16 +8,14 @@
 ${AUTO_GENERATED_HEADER}
 
 // Trampolines for every intercepted command (see codegen/generator_interceptor.py).
-// Each one logs its function name and forwards through the generated dispatch
-// table (see openglDriversAuto.h). Resolving the real driver function is
-// entirely the dispatch table's own concern: each `drv.<name>` slot always
-// holds a valid, callable function pointer (either its own self-resolving
-// thunk or the resolved real function), so trampolines just call through it
-// directly. Exported via the generated interceptorAuto.def, not per-function
-// dllexport.
+// Each one initializes and caches an exactly typed recorder wrapper, invokes
+// it, and contains exceptions at the exported C boundary. Exported through
+// the generated interceptorAuto.def rather than per-function dllexport
+// annotations.
 
+#include "glTypes.h"
 #include "logging.h"
-#include "openglDriversAuto.h"
+#include "recorderLoader.h"
 
 % for cmd in commands:
 <%
@@ -27,12 +25,11 @@ ${AUTO_GENERATED_HEADER}
     param_names = ', '.join(p.name for p in cmd.params)
 %>\
 extern "C" ${ret} APIENTRY ${cmd.name}(${param_decls}) {
-  gits::opengl2::LogFunctionName("${cmd.name}");
-% if is_void:
-  gits::opengl2::drv.${cmd.name}(${param_names});
-% else:
-  return gits::opengl2::drv.${cmd.name}(${param_names});
-% endif
+  using Wrapper = ${ret} (APIENTRY*)(${', '.join(p.type for p in cmd.params)});
+  static Wrapper wrapper = reinterpret_cast<Wrapper>(
+      gits::opengl2::GetRecorderWrapper("${cmd.name}"));
+  return gits::opengl2::InvokeRecorderOrDie(
+      "${cmd.name}", [&] { return wrapper(${param_names}); });
 }
 
 % endfor

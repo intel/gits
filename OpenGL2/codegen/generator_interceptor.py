@@ -82,7 +82,7 @@ def _get_synthetic_wgl_commands(wgl_commands: list[Command]) -> list[Command]:
     internal-only synthetic command (not needed yet), which would need a
     trampoline/logging entry but no dispatch-table member and no .def export.
     """
-    synthetic = []
+    synthetic: list[Command] = []
 
     # Renamed commands.
     by_name = {c.name: c for c in wgl_commands}
@@ -100,31 +100,34 @@ def _get_synthetic_wgl_commands(wgl_commands: list[Command]) -> list[Command]:
     return synthetic
 
 
-def generate_interceptor_files(commands: dict[Api, list[Command]]) -> None:
-    """Generate all of the interceptor's generated sources from a single,
-    shared command list (see module docstring).
+def build_interceptor_command_list(commands: dict[Api, list[Command]]) -> list[Command]:
+    """Build the command list handled by the Windows interceptor.
+
+    The list contains known commands, both enabled and disabled, but currently
+    GL/WGL only. This includes synthetic entries for exports absent under their
+    real names in the WGL registry.
     """
     wgl_commands = [c for c in commands[Api.WGL] if c.name not in _WGL_NOT_REAL_EXPORTS]
     # Pass unfiltered WGL commands, since this function needs the signatures of some
     # GDI commands that _WGL_NOT_REAL_EXPORTS filters out (e.g. wglChoosePixelFormat
     # is cloned from ChoosePixelFormat, which is getting filtered).
     wgl_commands += _get_synthetic_wgl_commands(commands[Api.WGL])
-    all_commands = commands[Api.GL] + wgl_commands
+    return commands[Api.GL] + wgl_commands
+
+
+def generate_interceptor_files(commands: list[Command]) -> None:
+    """Generate interceptor DLL exports and trampolines."""
 
     # wglGetProcAddress gets a hand-written override instead of a generated
-    # trampoline (see interceptor/interceptorCustom.cpp) - it needs to hand
-    # out our own trampolines instead of raw real driver pointers, wherever
-    # we have one, which the uniform generated trampoline shape can't do.
-    # It's still part of the dispatch table and .def export list below
-    # (unchanged - our override still needs drv.wglGetProcAddress, and the
-    # symbol is still exported, just backed by the override instead).
-    trampoline_commands = [c for c in all_commands if c.name != 'wglGetProcAddress']
+    # trampoline (see interceptorCustom.cpp) - it needs to hand out our own
+    # trampolines instead of raw real driver pointers, wherever we have one,
+    # which the uniform generated trampoline shape can't do. It's still part of
+    # the dispatch table and .def export list below (recorder dispatch still
+    # needs wglGetProcAddress, and the symbol is still exported, just backed by
+    # the override instead).
+    trampoline_commands = [c for c in commands if c.name != 'wglGetProcAddress']
 
     mako_write('templates/interceptorAuto.cpp.mako', 'interceptor/interceptorAuto.cpp',
                commands=trampoline_commands)
-    mako_write('templates/openglDriversAuto.h.mako', 'interceptor/openglDriversAuto.h',
-               commands=all_commands)
-    mako_write('templates/openglDriversAuto.cpp.mako', 'interceptor/openglDriversAuto.cpp',
-               commands=all_commands)
     mako_write('templates/interceptorAuto.def.mako', 'interceptor/interceptorAuto.def',
-               commands=all_commands)
+               commands=commands)

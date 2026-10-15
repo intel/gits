@@ -14,6 +14,5 @@
 namespace gits::opengl2 {
 
 void EnsureLoggingInitialized();
-void LogFunctionName(const char* name);
 
 } // namespace gits::opengl2

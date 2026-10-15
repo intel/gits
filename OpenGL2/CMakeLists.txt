@@ -7,4 +7,5 @@
 # ===================== end_copyright_notice ==============================
 
 add_subdirectory(codegen)
+add_subdirectory(recorder)
 add_subdirectory(interceptor)

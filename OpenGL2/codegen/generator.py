@@ -17,7 +17,8 @@ from itertools import chain
 from pathlib import Path
 
 from command_ids import build_command_ids
-from generator_interceptor import generate_interceptor_files
+from generator_interceptor import build_interceptor_command_list, generate_interceptor_files
+from generator_recorder import generate_recorder_files
 from intermediates import Api, Command, EnumValue
 from intermediates_creator import (
     FILE_TO_API,
@@ -66,7 +67,9 @@ def main() -> None:
             inspect_function_params(api, api_commands)
         check_function_groups_against_enums(commands, enums)
 
-    generate_interceptor_files(commands)
+    interceptor_commands = build_interceptor_command_list(commands)
+    generate_interceptor_files(interceptor_commands)
+    generate_recorder_files(interceptor_commands)
 
 
 if __name__ == '__main__':

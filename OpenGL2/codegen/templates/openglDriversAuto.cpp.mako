@@ -8,11 +8,11 @@
 ${AUTO_GENERATED_HEADER}
 
 #include "openglDriversAuto.h"
-#include "logging.h"
 #include "log.h"
 #include "realDriver.h"
 
 #include <cstring>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -20,7 +20,7 @@ ${AUTO_GENERATED_HEADER}
 namespace gits::opengl2 {
 
 // Definition of the dispatch table declared in openglDriversAuto.h.
-OpenglDrivers drv;
+OpenGLDispatchTable g_DispatchTable;
 
 namespace {
 
@@ -36,7 +36,8 @@ namespace {
 void* ResolveDriverFunction(const char* name) {
   void* real = GetRealProcAddress(name);
   if (real == nullptr && strcmp(name, "wglGetProcAddress") != 0) {
-    real = reinterpret_cast<void*>(drv.wglGetProcAddress(name));
+    real = reinterpret_cast<void*>(
+      g_DispatchTable.wglGetProcAddress.load(std::memory_order_acquire)(name));
   }
   if (real == nullptr) {
     // Failed to load it, will retry the next time app calls it.
@@ -46,9 +47,10 @@ void* ResolveDriverFunction(const char* name) {
     // failure with a more specific message (see the old OpenGL backend's
     // get_proc_address(), which checks drv_.gl.Api() == CGlDriver::API_NULL
     // for this same case).
+    static std::mutex warningMutex;
     static std::unordered_set<std::string> alreadyWarnedNames;
+    const std::lock_guard lock(warningMutex);
     if (alreadyWarnedNames.insert(name).second) {
-      EnsureLoggingInitialized();
       LOG_WARNING << "Failed to resolve function: " << name;
     }
   }
@@ -73,27 +75,34 @@ ${ret} APIENTRY ResolveAndCall_${cmd.name}(${param_decls}) {
     return {};
 % endif
   }
-  drv.${cmd.name} = reinterpret_cast<decltype(drv.${cmd.name})>(real);
+  auto realFunction = reinterpret_cast<OpenGLDispatchTable::${cmd.name}Ptr>(real);
+  g_DispatchTable.${cmd.name}.store(realFunction, std::memory_order_release);
 % if is_void:
-  drv.${cmd.name}(${param_names});
+  realFunction(${param_names});
 % else:
-  return drv.${cmd.name}(${param_names});
+  return realFunction(${param_names});
 % endif
 }
 
 % endfor
-void SetResolved(const char* name, void* value) {
+bool TryCacheRealFunction(const char* name, void* value) {
   // This function is rarely run, so doesn't really matter for performance.
 
-  static const std::unordered_map<std::string, void**> nameToMember = {
+  static const std::unordered_map<std::string, void (*)(void*)> nameToSetter = {
 % for cmd in commands:
-    {"${cmd.name}", reinterpret_cast<void**>(&drv.${cmd.name})},
+    {"${cmd.name}", [](void* pointer) {
+         g_DispatchTable.${cmd.name}.store(
+           reinterpret_cast<OpenGLDispatchTable::${cmd.name}Ptr>(pointer),
+           std::memory_order_release);
+     }},
 % endfor
   };
-  auto it = nameToMember.find(name);
-  if (it != nameToMember.end()) {
-    *it->second = value;
+  auto it = nameToSetter.find(name);
+  if (it == nameToSetter.end()) {
+    return false;
   }
+  it->second(value);
+  return true;
 }
 
 } // namespace gits::opengl2
