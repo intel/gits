@@ -242,6 +242,15 @@ public:
     case WM_CLOSE:
       self->PushPendingEvent(WindowEvent::Close);
       break;
+    case WM_ERASEBKGND:
+      // Claim the background erase as already handled (a no-op) instead of letting
+      // DefWindowProcA paint over the client area with hbrBackground on every WM_PAINT.
+      // Vulkan/DirectX swap chains present outside of GDI, so this never mattered for them,
+      // but a GL window's wglSwapBuffers blits into this same GDI-visible surface - without
+      // this, any WM_PAINT delivered between two Present/SwapBuffers calls (Poll() dispatches
+      // messages once per frame boundary - see player/streamPlayer.cpp) paints the window
+      // solid white, erasing whatever was actually just rendered.
+      return 1;
     default:
       return DefWindowProcA(hwnd, msg, wParam, lParam);
     }
