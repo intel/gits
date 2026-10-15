@@ -34,6 +34,7 @@ ${AUTO_GENERATED_HEADER}
 
 #pragma once
 
+#include "arguments.h"
 #include "glTypes.h"
 
 #include <atomic>
@@ -75,13 +76,29 @@ bool TryCacheRealFunction(const char* name, void* value);
 // Proactively resolves and caches every command's real function pointer that isn't cached yet
 // (best-effort - failures are silently skipped, leaving that entry's lazy resolve-thunk in
 // place for a later retry). Meant to be called right after a real wglMakeCurrent call makes
-// some context current, since that is the only reliable window in which wglGetProcAddress can
+// `context` current, since that is the only reliable window in which wglGetProcAddress can
 // resolve extension functions (see openglDriversAuto.cpp's ResolveDriverFunction) - resolving
 // lazily on first *use* instead is too late once that context has since been released (e.g. the
 // common "create dummy context -> fetch ARB functions -> destroy it -> create the real
 // context" bootstrap pattern also documented on the recorder's WglGetProcAddress override in
 // interceptorCustom.cpp, which solves the identical problem the other way - by hooking the
 // app's own wglGetProcAddress calls, which the player has no equivalent of).
-void WarmUpResolvableFunctions();
+//
+// Skips its whole resolution pass entirely for a context this function has already warmed up
+// before (see openglDriversAuto.cpp's own already-warmed-contexts cache) - an application that
+// reattaches the same context every frame (a common render-loop shape) would otherwise repeat a
+// wglGetProcAddress/GetProcAddress probe for every still-unresolved (almost always never-
+// supported-by-this-driver) enabled extension once per frame, forever, since a failed probe
+// leaves that dispatch entry at its lazy-resolve thunk for the next retry - see this function's
+// own definition for the full rationale.
+//
+// Takes the context's stream-stable GITSKey (WglMakeCurrentRunner::Run()'s own
+// command.m_newContext.Key), not its live, replay-time HGLRC: a GITSKey is minted once per
+// logical context and never reused, whereas Windows CAN and does reuse a destroyed context's
+// numeric HGLRC value for a later, entirely unrelated wglCreateContext[AttribsARB] call - keying
+// the already-warmed cache on the raw handle would then incorrectly treat that new, genuinely
+// different context as already warmed and skip it, defeating the very bootstrap case this
+// function exists for (see this function's own definition for the full rationale).
+void WarmUpResolvableFunctions(GITSKey contextKey);
 
 } // namespace ${namespace}

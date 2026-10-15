@@ -144,7 +144,41 @@ bool TryCacheRealFunction(const char* name, void* value) {
   return true;
 }
 
-void WarmUpResolvableFunctions() {
+void WarmUpResolvableFunctions(GITSKey contextKey) {
+  // Skip the entire pass below for a context this function has already warmed up - see this
+  // function's own declaration comment in openglDriversAuto.h. Keyed by the context's stable
+  // GITSKey, not its live HGLRC, and permanently (never invalidated on wglDeleteContext): the
+  // resolvability of an extension function pointer depends on the real driver/GPU/pixel format,
+  // not on which still-live context happens to be current when wglGetProcAddress is called, so
+  // re-warming the SAME context later would always rediscover exactly the same set - there is
+  // nothing to invalidate in the first place for a still-live context.
+  //
+  // GITSKey rather than HGLRC specifically because a GITSKey is minted exactly once per logical
+  // context (ContextHandleMapService::Register(), called only from wglCreateContext(ARB)'s own
+  // UpdateOutputHandle) and never reused, while Windows CAN and does reuse a destroyed context's
+  // numeric HGLRC value for a later, entirely unrelated wglCreateContext[ARB] call. Keying on
+  // the raw handle would then incorrectly treat that new, genuinely different context as
+  // already warmed and skip it outright - not a harmless miss, since the whole reason this
+  // function exists is to resolve functions while some OTHER context is current for later use
+  // (the "dummy context -> fetch ARB functions -> destroy it -> create the real context"
+  // bootstrap pattern - see this function's own declaration comment): a skipped warm-up for the
+  // real, reused-handle context could leave it unable to resolve a function it needs at the
+  // exact point actual use requires it, i.e. the original bug this mechanism was built to
+  // prevent, recurring for that context specifically. A stable per-context identity closes this
+  // permanently rather than narrowing the odds of it, so there is no matching wglDeleteContext-
+  // side cache eviction to add either - GITSKey values are never recycled, so there is nothing
+  // for a destroyed context's entry to collide with even if it is never removed (mirrors
+  // ContextHandleMapService::Erase's own established "player-side cleanup on destroy is not
+  // load-bearing within a single replay" precedent - see that method's comment).
+  static std::mutex warmedContextsMutex;
+  static std::unordered_set<GITSKey> warmedContexts;
+  {
+    const std::lock_guard lock(warmedContextsMutex);
+    if (!warmedContexts.insert(contextKey).second) {
+      return; // Already warmed - see this function's own comment above.
+    }
+  }
+
   // Best-effort, silent per-function (logFailure=false - see ResolveDriverFunction's own
   // comment on why): a name that fails here simply keeps its lazy resolve-thunk in place for a
   // later retry, exactly as if this function had never run - including still warning normally
@@ -159,20 +193,22 @@ void WarmUpResolvableFunctions() {
   // commandRunnersAuto.cpp.mako's own `% if cmd.enabled:` guard) - it always replays through
   // the generic UnsupportedCommandRunner instead, which never touches g_DispatchTable - so
   // probing one up front is pure waste, multiplied by however many times this whole function
-  // reruns per replay (every context-attaching wglMakeCurrent - see this function's own comment
-  // further below). See generator_player.py's own comment for exactly which commands this
-  // excludes (every disabled, mostly-vendor-extension command) and keeps (every enabled one,
-  // plus a small, explicit set of disabled commands the player's own hand-written code still
-  // resolves through this same dispatch table directly).
+  // would otherwise rerun per replay (every context-attaching wglMakeCurrent for a genuinely
+  // new/different context - the already-warmed check above is what keeps a repeatedly
+  // reattached SAME context from paying this cost more than once at all). See
+  // generator_player.py's own comment for exactly which commands this excludes (every
+  // disabled, mostly-vendor-extension command) and keeps (every enabled one, plus a small,
+  // explicit set of disabled commands the player's own hand-written code still resolves
+  // through this same dispatch table directly).
   unsigned resolvedCount = 0;
   constexpr unsigned totalCount = ${len(warmup_commands)};
 % for cmd in warmup_commands:
   if (g_DispatchTable.${cmd.name}.load(std::memory_order_acquire) != &ResolveAndCall_${cmd.name}) {
     // Already resolved (and cached) by an earlier warm-up or by actual use - the dispatch-table
     // entry no longer points at its default resolve-thunk, so probing again would just repeat
-    // a GetProcAddress/wglGetProcAddress call for no benefit
-    // (apps that call wglMakeCurrent every frame would otherwise re-probe thousands of
-    // functions per frame). Still counts toward the summary line below, so the reported
+    // a GetProcAddress/wglGetProcAddress call for no benefit: apps that call wglMakeCurrent
+    // every frame would otherwise re-probe thousands of
+    // functions per frame. Still counts toward the summary line below, so the reported
     // fraction stays accurate.
     ++resolvedCount;
   } else if (void* resolved = ResolveDriverFunction("${cmd.name}", /*logFailure=*/false)) {
@@ -181,14 +217,16 @@ void WarmUpResolvableFunctions() {
   }
 % endfor
 
-  // Every successful context-attaching wglMakeCurrent call re-runs this whole function (see
-  // WglMakeCurrentRunner::Run()/the recorder's own WglMakeCurrent wrapper), since a later
-  // context (e.g. a real context created after a temporary bootstrap one) may resolve
-  // additional functions the earlier context could not - the resolution work itself must
-  // still run every time. Only the aggregate log line is deduplicated: identical back-to-back
-  // counts (the overwhelmingly common case - most apps' second/third wglMakeCurrent call
-  // resolves nothing new) would otherwise print the same line once per wglMakeCurrent call,
-  // burying the one INFO line that actually carries information (the resolved count changing).
+  // Every successful context-attaching wglMakeCurrent call for a genuinely new/different
+  // context re-runs the resolution pass above (see WglMakeCurrentRunner::Run(); the
+  // already-warmed check at this function's own top is what skips it for a repeatedly
+  // reattached SAME context instead) - a later context (e.g. a real context created after a
+  // temporary bootstrap one) may resolve additional functions the earlier context could not,
+  // so the work itself must still run once per distinct context. Only the aggregate log line
+  // is deduplicated on top of that: identical back-to-back counts (the common case once a
+  // real application settles onto its one long-lived context) would otherwise print the same
+  // line once per newly-warmed context, burying the one INFO line that actually carries
+  // information (the resolved count changing).
   static std::mutex logMutex;
   static unsigned lastLoggedCount = 0;
   static bool loggedOnce = false;

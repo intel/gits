@@ -108,7 +108,13 @@ void WglMakeCurrentRunner::Run() {
     // after (the "dummy context -> fetch ARB functions -> destroy it -> create the real
     // context" bootstrap pattern), so anything not resolved by then would otherwise fail
     // permanently once this command's own real call resolves it lazily on first use instead.
-    player::WarmUpResolvableFunctions();
+    // Passing the context's stable, stream-decoded GITSKey (command.m_newContext.Key, untouched
+    // by UpdateHandle above - that call only ever writes .Value) rather than its live,
+    // replay-time HGLRC lets WarmUpResolvableFunctions() key its already-warmed cache on an
+    // identity that is never reused for a different logical context - see that function's own
+    // comment for why keying on the raw handle instead would have let a Windows-recycled HGLRC
+    // value for a genuinely new context skip warm-up entirely.
+    player::WarmUpResolvableFunctions(command.m_newContext.Key);
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);

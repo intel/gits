@@ -61,9 +61,12 @@ private:
   wglCreateContextAttribsARBCommand command;
 };
 
-// wglMakeCurrent's Run() - also triggers player::WarmUpResolvableFunctions() the first time a
-// context becomes current on this thread, see
-// docs/development/opengl2-player-skeleton-plan.md's Decision 8.
+// wglMakeCurrent's Run() - also triggers player::WarmUpResolvableFunctions() on every successful
+// call that attaches a context (see docs/development/opengl2-player-skeleton-plan.md's
+// Decision 8), though that function itself now skips its actual resolution pass for a context
+// it has already warmed up before, keyed by the context's stable GITSKey rather than "the first
+// time on this thread" - see WarmUpResolvableFunctions's own declaration comment
+// (openglDriversAuto.h) for the full per-context caching rationale.
 class WglMakeCurrentRunner : public stream::CommandRunner {
 public:
   void Run() override;
