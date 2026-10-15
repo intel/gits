@@ -8,15 +8,8 @@
 
 #pragma once
 
-// Hand-written player-side counterpart to common/layer_interface/unsupportedCommandTypes.h's
-// UnsupportedCommand/UnsupportedCommandSerializer (recorder-only; write-only). Registered by
-// OpenGL2CommandFactory::CreateCommand for CommandId::ID_META_UNSUPPORTED_COMMAND - see
-// modern-opengl-backend-architecture.md, "Log a degraded-fidelity warning for unsupported
-// commands during replay".
-
 #include "commandRunner.h"
-
-#include <string>
+#include "unsupportedCommandTypes.h"
 
 namespace gits::opengl2 {
 
@@ -25,10 +18,12 @@ public:
   void Run() override;
 
 protected:
-  void DecodeCommand() override;
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
 
 private:
-  std::string m_Name;
+  UnsupportedCommand command;
 };
 
 } // namespace gits::opengl2

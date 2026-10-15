@@ -8,46 +8,65 @@
 
 #pragma once
 
+#include "argumentCoders.h"
 #include "command.h"
 #include "commandSerializer.h"
 
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <utility>
 
 namespace gits::opengl2 {
 
-// Recorded in place of a disabled command's real call, carrying only its canonical
-// name. See modern-opengl-backend-architecture.md, "Intercept every known runtime
-// command, support commands incrementally": one occurrence is emitted per disabled call,
-// independent of the recorder's separate once-per-name warning (see
-// recorder/unsupportedCommand.h). The player makes no driver call for it and logs a
-// degraded-fidelity warning only for the first occurrence of each name - see
-// player/include/unsupportedCommandRunner.h, registered by OpenGL2CommandFactory for
-// CommandId::ID_META_UNSUPPORTED_COMMAND.
+// Recorded in place of a disabled command's real call. One occurrence is emitted per disabled
+// call, independent of the recorder's separate once-per-name warning. The player makes no driver
+// call for it and logs a degraded-fidelity warning only for the first occurrence of each name.
 class UnsupportedCommand : public Command {
 public:
   UnsupportedCommand(uint32_t threadId, std::string name)
       : Command(CommandId::ID_META_UNSUPPORTED_COMMAND, threadId), m_Name(std::move(name)) {}
+  UnsupportedCommand() : Command(CommandId::ID_META_UNSUPPORTED_COMMAND) {}
 
   const std::string& GetName() const {
     return m_Name;
   }
 
 private:
+  friend void Decode(const char* src, UnsupportedCommand& command);
+
   std::string m_Name;
 };
 
-// Flat [nameLength][name bytes] payload.
+inline uint64_t GetSize(const UnsupportedCommand& command) {
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + sizeof(uint64_t) +
+         command.GetName().size();
+}
+
+inline void Encode(const UnsupportedCommand& command, char* dest) {
+  uint64_t offset = 0;
+  Encode(dest, offset, command.m_Key);
+  Encode(dest, offset, command.m_ThreadId);
+  const auto nameLength = static_cast<uint64_t>(command.GetName().size());
+  Encode(dest, offset, nameLength);
+  std::memcpy(dest + offset, command.GetName().data(), nameLength);
+}
+
+inline void Decode(const char* src, UnsupportedCommand& command) {
+  uint64_t offset = 0;
+  Decode(src, offset, command.m_Key);
+  Decode(src, offset, command.m_ThreadId);
+  uint64_t nameLength{};
+  Decode(src, offset, nameLength);
+  command.m_Name.assign(src + offset, nameLength);
+}
+
 class UnsupportedCommandSerializer : public stream::CommandSerializer {
 public:
   explicit UnsupportedCommandSerializer(const UnsupportedCommand& command) {
-    const auto& name = command.GetName();
-    const auto nameLength = static_cast<uint32_t>(name.size());
-    m_DataSize = sizeof(nameLength) + nameLength;
+    m_DataSize = GetSize(command);
     m_Data.reset(new char[static_cast<size_t>(m_DataSize)]);
-    std::memcpy(m_Data.get(), &nameLength, sizeof(nameLength));
-    std::memcpy(m_Data.get() + sizeof(nameLength), name.data(), nameLength);
+    Encode(command, m_Data.get());
   }
 
   unsigned Id() const override {
