@@ -97,7 +97,7 @@ enum class GLObjectKind : uint8_t {
 
 // Key recorded for a non-zero object name the recorder has no key for (its creation was never
 // observed). Only the key crosses the wire, so key 0 alone cannot tell such a name from name 0
-// (an unbind); the player replays this key as an invalid name instead. Never minted:
+// (an unbind); the player skips a call referencing this key instead. Never minted:
 // CaptureManager::CreateHandleKey counts up from 1.
 inline constexpr GITSKey UNMAPPED_OBJECT_NAME_KEY = ~GITSKey{0};
 

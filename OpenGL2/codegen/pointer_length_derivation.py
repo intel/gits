@@ -64,25 +64,23 @@
 #      of this module ever gets used for anything else. Run once, at introduction, against every
 #      existing entry in both tables: zero disagreements (see this module's own test suite's
 #      end-to-end test, which pins that result down as a regression check).
-#   2. derive_pointer_param_override() - the "supply a default for previously-unclassified
-#      params" half the task that introduced this module also asked for. It currently always
-#      returns None: see that function's own docstring for exactly why no narrow, safely
-#      auto-classifiable category carve-out exists today, and exactly what evidence a future one
-#      would need. This is intentionally NOT wired into intermediates_creator.py's
-#      _is_param_capturable gate - wiring in a fallback that can only ever return None would add
-#      a dead code path with no test coverage for zero behavioral benefit. When a real carve-out
-#      is added here (turning some real case non-None), wire it in there at the same time,
-#      mirroring exactly how POINTER_PARAM_OVERRIDES.get(...) is already consulted - and update
-#      generator_helpers.py's pointer_override_for() (the Mako-facing lookup) in the same change,
-#      since every Mako template that generates code from a command's `enabled` gate also needs
-#      pointer_override_for() to agree with whatever made that gate pass.
+#   2. derive_pointer_param_override() - the generic classification for params with no hand
+#      entry. The length source comes from len=; direction and "real array vs opaque offset"
+#      come from the declared C type (const-qualification, typed element vs void), which len=
+#      cannot express - see that function's docstring for the exact rule and its audited
+#      exceptions. Consulted last by intermediates_creator.py's _is_param_capturable and, in
+#      lockstep, generator_helpers.py's pointer_override_for(), so a command's generated code
+#      and its `enabled` gate always agree on which override applies.
 
 import re
 from dataclasses import dataclass
 
 from array_of_arrays_metadata import ARRAY_OF_ARRAYS_PARAM_OVERRIDES
 from intermediates import Api, Command, Parameter
-from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind
+from object_name_lifecycle import ObjectNameRole, resolve_object_name_override
+from pointer_metadata import (
+    POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride,
+)
 
 try:
     from enum import StrEnum
@@ -277,44 +275,96 @@ def derive_length_source(
     return None
 
 
+# Commands the generic rule in derive_pointer_param_override() would classify WRONGLY - found by
+# auditing every command it newly enables. Each needs a hand entry (or stays disabled).
+_GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
+    # IN arrays gl.xml declares without `const` - the const rule would call them OUT.
+    'glCullParameterdvEXT', 'glCullParameterfvEXT',
+    'glDeletePerfMonitorsAMD', 'glSelectPerfMonitorCountersAMD',
+    # The driver keeps the pointer and writes into it on LATER calls (glRenderMode, ...); the
+    # player's per-call scratch buffer would be freed by then.
+    'glFeedbackBuffer', 'glSelectBuffer', 'glInstrumentsBufferSGIX',
+    # Semaphore object names - a namespace this backend has no object-name mapping for.
+    'glAsyncCopyBufferSubDataNVX', 'glAsyncCopyImageSubDataNVX',
+    'glClientWaitSemaphoreui64NVX', 'glSignalSemaphoreui64NVX', 'glWaitSemaphoreui64NVX',
+    # `const void *` with a sibling length that is not client data: an element-array-buffer
+    # offset (len="count" counts indices, not bytes), and memory ranges the driver retains.
+    'glDrawElementsInstancedBaseInstance', 'glDrawElementsInstancedBaseInstanceEXT',
+    'glPixelDataRangeNV', 'glTextureRangeAPPLE',
+    # Bindless texture handles / GPU addresses: driver-assigned 64-bit values with no replay-time
+    # mapping, so replaying the captured values would reference the wrong memory.
+    'glUniformHandleui64vARB', 'glProgramUniformHandleui64vARB',
+    'glUniformHandleui64vIMG', 'glProgramUniformHandleui64vIMG',
+    'glUniformHandleui64vNV', 'glProgramUniformHandleui64vNV',
+    'glUniformui64vNV', 'glProgramUniformui64vNV',
+    # Debug-message filter: deliberately not captured, see the architecture page's "Reduce
+    # replay warning noise" decision.
+    'glDebugMessageControl', 'glDebugMessageControlARB', 'glDebugMessageControlKHR',
+    'glDebugMessageEnableAMD',
+})
+
+_GEN_CREATE_DELETE_RE = re.compile(r'^gl(?:Gen|Create|Delete)(?:$|[A-Z])')
+
+
 def derive_pointer_param_override(
-    command_name: str, param: Parameter, other_params: list[Parameter],  # noqa: ARG001
-) -> None:
-    """Attempt to auto-derive a COMPLETE PointerParamOverride (category AND length-source) for
-    a param with no POINTER_PARAM_OVERRIDES entry - the "safe narrow carve-out" the task that
-    introduced this module asked to be considered, if one exists.
+    command_name: str, param: Parameter, other_params: list[Parameter],
+) -> PointerParamOverride | None:
+    """Generic classification for a pointer param with no POINTER_PARAM_OVERRIDES entry (and no
+    narrower family derivation), or None. Consulted last by intermediates_creator.py's
+    _is_param_capturable and generator_helpers.py's pointer_override_for().
 
-    Always returns None today. This is a deliberate, documented "not yet" (mirroring
-    object_name_lifecycle.py's _CLASS_TO_KIND mapping a real, seen class= value to None for a
-    namespace with no backend support yet) rather than a stub nobody has gotten to: `direction`
-    (IN vs OUT) and "is this pointer genuinely dereferenced at all, vs. an opaque bit pattern"
-    are CATEGORY facts, and len= has been confirmed (see this module's header comment,
-    glShaderSource.string vs glMultiDrawElementsBaseVertex.indices) to carry NO signal that
-    distinguishes them, for any command - not "usually enough signal with occasional
-    exceptions", but structurally zero signal, by construction of the attribute itself. A
-    per-command judgment call about direction/dereference semantics is exactly what
-    pointer_metadata.py's own header comment already says must stay hand-maintained ("Pointer
-    direction (in/out) and length ... cannot be derived from gl.xml/wgl.xml alone ... this is a
-    per-(command, param) manual claim").
-
-    Kept as a real function (not just a comment) so a future safe signal - if one is ever found
-    - has an obvious, single place to land, and so intermediates_creator.py's
-    _is_param_capturable gate has an obvious place to consult it (see this module's header
-    comment for why that wiring is intentionally NOT added yet: a fallback that only ever
-    returns None is dead code with no test coverage for zero behavioral benefit). A future
-    change adding a real carve-out here must, in the same change:
-      - wire this function's result into _is_param_capturable's POINTER_PARAM_OVERRIDES lookup
-        (as a fallback consulted only when the explicit table has no entry - the explicit table
-        must always win, per this module's header comment and the object-name precedent), AND
-      - update generator_helpers.py's pointer_override_for() (the Mako-template-facing lookup)
-        in lockstep, since every template that reads a command's `enabled` gate also needs
-        pointer_override_for() to see the same override that made that gate pass, AND
-      - present concrete evidence the new signal is safe for EVERY command it would newly
-        enable, not just the one that motivated adding it - mirroring
-        object_name_lifecycle.py's own "audited every class-tagged command, 0 disagreements"
-        standard, not a spot-check.
+    len= alone never encodes direction or "real array vs opaque offset" (see this module's
+    header comment). The declared C type does, for the two shapes accepted here:
+      - A single-level pointer to a typed element (GLfloat*, GLuint*, ...; never void*) whose
+        len= derives a length source (a literal or a sibling count). A typed element is never
+        an opaque buffer offset; `const T*` is read by the driver (IN), `T*` is written (OUT).
+      - `const void *` whose len= is a plain sibling byte count (glNamedBufferData's `data`,
+        glProgramBinary's `binary`, glCompressed*Image*'s `data`/`bits`). `imageSize` siblings
+        are compressed pixel uploads and get the unpack-PBO guard. OUT void* is never derived:
+        those are image/buffer read-backs whose pointer can be a pack-buffer offset.
+    Exceptions found by auditing every newly enabled command are in
+    _GENERIC_DERIVATION_DENYLIST. Two object-name shapes are also refused:
+      - An existing-object name array written by the driver (glGetAttachedShaders): object-name
+        resolution runs before the call, when the array is not filled yet.
+      - A Gen/Create/Delete name array gl.xml does not tag with class= (NV fences, AMD perf
+        monitors, ...): a namespace without object-name mapping would replay raw names.
     """
-    return None
+    if command_name in _GENERIC_DERIVATION_DENYLIST:
+        return None
+    facts = param.type_facts
+    if facts.pointer_depth != 1:
+        return None
+    derived = derive_length_source(param, other_params)
+    if derived is None:
+        return None
+
+    if facts.base_type == 'void':
+        if param.type != 'const void *' or derived.kind is not LengthSourceKind.SIBLING_PARAM:
+            return None
+        return PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.SIBLING_PARAM,
+            length_source_value=derived.value,
+            length_multiplier=derived.multiplier,
+            unpack_pbo_guard=derived.value == 'imageSize')
+
+    if not facts.is_array_element_eligible:
+        return None
+    direction = PointerDirection.IN if param.type.startswith('const ') else PointerDirection.OUT
+
+    object_name = resolve_object_name_override(command_name, param.name, param.class_)
+    if object_name is not None:
+        if direction is PointerDirection.OUT and object_name.role in (
+                ObjectNameRole.LOOKUP, ObjectNameRole.LOOKUP_OR_CREATE):
+            return None
+    elif _GEN_CREATE_DELETE_RE.match(command_name) and facts.base_type in ('GLuint', 'GLint'):
+        return None
+
+    return PointerParamOverride(
+        direction=direction,
+        length_source_kind=derived.kind,
+        length_source_value=derived.value,
+        length_multiplier=derived.multiplier)
 
 
 def _hand_entry_as_length_source(

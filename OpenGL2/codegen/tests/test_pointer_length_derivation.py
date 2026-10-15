@@ -19,7 +19,7 @@ from intermediates_creator import (
     extract_commands_from_registry,
     get_commands_from_xml_data,
 )
-from pointer_metadata import LengthSourceKind
+from pointer_metadata import LengthSourceKind, PointerDirection
 from pointer_length_derivation import (
     LenAttribShape,
     LengthSourceDerivation,
@@ -145,17 +145,62 @@ class DeriveLengthSourceTests(unittest.TestCase):
 
 
 class DerivePointerParamOverrideTests(unittest.TestCase):
-    def test_always_returns_none_today(self) -> None:
-        # No safe category (direction/dereference-semantics) carve-out exists yet - see this
-        # function's own docstring for exactly why and what would need to change. Exercised
-        # against a real, currently-unclassified command/param shape (glProgramUniform4dv's
-        # `value`, len="count*4" - structurally identical to glUniform4fv's own hand-classified
-        # `value`) to confirm this stays a documented "not yet", not a silent guess, even for a
-        # case that looks safe by analogy.
+    def test_const_typed_array_is_in(self) -> None:
         param = Parameter(name='value', type='const GLdouble *', len='count*4')
         sibling = Parameter(name='count', type='GLsizei')
+        override = derive_pointer_param_override('glProgramUniform4dv', param, [sibling])
+        self.assertEqual(override.direction, PointerDirection.IN)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.SIBLING_PARAM)
+        self.assertEqual(override.length_source_value, 'count')
+        self.assertEqual(override.length_multiplier, 4)
+
+    def test_non_const_typed_array_is_out(self) -> None:
+        param = Parameter(name='params', type='GLint *', len='count')
+        sibling = Parameter(name='count', type='GLsizei')
+        override = derive_pointer_param_override('glGetProgramResourceiv', param, [sibling])
+        self.assertEqual(override.direction, PointerDirection.OUT)
+
+    def test_fixed_count_typed_array(self) -> None:
+        param = Parameter(name='v', type='const GLfloat *', len='3')
+        override = derive_pointer_param_override('glVertex3fv', param, [])
+        self.assertEqual(override.length_source_kind, LengthSourceKind.FIXED_COUNT)
+        self.assertEqual(override.length_source_value, '3')
+
+    def test_denylisted_command_is_not_derived(self) -> None:
+        param = Parameter(name='buffer', type='GLuint *', len='size')
+        sibling = Parameter(name='size', type='GLsizei')
+        self.assertIsNone(derive_pointer_param_override('glSelectBuffer', param, [sibling]))
+
+    def test_untagged_gen_array_is_not_derived(self) -> None:
+        # No class= means no object-name mapping; the raw names would be replayed.
+        param = Parameter(name='fences', type='GLuint *', len='n')
+        sibling = Parameter(name='n', type='GLsizei')
+        self.assertIsNone(derive_pointer_param_override('glGenFencesNV', param, [sibling]))
+
+    def test_out_lookup_object_name_array_is_not_derived(self) -> None:
+        param = Parameter(name='shaders', type='GLuint *', len='maxCount', class_='shader')
+        sibling = Parameter(name='maxCount', type='GLsizei')
         self.assertIsNone(
-            derive_pointer_param_override('glProgramUniform4dv', param, [sibling]))
+            derive_pointer_param_override('glGetAttachedShaders', param, [sibling]))
+
+    def test_const_void_byte_count_is_in(self) -> None:
+        param = Parameter(name='data', type='const void *', len='size')
+        sibling = Parameter(name='size', type='GLsizeiptr')
+        override = derive_pointer_param_override('glNamedBufferData', param, [sibling])
+        self.assertEqual(override.direction, PointerDirection.IN)
+        self.assertFalse(override.unpack_pbo_guard)
+
+    def test_compressed_image_size_gets_unpack_pbo_guard(self) -> None:
+        param = Parameter(name='data', type='const void *', len='imageSize')
+        sibling = Parameter(name='imageSize', type='GLsizei')
+        override = derive_pointer_param_override(
+            'glCompressedTextureSubImage2D', param, [sibling])
+        self.assertTrue(override.unpack_pbo_guard)
+
+    def test_non_const_void_is_not_derived(self) -> None:
+        param = Parameter(name='data', type='void *', len='bufSize')
+        sibling = Parameter(name='bufSize', type='GLsizei')
+        self.assertIsNone(derive_pointer_param_override('glGetnTexImage', param, [sibling]))
 
 
 class FindPointerLengthMismatchesTests(unittest.TestCase):

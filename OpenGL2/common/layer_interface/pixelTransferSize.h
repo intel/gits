@@ -54,8 +54,8 @@ namespace gits::opengl2 {
 // guard rather than a real, expected-in-practice limitation.
 //
 // Returns 0 for a non-positive `width`/`height`/`depth` (a genuine, real zero-byte transfer -
-// see this function's own comment below), an unrecognized `format`/`type`
-// combination, non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES state on a 3D
+// see this function's own comment below), an unrecognized or invalid `format`/`type`
+// combination (see ComputeTexelByteSize()), non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES state on a 3D
 // transfer (still gated - see below), a negative GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS
 // (a can't-happen defensive guard - see above), or an intermediate/final size computation that
 // would overflow uint64_t - rather than guessing, or silently returning a wrapped-around value
@@ -272,6 +272,15 @@ GLint QueryPackSkipPixels();
 // since unlike a pixel-transfer format/type combination there is no meaningful "unrecognized"
 // case in practice - `buffer` only ever takes one of these three values for a well-formed call.
 uint32_t ComputeClearBufferValueCount(GLenum buffer);
+
+// Byte size of ONE texel described by `format`/`type` - gl.xml's COMPSIZE(format,type) on
+// glClearTexImage/glClearTexSubImage/glClearBufferData/... (a single clear value; pixel-store
+// state does not apply). See pointer_metadata.py's LengthSourceKind.TEXEL_BYTE_SIZE. Returns 0
+// for an unrecognized or invalid format/type combination (such as a packed type paired with a
+// format it cannot describe, GL_STENCIL_INDEX with a floating-point type, or
+// GL_DEPTH_COMPONENT with a signed integer type), which the driver rejects without reading the
+// clear value, so it is not captured.
+uint32_t ComputeTexelByteSize(GLenum format, GLenum type);
 
 // Distinguishes the two command families that share ComputeTexOrSamplerParameterValueCount()
 // below - see that function's own comment for why this matters.

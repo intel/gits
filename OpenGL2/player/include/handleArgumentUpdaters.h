@@ -41,12 +41,17 @@
 // see that file's header comment.
 
 #include "arguments.h"
+#include "command.h"
 #include "glTypes.h"
 #include "handleMapService.h"
+#include "log.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 
 #include <atomic>
+#include <mutex>
+#include <string>
+#include <unordered_set>
 
 namespace gits::opengl2 {
 
@@ -93,19 +98,22 @@ inline void UpdateOutputHandle(HandleArgument<HandleT>& arg) {
   }
 }
 
-// A deliberately, permanently invalid GL object name - no real Gen/Create call will ever hand
-// this out - substituted below for a captured name whose own create call the recorder never
-// observed (recorded as UNMAPPED_OBJECT_NAME_KEY; see this header's own comment on
-// UpdateHandle(HandleArgument<GLuint>&, GLObjectKind) for when that happens). Matches the
-// legacy OpenGL backend's own identical fallback (OpenGL/common/include/mapping.h's
-// CMappedArgument<...>::GetMapping(): "LOG_WARNING << \"Couldn't map object name\" ...; return
-// ... 1000000") - same value, same rationale: replaying the raw, capture-time name unchanged
-// risks silently aliasing an unrelated, valid object that happens to already have that same
-// numeric name at replay time (a real object, e.g. a texture the game legitimately created
-// with name 774 for something else entirely), which is far more dangerous than a real call
-// simply failing (GL_INVALID_VALUE/no-op) against a name so large no Gen call would plausibly
-// have produced it.
-inline constexpr GLuint kUnmappedObjectName = 1000000;
+// Skips `command`'s real call, which references an object name whose create call the recorder
+// never saw (UNMAPPED_OBJECT_NAME_KEY). No replay-time name stands in for it safely: every
+// nonzero name can belong to a live object, and a legacy bind implicitly creates any name it is
+// given, so a substitute could alias an object or make the rejected call succeed. Warns once per
+// command.
+inline void SkipUnmappedObjectNameCall(Command& command, const char* commandName) {
+  command.m_Skip = true;
+  static std::mutex mutex;
+  static std::unordered_set<std::string> warned;
+  std::lock_guard<std::mutex> lock(mutex);
+  if (warned.insert(commandName).second) {
+    LOG_WARNING << commandName
+                << " references an object name that was not created during recording; calls "
+                   "doing so are skipped";
+  }
+}
 
 // Existing-name resolution before a real call: substitute the decoded Key's live, player-local
 // name for Value - glBindTexture/glBindBuffer/glUseProgram/glBindAttribLocation/
@@ -115,14 +123,15 @@ inline constexpr GLuint kUnmappedObjectName = 1000000;
 // UpdateHandle(HandleArgument<HGLRC>&)'s zero-key handling above exactly.
 // UNMAPPED_OBJECT_NAME_KEY means the recorder itself never saw this name's own create call (see
 // ObjectNameMapService::GetKey's "no registered key (never created, or created before
-// recording started)" warning) - substitute kUnmappedObjectName; see that constant's own
-// comment for why.
-inline void UpdateHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
+// recording started)" warning): Value stays 0 and false is returned, for the caller to skip the
+// call with SkipUnmappedObjectNameCall.
+[[nodiscard]] inline bool UpdateHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
   if (arg.Key == UNMAPPED_OBJECT_NAME_KEY) {
-    arg.Value = kUnmappedObjectName;
-    return;
+    arg.Value = 0;
+    return false;
   }
   arg.Value = arg.Key == 0 ? 0 : ObjectNameMapService::Get().GetHandle(kind, arg.Key);
+  return true;
 }
 
 // After a real glCreateProgram/glCreateShader call succeeds: register the newly-created live
@@ -146,12 +155,13 @@ inline void UpdateOutputHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
 // expected, first-ever-reference miss never logs GetHandle's "no registered name" warning - see
 // TryGetHandle's own header comment (objectNameMapService.h). A zero key (unbind) and
 // UNMAPPED_OBJECT_NAME_KEY (a bind the recorder saw rejected) are handled exactly as by the
-// plain UpdateHandle overload above.
+// plain UpdateHandle overload above, including its return value.
 template <typename GenFn>
-inline void UpdateHandleOrCreate(HandleArgument<GLuint>& arg, GLObjectKind kind, GenFn gen) {
+[[nodiscard]] inline bool UpdateHandleOrCreate(HandleArgument<GLuint>& arg,
+                                               GLObjectKind kind,
+                                               GenFn gen) {
   if (arg.Key == 0 || arg.Key == UNMAPPED_OBJECT_NAME_KEY) {
-    UpdateHandle(arg, kind);
-    return;
+    return UpdateHandle(arg, kind);
   }
   ObjectNameMapService& service = ObjectNameMapService::Get();
   GLuint liveName = service.TryGetHandle(kind, arg.Key);
@@ -162,6 +172,7 @@ inline void UpdateHandleOrCreate(HandleArgument<GLuint>& arg, GLObjectKind kind,
     service.SetHandle(kind, arg.Key, liveName);
   }
   arg.Value = liveName;
+  return true;
 }
 
 // Existing-name resolution for an array of GL object names (glDeleteTextures' `textures`, and
@@ -170,19 +181,23 @@ inline void UpdateHandleOrCreate(HandleArgument<GLuint>& arg, GLObjectKind kind,
 // decoded Key, mirroring the scalar UpdateHandle above applied elementwise. Value and Key are
 // always the same length (see arguments.h's HandleArrayArgument<T>).
 //
-// Deliberately NOT given the scalar UpdateHandle's kUnmappedObjectName substitution above: a
-// per-element Key of 0 (the recorder never observed that element's own create call) already
-// resolves to Value 0 here unconditionally, via GetHandle(kind, 0)'s own documented "a zero key
-// returns 0 silently" behavior (objectNameMapService.h) - never the dangerous raw capture-time
-// name the scalar overload used to leave in place. A 0 element is already the GL-defined safe
-// no-op for every current caller of this array overload (glDeleteTextures/glDeleteBuffers/...
-// silently ignore a 0 entry; a 0 in a multi-bind array unbinds that unit) - strictly safer than
-// substituting kUnmappedObjectName, which would risk a real GL_INVALID_VALUE where GL itself
-// already defines a well-behaved no-op.
-inline void UpdateHandleArray(HandleArrayArgument<GLuint>& arg, GLObjectKind kind) {
+// Each element is resolved like the scalar UpdateHandle: key 0 is a captured zero name and
+// replays as 0, and UNMAPPED_OBJECT_NAME_KEY (a lookup-array name the recorder never saw
+// created) makes this return false, for the caller to skip the whole call rather than unbind
+// that element or alias another object through it. The recorder never writes that key into
+// delete-role arrays: GL ignores unused names there, so a miss is key 0 and replays as a no-op
+// 0 entry.
+[[nodiscard]] inline bool UpdateHandleArray(HandleArrayArgument<GLuint>& arg, GLObjectKind kind) {
+  bool mapped = true;
   for (size_t i = 0; i < arg.Key.size(); ++i) {
+    if (arg.Key[i] == UNMAPPED_OBJECT_NAME_KEY) {
+      arg.Value[i] = 0;
+      mapped = false;
+      continue;
+    }
     arg.Value[i] = ObjectNameMapService::Get().GetHandle(kind, arg.Key[i]);
   }
+  return mapped;
 }
 
 // After a real glGenTextures/glGenBuffers call: register each newly-created live name under

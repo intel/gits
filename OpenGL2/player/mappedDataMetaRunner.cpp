@@ -60,7 +60,9 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
 
 void MappedDataMetaRunner::Run() {
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
+  if (!UpdateHandle(command.m_Buffer, GLObjectKind::Buffer)) {
+    SkipUnmappedObjectNameCall(command, "MappedDataMetaCommand");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }

@@ -271,7 +271,7 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     # COMPATIBILITY profile app (compatibility profile keeps every one of these implicit-create
     # paths legal) - binds hundreds of textures by name with no corresponding glGenTextures ever
     # observed by the recorder, each one producing an ObjectNameMapService "no registered key"
-    # warning and, on replay, an unresolvable reference (see kUnmappedObjectName's own comment) -
+    # warning and, on replay, a skipped call (see SkipUnmappedObjectNameCall's own comment) -
     # not a startup race, not a missing EXT/ARB alias (see the pointer_metadata.py
     # glGenTexturesEXT/glGenQueriesEXT fix for that separate, already-covered gap), just this
     # GL-spec-legal calling pattern the backend had no representation for at all.

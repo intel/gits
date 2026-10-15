@@ -123,8 +123,19 @@ class DerivePixelTransferOverrideUnitTests(unittest.TestCase):
 
         self.assertIsNone(derive_pixel_transfer_override(param, other))
 
-    def test_no_len_at_all_is_not_derived(self) -> None:
+    def test_missing_len_is_recovered_from_siblings(self) -> None:
+        # glTextureSubImage2D's `pixels`: gl.xml omits len=, the siblings still give the shape.
         param = Parameter(name='pixels', type='const void *', len=None)
+        other = [_format_param(), _type_param(), _dim_param('width'), _dim_param('height')]
+
+        override = derive_pixel_transfer_override(param, other)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.PIXEL_TRANSFER_SIZE)
+        self.assertEqual(override.pixel_width_param, 'width')
+        self.assertEqual(override.pixel_height_param, 'height')
+        self.assertIsNone(override.pixel_depth_param)
+
+    def test_missing_len_on_out_pointer_is_not_derived(self) -> None:
+        param = Parameter(name='pixels', type='void *', len=None)
         other = [_format_param(), _type_param(), _dim_param('width'), _dim_param('height')]
 
         self.assertIsNone(derive_pixel_transfer_override(param, other))
@@ -156,14 +167,15 @@ class DerivePixelTransferOverrideUnitTests(unittest.TestCase):
 
         self.assertIsNone(derive_pixel_transfer_override(param, other))
 
-    def test_dimensionless_compsize_is_not_derived(self) -> None:
-        # COMPSIZE(format,type) - glClearTexImage's own shape: a single clear-color PATTERN
-        # value, not an image at all - see this module's own header comment for why this is a
-        # deliberately excluded shape, not merely one that has not been added yet.
+    def test_dimensionless_compsize_is_one_texel(self) -> None:
+        # COMPSIZE(format,type) - glClearTexImage's shape: a single clear value, not an image.
         param = Parameter(name='data', type='const void *', len='COMPSIZE(format,type)')
         other = [_format_param(), _type_param()]
 
-        self.assertIsNone(derive_pixel_transfer_override(param, other))
+        override = derive_pixel_transfer_override(param, other)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.TEXEL_BYTE_SIZE)
+        self.assertEqual(override.direction, PointerDirection.IN)
+        self.assertFalse(override.unpack_pbo_guard)
 
     def test_extra_trailing_dimension_is_not_derived(self) -> None:
         # COMPSIZE(format,type,width,height,depth,size4d) - glTexImage4DSGIS's own shape: a

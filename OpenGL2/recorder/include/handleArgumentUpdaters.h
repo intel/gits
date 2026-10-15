@@ -210,8 +210,8 @@ inline bool UpdateHandleIfKnown(HandleArgument<GLuint>& arg,
 // now was implicitly created by it; a fresh key is then registered like an ordinary Gen call's
 // result. Otherwise this is an ordinary lookup miss - the bind was rejected (a core profile's
 // unknown texture or buffer name), or bound an object this capture never saw created: GetKey
-// warns and Key becomes UNMAPPED_OBJECT_NAME_KEY, so replay binds an invalid name and is rejected
-// instead of silently binding a fresh, empty object.
+// warns and Key becomes UNMAPPED_OBJECT_NAME_KEY, so replay skips the bind instead of silently
+// binding a fresh, empty object.
 //
 // Permanent sanity check (not stream-specific - runs on every capture, not just the one this was
 // first chased down on): a real target application's captured stream's "implicit create" hits
@@ -270,11 +270,21 @@ inline void ConfirmImplicitCreate(HandleArgument<GLuint>& arg,
 // object_name_lifecycle.py's DELETE role on an array field). Runs before the real driver call,
 // same timing as the scalar UpdateHandle above - the names must still be resolvable to keys
 // before ObjectNameMapService::Delete removes them post-call (see recorderWrappersAuto.cpp.mako).
-// Value and Key are always the same length (see arguments.h's HandleArrayArgument<T>).
+// Value and Key are always the same length (see arguments.h's HandleArrayArgument<T>). As in the
+// scalar UpdateHandle, a zero element stays key 0 and a non-zero element without a key gets
+// UNMAPPED_OBJECT_NAME_KEY, so replay does not turn it into name 0 (which, in a multi-bind array
+// such as glBindTextures', would unbind the unit).
 inline void UpdateHandleArray(HandleArrayArgument<GLuint>& arg, GLObjectKind kind) {
   const uint64_t groupIdentity = GroupIdentityFor(kind);
   for (size_t i = 0; i < arg.Value.size(); ++i) {
+    if (arg.Value[i] == 0) {
+      arg.Key[i] = 0;
+      continue;
+    }
     arg.Key[i] = ObjectNameMapService::Get().GetKey(kind, groupIdentity, arg.Value[i]);
+    if (arg.Key[i] == 0) {
+      arg.Key[i] = UNMAPPED_OBJECT_NAME_KEY;
+    }
   }
 }
 

@@ -128,7 +128,9 @@ void WglMakeCurrentRunner::Run() {
 
 void GlGetUniformLocationRunner::Run() {
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_program, GLObjectKind::Program);
+  if (!UpdateHandle(command.m_program, GLObjectKind::Program)) {
+    SkipUnmappedObjectNameCall(command, "glGetUniformLocation");
+  }
   const GLint capturedLocation = command.m_Return.Value;
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
@@ -163,7 +165,9 @@ void GlGetUniformLocationRunner::Run() {
 
 void GlUseProgramRunner::Run() {
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_program, GLObjectKind::Program);
+  if (!UpdateHandle(command.m_program, GLObjectKind::Program)) {
+    SkipUnmappedObjectNameCall(command, "glUseProgram");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -320,10 +324,12 @@ void GlBindTextureRunner::Run() {
   auto& manager = PlayerManager::Get();
   // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a never-seen key here is the recorder
   // having minted one right at this same Bind call (see the recorder-side ConfirmImplicitCreate),
-  // not a stream gap, so it mints a fresh replay-time name instead of substituting the
-  // kUnmappedObjectName sentinel.
-  UpdateHandleOrCreate(command.m_texture, GLObjectKind::Texture,
-                       player::g_DispatchTable.glGenTextures.load(std::memory_order_acquire));
+  // not a stream gap, so it mints a fresh replay-time name instead of skipping the call.
+  if (!UpdateHandleOrCreate(
+          command.m_texture, GLObjectKind::Texture,
+          player::g_DispatchTable.glGenTextures.load(std::memory_order_acquire))) {
+    SkipUnmappedObjectNameCall(command, "glBindTexture");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -346,8 +352,11 @@ void GlBindTextureRunner::Run() {
 void GlBindTextureEXTRunner::Run() {
   auto& manager = PlayerManager::Get();
   // See GlBindTextureRunner::Run()'s own comment above - identical fixup, same rationale.
-  UpdateHandleOrCreate(command.m_texture, GLObjectKind::Texture,
-                       player::g_DispatchTable.glGenTexturesEXT.load(std::memory_order_acquire));
+  if (!UpdateHandleOrCreate(
+          command.m_texture, GLObjectKind::Texture,
+          player::g_DispatchTable.glGenTexturesEXT.load(std::memory_order_acquire))) {
+    SkipUnmappedObjectNameCall(command, "glBindTextureEXT");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -366,7 +375,9 @@ void GlBindTextureEXTRunner::Run() {
 
 void GlBindTextureUnitRunner::Run() {
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_texture, GLObjectKind::Texture);
+  if (!UpdateHandle(command.m_texture, GLObjectKind::Texture)) {
+    SkipUnmappedObjectNameCall(command, "glBindTextureUnit");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -384,7 +395,9 @@ void GlBindTextureUnitRunner::Run() {
 
 void GlBindSamplerRunner::Run() {
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_sampler, GLObjectKind::Sampler);
+  if (!UpdateHandle(command.m_sampler, GLObjectKind::Sampler)) {
+    SkipUnmappedObjectNameCall(command, "glBindSampler");
+  }
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }

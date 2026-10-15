@@ -28,6 +28,7 @@ from object_name_lifecycle import ObjectNameOverride, ObjectNameRole, resolve_ob
 from pixel_transfer_metadata import derive_pixel_transfer_override
 from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride
 from registry import Registry
+from pointer_length_derivation import derive_pointer_param_override
 from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
 from uniform_setter_metadata import derive_uniform_setter_override
 
@@ -525,6 +526,25 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
                 f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
             )
+    elif override.length_source_kind is LengthSourceKind.TEXEL_BYTE_SIZE:
+        if override.length_source_value is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: TEXEL_BYTE_SIZE override must not set "
+                f"length_source_value - use pixel_format_param/pixel_type_param instead"
+            )
+        if override.direction is not PointerDirection.IN:
+            raise ValueError(
+                f"{command_name}.{param.name}: TEXEL_BYTE_SIZE override must be IN direction - "
+                f"the Mako templates have no OUT-direction branch for it"
+            )
+        for field_name in ('pixel_format_param', 'pixel_type_param'):
+            sibling_name = getattr(override, field_name)
+            sibling = next((p for p in other_params if p.name == sibling_name), None)
+            if sibling is None or not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: TEXEL_BYTE_SIZE's {field_name} must name a "
+                    f"plain scalar sibling (got {sibling_name!r})"
+                )
     # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
     # cross-check.
 
@@ -724,6 +744,10 @@ def _is_param_capturable(
         # auto-derivation - see tex_sampler_parameter_metadata.py's own header comment for
         # exactly what evidence it requires before returning non-None.
         override = derive_tex_sampler_parameter_override(command_name, param, other_params)
+    if override is None:
+        # Last fallback: the generic type-and-len= rule - see pointer_length_derivation.py's
+        # derive_pointer_param_override().
+        override = derive_pointer_param_override(command_name, param, other_params)
     if override is None:
         return False
     _validate_pointer_override(command_name, param, override, other_params)

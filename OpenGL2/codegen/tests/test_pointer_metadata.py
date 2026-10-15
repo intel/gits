@@ -793,6 +793,28 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
 
+    def test_generic_rule_enables_commands_without_hand_entries(self) -> None:
+        for name in (
+            'glBindTextures', 'glBindSamplers', 'glGetProgramResourceiv', 'glNamedBufferData',
+            'glTextureSubImage1D', 'glTextureSubImage2D', 'glTextureSubImage3D',
+            'glClearTexImage', 'glClearTexSubImage', 'glClearNamedBufferData',
+            'glCompressedTextureSubImage2D', 'glProgramBinary', 'glCreateTransformFeedbacks',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_generic_rule_exceptions_stay_disabled(self) -> None:
+        for name in (
+            'glSelectBuffer', 'glFeedbackBuffer',           # driver retains the pointer
+            'glCullParameterfvEXT',                         # IN array declared without const
+            'glGenFencesNV', 'glDeleteFencesNV',            # names without object-name mapping
+            'glGetAttachedShaders',                         # OUT existing-object names
+            'glDrawElementsInstancedBaseInstance',          # element-array offset, not bytes
+            'glGetTexImage',                                # OUT void*, pack-buffer offset
+        ):
+            with self.subTest(command=name):
+                self.assertFalse(self._get_command(Api.GL, name).enabled)
+
     def test_debug_commands_stay_disabled(self) -> None:
         # glDebugMessageCallback takes an application callback function pointer - structurally
         # uncapturable, never a "just add an override" gap. glDebugMessageControl is left

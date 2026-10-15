@@ -289,7 +289,6 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             # entry of its own) keeps the whole command disabled - confirms auto-derivation
             # only ever *removes* a blocking reason, never masks an unrelated one.
             'glActiveVaryingNV',     # 'program' resolves; 'name' (GLchar*) has no entry.
-            'glClearTexImage',       # 'texture' resolves; 'pixels' (void*) has no entry.
         ):
             with self.subTest(command=cmd_name):
                 cmd = get_command(Api.GL, cmd_name)
@@ -425,16 +424,11 @@ class EndToEndAutoDerivationTests(unittest.TestCase):
                 self.assertEqual(override.kind, GLObjectKind.TRANSFORM_FEEDBACK)
                 self.assertEqual(override.role, role)
 
-    def test_create_transform_feedbacks_stays_disabled_pending_pointer_override(self) -> None:
-        # Unlike glGenTransformFeedbacks/glDeleteTransformFeedbacks above, the DSA variant
-        # glCreateTransformFeedbacks' own `ids` (GLuint *, CREATE role, no `n`-named sibling
-        # consumed any differently) has no POINTER_PARAM_OVERRIDES entry - nobody added one,
-        # since no tested sample calls this specific DSA entry point. The object-name gate is
-        # already satisfied (kind auto-derives fine, exactly like its Gen/Delete siblings), so
-        # this is purely the missing-pointer-classification reason, independent of kind
-        # support - add a POINTER_PARAM_OVERRIDES entry once a real caller needs it.
+    def test_create_transform_feedbacks_is_enabled_by_generic_rule(self) -> None:
+        # No hand entry: `ids` (GLuint *, len="n") is classified OUT by the generic rule and
+        # its CREATE-role kind auto-derives like its Gen/Delete siblings.
         cmd = get_command(Api.GL, 'glCreateTransformFeedbacks')
-        self.assertFalse(cmd.enabled)
+        self.assertTrue(cmd.enabled)
         param = next(p for p in cmd.params if p.name == 'ids')
         self.assertEqual(param.class_, 'transform feedback')
         self.assertFalse(_requires_object_name_override('glCreateTransformFeedbacks', param))

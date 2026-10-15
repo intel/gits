@@ -395,9 +395,9 @@ class EndToEndUniformSetterTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
-    def test_vendor_suffixed_siblings_stay_disabled(self) -> None:
-        # ARB/EXT/NV aliases of already-enabled commands must not be swept in just because
-        # they share a prefix - the family regex is fully anchored.
+    def test_vendor_suffixed_siblings_are_not_family_derived(self) -> None:
+        # The family regex is fully anchored: ARB/EXT/NV aliases are not swept in by prefix.
+        # They are still enabled by the generic rule in pointer_length_derivation.py.
         for name in (
             'glUniform1fvARB', 'glUniform2fvARB', 'glUniform3fvARB', 'glUniform4fvARB',
             'glUniformMatrix2fvARB', 'glUniformMatrix3fvARB', 'glUniformMatrix4fvARB',
@@ -406,19 +406,20 @@ class EndToEndUniformSetterTests(unittest.TestCase):
             'glProgramUniform1fvEXT', 'glProgramUniformMatrix2fvEXT',
         ):
             with self.subTest(command=name):
-                self.assertFalse(self._get_command(Api.GL, name).enabled)
+                cmd = self._get_command(Api.GL, name)
+                value = next(p for p in cmd.params if p.name == 'value')
+                others = [p for p in cmd.params if p is not value]
+                self.assertIsNone(derive_uniform_setter_override(name, value, others))
+                self.assertTrue(cmd.enabled)
 
-    def test_64bit_and_bindless_handle_vector_setters_stay_disabled(self) -> None:
-        # The *vector* (array-parameter) forms of the 64-bit-integer/bindless-handle families -
-        # a genuinely different value-type domain this module deliberately never extends to
-        # (see uniform_setter_metadata.py's header comment). Note this is specifically about
-        # the 'v'-suffixed array forms: their plain scalar siblings (glProgramUniform1i64ARB,
-        # glUniformHandleui64ARB, ...) have no pointer parameter at all and are already
-        # enabled=True on their own, unrelated to this module.
-        for name in (
-            'glUniform1i64vARB', 'glUniform1ui64vARB',
-            'glProgramUniformHandleui64vARB',
-        ):
+    def test_64bit_integer_vector_setters_are_enabled(self) -> None:
+        for name in ('glUniform1i64vARB', 'glUniform1ui64vARB'):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_bindless_handle_vector_setters_stay_disabled(self) -> None:
+        # Driver-assigned handles with no replay-time mapping.
+        for name in ('glUniformHandleui64vARB', 'glProgramUniformHandleui64vARB'):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
 

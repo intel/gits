@@ -150,14 +150,16 @@ namespace gits::opengl2 {
               LengthSourceKind.PIXEL_TRANSFER_SIZE)
   ]
 
-  # Any command with a GLint parameter literally named 'location' is one of the
+  # Any command with a scalar GLint parameter literally named 'location' is one of the
   # glUniform*(location, ...) family (glUniform1f/.../4fv, glUniformMatrix*fv, ...) - a
   # structural rule rather than a per-command-name table, so it automatically covers every
   # such command that is or becomes enabled, present and future, with no table to keep in
   # sync. See UniformLocationMapService's own header comment for why the captured location
-  # value cannot simply be replayed verbatim.
+  # value cannot simply be replayed verbatim. A GLint* 'location' is an output
+  # (glGetTransformFeedbackVaryingNV, glGetShadingRateSampleLocationivNV), not a uniform.
   def is_uniform_location_param(p):
-      return p.name == 'location' and p.type_facts.base_type == 'GLint'
+      return (p.name == 'location' and p.type_facts.base_type == 'GLint'
+              and p.type_facts.is_scalar)
 
   # glProgramUniform*(program, location, ...) DSA commands also have a 'location' param, but
   # unlike classic glUniform*(), they resolve against their own explicit 'program' parameter
@@ -260,16 +262,22 @@ void ${cmd.name}Runner::Run() {
                                 resolve_override.role == ObjectNameRole.DELETE)
 %>\
 % if p.type_facts.is_array_element_eligible:
-  UpdateHandleArray(command.m_${p.name}, GLObjectKind::${kind});
+  if (!UpdateHandleArray(command.m_${p.name}, GLObjectKind::${kind})) {
+    SkipUnmappedObjectNameCall(command, "${cmd.name}");
+  }
 % elif resolve_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
   // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a never-seen key here is the recorder
   // having minted one right at this same Bind call (see the recorder-side ConfirmImplicitCreate),
   // not a stream gap, so it mints a fresh replay-time name, through this bind's own family's
-  // Gen command, instead of substituting the kUnmappedObjectName sentinel.
-  UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
-                       player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire));
+  // Gen command, instead of skipping the call.
+  if (!UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
+                            player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire))) {
+    SkipUnmappedObjectNameCall(command, "${cmd.name}");
+  }
 % else:
-  UpdateHandle(command.m_${p.name}, GLObjectKind::${kind});
+  if (!UpdateHandle(command.m_${p.name}, GLObjectKind::${kind})) {
+    SkipUnmappedObjectNameCall(command, "${cmd.name}");
+  }
 % if purges_uniform_locations:
   // Keyed by the program's stream-stable GITSKey (.Key, untouched by UpdateHandle above),
   // not its live handle - see UniformLocationMapService's own header comment.

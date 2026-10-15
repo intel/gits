@@ -99,6 +99,7 @@ uint32_t PackedTypeByteSize(GLenum type) {
   case 0x8367: // GL_UNSIGNED_INT_8_8_8_8_REV
   case 0x8036: // GL_UNSIGNED_INT_10_10_10_2
   case 0x8368: // GL_UNSIGNED_INT_2_10_10_10_REV
+  case 0x8D9F: // GL_INT_2_10_10_10_REV
   case 0x84FA: // GL_UNSIGNED_INT_24_8
   case 0x8C3E: // GL_UNSIGNED_INT_5_9_9_9_REV
   case 0x8C3B: // GL_UNSIGNED_INT_10F_11F_11F_REV
@@ -164,6 +165,60 @@ uint32_t ComponentCount(GLenum format) {
   }
 }
 
+bool IsIntegerFormat(GLenum format) {
+  switch (format) {
+  case 0x8D94: // GL_RED_INTEGER
+  case 0x8D95: // GL_GREEN_INTEGER
+  case 0x8D96: // GL_BLUE_INTEGER
+  case 0x8228: // GL_RG_INTEGER
+  case 0x8D98: // GL_RGB_INTEGER
+  case 0x8D9A: // GL_BGR_INTEGER
+  case 0x8D99: // GL_RGBA_INTEGER
+  case 0x8D9B: // GL_BGRA_INTEGER
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Whether a packed `type` may describe pixels of `format` (GL 4.6 table 8.5).
+bool IsPackedTypeFormatCompatible(GLenum format, GLenum type) {
+  switch (type) {
+  case 0x8032: // GL_UNSIGNED_BYTE_3_3_2
+  case 0x8362: // GL_UNSIGNED_BYTE_2_3_3_REV
+  case 0x8363: // GL_UNSIGNED_SHORT_5_6_5
+  case 0x8364: // GL_UNSIGNED_SHORT_5_6_5_REV
+    return format == 0x1907 /* GL_RGB */ || format == 0x8D98 /* GL_RGB_INTEGER */;
+  case 0x8C3E:               // GL_UNSIGNED_INT_5_9_9_9_REV
+  case 0x8C3B:               // GL_UNSIGNED_INT_10F_11F_11F_REV
+    return format == 0x1907; // GL_RGB
+  case 0x84FA:               // GL_UNSIGNED_INT_24_8
+  case 0x8DAD:               // GL_FLOAT_32_UNSIGNED_INT_24_8_REV
+    return format == 0x84F9; // GL_DEPTH_STENCIL
+  case 0x8D9F:               // GL_INT_2_10_10_10_REV
+    return format == 0x8D99 /* GL_RGBA_INTEGER */ || format == 0x8D9B /* GL_BGRA_INTEGER */;
+  default: // The four-component packed types.
+    return format == 0x1908 /* GL_RGBA */ || format == 0x80E1 /* GL_BGRA */ ||
+           format == 0x8D99 /* GL_RGBA_INTEGER */ || format == 0x8D9B /* GL_BGRA_INTEGER */;
+  }
+}
+
+// Bytes of one pixel of `format`/`type`, or 0 for an unrecognized or invalid pairing - one the
+// driver rejects without reading any pixel data.
+uint32_t PixelByteSize(GLenum format, GLenum type) {
+  const uint32_t packedBytes = PackedTypeByteSize(type);
+  if (packedBytes != 0) {
+    return IsPackedTypeFormatCompatible(format, type) ? packedBytes : 0;
+  }
+  // GL_DEPTH_STENCIL takes only the packed depth-stencil types; integer formats take no
+  // floating-point type.
+  const bool floatType = type == 0x1406 /* GL_FLOAT */ || type == 0x140B /* GL_HALF_FLOAT */;
+  if (format == 0x84F9 /* GL_DEPTH_STENCIL */ || (floatType && IsIntegerFormat(format))) {
+    return 0;
+  }
+  return ComponentCount(format) * ComponentByteSize(type);
+}
+
 } // namespace
 
 uint64_t ComputePixelTransferByteSize(GLenum format,
@@ -213,14 +268,9 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
     alignment = 4;
   }
 
-  uint32_t bytesPerPixel = PackedTypeByteSize(type);
+  const uint32_t bytesPerPixel = PixelByteSize(format, type);
   if (bytesPerPixel == 0) {
-    const uint32_t components = ComponentCount(format);
-    const uint32_t componentBytes = ComponentByteSize(type);
-    if (components == 0 || componentBytes == 0) {
-      return 0; // Unrecognized format/type combination - see this header's own comment.
-    }
-    bytesPerPixel = components * componentBytes;
+    return 0; // Unrecognized format/type combination - see this header's own comment.
   }
 
   // Effective row length, in PIXELS, per the GL pixel-store spec: GL_(UN)PACK_ROW_LENGTH when
@@ -403,6 +453,19 @@ bool PixelTransferSizeIsUnknown(GLenum format,
   return ComputePixelTransferByteSize(format, type, width, height, alignment, depth, imageHeight,
                                       skipImages, rowLength, skipRows, skipPixels,
                                       commandName) == 0;
+}
+
+uint32_t ComputeTexelByteSize(GLenum format, GLenum type) {
+  // A clear value follows the texture image rules, stricter than glDrawPixels/glReadPixels:
+  // stencil takes only integer types, depth only unsigned integer and floating-point types.
+  const bool floatType = type == 0x1406 /* GL_FLOAT */ || type == 0x140B /* GL_HALF_FLOAT */;
+  const bool signedType =
+      type == 0x1400 /* GL_BYTE */ || type == 0x1402 /* GL_SHORT */ || type == 0x1404 /* GL_INT */;
+  if ((format == 0x1901 /* GL_STENCIL_INDEX */ && floatType) ||
+      (format == 0x1902 /* GL_DEPTH_COMPONENT */ && signedType)) {
+    return 0;
+  }
+  return PixelByteSize(format, type);
 }
 
 uint32_t ComputeClearBufferValueCount(GLenum buffer) {

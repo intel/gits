@@ -44,7 +44,8 @@
 #     third name is `count`, not `width`), glClearBufferData/glClearBufferSubData/
 #     glClearNamedBufferData(EXT)/glClearNamedBufferSubData(EXT)/glClearTexImage(EXT)/
 #     glClearTexSubImage(EXT) (COMPSIZE(format,type) - a single clear-color PATTERN value with
-#     NO dimension arguments at all, not an image), and glTexImage4DSGIS/glTexSubImage4DSGIS
+#     NO dimension arguments at all, not an image; derived separately as TEXEL_BYTE_SIZE, see
+#     _derive_texel_byte_size_override), and glTexImage4DSGIS/glTexSubImage4DSGIS
 #     (COMPSIZE(format,type,width,height,depth,size4d) - a vendor-only 4-D texture extension
 #     with a genuine fifth dimension no version of ComputePixelTransferByteSize() computes).
 #     Every one of these is real, deliberately excluded evidence that "COMPSIZE(format,type,
@@ -118,6 +119,29 @@ def _parse_compsize_args(len_attrib: str | None) -> tuple[str, ...] | None:
     return tuple(name.strip() for name in inner.split(','))
 
 
+def _derive_texel_byte_size_override(
+    param: Parameter, by_name: dict[str, Parameter],
+) -> PointerParamOverride | None:
+    """COMPSIZE(format,type) - a single clear value (glClearTexImage/glClearBufferData/...), see
+    LengthSourceKind.TEXEL_BYTE_SIZE."""
+    format_param = by_name.get('format')
+    type_param = by_name.get('type')
+    if format_param is None or type_param is None:
+        return None
+    if format_param.group != 'PixelFormat' or type_param.group != 'PixelType':
+        return None
+    if not format_param.type_facts.is_scalar or not type_param.type_facts.is_scalar:
+        return None
+    if param.type != 'const void *':
+        return None
+    return PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.TEXEL_BYTE_SIZE,
+        pixel_format_param='format',
+        pixel_type_param='type',
+    )
+
+
 def derive_pixel_transfer_override(
     param: Parameter, other_params: list[Parameter],
 ) -> PointerParamOverride | None:
@@ -130,7 +154,17 @@ def derive_pixel_transfer_override(
     _validate_pointer_override's/pointer_length_derivation.py's own `other_params` convention) -
     needed to resolve and validate the format/type/dimension siblings COMPSIZE(...) names.
     """
+    by_name = {p.name: p for p in other_params}
     compsize_args = _parse_compsize_args(param.len)
+    if compsize_args is None and param.len is None and param.type == 'const void *':
+        # gl.xml omits len= on core glTextureSubImage1D/2D/3D's `pixels` (their EXT
+        # counterparts carry COMPSIZE(format,type,<dims>)). The same shape is recovered from the
+        # siblings instead; the format/type group checks below still apply. IN only - the one
+        # OUT match (glExtGetTexSubImageQCOM) stays excluded.
+        compsize_args = ('format', 'type') + tuple(
+            name for name in ('width', 'height', 'depth') if name in by_name)
+    if compsize_args == ('format', 'type'):
+        return _derive_texel_byte_size_override(param, by_name)
     if compsize_args is None or len(compsize_args) < 3:
         return None
     if compsize_args[0] != 'format' or compsize_args[1] != 'type':
@@ -139,7 +173,6 @@ def derive_pixel_transfer_override(
     if dims not in _DIMENSION_SHAPES:
         return None
 
-    by_name = {p.name: p for p in other_params}
     format_param = by_name.get('format')
     type_param = by_name.get('type')
     if format_param is None or type_param is None:

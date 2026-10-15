@@ -154,6 +154,9 @@ QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "${cmd.n
 ## COMPSIZE(buffer) depends on the sibling enum's *value*, not just its presence - see that
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h.
 , m_${p.name}(${arg_expr}, ComputeClearBufferValueCount(${override.clear_buffer_param}))\
+% elif override.length_source_kind == LengthSourceKind.TEXEL_BYTE_SIZE:
+## COMPSIZE(format,type) - one clear value, see that LengthSourceKind's own comment.
+, m_${p.name}(${arg_expr}, ComputeTexelByteSize(${override.pixel_format_param}, ${override.pixel_type_param}))\
 % elif override.length_source_kind == LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
 ## COMPSIZE(pname) depends on the sibling enum's *value* AND on which command family is
 ## calling (GL_TEXTURE_SWIZZLE_RGBA is legal only for the Tex- family - see that
@@ -184,8 +187,13 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 ## BufferArgument - see arguments.h's own comment) and does the static_cast<size_t> itself,
 ## sidestepping both MSVC's C2398 brace-init narrowing check and the uint32_t-narrowing bug
 ## a hand-written static_cast<uint32_t> here would reintroduce for a 64-bit sibling like
-## glBufferData/glBufferSubData's `size` (GLsizeiptr).
-, m_${p.name}(${arg_expr}, ${override.length_source_value} * ${override.length_multiplier})\
+## glBufferData/glBufferSubData's `size` (GLsizeiptr). A multiplier is applied after clamping
+## and widening to uint64_t, since the product in the sibling's signed type can overflow.
+% if override.length_multiplier == 1:
+, m_${p.name}(${arg_expr}, ${override.length_source_value})\
+% else:
+, m_${p.name}(${arg_expr}, static_cast<uint64_t>(ClampCountToSizeT(${override.length_source_value})) * ${override.length_multiplier}u)\
+% endif
 % endif
 % endif
 % endfor

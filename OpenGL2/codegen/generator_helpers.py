@@ -40,6 +40,7 @@ from pointer_metadata import (
     PointerParamOverride,
     TexOrSamplerParameterFamily,
 )
+from pointer_length_derivation import derive_pointer_param_override
 from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
 from uniform_setter_metadata import derive_uniform_setter_override
 
@@ -263,7 +264,10 @@ def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride 
     override = derive_uniform_setter_override(cmd.name, param, other_params)
     if override is not None:
         return override
-    return derive_tex_sampler_parameter_override(cmd.name, param, other_params)
+    override = derive_tex_sampler_parameter_override(cmd.name, param, other_params)
+    if override is not None:
+        return override
+    return derive_pointer_param_override(cmd.name, param, other_params)
 
 
 def mako_render(inpath: str, **kwargs) -> str | None:

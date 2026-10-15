@@ -146,6 +146,13 @@ class LengthSourceKind(StrEnum):
         # count, so a real runtime helper (gits::opengl2::ComputeClearBufferValueCount(),
         # OpenGL2/common/layer_interface/pixelTransferSize.h) computes it at capture time
         # instead of a SIBLING_PARAM direct by-value read.
+    TEXEL_BYTE_SIZE = 'texel_byte_size'  # length_source_value is unused (None); the byte size of
+        # ONE texel of the pixel_format_param/pixel_type_param siblings (gl.xml's
+        # COMPSIZE(format,type) on glClearTexImage/glClearTexSubImage/glClearBufferData/...:
+        # a single clear value, not an image). Pixel-store state and GL_PIXEL_UNPACK_BUFFER do
+        # not apply to these commands' `data`, so unlike PIXEL_TRANSFER_SIZE there is no row
+        # arithmetic and no PBO guard. See gits::opengl2::ComputeTexelByteSize()
+        # (pixelTransferSize.h). IN direction only.
     TEX_SAMPLER_PARAMETER_VALUE_COUNT = 'tex_sampler_parameter_value_count'  # length_source_value
         # is unused (None); instead the extra `pname_param` field names the sibling `pname` enum
         # param whose len="COMPSIZE(pname)" value count actually depends on, and the extra
@@ -248,6 +255,7 @@ class PointerParamOverride:
         # SIBLING_PARAM entry that already counts elements 1:1 with its sibling's value.
     # Only meaningful when length_source_kind is PIXEL_TRANSFER_SIZE - the sibling param names
     # ComputePixelTransferByteSize() needs (see that LengthSourceKind member's own comment).
+    # TEXEL_BYTE_SIZE uses only pixel_format_param/pixel_type_param.
     # pixel_format_param/pixel_type_param/pixel_width_param are always required;
     # pixel_height_param/pixel_depth_param are optional (a 1D transfer has neither; depth
     # requires height). None for every other kind.
