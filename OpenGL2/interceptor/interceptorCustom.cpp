@@ -26,6 +26,19 @@
 
 namespace gits::opengl2 {
 
+namespace {
+// Per the WGL spec, wglGetProcAddress signals failure either by returning NULL or by
+// returning one of four documented sentinel values - (PROC)1, (PROC)2, (PROC)3, (PROC)-1 -
+// some drivers use instead of NULL for a function they don't support. Treating a sentinel as
+// a real, callable pointer would cache it and eventually crash the first time something
+// actually calls through it, since it is not a valid code address.
+bool IsWglGetProcAddressFailureSentinel(PROC proc) {
+  return proc == nullptr || proc == reinterpret_cast<PROC>(1) ||
+         proc == reinterpret_cast<PROC>(2) || proc == reinterpret_cast<PROC>(3) ||
+         proc == reinterpret_cast<PROC>(-1);
+}
+} // namespace
+
 PROC WglGetProcAddress(LPCSTR name) {
   IRecorder& recorder = GetRecorder();
   if (name == nullptr) {
@@ -39,9 +52,10 @@ PROC WglGetProcAddress(LPCSTR name) {
     FatalRecorderError("real wglGetProcAddress resolution", "Function is unavailable");
   }
   PROC realProc = realWglGetProcAddress(name);
-  if (realProc == nullptr) {
+  if (IsWglGetProcAddressFailureSentinel(realProc)) {
     // The real driver doesn't have this function either - report that
-    // faithfully rather than pretending otherwise.
+    // faithfully (as a real NULL) rather than pretending otherwise, whether the driver told
+    // us so via NULL or via one of the documented non-NULL failure sentinels above.
     return nullptr;
   }
 

@@ -24,6 +24,17 @@ OpenGLDispatchTable g_DispatchTable;
 
 namespace {
 
+// Per the WGL spec, wglGetProcAddress signals failure either by returning NULL or by
+// returning one of four documented sentinel values - (void*)1, (void*)2, (void*)3, (void*)-1 -
+// some drivers use instead of NULL for a function they don't support. Treating a sentinel as
+// a real, resolved pointer would cache it in the dispatch table and eventually crash the
+// first time something actually calls through it, since it is not a valid code address.
+bool IsWglGetProcAddressFailureSentinel(void* real) {
+  return real == nullptr || real == reinterpret_cast<void*>(1) ||
+         real == reinterpret_cast<void*>(2) || real == reinterpret_cast<void*>(3) ||
+         real == reinterpret_cast<void*>(-1);
+}
+
 // Resolves `name`'s real function pointer: tries the real opengl32.dll's
 // static exports first; most functions beyond GL1.1/core WGL aren't
 // statically exported at all and can only be resolved via
@@ -38,6 +49,9 @@ void* ResolveDriverFunction(const char* name) {
   if (real == nullptr && strcmp(name, "wglGetProcAddress") != 0) {
     real = reinterpret_cast<void*>(
       g_DispatchTable.wglGetProcAddress.load(std::memory_order_acquire)(name));
+    if (IsWglGetProcAddressFailureSentinel(real)) {
+      real = nullptr;
+    }
   }
   if (real == nullptr) {
     // Failed to load it, will retry the next time app calls it.
