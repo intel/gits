@@ -9,6 +9,8 @@
 set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/include/openglDriversAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/openglDriversAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappersAuto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)

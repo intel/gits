@@ -9,7 +9,7 @@
 #pragma once
 
 #include "arguments.h"
-#include "layer.h"
+#include "command.h"
 #include "orderingRecorder.h"
 
 #include <atomic>
@@ -20,11 +20,28 @@
 
 namespace gits::opengl2 {
 
+// Forward-declared, not #include "layerAuto.h": this header only ever stores/returns Layer*
+// (never dereferences one), so a forward declaration is sufficient - and deliberately
+// preferable here, not just a minor optimization. layerAuto.h pulls in commandsAuto.h (every
+// enabled command's typed Pre/Post overload needs the full Command subclass) and therefore
+// glTypes.h (see interceptor/glTypes.h's own header comment on being a stand-alone substitute
+// for <windows.h>'s PROC/RECT/etc., never meant to coexist with a real <windows.h> include in
+// the same translation unit). captureManager.h is included from recorder/unsupportedCommand.cpp,
+// which - unlike the generated wrapper/runner templates - genuinely needs real <windows.h> too;
+// pulling glTypes.h's conflicting declarations in ahead of it there breaks the build. Only
+// captureManager.cpp (which actually constructs a Layer subclass, see LoadLayers() below)
+// and the generated wrapper/runner templates (which already include commandsAuto.h directly,
+// so this adds nothing new for them) need the real layerAuto.h include.
+class Layer;
+
 // Owns the single OpenGL2 capture pipeline: the atomic ordering-key source, the
 // backend-local OrderingRecorder instance (the common ordering service, see
 // modern-opengl-backend-architecture.md "Establish one total capture order"), and the
-// registered Pre/Post layer lists with the encoder always last in Post order (not yet
-// populated; there are no enabled commands and therefore no encoder layer yet).
+// registered Pre/Post layer lists with the encoder always last in Post order. LoadLayers()
+// (called once, from the constructor) populates m_PostLayers with the sole EncoderLayer
+// instance - see docs/development/opengl2-layer-architecture-alignment-plan.md; m_PreLayers
+// stays empty until a real Pre-side layer (e.g. tracing/logging) is added, which is out of
+// this plan's scope.
 class CaptureManager {
 public:
   // Heap-allocated and intentionally never destroyed via a C++ static destructor,
@@ -110,8 +127,22 @@ public:
   }
 
 private:
-  CaptureManager() = default;
+  CaptureManager() {
+    LoadLayers();
+  }
   stream::OrderingRecorder& GetOrderingRecorder();
+
+  // Constructs the (today, single) concrete Layer subclass - EncoderLayer - and registers it
+  // into m_PostLayers as the last entry, matching Vulkan's own "encoder always last in Post
+  // order" invariant. See captureManager.cpp: heap-allocated via `new` and intentionally never
+  // deleted, same never-destroyed rationale as this singleton itself (Get()'s own comment) -
+  // EncoderLayer holds no resources that need releasing, so this introduces no static-
+  // destruction-order risk. A future, fuller CaptureLayerManager (see the plan doc's follow-on
+  // work) would replace this single-purpose method with a real LoadLayers() that also
+  // registers trace/logging layers; nothing
+  // else needs to change at the call sites above (GetPreLayers()/GetPostLayers() already return
+  // by reference).
+  void LoadLayers();
 
   std::once_flag m_RecorderInitFlag;
   std::unique_ptr<stream::OrderingRecorder> m_Recorder;

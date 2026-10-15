@@ -30,5 +30,12 @@ def generate_recorder_files(commands: list[Command]) -> None:
                handle_creating_commands=HANDLE_CREATING_COMMANDS,
                handle_param_to_erase_on_success=HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
                context_share_param=CONTEXT_SHARE_PARAM,
-               share_lists_commands=SHARE_LISTS_COMMANDS,
+               share_lists_commands=SHARE_LISTS_COMMANDS)
+    # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,
+    # last-registered Post layer, dispatched through by the wrapper above via its
+    # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.
+    mako_write('templates/encoderLayerAuto.h.mako',
+               'recorder/encoderLayerAuto.h', commands=commands)
+    mako_write('templates/encoderLayerAuto.cpp.mako',
+               'recorder/encoderLayerAuto.cpp', commands=commands,
                frame_end_commands=FRAME_END_COMMANDS)

@@ -15,14 +15,24 @@ ${AUTO_GENERATED_HEADER}
 // the real driver is then always called, unconditionally, matching the app's expectations
 // regardless of recording state; any OUT-direction array is captured immediately afterward,
 // once the driver has actually written into the app's buffer; then the command is keyed,
-// the return value and any handle keys are resolved, and the command is handed to
-// CaptureManager. Disabled commands just report themselves once (per canonical name) as
-// unsupported.
+// the return value and any handle keys are resolved, and the command is handed off to the
+// Post layer chain for encoding. Disabled commands just report themselves once (per
+// canonical name) as unsupported.
 //
 // The recursion guard already distinguishes the outermost call (depth one) from calls
-// nested underneath it, even though there is no layer work yet that could recurse into GL
-// itself - recording/reporting only happens at depth one so a future nested call (e.g.
-// from a layer) will not re-record or re-warn.
+// nested underneath it, so a nested call from within a Pre/Post layer will not re-record
+// or re-warn.
+//
+// Pre/Post layers (see docs/development/opengl2-layer-architecture-alignment-plan.md):
+// CaptureManager::GetPreLayers() runs immediately before the real driver call, once every
+// input handle/object-name field has been resolved to its GITSKey (matching Vulkan's
+// wrappersAuto.cpp.mako's own Pre-layer placement); CaptureManager::GetPostLayers() runs once
+// output handle/object-name fields have been registered and command.m_Return is set -
+// CaptureManager::LoadLayers() registers exactly one Post layer, EncoderLayer, as the last
+// (and, today, only) entry in that chain, so this loop is where encoding onto the wire
+// actually happens (see encoderLayerAuto.cpp.mako's EncoderLayer::Post), matching Vulkan's own
+// Post-layer-does-the-encoding architecture instead of calling CaptureManager::RecordCommand()
+// directly and inline here.
 //
 // handle_creating_commands / handle_param_to_erase_on_success come from
 // codegen/handle_lifecycle.py - see that module for why this is a small hand-maintained
@@ -36,6 +46,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandSerializersAuto.h"
 #include "contextHandleMapService.h"
 #include "handleArgumentUpdaters.h"
+#include "layerAuto.h"
 #include "mapTrackingWrappers.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
@@ -43,7 +54,6 @@ ${AUTO_GENERATED_HEADER}
 #include "recursionGuard.h"
 #include "shareGroupService.h"
 #include "unsupportedCommand.h"
-#include "unsupportedCommandTypes.h"
 
 #include <cstdint>
 #include <optional>
@@ -134,6 +144,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endif
 % endfor
+    for (Layer* layer : CaptureManager::Get().GetPreLayers()) {
+      layer->Pre(*command);
+    }
   }
 % endif
 % if is_void:
@@ -285,27 +298,15 @@ ${override.pixel_width_param}, ${override.pixel_height_param}, QueryPackAlignmen
     }
 % endif
 % endfor
-    CaptureManager::Get().RecordCommand(*command, new ${cmd.name}CommandSerializer(*command));
-% if cmd.name in frame_end_commands:
-    // See codegen/handle_lifecycle.py's FRAME_END_COMMANDS and
-    // common/layer_interface/unsupportedCommandTypes.h's FrameEndCommand - only emit the
-    // marker on a successful swap, mirroring the erase-on-success pattern used elsewhere in
-    // this same function; an unsuccessful swap did not actually present anything and should
-    // not advance the shared player infrastructure's frame count.
-% if is_void:
-    {
-      FrameEndCommand frameEndCommand(static_cast<uint32_t>(GetCurrentThreadId()));
-      frameEndCommand.m_Key = CaptureManager::Get().CreateCommandKey();
-      CaptureManager::Get().RecordCommand(frameEndCommand, new FrameEndSerializer(frameEndCommand));
+    // See docs/development/opengl2-layer-architecture-alignment-plan.md: EncoderLayer - the
+    // sole, last-registered Post layer (see captureManager.cpp's LoadLayers()) - does what
+    // this loop used to do directly right here: hand the command to
+    // CaptureManager::RecordCommand() for encoding onto the wire (and, for a
+    // FRAME_END_COMMANDS entry like this one might be, additionally emit the FrameEndCommand
+    // marker afterward - see encoderLayerAuto.cpp.mako's EncoderLayer::Post).
+    for (Layer* layer : CaptureManager::Get().GetPostLayers()) {
+      layer->Post(*command);
     }
-% else:
-    if (result) {
-      FrameEndCommand frameEndCommand(static_cast<uint32_t>(GetCurrentThreadId()));
-      frameEndCommand.m_Key = CaptureManager::Get().CreateCommandKey();
-      CaptureManager::Get().RecordCommand(frameEndCommand, new FrameEndSerializer(frameEndCommand));
-    }
-% endif
-% endif
 % else:
     ReportUnsupportedCommand("${cmd.name}", orderingKey);
 % endif

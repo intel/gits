@@ -27,6 +27,8 @@ def generate_layer_interface_files(
                'common/layer_interface/commandIdsAuto.h', command_ids=command_ids)
     mako_write('templates/commandsAuto.h.mako',
                'common/layer_interface/commandsAuto.h', commands=command_list)
+    mako_write('templates/layerAuto.h.mako',
+               'common/layer_interface/layerAuto.h', commands=command_list)
     mako_write('templates/commandCodersAuto.h.mako',
                'common/layer_interface/commandCodersAuto.h', commands=command_list)
     mako_write('templates/commandCodersAuto.cpp.mako',

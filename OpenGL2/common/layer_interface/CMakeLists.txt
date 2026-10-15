@@ -13,6 +13,7 @@
 set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandIdsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/layerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
@@ -25,7 +26,7 @@ add_library(OpenGL2_layer_interface STATIC
   arguments.h
   argumentCoders.h
   command.h
-  layer.h
+  layerBase.h
   mappedDataMetaTypes.h
   unsupportedCommandTypes.h
   pixelTransferSize.h

@@ -30,9 +30,22 @@ ${AUTO_GENERATED_HEADER}
 // an UpdateOutputHandle() call once the real call has returned. A CREATE-role array
 // parameter (glGenTextures/glGenBuffers) gets the array counterpart, UpdateOutputHandleArray().
 //
-// Mirrors Vulkan/codegen/templates/commandRunnersAuto.cpp.mako's shape, minus Pre/Post layers
-// and ExecuteCommands()/m_Skip support - neither is wired for this backend yet (the recorder
-// side doesn't call its own layers yet either), see the plan's Non-goals.
+// Mirrors Vulkan/codegen/templates/commandRunnersAuto.cpp.mako's shape, minus
+// ExecuteCommands()/m_Skip support - not wired for this backend yet, see the plan's
+// Non-goals. Pre/Post layers ARE wired (see
+// docs/development/opengl2-layer-architecture-alignment-plan.md), via the exact same inline
+// `for (Layer* layer : manager.GetPreLayers()) { layer->Pre(command); }` loop shape Vulkan's/
+// DX12's own commandRunnersAuto.cpp.mako use (and, on the OpenGL2 side, the same shape every
+// hand-written runner in commandRunnersCustom.cpp also repeats inline at the equivalent point
+// in its own Run() - see that file's own header comment): PlayerManager::GetPreLayers() runs
+// immediately before the real driver call, once every LOOKUP/DELETE-role handle/object-name
+// field has been resolved to its live, replay-time value (matching Vulkan's
+// commandRunnersAuto.cpp.mako's own Pre-layer placement); PlayerManager::GetPostLayers() runs
+// at the very end of Run(), once every CREATE-role field has been registered. Both vectors are
+// permanently empty today - no concrete Layer subclass registers into either one on the player
+// side (see playerManager.h's own header comment on why the player has no
+// EncoderLayer-equivalent) - so this is a zero-behavior-change wiring change, exactly like the
+// recorder side's own Pre/Post loop.
 //
 // Two shapes added for the rendering-pipeline round 2 (see
 // docs/development/opengl2-rendering-pipeline-pointer-support-plan.md), on top of the treatments
@@ -49,8 +62,10 @@ ${AUTO_GENERATED_HEADER}
 #include "commandRunnersAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
+#include "layerAuto.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
+#include "playerManager.h"
 #include "uniformLocationMapService.h"
 
 #include <cstddef>
@@ -163,6 +178,7 @@ namespace gits::opengl2 {
   call_args = ', '.join(call_arg(p) for p in cmd.params)
 %>\
 void ${cmd.name}Runner::Run() {
+  auto& manager = PlayerManager::Get();
 % for p in handle_params:
   UpdateHandle(command.m_${p.name});
 % endfor
@@ -199,6 +215,9 @@ void ${cmd.name}Runner::Run() {
     ${p.name}Ptrs[i] = command.m_${p.name}.Value[i].data();
   }
 % endfor
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if is_void:
   realFunction(${call_args});
@@ -213,6 +232,9 @@ void ${cmd.name}Runner::Run() {
 % for p in register_object_name_array_params:
   UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${object_name_override_for(cmd.name, p.name, p.class_).kind.value});
 % endfor
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 % endif

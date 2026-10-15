@@ -8,6 +8,7 @@
 
 #include "captureManager.h"
 
+#include "encoderLayerAuto.h"
 #include "unsupportedCommandTypes.h"
 
 namespace gits::opengl2 {
@@ -46,6 +47,13 @@ void CaptureManager::RecordUnsupportedCommand(const char* name, uint64_t key, ui
 
 void CaptureManager::SkipCommandKey(uint64_t key) {
   GetOrderingRecorder().Skip(key);
+}
+
+void CaptureManager::LoadLayers() {
+  // See the header comment: heap-allocated and intentionally never deleted, matching this
+  // singleton's own never-destroyed pattern (Get()'s comment above) - EncoderLayer holds no
+  // resources that need releasing, so this introduces no static-destruction-order risk.
+  m_PostLayers.push_back(new EncoderLayer());
 }
 
 } // namespace gits::opengl2

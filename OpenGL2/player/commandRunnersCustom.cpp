@@ -8,29 +8,53 @@
 
 // See commandRunnersCustom.h's header comment for why these Run() bodies are hand-written
 // instead of generated. Behavior is unchanged from before Decision 11's refactor - only the
-// location moved (out of commandRunnersAuto.cpp.mako's shared per-command loop, into this file).
+// location moved (out of commandRunnersAuto.cpp.mako's shared per-command loop, into this file) -
+// EXCEPT that every Run() below now also runs PlayerManager's Pre/Post layer chain at the same
+// points the generated Run() bodies do, closing a real gap Decision 11's refactor introduced:
+// none of these six runners previously ran PlayerManager::GetPreLayers()/GetPostLayers() at all,
+// so a future player layer would have silently never seen context creation/currentness changes,
+// uniform lookup/use, or pixel-format commands. Each Run() below repeats the exact same inline
+// `for (Layer* layer : manager.GetPreLayers()) { layer->Pre(command); }` loop shape
+// commandRunnersAuto.cpp.mako's generated Run() bodies use - deliberately not factored into a
+// shared helper: Vulkan's and DirectX's own hand-written commandRunnersCustom.cpp files (see
+// Vulkan/player/commandRunnersCustom.cpp, DirectX/player/commandRunnersCustom.cpp) establish
+// this exact "repeat the same four-line pair inline in every Run(), generated or hand-written"
+// pattern already, with no shared-helper equivalent anywhere in either backend, so matching that
+// established pattern here - rather than introducing OpenGL2-only helper functions with no
+// counterpart elsewhere - keeps this backend's player code recognizable to anyone coming from
+// Vulkan/DirectX first.
 
 #include "commandRunnersCustom.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
+#include "layerAuto.h"
 #include "openglDriversAuto.h"
+#include "playerManager.h"
 #include "uniformLocationMapService.h"
 
 namespace gits::opengl2 {
 
 void WglCreateContextRunner::Run() {
+  auto& manager = PlayerManager::Get();
   HDC real_hDc = HdcVirtualizationService::Get().Resolve(command.m_hDc.Value);
   // Defensive fallback for an app that never called (or that called an unsupported variant
   // of) SetPixelFormat before creating its context - see
   // docs/development/opengl2-player-skeleton-plan.md's Decision 9. A no-op if a real,
   // replayed wglSetPixelFormat command (see WglSetPixelFormatRunner below) already set one.
   HdcVirtualizationService::Get().EnsurePixelFormatSet(nullptr);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction = player::g_DispatchTable.wglCreateContext.load(std::memory_order_acquire);
   command.m_Return.Value = realFunction(real_hDc);
   UpdateOutputHandle(command.m_Return);
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 void WglCreateContextAttribsARBRunner::Run() {
+  auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_hShareContext);
   HDC real_hDC = HdcVirtualizationService::Get().Resolve(command.m_hDC.Value);
   // Defensive fallback for an app that never called (or that called an unsupported variant
@@ -38,6 +62,9 @@ void WglCreateContextAttribsARBRunner::Run() {
   // docs/development/opengl2-player-skeleton-plan.md's Decision 9. A no-op if a real,
   // replayed wglSetPixelFormat command (see WglSetPixelFormatRunner below) already set one.
   HdcVirtualizationService::Get().EnsurePixelFormatSet(nullptr);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction =
       player::g_DispatchTable.wglCreateContextAttribsARB.load(std::memory_order_acquire);
   // command.m_attribList.HasValue (not just .Data.data()) is the correct null check here - a
@@ -52,9 +79,13 @@ void WglCreateContextAttribsARBRunner::Run() {
       realFunction(real_hDC, command.m_hShareContext.Value,
                    command.m_attribList.HasValue ? command.m_attribList.Data.data() : nullptr);
   UpdateOutputHandle(command.m_Return);
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 void WglMakeCurrentRunner::Run() {
+  auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_newContext);
   // A recorded wglMakeCurrent(NULL, NULL) - the Win32 API's own "detach the current context"
   // form - has a null captured HDC. HdcVirtualizationService::Resolve() unconditionally maps
@@ -65,6 +96,9 @@ void WglMakeCurrentRunner::Run() {
   // literal null HDC straight through in that case instead of resolving it.
   HDC real_hDc =
       command.m_hDc.Value ? HdcVirtualizationService::Get().Resolve(command.m_hDc.Value) : nullptr;
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction = player::g_DispatchTable.wglMakeCurrent.load(std::memory_order_acquire);
   command.m_Return.Value = realFunction(real_hDc, command.m_newContext.Value);
   if (command.m_Return.Value && command.m_newContext.Value) {
@@ -76,11 +110,18 @@ void WglMakeCurrentRunner::Run() {
     // permanently once this command's own real call resolves it lazily on first use instead.
     player::WarmUpResolvableFunctions();
   }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 void GlGetUniformLocationRunner::Run() {
+  auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_program, GLObjectKind::Program);
   const GLint capturedLocation = command.m_Return.Value;
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction = player::g_DispatchTable.glGetUniformLocation.load(std::memory_order_acquire);
   // command.m_name.HasValue check mirrors WglCreateContextAttribsARBRunner::Run()'s own
   // attribList fix above - an empty-but-HasValue-false vector's .data() is not guaranteed
@@ -97,10 +138,17 @@ void GlGetUniformLocationRunner::Run() {
   // be live handle 1 at the same time).
   UniformLocationMapService::Get().Register(command.m_program.Key, capturedLocation,
                                             command.m_Return.Value);
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 void GlUseProgramRunner::Run() {
+  auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_program, GLObjectKind::Program);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   auto realFunction = player::g_DispatchTable.glUseProgram.load(std::memory_order_acquire);
   realFunction(command.m_program.Value);
   // See UniformLocationMapService's header comment: classic glUniform*() calls carry no
@@ -123,10 +171,17 @@ void GlUseProgramRunner::Run() {
   if (static_cast<GLuint>(actualProgram) == command.m_program.Value) {
     UniformLocationMapService::Get().SetCurrentProgram(CurrentContext(), command.m_program.Key);
   }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 void WglSetPixelFormatRunner::Run() {
+  auto& manager = PlayerManager::Get();
   HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
   // A captured wglSetPixelFormat(hdc, format, nullptr) is itself an invalid request - it must
   // have FAILED at capture (no format was set, no state changed there either). Preserve that
   // failure/no-op semantics on replay rather than forwarding the null straight through to
@@ -147,6 +202,12 @@ void WglSetPixelFormatRunner::Run() {
     command.m_Return.Value = 0; // WGL BOOL FALSE - mirrors the real call's own capture-time
                                 // failure; still resolves/virtualizes the HDC above so a later,
                                 // real request against the same recorded HDC value works.
+    // Still bracket this path in the Post-layer loop even though it makes no actual WGL call -
+    // every runner brackets its whole Run() in Pre/Post regardless of which internal path it
+    // takes, so a layer sees this command exactly once either way.
+    for (Layer* layer : manager.GetPostLayers()) {
+      layer->Post(command);
+    }
     return;
   }
   // The recorded format index (*ipfd) is a driver/GPU-specific value with no defined meaning
@@ -159,6 +220,9 @@ void WglSetPixelFormatRunner::Run() {
   // both virtualized onto this one real HDC) is safe.
   command.m_Return.Value =
       HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_ppfd.Data.data());
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 } // namespace gits::opengl2
