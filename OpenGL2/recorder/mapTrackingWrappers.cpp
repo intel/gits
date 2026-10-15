@@ -18,10 +18,53 @@
 #include "recursionGuard.h"
 
 #include <cstring>
+#include <limits>
+#include <type_traits>
+#include <vector>
 
 namespace gits::opengl2 {
 
 namespace {
+
+bool CanQueryBufferBinding(GLenum target, int major, int minor) {
+  const auto supports = [major, minor](int coreMajor, int coreMinor, const char* extension,
+                                       const char* alternate = nullptr) {
+    return major > coreMajor || (major == coreMajor && minor >= coreMinor) ||
+           CurrentContextHasExtension(major, extension) ||
+           (alternate != nullptr && CurrentContextHasExtension(major, alternate));
+  };
+  switch (target) {
+  case GL_ARRAY_BUFFER:
+  case GL_ELEMENT_ARRAY_BUFFER:
+    return supports(1, 5, "GL_ARB_vertex_buffer_object");
+  case GL_PIXEL_PACK_BUFFER:
+  case GL_PIXEL_UNPACK_BUFFER:
+    return supports(2, 1, "GL_ARB_pixel_buffer_object", "GL_EXT_pixel_buffer_object");
+  case GL_UNIFORM_BUFFER:
+    return supports(3, 1, "GL_ARB_uniform_buffer_object");
+  case GL_TRANSFORM_FEEDBACK_BUFFER:
+    return supports(3, 0, "GL_EXT_transform_feedback");
+  case GL_COPY_READ_BUFFER:
+  case GL_COPY_WRITE_BUFFER:
+    return supports(3, 1, "GL_ARB_copy_buffer");
+  case GL_DRAW_INDIRECT_BUFFER:
+    return supports(4, 0, "GL_ARB_draw_indirect");
+  case GL_ATOMIC_COUNTER_BUFFER:
+    return supports(4, 2, "GL_ARB_shader_atomic_counters");
+  case GL_DISPATCH_INDIRECT_BUFFER:
+    return supports(4, 3, "GL_ARB_compute_shader");
+  case GL_SHADER_STORAGE_BUFFER:
+    return supports(4, 3, "GL_ARB_shader_storage_buffer_object");
+  case GL_QUERY_BUFFER:
+    return supports(4, 4, "GL_ARB_query_buffer_object");
+  case GL_TEXTURE_BUFFER:
+    return supports(3, 1, "GL_ARB_texture_buffer_object", "GL_EXT_texture_buffer_object");
+  case GL_PARAMETER_BUFFER:
+    return supports(4, 6, "GL_ARB_indirect_parameters");
+  default:
+    return false;
+  }
+}
 
 void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
                                               GLintptr offset,
@@ -29,10 +72,42 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
                                               GLbitfield access) {
   const RecursionGuard guard;
   const bool record = !guard.IsNested();
+  std::vector<uint8_t> initialBytes;
+  if (record && MapTrackingService::NeedsInitialShadowContents(access)) {
+    const auto [major, minor] = CurrentContextGLVersion();
+    const GLuint buffer = CanQueryBufferBinding(target, major, minor)
+                              ? MapTrackingService::Get().ResolveBoundBuffer(target)
+                              : 0;
+    const bool getterAvailable = buffer != 0 && (major > 1 || (major == 1 && minor >= 5)) &&
+                                 TryResolveRealFunction("glGetBufferParameteriv") &&
+                                 (major < 3 || (major == 3 && minor < 2) ||
+                                  TryResolveRealFunction("glGetBufferParameteri64v")) &&
+                                 TryResolveRealFunction("glGetBufferSubData");
+    initialBytes = MapTrackingService::Get().PrepareInitialBytes(
+        offset, length, access, getterAvailable,
+        /*parameter=*/
+        [target](GLenum pname, GLint64& value) {
+          if (pname == GL_BUFFER_SIZE) {
+            return GetBoundBufferSize(target, value);
+          }
+          GLint mapped = 0;
+          if (!GetBoundBufferParameter(target, pname, mapped)) {
+            return false;
+          }
+          value = mapped;
+          return true;
+        },
+        /*read=*/
+        [target](GLintptr start, GLsizeiptr count, void* data) {
+          g_DispatchTable.glGetBufferSubData.load(std::memory_order_acquire)(target, start, count,
+                                                                             data);
+        });
+  }
   auto realFunction = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* result = realFunction(target, offset, length, access);
   if (record && result != nullptr) {
-    return MapTrackingService::Get().OnMapBufferRange(target, offset, length, access, result);
+    return MapTrackingService::Get().OnMapBufferRange(target, offset, length, access, result,
+                                                      initialBytes);
   }
   return result;
 }
@@ -155,17 +230,58 @@ void* APIENTRY CustomWrapper_MapNamedBuffer(GLuint buffer, GLenum access) {
   return result;
 }
 
-template <auto MapRangeEntry>
+enum class NamedRangeFamily {
+  Core,
+  EXT
+};
+
+template <NamedRangeFamily Family, auto MapRangeEntry, auto ParameterEntry, auto SubDataEntry>
 void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
                                                  GLintptr offset,
                                                  GLsizeiptr length,
                                                  GLbitfield access) {
   const RecursionGuard guard;
   const bool record = !guard.IsNested();
+  std::vector<uint8_t> initialBytes;
+  if (record && MapTrackingService::NeedsInitialShadowContents(access)) {
+    const int major = CurrentContextGLVersion().first;
+    constexpr bool ext = Family == NamedRangeFamily::EXT;
+    // EXT entry points require GL_EXT_direct_state_access; core DSA support does not imply it.
+    const bool supported = ext ? CurrentContextHasExtension(major, "GL_EXT_direct_state_access")
+                               : ContextSupportsDirectStateAccess();
+    const char* getterName = ext ? "glGetNamedBufferSubDataEXT" : "glGetNamedBufferSubData";
+    const char* parameterName =
+        ext ? "glGetNamedBufferParameterivEXT" : "glGetNamedBufferParameteri64v";
+    const bool getterAvailable =
+        buffer != 0 && supported && TryResolveRealFunction("glIsBuffer") &&
+        g_DispatchTable.glIsBuffer.load(std::memory_order_acquire)(buffer) == GL_TRUE &&
+        TryResolveRealFunction(parameterName) && TryResolveRealFunction(getterName);
+    initialBytes = MapTrackingService::Get().PrepareInitialBytes(
+        offset, length, access, getterAvailable,
+        /*parameter=*/
+        [buffer](GLenum pname, GLint64& value) {
+          using ParameterType = std::conditional_t<ext, GLint, GLint64>;
+          ParameterType result = 0;
+          (g_DispatchTable.*ParameterEntry).load(std::memory_order_acquire)(buffer, pname, &result);
+          if constexpr (ext) {
+            if (pname == GL_BUFFER_SIZE && result == std::numeric_limits<GLint>::max()) {
+              return false;
+            }
+          }
+          value = result;
+          return true;
+        },
+        /*read=*/
+        [buffer](GLintptr start, GLsizeiptr count, void* data) {
+          (g_DispatchTable.*SubDataEntry)
+              .load(std::memory_order_acquire)(buffer, start, count, data);
+        });
+  }
   void* result = (g_DispatchTable.*MapRangeEntry)
                      .load(std::memory_order_acquire)(buffer, offset, length, access);
   if (record && result != nullptr) {
-    return MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result);
+    return MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result,
+                                                           initialBytes);
   }
   return result;
 }
@@ -181,8 +297,8 @@ void APIENTRY CustomWrapper_FlushMappedBufferRange(GLenum target,
     return;
   }
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
-  MapTrackingService::Get().FlushMappedRange(MapTrackingService::Get().BoundBuffer(target), offset,
-                                             length, key,
+  MapTrackingService::Get().FlushMappedRange(MapTrackingService::Get().ResolveBoundBuffer(target),
+                                             offset, length, key,
                                              [=] { realFlush(target, offset, length); });
 }
 
@@ -220,7 +336,7 @@ void APIENTRY CustomWrapper_GetBufferPointerv(GLenum target, GLenum pname, void*
   (g_DispatchTable.*GetEntry).load(std::memory_order_acquire)(target, pname, params);
   if (!guard.IsNested() && pname == GL_BUFFER_MAP_POINTER && params != nullptr) {
     MapTrackingService::Get().AssertNoShadowPointerQuery(
-        MapTrackingService::Get().BoundBuffer(target), *params);
+        MapTrackingService::Get().ResolveBoundBuffer(target), *params);
   }
 }
 
@@ -376,10 +492,16 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
                                        &ExtNamedBufferSize>)},
     {"glMapNamedBufferRange",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBufferRange<&OpenGLDispatchTable::glMapNamedBufferRange>)},
+         &CustomWrapper_MapNamedBufferRange<NamedRangeFamily::Core,
+                                            &OpenGLDispatchTable::glMapNamedBufferRange,
+                                            &OpenGLDispatchTable::glGetNamedBufferParameteri64v,
+                                            &OpenGLDispatchTable::glGetNamedBufferSubData>)},
     {"glMapNamedBufferRangeEXT",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBufferRange<&OpenGLDispatchTable::glMapNamedBufferRangeEXT>)},
+         &CustomWrapper_MapNamedBufferRange<NamedRangeFamily::EXT,
+                                            &OpenGLDispatchTable::glMapNamedBufferRangeEXT,
+                                            &OpenGLDispatchTable::glGetNamedBufferParameterivEXT,
+                                            &OpenGLDispatchTable::glGetNamedBufferSubDataEXT>)},
     {"glUnmapNamedBuffer",
      reinterpret_cast<void*>(
          &CustomWrapper_UnmapNamedBuffer<UNMAP_NAMED_BUFFER,

@@ -96,11 +96,47 @@ MapTrackingService& MapTrackingService::Get() {
   return instance;
 }
 
-void* MapTrackingService::OnMapBufferRange(
-    GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer) {
+bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
+  constexpr GLbitfield required = GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
+  constexpr GLbitfield excluded =
+      GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+  return (access & required) == required && (access & excluded) == 0;
+}
+
+std::vector<uint8_t> MapTrackingService::PrepareInitialBytes(
+    GLintptr offset,
+    GLsizeiptr length,
+    GLbitfield access,
+    bool getterAvailable,
+    const BufferParameterCallback& parameter,
+    const BufferReadCallback& read) {
+  if (!getterAvailable || !NeedsInitialShadowContents(access) || offset < 0 || length <= 0) {
+    return {};
+  }
+  GLint64 size = 0;
+  GLint64 mapped = 0;
+  if (!parameter(GL_BUFFER_SIZE, size) || !parameter(GL_BUFFER_MAPPED, mapped)) {
+    return {};
+  }
+  if (mapped != 0 || size < 0 || offset > size || length > size - offset ||
+      static_cast<uint64_t>(length) > std::vector<uint8_t>().max_size()) {
+    return {};
+  }
+  std::vector<uint8_t> bytes(static_cast<size_t>(length));
+  // Readback may synchronize even when the subsequent map requests GL_MAP_UNSYNCHRONIZED_BIT.
+  read(offset, length, bytes.data());
+  return bytes;
+}
+
+void* MapTrackingService::OnMapBufferRange(GLenum target,
+                                           GLintptr offset,
+                                           GLsizeiptr length,
+                                           GLbitfield access,
+                                           void* mappedPointer,
+                                           std::span<const uint8_t> initialBytes) {
   const GLuint buffer = ResolveBoundBuffer(target);
   GITS_ASSERT(buffer != 0, "Successful buffer range map has no resolvable buffer");
-  return RegisterRange(buffer, offset, length, access, mappedPointer);
+  return RegisterRange(buffer, offset, length, access, mappedPointer, initialBytes);
 }
 
 GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
@@ -184,14 +220,22 @@ void MapTrackingService::OnMapNamedBuffer(GLuint buffer,
                       static_cast<GLsizeiptr>(size));
 }
 
-void* MapTrackingService::OnMapNamedBufferRange(
-    GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer) {
+void* MapTrackingService::OnMapNamedBufferRange(GLuint buffer,
+                                                GLintptr offset,
+                                                GLsizeiptr length,
+                                                GLbitfield access,
+                                                void* mappedPointer,
+                                                std::span<const uint8_t> initialBytes) {
   GITS_ASSERT(buffer != 0, "Successful named buffer range map has no buffer name");
-  return RegisterRange(buffer, offset, length, access, mappedPointer);
+  return RegisterRange(buffer, offset, length, access, mappedPointer, initialBytes);
 }
 
-void* MapTrackingService::RegisterRange(
-    GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* driverPointer) {
+void* MapTrackingService::RegisterRange(GLuint buffer,
+                                        GLintptr offset,
+                                        GLsizeiptr length,
+                                        GLbitfield access,
+                                        void* driverPointer,
+                                        std::span<const uint8_t> initialBytes) {
   GITS_ASSERT(driverPointer != nullptr && offset >= 0 && length > 0,
               "Successful buffer range map has invalid tracking parameters");
   GITS_ASSERT((access & GL_MAP_COHERENT_BIT) == 0 && (access & GL_MAP_PERSISTENT_BIT) == 0,
@@ -201,8 +245,9 @@ void* MapTrackingService::RegisterRange(
     GITS_ASSERT((access & GL_MAP_WRITE_BIT) != 0,
                 "Explicit-flush buffer map has no writable byte source");
     if ((access & GL_MAP_READ_BIT) == 0) {
-      GITS_ASSERT((access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0,
-                  "Non-invalidating write-only explicit-flush maps are not supported");
+      GITS_ASSERT(!NeedsInitialShadowContents(access) ||
+                      initialBytes.size() == static_cast<size_t>(length),
+                  "Non-invalidating write-only explicit-flush map has no initial bytes");
       const auto [major, minor] = CurrentContextGLVersion();
       GITS_ASSERT(major > 4 || (major == 4 && minor >= 2) ||
                       CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment"),
@@ -226,15 +271,14 @@ void* MapTrackingService::RegisterRange(
           (residue + static_cast<size_t>(alignment) - base % static_cast<size_t>(alignment)) %
           static_cast<size_t>(alignment);
       range.ApplicationPointer = range.Shadow.data() + padding;
+      if (NeedsInitialShadowContents(access)) {
+        std::memcpy(range.ApplicationPointer, initialBytes.data(), static_cast<size_t>(length));
+      }
     }
   }
   void* applicationPointer = range.ApplicationPointer;
   StoreMappedRange(CurrentShareGroup(), buffer, std::move(range));
   return applicationPointer;
-}
-
-GLuint MapTrackingService::BoundBuffer(GLenum target) {
-  return ResolveBoundBuffer(target);
 }
 
 void MapTrackingService::AssertNoShadowPointerQuery(GLuint buffer, void* pointer) {

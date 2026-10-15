@@ -23,6 +23,7 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -33,9 +34,23 @@ class MapTrackingService {
 public:
   static MapTrackingService& Get();
 
+  using BufferParameterCallback = std::function<bool(GLenum, GLint64&)>;
+  using BufferReadCallback = std::function<void(GLintptr, GLsizeiptr, void*)>;
+  static bool NeedsInitialShadowContents(GLbitfield access);
+  std::vector<uint8_t> PrepareInitialBytes(GLintptr offset,
+                                           GLsizeiptr length,
+                                           GLbitfield access,
+                                           bool getterAvailable,
+                                           const BufferParameterCallback& parameter,
+                                           const BufferReadCallback& read);
+
   // Registers a successful glMapBufferRange and returns the application-visible pointer.
-  void* OnMapBufferRange(
-      GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
+  void* OnMapBufferRange(GLenum target,
+                         GLintptr offset,
+                         GLsizeiptr length,
+                         GLbitfield access,
+                         void* mappedPointer,
+                         std::span<const uint8_t> initialBytes = {});
 
   // Performs the application-visible glUnmapBuffer and returns its result unchanged, snapshotting
   // the tracked range before or after that call as the mapping's access flags require. Emits a
@@ -65,12 +80,18 @@ public:
                         NamedBufferSizeFn querySize);
 
   // Registers a successful core or EXT named-buffer range map.
-  void* OnMapNamedBufferRange(
-      GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
+  void* OnMapNamedBufferRange(GLuint buffer,
+                              GLintptr offset,
+                              GLsizeiptr length,
+                              GLbitfield access,
+                              void* mappedPointer,
+                              std::span<const uint8_t> initialBytes = {});
 
   void OnDelete(GLsizei count, const GLuint* buffers);
 
-  GLuint BoundBuffer(GLenum target);
+  // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
+  // target, for an untracked target or one with nothing bound.
+  GLuint ResolveBoundBuffer(GLenum target);
   void FlushMappedRange(GLuint buffer,
                         GLintptr offset,
                         GLsizeiptr length,
@@ -96,8 +117,8 @@ public:
 private:
   MapTrackingService() = default;
 
-  // For write-only invalidating explicit maps, ApplicationPointer points into GITS-owned
-  // shadow memory while DriverPointer retains the real GL mapping. Otherwise they are equal.
+  // For write-only explicit maps, ApplicationPointer points into GITS-owned shadow memory
+  // while DriverPointer retains the real GL mapping. Otherwise they are equal.
   struct MappedRange {
     void* DriverPointer{nullptr};
     void* ApplicationPointer{nullptr};
@@ -125,12 +146,12 @@ private:
     }
   };
 
-  // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
-  // target, for an untracked target or one with nothing bound.
-  GLuint ResolveBoundBuffer(GLenum target);
-
-  void* RegisterRange(
-      GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* driverPointer);
+  void* RegisterRange(GLuint buffer,
+                      GLintptr offset,
+                      GLsizeiptr length,
+                      GLbitfield access,
+                      void* driverPointer,
+                      std::span<const uint8_t> initialBytes);
 
   // Overwrites any previous entry for the same (share group, buffer) without warning: GL
   // forbids mapping an already-mapped buffer, so the driver itself already enforces that at
