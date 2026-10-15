@@ -19,6 +19,7 @@ source_group("Generated Files" FILES ${GENERATED_SRC})
 add_library(OpenGL2_recorder STATIC
   ${GENERATED_SRC}
   include/captureManager.h
+  include/clientMemoryCapture.h
   include/handleArgumentUpdaters.h
   include/mapTrackingWrappers.h
   include/realDriver.h
@@ -27,6 +28,7 @@ add_library(OpenGL2_recorder STATIC
   include/recorderWrappers.h
   include/unsupportedCommand.h
   captureManager.cpp
+  clientMemoryCapture.cpp
   mapTrackingWrappers.cpp
   realDriver.cpp
   recorder.cpp

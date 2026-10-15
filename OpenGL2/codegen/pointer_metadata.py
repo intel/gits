@@ -238,7 +238,7 @@ class PointerParamOverride:
     # parameter's "pointer" is real client memory ONLY when no GL_PIXEL_UNPACK_BUFFER is
     # bound - when one is, GL semantics repurpose the same parameter as a buffer-relative BYTE
     # OFFSET instead (see gits::opengl2::GuardUnpackPixelsPointer(),
-    # OpenGL2/recorder/mapTrackingWrappers.cpp), and dereferencing it as a pointer is an
+    # OpenGL2/recorder/clientMemoryCapture.cpp), and dereferencing it as a pointer is an
     # arbitrary-offset-treated-as-an-address crash risk. PIXEL_TRANSFER_SIZE overrides already
     # get this exact guard unconditionally, in every Mako template that constructs one (see
     # commandsAuto.h.mako/recorderWrappersAuto.cpp.mako's own is_pixel_transfer_in-style
@@ -262,7 +262,7 @@ class PointerParamOverride:
     # buffer at a byte offset given by this same parameter, instead of writing through it as a
     # pointer, and the eager post-call read this backend performs to capture the result would
     # otherwise treat that small integer offset as an arbitrary address (see
-    # gits::opengl2::GuardQueryBufferPointer(), OpenGL2/recorder/mapTrackingWrappers.cpp). So
+    # gits::opengl2::GuardQueryBufferPointer(), OpenGL2/recorder/clientMemoryCapture.cpp). So
     # far: glGetQueryObjecti64v/glGetQueryObjectui64v/glGetQueryObjectuiv's `params` (every
     # member of QueryObjectParameterName's result-redirection set per
     # ARB_query_buffer_object's own spec text - NOT glGetQueryiv's `params`, which queries
@@ -667,7 +667,7 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # GL_QUERY_BUFFER is bound; this backend's own post-call eager read (this OUT param's
     # FIXED_COUNT capture) must not dereference it in that case. See this field's own comment
     # (PointerParamOverride.query_buffer_guard) and
-    # gits::opengl2::GuardQueryBufferPointer() (mapTrackingWrappers.cpp). Deliberately NOT
+    # gits::opengl2::GuardQueryBufferPointer() (clientMemoryCapture.cpp). Deliberately NOT
     # applied to glGetQueryiv's own `params` above - that command queries scalar,
     # QueryParameterName-grouped state via `target`/`pname` (GL_QUERY_COUNTER_BITS/
     # GL_CURRENT_QUERY), which ARB_query_buffer_object's result-redirection set never includes;

@@ -41,9 +41,9 @@ namespace gits::opengl2 {
 // The share group of whichever HGLRC is current on this thread right now, per the real
 // driver - see common/services/shareGroupService.h's own header comment for why GL object
 // names must be bucketed by this instead of by GLObjectKind alone. Queried directly from the
-// real driver rather than tracked separately here, mirroring recorder/mapTrackingWrappers.cpp's
-// existing precedent of calling real GL/WGL functions directly from wrapper code to introspect
-// state that isn't itself a captured command parameter (see that file's QueryBoundBufferQuiet).
+// real driver rather than tracked separately here, mirroring recorder/clientMemoryCapture.cpp's
+// precedent of calling real GL/WGL functions directly from recorder helpers to introspect state
+// that isn't itself a captured command parameter (see that file's QueryBoundBufferQuiet).
 // Safe to call at any point a GL wrapper runs: a context, once made current on a thread, stays
 // current until that thread's own next wglMakeCurrent call, so this always reflects the
 // context the in-flight wrapped call is actually being made against.

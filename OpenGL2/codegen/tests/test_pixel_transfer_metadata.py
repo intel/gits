@@ -474,21 +474,21 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
     generated/hand-written C++ text the same way PixelTransferSizeIsUnknownCppHelperTests
     above does."""
 
-    _MAP_TRACKING_WRAPPERS_H = (
-        CODEGEN_DIR.parent / 'recorder' / 'include' / 'mapTrackingWrappers.h')
-    _MAP_TRACKING_WRAPPERS_CPP = CODEGEN_DIR.parent / 'recorder' / 'mapTrackingWrappers.cpp'
+    _CLIENT_MEMORY_CAPTURE_H = (
+        CODEGEN_DIR.parent / 'recorder' / 'include' / 'clientMemoryCapture.h')
+    _CLIENT_MEMORY_CAPTURE_CPP = CODEGEN_DIR.parent / 'recorder' / 'clientMemoryCapture.cpp'
     _COMMANDS_AUTO_H_MAKO = CODEGEN_DIR / 'templates' / 'commandsAuto.h.mako'
     _COMMAND_CODERS_AUTO_CPP_MAKO = CODEGEN_DIR / 'templates' / 'commandCodersAuto.cpp.mako'
     _RECORDER_WRAPPERS_AUTO_CPP_MAKO = CODEGEN_DIR / 'templates' / 'recorderWrappersAuto.cpp.mako'
     _COMMAND_RUNNERS_AUTO_CPP_MAKO = CODEGEN_DIR / 'templates' / 'commandRunnersAuto.cpp.mako'
 
     def test_header_declares_both_predicates(self) -> None:
-        source = self._MAP_TRACKING_WRAPPERS_H.read_text(encoding='utf-8')
+        source = self._CLIENT_MEMORY_CAPTURE_H.read_text(encoding='utf-8')
         self.assertIn('bool UnpackPixelsPointerIsBufferOffset(const void* pixels);', source)
         self.assertIn('bool PackPixelsPointerIsBufferOffset(const void* pixels);', source)
 
     def test_implementation_shares_guard_pixels_pointers_own_condition(self) -> None:
-        source = self._MAP_TRACKING_WRAPPERS_CPP.read_text(encoding='utf-8')
+        source = self._CLIENT_MEMORY_CAPTURE_CPP.read_text(encoding='utf-8')
         # GuardPixelsPointer() itself must be expressed in terms of the same shared predicate
         # the two new query functions use, so the guard's own gating decision and the query
         # functions' answer can never independently drift out of sync.
@@ -521,7 +521,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
         `pixels != nullptr` - a null-check gate would misreport offset-0 PBO calls as "not
         buffer-offset mode", which (combined with the SizeUnknown skip gate) would incorrectly
         skip a perfectly valid, PBO-backed call instead of letting it run normally."""
-        source = self._MAP_TRACKING_WRAPPERS_CPP.read_text(encoding='utf-8')
+        source = self._CLIENT_MEMORY_CAPTURE_CPP.read_text(encoding='utf-8')
         bound_match = re.search(
             r'bool PixelBufferObjectIsBound\((.*?)\) \{(.*?)\n\}', source, re.DOTALL)
         self.assertIsNotNone(bound_match, 'PixelBufferObjectIsBound() not found')

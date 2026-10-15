@@ -200,7 +200,7 @@ bool PixelTransferSizeIsUnknown(GLenum format,
 // ComputePixelTransferByteSize()'s `alignment` argument - see that function's own comment for
 // which of the two applies to a given command's direction. Forward-declared here (rather than
 // included via a recorder-only header) and defined in
-// OpenGL2/recorder/mapTrackingWrappers.cpp, which has access to the real driver dispatch table
+// OpenGL2/recorder/clientMemoryCapture.cpp, which has access to the real driver dispatch table
 // these need - this header (and the two call sites that use these, both effectively
 // recorder-only despite living in code compiled into the shared common/layer_interface library
 // too, since only the recorder's own generated code ever actually invokes the constructor/
@@ -213,7 +213,7 @@ GLint QueryPackAlignment();
 // Queries the real, current GL_UNPACK_IMAGE_HEIGHT/GL_UNPACK_SKIP_IMAGES (or their GL_PACK_*
 // counterparts) via glGetIntegerv, for use as ComputePixelTransferByteSize()'s `imageHeight`/
 // `skipImages` arguments - see that function's own comment for why these matter and when a
-// caller must pass them. Same forward-declared-here/defined-in-mapTrackingWrappers.cpp
+// caller must pass them. Same forward-declared-here/defined-in-clientMemoryCapture.cpp
 // convention as QueryUnpackAlignment()/QueryPackAlignment() above, for the same reason. Only
 // ever called by a Mako-emitted call site for a command with an actual `depth` dimension (see
 // commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) - a 2D-or-1D command has no reason to
@@ -229,7 +229,7 @@ GLint QueryPackSkipImages();
 // function's own comment for why these matter and why, unlike QueryUnpackImageHeight() et al.
 // above, every enabled pixel-transfer call site queries and passes all three unconditionally
 // (1D/2D/3D alike), not just a command with a `depth` param. Same forward-declared-here/
-// defined-in-mapTrackingWrappers.cpp convention as every other Query*() in this header, for
+// defined-in-clientMemoryCapture.cpp convention as every other Query*() in this header, for
 // the same reason (real driver dispatch table access).
 GLint QueryUnpackRowLength();
 GLint QueryUnpackSkipRows();

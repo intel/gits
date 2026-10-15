@@ -172,7 +172,7 @@ public:
   // `erase_param`/`result` handling) - and checking glGetError() immediately after would risk
   // consuming/clearing an unrelated, already-pending error the application itself has not yet
   // observed, the same GL-error-state-fidelity hazard already avoided elsewhere in this
-  // backend (see e.g. mapTrackingWrappers.cpp's query-buffer-binding guard, which takes the
+  // backend (see e.g. clientMemoryCapture.cpp's query-buffer-binding guard, which takes the
   // same precaution for the same reason). So, exactly like Program/Shader above, this simply
   // never erases a TransformFeedback mapping at all: a still-legal reference (the
   // overwhelmingly common case - most calls succeed) keeps resolving correctly regardless of

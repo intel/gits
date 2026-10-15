@@ -196,7 +196,7 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
   Argument<bool> m_${p.name}SizeUnknown;
   // See pointer_needs_pixel_transfer_unknown_
   // flag()'s own header comment (generator_helpers.py) and UnpackPixelsPointerIsBufferOffset()/
-  // PackPixelsPointerIsBufferOffset()'s own header comment (mapTrackingWrappers.h). Populated
+  // PackPixelsPointerIsBufferOffset()'s own header comment (clientMemoryCapture.h). Populated
   // unconditionally by recorderWrappersAuto.cpp.mako, independently of m_${p.name}SizeUnknown
   // above: true iff this call's ${p.name} was actually a buffer-relative offset (a pixel
   // (un)pack buffer object was bound), in which case commandRunnersAuto.cpp.mako's Run() must

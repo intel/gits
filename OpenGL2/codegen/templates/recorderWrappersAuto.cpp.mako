@@ -43,6 +43,7 @@ ${AUTO_GENERATED_HEADER}
 // docs/development/opengl2-object-name-mapping-plan.md.
 
 #include "captureManager.h"
+#include "clientMemoryCapture.h"
 #include "commandSerializersAuto.h"
 #include "contextHandleMapService.h"
 #include "handleArgumentUpdaters.h"
@@ -170,7 +171,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // never disagree about whether this call's captured size is genuine-zero or unknown.
     command->m_${p.name}SizeUnknown.Value = PixelTransferSizeIsUnknown(${pixel_transfer_args_in});
     // See
-    // UnpackPixelsPointerIsBufferOffset()'s own header comment (mapTrackingWrappers.h). Uses
+    // UnpackPixelsPointerIsBufferOffset()'s own header comment (clientMemoryCapture.h). Uses
     // ${p.name} here too - this wrapper's own, ORIGINAL, never-guarded parameter, the same one
     // m_${p.name}RawPointer.Value above captures - never whatever the emplace() call's own
     // GuardUnpackPixelsPointer() invocation returned, so this always reflects the real guard
@@ -284,7 +285,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // commandName regardless, so this second call never double-logs.
     command->m_${p.name}SizeUnknown.Value = PixelTransferSizeIsUnknown(${pixel_transfer_args_out});
     // See PackPixelsPointerIsBufferOffset()'s
-    // own header comment (mapTrackingWrappers.h). Uses ${p.name} here too - this wrapper's
+    // own header comment (clientMemoryCapture.h). Uses ${p.name} here too - this wrapper's
     // own, ORIGINAL, never-guarded parameter, the same one m_${p.name}RawPointer.Value below
     // captures - never whatever capture_arg_expr's own GuardPackPixelsPointer() invocation
     // returned, so this always reflects the real guard decision for this exact call

@@ -361,7 +361,7 @@ void ${cmd.name}Runner::Run() {
   // m_<param>SizeUnknown.Value == true does NOT
   // always mean "must skip" - m_<param>IsBufferOffset.Value == true (this exact call's pointer
   // was actually a buffer-relative offset, per UnpackPixelsPointerIsBufferOffset()/
-  // PackPixelsPointerIsBufferOffset()'s own header comment, mapTrackingWrappers.h) means the
+  // PackPixelsPointerIsBufferOffset()'s own header comment, clientMemoryCapture.h) means the
   // real driver call needs no captured size at all - call_arg() above already falls back to
   // this same parameter's m_<param>RawPointer.Value (the preserved offset) whenever
   // m_<param>.HasValue is false, so the call below is safe and correct to make. The two flags
