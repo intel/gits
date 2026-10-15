@@ -90,22 +90,6 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'wglGetPbufferDCEXT': 'WglGetPbufferDCEXTRunner',
     'wglReleasePbufferDCEXT': 'WglReleasePbufferDCEXTRunner',
     'wglDestroyPbufferEXT': 'WglDestroyPbufferEXTRunner',
-    # Beyond the generic resolve/dispatch forward, also notes the unit this bind call affected
-    # with MipmapCompletionService::NoteUnit(), so the draw-time BeforeSampling() checks
-    # it - a defensive fixup for a real driver completeness quirk found investigating a
-    # black-rendered GL_TEXTURE_2D that only had base-level content sampled through a
-    # mipmap-family GL_TEXTURE_MIN_FILTER (its own, or an overriding bound sampler object's) -
-    # see that service's own header comment (mipmapCompletionService.h) for the full rationale.
-    # Texture and sampler binds are the calls that put a (texture, sampler) pair on a unit.
-    'glBindTexture': 'GlBindTextureRunner',
-    'glBindTextureEXT': 'GlBindTextureEXTRunner',
-    'glBindTextureUnit': 'GlBindTextureUnitRunner',
-    'glBindSampler': 'GlBindSamplerRunner',
-    # Bracket the display-list compilation MipmapCompletionService records, and replay a
-    # GL_COMPILE_AND_EXECUTE compilation as GL_COMPILE followed by glCallList, so its immediate
-    # execution gets the same fixup - see MipmapCompletionService::NewListMode().
-    'glNewList': 'GlNewListRunner',
-    'glEndList': 'GlEndListRunner',
     # Waits again when replay times out on a sync object the recording did not - see
     # GlClientWaitSyncRunner::Run().
     'glClientWaitSync': 'GlClientWaitSyncRunner',

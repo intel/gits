@@ -28,7 +28,6 @@ add_library(OpenGL2_player STATIC
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
   include/mappedTextureDataMetaRunner.h
-  include/mipmapCompletionService.h
   include/pbufferPixelFormatMetaRunner.h
   include/pbufferService.h
   include/replayContextCaps.h
@@ -46,7 +45,6 @@ add_library(OpenGL2_player STATIC
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   mappedTextureDataMetaRunner.cpp
-  mipmapCompletionService.cpp
   pbufferPixelFormatMetaRunner.cpp
   pbufferService.cpp
   replayContextCaps.cpp

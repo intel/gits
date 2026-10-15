@@ -15,7 +15,6 @@ from generator_helpers import mako_write, object_name_override_for
 from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS
 from intermediates import Command
 from object_name_lifecycle import ObjectNameRole
-from texture_sampling_commands import sampling_hook_after, sampling_hook_before
 
 # HANDLE_CREATING_COMMANDS is already unioned across every mapped-handle type (HGLRC, GLsync,
 # ...) by handle_lifecycle.py itself - kept in sync with the same table generator_recorder.py
@@ -139,8 +138,7 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
                'player/include/commandRunnersAuto.h', commands=commands)
     mako_write('templates/commandRunnersAuto.cpp.mako',
                'player/commandRunnersAuto.cpp', commands=commands,
-               handle_creating_commands=HANDLE_CREATING_COMMANDS,
-               sampling_hook_before=sampling_hook_before, sampling_hook_after=sampling_hook_after)
+               handle_creating_commands=HANDLE_CREATING_COMMANDS)
     mako_write('templates/openGL2CommandFactoryAuto.cpp.mako',
                'player/openGL2CommandFactoryAuto.cpp', commands=commands,
                custom_player_runners=CUSTOM_PLAYER_RUNNERS)

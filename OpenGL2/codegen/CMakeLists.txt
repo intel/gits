@@ -33,7 +33,6 @@ set(SCRIPTS_SRC
   pointer_length_derivation.py
   pointer_metadata.py
   tex_sampler_parameter_metadata.py
-  texture_sampling_commands.py
   uniform_setter_metadata.py
   xml_data_exploration.py
   registry.py

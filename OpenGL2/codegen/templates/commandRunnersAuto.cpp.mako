@@ -73,7 +73,6 @@ ${AUTO_GENERATED_HEADER}
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
 #include "log.h"
-#include "mipmapCompletionService.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
@@ -408,10 +407,6 @@ void ${cmd.name}Runner::Run() {
   }
 % endfor
   if (manager.ExecuteCommands() && !command.m_Skip) {
-% if sampling_hook_before(cmd.name):
-    // See texture_sampling_commands.py.
-    MipmapCompletionService::Get().${sampling_hook_before(cmd.name)};
-% endif
     auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if pixel_transfer_size_params:
     // An empty-but-HasValue-true captured Data buffer here does not mean this call safely
@@ -461,9 +456,6 @@ ${call_indent}realFunction(${call_args});
 % endif
 % if pixel_transfer_size_params:
     }
-% endif
-% if sampling_hook_after(cmd.name):
-    MipmapCompletionService::Get().${sampling_hook_after(cmd.name)};
 % endif
 % if is_handle_creating:
     UpdateOutputHandle(command.m_Return);
