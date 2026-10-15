@@ -407,6 +407,26 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
 
+    # glInvalidateFramebuffer(target, numAttachments, attachments): `attachments` is
+    # len="numAttachments" in gl.xml - a PLAIN sibling reference (not a COMPSIZE(...)
+    # expression), same shape as glDrawBuffers' `bufs`/`n` above. `attachments` is a real
+    # `const GLenum *` array of attachment-point tokens (GL_COLOR_ATTACHMENTi/GL_DEPTH/
+    # GL_STENCIL/GL_DEPTH_STENCIL/GL_COLOR/GL_DEPTH/GL_STENCIL for the default framebuffer,
+    # group="InvalidateFramebufferAttachment" in gl.xml) - never a buffer-relative offset or a
+    # GLuint object name (no `class` attribute on either `target`/`numAttachments`/
+    # `attachments` in gl.xml, verified directly), so it needs no unpack_pbo_guard and no
+    # object-name classification, unlike glDrawElements'/pixel-transfer commands' pointer
+    # params. `numAttachments` is a plain GLsizei scalar sibling - ordinary SIBLING_PARAM,
+    # nothing new. Only glInvalidateFramebuffer itself is added here - its siblings
+    # glInvalidateNamedFramebufferData/glInvalidateNamedFramebufferSubData/
+    # glInvalidateSubFramebuffer share the identical `attachments`/`numAttachments` shape (and
+    # would need the identical entry to enable), but each also has its own additional params
+    # (a `framebuffer` GLuint, or x/y/width/height) out of scope for this entry - left for a
+    # future round rather than bundled in speculatively.
+    ('glInvalidateFramebuffer', 'attachments'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='numAttachments'),
+
     # glTexImage2D's `pixels` USED TO have a manual PIXEL_TRANSFER_SIZE entry here. It is now
     # auto-derived instead - see pixel_transfer_metadata.py's derive_pixel_transfer_override(),
     # consulted as a fallback by intermediates_creator.py's _is_param_capturable/

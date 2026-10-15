@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 1698,
+        "GL": 1699,
         "WGL": 52,
         "EGL": 0,
         "GLX": 0
@@ -1704,7 +1704,8 @@
             "ID_GLISSYNC": 986014,
             "ID_GLISSYNCAPPLE": 986015,
             "ID_GLWAITSYNC": 986016,
-            "ID_GLWAITSYNCAPPLE": 986017
+            "ID_GLWAITSYNCAPPLE": 986017,
+            "ID_GLINVALIDATEFRAMEBUFFER": 986018
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,

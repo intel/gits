@@ -591,6 +591,7 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glDrawBuffers',
             'glGetSubroutineIndex', 'glGetSubroutineUniformLocation', 'glGetAttribLocation',
             'glGenTransformFeedbacks', 'glDeleteTransformFeedbacks',
+            'glInvalidateFramebuffer',
         ):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
