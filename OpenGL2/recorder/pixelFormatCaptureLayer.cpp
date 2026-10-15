@@ -37,10 +37,11 @@ namespace gits::opengl2 {
 // PFD_DOUBLEBUFFER on Windows' generic implementation).
 //
 // Root cause: an app's OWN `ppfd` argument to SetPixelFormat is not a reliable source of the
-// format's real buffering semantics in the first place - a real repro against a stream
-// captured a sparse descriptor with dwFlags == 0 (see EnsurePixelFormatSet's own comment), and
-// the OS barely validates dwFlags at all, so capturing that byte-for-byte and later trying to
-// "fix it up" at replay time (by forcing bits on) can never be fully correct in either
+// format's real buffering semantics in the first place - a real repro against a captured
+// application's stream captured a sparse descriptor with dwFlags == 0 (see
+// EnsurePixelFormatSet's own comment), and the OS barely validates dwFlags at all, so
+// capturing that byte-for-byte and later trying to "fix it up" at replay time (by forcing bits
+// on) can never be fully correct in either
 // direction. The actually authoritative source is the driver's own resolution of the format
 // that got set - queryable, right after a successful SetPixelFormat, via
 // GetPixelFormat()+DescribePixelFormat() on the very same (real, capture-time) HDC.

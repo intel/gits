@@ -69,6 +69,9 @@ ARRAY_OF_ARRAYS_PARAM_OVERRIDES: dict[tuple[str, str], ArrayOfArraysOverride] = 
     # element scan).
     ('glCreateShaderProgramv', 'strings'): ArrayOfArraysOverride(outer_count_param='count'),
     ('glTransformFeedbackVaryings', 'varyings'): ArrayOfArraysOverride(outer_count_param='count'),
+
+    # Same null-terminated string array shape as glCreateShaderProgramv's `strings`.
+    ('glGetUniformIndices', 'uniformNames'): ArrayOfArraysOverride(outer_count_param='uniformCount'),
 }
 
 

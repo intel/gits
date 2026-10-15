@@ -9,6 +9,9 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
+#include <unordered_set>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -24,10 +27,11 @@ namespace gits::opengl2 {
 // Deliberately simpler than Vulkan's own WindowTrackingService: this backend has exactly one
 // real application window to ever track (there is no VkSurfaceKHR/VkSwapchainKHR-shaped
 // indirection - an HDC's owning HWND, resolved via WindowFromDC, is the only window identity
-// OpenGL2 ever has), so there is no per-surface map - just one, stateless "capture and record"
-// entry point used from every hook point. Stateless deliberately, not merely "simple": see
-// Capture()'s own header comment below for why an earlier, stateful skip-if-unchanged
-// version of this method was removed rather than fixed a third time.
+// OpenGL2 ever has), so there is no per-surface map - just one "capture and record" entry point
+// used from every hook point. Samples themselves are never deduplicated: see Capture()'s own
+// header comment below for why an earlier, stateful skip-if-unchanged version of this method
+// was removed rather than fixed a third time. The only state kept is the set of sampled windows,
+// to report which of them are destroyed or hidden at every sample (m_ClosedWindows).
 class WindowGeometryTrackingService {
 public:
   static WindowGeometryTrackingService& Get();
@@ -65,11 +69,12 @@ public:
   // identical geometry every frame, which OrderingRecorder/the encoder can decode trivially -
   // a larger but always-correct stream beats a smaller, sometimes-wrong one.
   //
-  // Silently does nothing but release `geometryKey` (never throws, never logs more than once)
-  // if `hdc`'s owning window cannot be resolved or queried - see .cpp for the specific,
-  // once-only warning this emits; GlViewportRunner's own glViewport-inferred fallback
-  // (player/include/commandRunnersCustom.h) still applies on replay for a stream where this
-  // capture never succeeded.
+  // Records a sample with window 0 and no geometry (never throws, never logs more than once) if
+  // `hdc`'s owning window cannot be resolved or queried - see .cpp for the specific, once-only
+  // warning this emits. The player still needs it: it decides each swap from the sample taken
+  // for that swap, and must not reuse an earlier window's decision. GlViewportRunner's own
+  // glViewport-inferred fallback (player/include/commandRunnersCustom.h) still applies on replay
+  // for a stream where this capture never succeeded.
   //
   // `geometryKey` must already be reserved by the caller - see
   // CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for why
@@ -78,14 +83,24 @@ public:
   // (WindowGeometryTrackingLayer's four Pre() overrides, via
   // CaptureManager::TakePendingPreHookKey()) already has one ready by the time it calls this
   // method. This method takes ownership of `geometryKey` unconditionally from here on - on
-  // EVERY return path, `geometryKey` is either consumed by a WindowGeometryMetaCommand this
-  // method actually records, or explicitly released via CaptureManager::SkipCommandKey() -
-  // never silently dropped (see CaptureManager::SkipCommandKey's own header comment for why a
-  // dropped key would stall OrderingRecorder forever).
+  // EVERY return path, `geometryKey` is consumed by a WindowGeometryMetaCommand this method
+  // records - never silently dropped (see CaptureManager::SkipCommandKey's own header comment
+  // for why a dropped key would stall OrderingRecorder forever).
   void Capture(uint32_t threadId, void* hdc, uint64_t geometryKey);
 
 private:
   WindowGeometryTrackingService() = default;
+
+  // Every window sampled so far, other than `sampled` (0: none), that is destroyed or hidden now;
+  // then adds `sampled` to them. Captures reach the mutex out of key order, so nothing here is a
+  // one-time transition: each sample reports the full current set, and a report replayed out of
+  // real-time order is corrected by the next sample.
+  std::vector<uint64_t> ClosedWindows(uint64_t sampled);
+
+  std::mutex m_WindowsMutex;
+  // Capture-time HWND of every sampled window. Never pruned: a capture stalled with a smaller key
+  // could otherwise re-show a destroyed window on replay with no later sample reporting it.
+  std::unordered_set<uint64_t> m_Windows;
 };
 
 } // namespace gits::opengl2

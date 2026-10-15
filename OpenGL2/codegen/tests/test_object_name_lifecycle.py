@@ -167,28 +167,31 @@ class ObjectNameOverrideForTests(unittest.TestCase):
                                gen_command='glGenTextures', is_command='glIsTexture')
 
     def test_known_entry_is_found(self) -> None:
-        # glBindBuffer, not glBindTexture, is the plain-LOOKUP example here on purpose -
-        # glBindTexture is now one of the explicit ObjectNameRole.LOOKUP_OR_CREATE entries (see
-        # test_lookup_or_create_entries_resolve below), since the base GL 1.0 spec says binding
-        # a never-before-seen texture name implicitly creates it.
-        override = object_name_override_for('glBindBuffer', 'buffer', 'buffer')
+        # glBindTexture and glBindBuffer are LOOKUP_OR_CREATE entries (see
+        # test_lookup_or_create_entries_resolve below), so glBindBufferBase is the plain-LOOKUP
+        # example here.
+        override = object_name_override_for('glBindBufferBase', 'buffer', 'buffer')
         self.assertIsNotNone(override)
         assert override is not None
         self.assertEqual(override.kind, GLObjectKind.BUFFER)
         self.assertEqual(override.role, ObjectNameRole.LOOKUP)
 
     def test_lookup_or_create_entries_resolve(self) -> None:
-        # See _EXPLICIT_OVERRIDES' own comment for exactly why each of these five (command,
+        # See _EXPLICIT_OVERRIDES' own comment for exactly why each of these seven (command,
         # field) pairs is a documented exception to plain auto-derived LOOKUP: each one's own
         # GL/extension spec text says binding a never-before-seen name implicitly creates a new
-        # object with that name, unlike the later ARB-promoted core Bind commands for the same
-        # three namespaces (glBindFramebuffer/glBindRenderbuffer/glBindVertexArray), which
-        # correctly keep plain LOOKUP. glBindVertexArrayOES is deliberately NOT here - see
-        # its own case in core_cases below and _EXPLICIT_OVERRIDES' comment on why (gl.xml
-        # aliases it directly to core glBindVertexArray, unlike its APPLE sibling here).
+        # object with that name, unlike the later ARB-promoted core Bind commands for the
+        # framebuffer, renderbuffer and vertex array namespaces
+        # (glBindFramebuffer/glBindRenderbuffer/glBindVertexArray), which correctly keep plain
+        # LOOKUP.
+        # glBindVertexArrayOES is deliberately NOT here - see its own case in core_cases below
+        # and _EXPLICIT_OVERRIDES' comment on why (gl.xml aliases it directly to core
+        # glBindVertexArray, unlike its APPLE sibling here).
         cases = [
             ('glBindTexture', 'texture', 'texture', GLObjectKind.TEXTURE),
             ('glBindTextureEXT', 'texture', 'texture', GLObjectKind.TEXTURE),
+            ('glBindBuffer', 'buffer', 'buffer', GLObjectKind.BUFFER),
+            ('glBindBufferARB', 'buffer', 'buffer', GLObjectKind.BUFFER),
             ('glBindFramebufferEXT', 'framebuffer', 'framebuffer', GLObjectKind.FRAMEBUFFER),
             ('glBindRenderbufferEXT', 'renderbuffer', 'renderbuffer', GLObjectKind.RENDERBUFFER),
             ('glBindVertexArrayAPPLE', 'array', 'vertex array', GLObjectKind.VERTEX_ARRAY),
@@ -270,10 +273,9 @@ class ResolveObjectNameOverrideTests(unittest.TestCase):
         self.assertEqual(override.role, ObjectNameRole.DELETE)
 
     def test_everything_else_infers_lookup(self) -> None:
-        # glBindBuffer, not glBindTexture, is the auto-derivation example here on purpose - see
-        # ObjectNameOverrideForTests.test_known_entry_is_found's own comment for why
-        # glBindTexture itself no longer plain-LOOKUP-auto-derives.
-        override = resolve_object_name_override('glBindBuffer', 'buffer', 'buffer')
+        # See ObjectNameOverrideForTests.test_known_entry_is_found for why this uses
+        # glBindBufferBase.
+        override = resolve_object_name_override('glBindBufferBase', 'buffer', 'buffer')
         assert override is not None
         self.assertEqual(override.role, ObjectNameRole.LOOKUP)
 

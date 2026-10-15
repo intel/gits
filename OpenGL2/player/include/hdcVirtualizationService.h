@@ -11,7 +11,9 @@
 #include "glTypes.h"
 
 #include <atomic>
+#include <cstdint>
 #include <mutex>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -142,20 +144,51 @@ public:
   // captured position - m_X/m_Y were encoded into WindowGeometryMetaCommand but
   // WindowGeometryMetaRunner::Run() never forwarded them here. Fixed by threading x/y through
   // exactly like width/height, immediately below.
-  void SetGeometry(int x, int y, int width, int height, bool visible);
+  //
+  // `window` is the sample's recorded window identity (WindowGeometryMetaCommand::m_Window); only
+  // the main window's samples change the player window (see the .cpp). 0 is a sample the
+  // recorder could not capture: it changes nothing but still belongs to the next swap.
+  // `closedWindows` (m_ClosedWindows) are the other sampled windows destroyed or hidden at this
+  // sample; the main window among them gives up its role.
+  void SetGeometry(uint64_t window,
+                   int x,
+                   int y,
+                   int width,
+                   int height,
+                   bool visible,
+                   const std::vector<uint64_t>& closedWindows);
 
-  // Whether the swap that immediately follows the LAST SetGeometry() call above should skip
-  // its real driver call entirely - see that method's own comment (hdcVirtualizationService.cpp)
-  // for the concrete repro and rationale. Consulted by WglSwapBuffersRunner/
-  // WglSwapLayerBuffersRunner (player/commandRunnersCustom.cpp), which - thanks to
-  // WindowGeometryTrackingLayer's atomic pre-hook-key-pair guarantee (that layer's own header
-  // comment) - always run immediately after the one SetGeometry() call that was sampled for
-  // that exact swap, so "the last call's result" is always the right one to consult here, not
-  // a stale value from some earlier, unrelated swap.
+  // Whether the swap about to run should skip its real driver call entirely, because it presents
+  // a window other than the main one - see SetGeometry()'s and this method's own comments
+  // (hdcVirtualizationService.cpp) for the concrete repro and rationale. Called once per swap by
+  // WglSwapBuffersRunner/WglSwapLayerBuffersRunner (player/commandRunnersCustom.cpp), which -
+  // thanks to WindowGeometryTrackingLayer's atomic pre-hook-key-pair guarantee (that layer's own
+  // header comment) - always run immediately after the SetGeometry() call sampled for that exact
+  // swap. Consumes that sample, so no swap is ever decided by an earlier swap's sample.
   bool ShouldSuppressSwap();
 
 private:
   HdcVirtualizationService() = default;
+
+  struct WindowSample {
+    int X = 0;
+    int Y = 0;
+    int Width = 0;
+    int Height = 0;
+    bool Visible = false;
+
+    bool HasUsableSize() const {
+      return Width > 0 && Height > 0;
+    }
+    bool IsShown() const {
+      return Visible && HasUsableSize();
+    }
+  };
+
+  // Apply a sample's geometry (when it has a usable size) and visibility to the player window,
+  // or record them for Resolve() before it exists. m_ResizeMutex must be held.
+  void ApplySample(const WindowSample& sample);
+  void ApplyVisibility(bool visible);
 
   std::once_flag m_Init;
   std::mutex m_PixelFormatMutex;
@@ -170,7 +203,10 @@ private:
   // constructor's own AdjustWindowRectEx call - so GrowToFit() must re-add this delta itself
   // before calling ResizeWindow(), or the client area would shrink by it on every resize).
   std::mutex m_ResizeMutex;
-  // Set once by SetGeometry() (either branch) and never cleared - disables GrowToFit()'s
+  // Set by ApplySample() the first time it applies a sample with a usable size to the player
+  // window (from SetGeometry(), including when a new window takes over the main-window role),
+  // and never cleared. Samples that are ignored or carry no usable size - a hidden zero-area
+  // helper window, say - leave it unset, so GrowToFit() stays available. Disables GrowToFit()'s
   // glViewport-inferred fallback for good once the application's REAL, authoritative Win32
   // geometry has actually been applied. Without this, a later origin-anchored viewport call
   // against something other than the default framebuffer (e.g. a large off-screen FBO/shadow
@@ -178,11 +214,16 @@ private:
   // nothing would ever shrink it back, since SetGeometry() only fires on a genuine captured
   // change, and the captured application window itself never changed in that scenario.
   bool m_HasRealGeometry{false};
-  // See ShouldSuppressSwap()'s own declaration comment above. Plain atomic rather than
-  // m_ResizeMutex-guarded: written only by SetGeometry() (always right before the one swap it
-  // was sampled for reads it), read only by the swap runners - a single bool with no other
-  // state to stay consistent with needs no broader lock.
-  std::atomic<bool> m_SuppressSwap{false};
+  // The recorded window whose samples describe the player window: the first one shown, until it
+  // is destroyed or hidden, then the next one shown (see SetGeometry()). 0 when there is none.
+  uint64_t m_MainWindow{0};
+  // Some window has held the main-window role. From then on only a shown window's sample can
+  // change the player window, and other windows' swaps stay suppressed while the role is vacant.
+  bool m_HadMainWindow{false};
+  // Window of the sample taken for the next swap (0: none, or not captured); consumed by it.
+  uint64_t m_SampledWindow{0};
+  // Last visibility applied to the live window, so unchanged samples cause no Win32 call.
+  bool m_WindowVisible{true};
   uint64_t m_NativeDisplay{};
   uint64_t m_NativeWindow{};
   int m_BorderExtraWidth{0};

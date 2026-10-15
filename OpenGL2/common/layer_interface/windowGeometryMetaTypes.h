@@ -66,11 +66,21 @@ public:
   WindowGeometryMetaCommand() : Command(CommandId::ID_META_WINDOW_GEOMETRY) {}
 
 public:
+  // The sampled window's capture-time HWND, an opaque identity only (see the architecture page's
+  // "Capture native OS handles as opaque scalar values"), so the player can tell the recorded
+  // windows apart. 0 when the HDC had no window or its geometry could not be queried; the other
+  // fields are then unset, and the sample only tells the player the next swap's window is unknown.
+  Argument<uint64_t> m_Window{};
   Argument<int32_t> m_X{};
   Argument<int32_t> m_Y{};
   Argument<int32_t> m_Width{};
   Argument<int32_t> m_Height{};
   Argument<bool> m_Visible{};
+  // Every other window sampled so far that is destroyed or hidden at this sample, reported by
+  // every sample so a report replayed out of real-time order is corrected by the next one. Lets
+  // the player tell that its main window stopped presenting even when that window records no
+  // sample of its own again.
+  ArrayArgument<uint64_t> m_ClosedWindows{};
 };
 
 // Hand-assembled from the same generic, per-field GetSize/Encode/Decode overloads every
@@ -78,31 +88,35 @@ public:
 // rationale (mappedDataMetaTypes.h): there is no gl.xml/wgl-registry counterpart for this
 // command, so there is no per-command loop to add it to.
 inline uint64_t GetSize(const WindowGeometryMetaCommand& command) {
-  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_X) +
-         GetSize(command.m_Y) + GetSize(command.m_Width) + GetSize(command.m_Height) +
-         GetSize(command.m_Visible);
+  return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Window) +
+         GetSize(command.m_X) + GetSize(command.m_Y) + GetSize(command.m_Width) +
+         GetSize(command.m_Height) + GetSize(command.m_Visible) + GetSize(command.m_ClosedWindows);
 }
 
 inline void Encode(const WindowGeometryMetaCommand& command, char* dest) {
   uint64_t offset = 0;
   Encode(dest, offset, command.m_Key);
   Encode(dest, offset, command.m_ThreadId);
+  Encode(dest, offset, command.m_Window);
   Encode(dest, offset, command.m_X);
   Encode(dest, offset, command.m_Y);
   Encode(dest, offset, command.m_Width);
   Encode(dest, offset, command.m_Height);
   Encode(dest, offset, command.m_Visible);
+  Encode(dest, offset, command.m_ClosedWindows);
 }
 
 inline void Decode(const char* src, WindowGeometryMetaCommand& command) {
   uint64_t offset = 0;
   Decode(src, offset, command.m_Key);
   Decode(src, offset, command.m_ThreadId);
+  Decode(src, offset, command.m_Window);
   Decode(src, offset, command.m_X);
   Decode(src, offset, command.m_Y);
   Decode(src, offset, command.m_Width);
   Decode(src, offset, command.m_Height);
   Decode(src, offset, command.m_Visible);
+  Decode(src, offset, command.m_ClosedWindows);
 }
 
 class WindowGeometryMetaSerializer : public stream::CommandSerializer {

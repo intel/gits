@@ -134,8 +134,8 @@ class ObjectNameRole(StrEnum):
                         # textures / glGenBuffers' buffers / glCreateProgram's and
                         # glCreateShader's return value.
     LOOKUP = 'lookup'   # a read-only reference to an existing, already-registered name -
-                        # glBindTexture/glBindBuffer/glUseProgram/glBindAttribLocation/
-                        # glGetUniformLocation's object-name parameter.
+                        # glUseProgram/glBindAttribLocation/glGetUniformLocation's object-name
+                        # parameter.
     DELETE = 'delete'   # an existing name (or names) destroyed on success, looked up first -
                         # glDeleteTextures/glDeleteProgram/glDeleteShader.
     # A LOOKUP that is *also* a legal CREATE the instant the name has never been seen before -
@@ -287,6 +287,18 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     ('glBindTextureEXT', 'texture'): ObjectNameOverride(
         kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP_OR_CREATE,
         gen_command='glGenTexturesEXT', is_command='glIsTextureEXT'),
+
+    # Core GL 1.5/ARB_vertex_buffer_object: binding a name glGenBuffers never returned creates a
+    # buffer object with that name. Still legal in the compatibility profile; the core profile
+    # (GL 3.1+) rejects it with GL_INVALID_OPERATION, which the recorder's is_command check
+    # after the bind detects. glBindBufferARB needs its own entry - this table does not follow
+    # gl.xml aliases.
+    ('glBindBuffer', 'buffer'): ObjectNameOverride(
+        kind=GLObjectKind.BUFFER, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenBuffers', is_command='glIsBuffer'),
+    ('glBindBufferARB', 'buffer'): ObjectNameOverride(
+        kind=GLObjectKind.BUFFER, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenBuffersARB', is_command='glIsBufferARB'),
 
     # GL_EXT_framebuffer_object (both the framebuffer and renderbuffer halves) - spec'd with the
     # identical "if <framebuffer>/<renderbuffer> is not zero, and if it is not the name of an

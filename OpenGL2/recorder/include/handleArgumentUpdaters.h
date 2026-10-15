@@ -219,8 +219,8 @@ inline bool UpdateHandleIfKnown(HandleArgument<GLuint>& arg,
 // own designed behavior (two sharing-but-FBO-non-shared contexts each legitimately owning their
 // own small integer), not a bug - but that is one topology, on one stream, and proves nothing
 // about every other app's context-sharing pattern this backend will ever capture. For a
-// share-group-scoped kind specifically (Texture/Renderbuffer, currently the only two
-// LOOKUP_OR_CREATE kinds that are NOT per-context), the identical situation is NOT an expected
+// share-group-scoped kind specifically (Texture/Renderbuffer/Buffer - every LOOKUP_OR_CREATE
+// kind that is NOT per-context), the identical situation is NOT an expected
 // outcome by this service's own design - a genuine implicit create should only ever be a name no
 // context in this share group has ever touched - so ObjectNameMapService::FindOtherIdentityForName
 // checks every single time this path runs (not just when manually investigating a specific

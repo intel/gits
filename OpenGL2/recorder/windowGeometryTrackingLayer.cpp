@@ -26,9 +26,9 @@ namespace gits::opengl2 {
 // CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for why this
 // is the only race-free way to guarantee the geometry command below decodes/replays BEFORE
 // this WGL call. TakePendingPreHookKey() consumes it exactly once per call - Capture()
-// unconditionally takes ownership of it from here on (either a genuine WindowGeometryMetaCommand
-// gets recorded under it, or it is explicitly released - see that method's own header comment,
-// windowGeometryTrackingService.h), so this call site never needs to know which happened.
+// unconditionally takes ownership of it from here on (a WindowGeometryMetaCommand is always
+// recorded under it, with window 0 when the window could not be queried - see that method's own
+// header comment, windowGeometryTrackingService.h).
 // Never skip taking it, even though the value itself is unused here beyond being handed off -
 // TakePendingPreHookKey()'s own assert is what actually catches a wrapper/layer table mismatch
 // (a command reserving a pair with nothing to consume it, or vice versa) - see that method's
@@ -43,9 +43,9 @@ void WindowGeometryTrackingLayer::Pre(wglMakeCurrentCommand& command) {
   // A detach call (wglMakeCurrent(NULL, NULL) or wglMakeCurrent(hdc, NULL) after the app is
   // done with a context) still carries a real, capturable HDC in the common case - only a
   // fully-null recorded HDC (the detach's own "no context" form) has nothing to resolve a
-  // window from, and Capture() already no-ops safely (releasing the pre-hook key) on a
-  // HDC whose WindowFromDC fails, so no extra null check is needed here beyond what that
-  // function already does internally.
+  // window from, and Capture() already records an unknown-window sample for a HDC whose
+  // WindowFromDC fails, so no extra null check is needed here beyond what that function
+  // already does internally.
   //
   // See Pre(wglSetPixelFormatCommand&) above for where this pre-hook key comes from.
   WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hDc.Value,

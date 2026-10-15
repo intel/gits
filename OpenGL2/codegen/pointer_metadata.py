@@ -28,6 +28,7 @@ TEXT_OUTPUT_BUFFERS: dict[tuple[str, str], str] = {
     ('glGetShaderInfoLog', 'infoLog'): 'length',
     ('glGetActiveUniformBlockName', 'uniformBlockName'): 'length',
     ('glGetActiveUniformName', 'uniformName'): 'length',
+    ('glGetProgramResourceName', 'name'): 'length',
 }
 
 try:
@@ -373,6 +374,11 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glGenBuffers', 'buffers'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateBuffers: DSA sibling of glGenBuffers, same (GLsizei n, GLuint *buffers) shape as
+    # the rest of the glCreate* family.
+    ('glCreateBuffers', 'buffers'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
     ('glBufferData', 'data'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
@@ -386,9 +392,29 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glNamedBufferSubData', 'data'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
+    # glNamedBufferDataEXT has no gl.xml alias to glNamedBufferData, so it needs its own entry.
+    # Its `data` len is COMPSIZE(size), which reads the same as a plain `size` sibling.
+    ('glNamedBufferDataEXT', 'data'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
+    # Immutable-storage allocation: same len="size" shape as glBufferData/glNamedBufferData.
+    # Without these, every buffer allocated only through glBufferStorage has no storage at all
+    # on replay, so every MappedDataMetaCommand targeting it fails its glMapBufferRange and the
+    # buffer's content - including PBO-sourced texture uploads read from it - is lost.
+    # glBufferStorageEXT/glNamedBufferStorageEXT alias these in gl.xml and are enabled through
+    # the alias fallback.
+    ('glBufferStorage', 'data'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
+    ('glNamedBufferStorage', 'data'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
     ('glGetUniformLocation', 'name'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     ('glBindAttribLocation', 'name'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
+    # Same null-terminated `name` shape as glGetUniformLocation.
+    ('glGetProgramResourceIndex', 'name'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     # A {key, value, key, value, ..., 0} attribute list, terminated only by a zero KEY - see
     # LengthSourceKind.KEY_VALUE_LIST's own comment above for why this must not use plain
@@ -595,6 +621,11 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
     ('glGetFramebufferAttachmentParameteriv', 'params'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    # Every valid glGetProgramInterfaceiv pname (GL_ACTIVE_RESOURCES, GL_MAX_NAME_LENGTH,
+    # GL_MAX_NUM_ACTIVE_VARIABLES, GL_MAX_NUM_COMPATIBLE_SUBROUTINES) writes exactly one GLint.
+    ('glGetProgramInterfaceiv', 'params'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
 
@@ -836,6 +867,13 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glGetProgramInfoLog', 'infoLog'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='bufSize'),
+    # Same `length`/`bufSize`-bounded name shape as glGetProgramInfoLog above.
+    ('glGetProgramResourceName', 'length'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glGetProgramResourceName', 'name'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='bufSize'),
     ('glGetProgramPipelineInfoLog', 'length'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
@@ -958,6 +996,11 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glUniformSubroutinesuiv', 'indices'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='count'),
+    # glGetUniformIndices writes one index per name; `uniformNames` is classified in
+    # array_of_arrays_metadata.py.
+    ('glGetUniformIndices', 'uniformIndices'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='uniformCount'),
 
     # glVertexAttribIPointer/glVertexAttribLPointer's `pointer`: no len= attribute at all (a
     # buffer-relative offset or client-memory address, exactly like glVertexAttribPointer's own

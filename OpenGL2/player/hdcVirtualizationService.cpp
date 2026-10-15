@@ -77,6 +77,7 @@ HDC HdcVirtualizationService::Resolve(HDC /*recordedValue*/) {
     // duplicating that logic here.
     m_NativeDisplay = handles.first;
     m_NativeWindow = handles.second;
+    m_WindowVisible = m_InitialVisible;
     RECT windowRect{};
     RECT clientRect{};
     if (GetWindowRect(hwnd, &windowRect) && GetClientRect(hwnd, &clientRect)) {
@@ -125,107 +126,118 @@ void HdcVirtualizationService::GrowToFit(int width, int height) {
       static_cast<uint32_t>(m_ClientHeight + m_BorderExtraHeight));
 }
 
-void HdcVirtualizationService::SetGeometry(int x, int y, int width, int height, bool visible) {
-  // Unlike GrowToFit()'s inferred lower bound, this is real, authoritative captured geometry
-  // (a WindowGeometryMetaCommand), so an unusable width/height (e.g. a legitimately
-  // zero-sized/minimized Win32 client area) must NOT discard the rest of it in general:
-  // position and visibility are independent pieces of state and are normally always applied
-  // below. The one deliberate exception is HIDING the already-created window on a zero-area
-  // sample - see that call site's own comment (below, at the real SetWindowVisibility() call)
-  // for the concrete repro and rationale. Only the resize itself is otherwise guarded
-  // defensively - an actual zero/negative ResizeWindow call would be a no-op at best, UB at
-  // worst (see GrowToFit()'s identical size guard).
-  const bool hasUsableSize = width > 0 && height > 0;
+void HdcVirtualizationService::SetGeometry(uint64_t window,
+                                           int x,
+                                           int y,
+                                           int width,
+                                           int height,
+                                           bool visible,
+                                           const std::vector<uint64_t>& closedWindows) {
+  // Every recorded window is aliased onto this one player window (see this class's header
+  // comment), so samples from the application's main window arrive interleaved with samples from
+  // other windows of the same process (for example a small hidden or zero-area
+  // helper, sampled once per frame between the main window's samples). Only the main window's
+  // samples are applied, including its own hides and minimizes. The main window is the first one
+  // shown (visible, positive area); before that every positive-area sample is applied, since an
+  // application's main window is commonly sized while still hidden, before its first show.
+  //
+  // The main window keeps the role until it is reported destroyed or hidden (closedWindows,
+  // from any later sample) or its own sample is hidden; the next window sampled shown then
+  // takes over. How often other windows present never moves the role: a shown secondary window
+  // may present any number of times between main window frames.
   std::lock_guard<std::mutex> lock(m_ResizeMutex);
-  // Latches permanently once a real geometry command has actually been applied (either
-  // branch below) - see m_HasRealGeometry's own declaration comment and GrowToFit()'s new
-  // guard against it. Set unconditionally here, before either branch, since both are equally
-  // "real, authoritative captured geometry" as far as GrowToFit()'s fallback is concerned,
-  // regardless of whether the size half of it was usable.
-  m_HasRealGeometry = true;
-  if (m_NativeWindow == 0) {
-    // Resolve() hasn't created the window yet - the common case (see this method's own
-    // declaration comment): just update the position/size/visibility Resolve() itself will
-    // create the window at, rather than trying to move/resize a window that does not exist yet.
-    m_WindowX = x;
-    m_WindowY = y;
-    if (hasUsableSize) {
-      m_ClientWidth = width;
-      m_ClientHeight = height;
-      m_InitialVisible = visible;
+  if (m_MainWindow != 0 &&
+      std::find(closedWindows.begin(), closedWindows.end(), m_MainWindow) != closedWindows.end()) {
+    m_MainWindow = 0;
+  }
+  m_SampledWindow = window;
+  if (window == 0) {
+    return; // Not captured: the swap it was taken for is presented, and geometry is unchanged.
+  }
+  const WindowSample sample{x, y, width, height, visible};
+  if (m_MainWindow == 0) {
+    if (sample.IsShown()) {
+      m_MainWindow = window;
+      m_HadMainWindow = true;
+      ApplySample(sample);
+    } else if (m_HadMainWindow) {
+      // Waiting for a replacement main window: other windows' samples stay ignored, as while the
+      // previous main window held the role.
+    } else if (sample.HasUsableSize()) {
+      ApplySample(sample);
     } else if (visible) {
-      // Mirrors the already-created-window branch's identical HIDE-suppression guard below
-      // (see that call site's own comment for the full rationale) - a zero-area sample can
-      // still legitimately request an initial SHOW, but must not be allowed to leave the
-      // window's initial visibility permanently false just because it happened to be the last
-      // sample applied before Resolve() creates the window.
-      m_InitialVisible = true;
+      ApplyVisibility(true);
     }
     return;
   }
-  // Window already exists - a later resize/move captured by WindowGeometryTrackingLayer's
-  // per-frame poll. Unlike GrowToFit(), this sets the size directly (can shrink) since it is
-  // real, authoritative captured geometry, not an inferred lower bound.
-  m_WindowX = x;
-  m_WindowY = y;
-  windowing::WindowManager::Get().MoveWindow(windowing::WindowProtocol::Win, m_NativeDisplay,
-                                             m_NativeWindow, m_WindowX, m_WindowY);
-  if (hasUsableSize) {
-    m_ClientWidth = width;
-    m_ClientHeight = height;
-    windowing::WindowManager::Get().ResizeWindow(
-        windowing::WindowProtocol::Win, m_NativeDisplay, m_NativeWindow,
-        static_cast<uint32_t>(m_ClientWidth + m_BorderExtraWidth),
-        static_cast<uint32_t>(m_ClientHeight + m_BorderExtraHeight));
+  if (window == m_MainWindow) {
+    ApplySample(sample);
+    if (!sample.Visible) {
+      m_MainWindow = 0;
+    }
   }
-  // Observed in a recorded stream: a second
-  // window/context in the same recorded process - permanently zero-area (e.g. observed as a
-  // steady 120x0) for the entire capture, most likely an overlay's or a background worker's
-  // hidden helper GL context, never the app's real render target - issues its own
-  // WindowGeometryMetaCommand samples throughout the whole stream, interleaved roughly 1:1 with
-  // the real, positive-area main window's own per-frame samples (observed as a steady
-  // 3824x1421). Both get aliased onto this one player-owned window (see this class's own
-  // header comment: "every distinct recorded HDC maps to the same one live HDC"). Applying
-  // every sample's `visible` here unconditionally
-  // toggled the single real player window hidden/shown on roughly every other sample for the
-  // stream's entire duration - continuous visible flicker, with the window hidden roughly half
-  // of all wall-clock time, and no rendering ever appearing to stay on screen.
-  //
-  // Fix: a sample with no usable area cannot be describing the same on-screen surface as a
-  // positive-area sample, so it is not authoritative for HIDING a window that IS currently
-  // showing real content - suppress only the HIDE case (visible == false) when the sample
-  // itself has no usable size. A SHOW request (visible == true) is always applied regardless of
-  // size, since re-showing the window is never harmful, and a real app's own main window can
-  // legitimately request visibility before its first real-size layout pass.
-  //
-  // This is a pragmatic, single-window-scoped mitigation, not a full fix for two simultaneous
-  // real windows - see this class's own header comment and
-  // docs/development/modern-opengl-backend-architecture.md's "Model context topology before
-  // broad object state" decision's "Revisit when" note for the real fix (a per-recorded-HDC
-  // window pool) once a stream needs the second window to actually be visible/correct in its
-  // own right, rather than merely not corrupting the first one.
-  if (hasUsableSize || visible) {
-    windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Win,
-                                                        m_NativeDisplay, m_NativeWindow, visible);
-  }
-  // Second half of the same fix: the HIDE-suppression above stops the phantom's samples from
-  // hiding the one real window, but does nothing about its actual GL rendering, which still
-  // lands in that same window's shared back buffer (every recorded HDC resolves to the one
-  // real HDC - see this class's own header comment). WindowGeometryTrackingLayer's per-frame
-  // poll runs immediately before the wglSwapBuffers/wglSwapLayerBuffers call it samples for
-  // (an atomic pre-hook-key pair - see that layer's own header comment), so a zero-area sample
-  // here means the very next swap belongs to the phantom, not the main window: latch that here
-  // for WglSwapBuffersRunner/WglSwapLayerBuffersRunner (commandRunnersCustom.cpp) to consult
-  // and skip the real driver call entirely for that one swap. Without this, the phantom's own
-  // (typically blank/uninitialized) back-buffer content would get presented on every one of its
-  // swaps, each one overwriting the main window's just-rendered frame right up until the main
-  // window's own next swap - real content would exist for a fraction of a frame at best, never
-  // long enough to actually be seen.
-  m_SuppressSwap.store(!hasUsableSize, std::memory_order_release);
 }
 
 bool HdcVirtualizationService::ShouldSuppressSwap() {
-  return m_SuppressSwap.load(std::memory_order_acquire);
+  std::lock_guard<std::mutex> lock(m_ResizeMutex);
+  // WindowGeometryTrackingLayer records a sample for every swap, immediately before it, so the
+  // pending sample is this swap's own. Taking it keeps the decision per swap.
+  const uint64_t window = m_SampledWindow;
+  m_SampledWindow = 0;
+  if (window == 0 || window == m_MainWindow) {
+    return false;
+  }
+  // Another window's back buffer is the shared player back buffer holding the main window's
+  // frame in progress (or garbage); presenting it would replace the main window's last frame
+  // until its next swap. Before any main window every swap is presented; between a main window
+  // closing and its replacement being shown, the last main window frame stays on screen.
+  return m_MainWindow != 0 || m_HadMainWindow;
+}
+
+void HdcVirtualizationService::ApplySample(const WindowSample& sample) {
+  if (sample.HasUsableSize()) {
+    m_HasRealGeometry = true;
+  }
+  if (m_NativeWindow == 0) {
+    // Resolve() creates the window later, from these values.
+    if (sample.HasUsableSize()) {
+      m_WindowX = sample.X;
+      m_WindowY = sample.Y;
+      m_ClientWidth = sample.Width;
+      m_ClientHeight = sample.Height;
+    }
+    m_InitialVisible = sample.Visible;
+    return;
+  }
+  auto& windowManager = windowing::WindowManager::Get();
+  if (sample.HasUsableSize()) {
+    if (sample.X != m_WindowX || sample.Y != m_WindowY) {
+      m_WindowX = sample.X;
+      m_WindowY = sample.Y;
+      windowManager.MoveWindow(windowing::WindowProtocol::Win, m_NativeDisplay, m_NativeWindow,
+                               m_WindowX, m_WindowY);
+    }
+    if (sample.Width != m_ClientWidth || sample.Height != m_ClientHeight) {
+      m_ClientWidth = sample.Width;
+      m_ClientHeight = sample.Height;
+      windowManager.ResizeWindow(windowing::WindowProtocol::Win, m_NativeDisplay, m_NativeWindow,
+                                 static_cast<uint32_t>(m_ClientWidth + m_BorderExtraWidth),
+                                 static_cast<uint32_t>(m_ClientHeight + m_BorderExtraHeight));
+    }
+  }
+  ApplyVisibility(sample.Visible);
+}
+
+void HdcVirtualizationService::ApplyVisibility(bool visible) {
+  if (m_NativeWindow == 0) {
+    m_InitialVisible = visible;
+    return;
+  }
+  if (visible != m_WindowVisible) {
+    m_WindowVisible = visible;
+    windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Win,
+                                                        m_NativeDisplay, m_NativeWindow, visible);
+  }
 }
 
 bool HdcVirtualizationService::EnsurePixelFormatSet(const PIXELFORMATDESCRIPTOR* requestedPfd) {

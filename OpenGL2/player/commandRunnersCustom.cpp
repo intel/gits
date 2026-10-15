@@ -285,7 +285,7 @@ void WglSwapBuffersRunner::Run() {
   // See HdcVirtualizationService::ShouldSuppressSwap()'s own declaration comment
   // (hdcVirtualizationService.h) - skip the real driver call (and therefore the actual
   // front/back buffer flip) entirely for a swap whose immediately-preceding geometry sample
-  // reported a non-renderable (zero-area) window. command.m_Return.Value is left as the
+  // belongs to a recorded window other than the main one. command.m_Return.Value is left as the
   // decoded (real, capture-time) value in that case - there is nothing further to report here
   // beyond what capture already observed, and this call never happened for real on replay.
   if (manager.ExecuteCommands() && !command.m_Skip &&

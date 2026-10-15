@@ -73,7 +73,7 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # Skip the real driver call entirely when HdcVirtualizationService::ShouldSuppressSwap()
     # says the geometry sample that was just sampled for this exact swap (an atomic pre-hook-key
     # pair with WindowGeometryTrackingLayer's per-frame poll - see that layer's own header
-    # comment) reported a non-renderable (zero-area) window - see
+    # comment) belongs to a recorded window other than the main one - see
     # HdcVirtualizationService::SetGeometry()'s own header comment for the concrete repro (a
     # second, permanently zero-area window/context in the same recorded process, aliased onto
     # the one real player window along with the real main window - see this backend's own

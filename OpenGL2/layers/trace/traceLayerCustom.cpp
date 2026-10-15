@@ -38,11 +38,13 @@ void TraceLayer::Pre(MappedDataMetaCommand& command) {
 
 void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
   CommandPrinter printer(m_Stream, m_Mutex, command, "WindowGeometryMeta");
+  printer.AddOpaque(static_cast<uintptr_t>(command.m_Window.Value));
   printer.Add(command.m_X);
   printer.Add(command.m_Y);
   printer.Add(command.m_Width);
   printer.Add(command.m_Height);
   printer.Add(command.m_Visible);
+  printer.Add(command.m_ClosedWindows);
   printer.Finish(m_Flush);
 }
 

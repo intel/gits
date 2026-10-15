@@ -21,9 +21,9 @@ void WindowGeometryMetaRunner::Run() {
   }
 
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    HdcVirtualizationService::Get().SetGeometry(command.m_X.Value, command.m_Y.Value,
-                                                command.m_Width.Value, command.m_Height.Value,
-                                                command.m_Visible.Value);
+    HdcVirtualizationService::Get().SetGeometry(
+        command.m_Window.Value, command.m_X.Value, command.m_Y.Value, command.m_Width.Value,
+        command.m_Height.Value, command.m_Visible.Value, command.m_ClosedWindows.Data);
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

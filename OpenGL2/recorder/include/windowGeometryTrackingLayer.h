@@ -47,10 +47,9 @@
 // CaptureManager::SetPendingPreHookKey(). Each Pre() override below consumes it via
 // TakePendingPreHookKey() and passes it straight into
 // WindowGeometryTrackingService::Capture(), which takes ownership of it from there:
-// either a WindowGeometryMetaCommand actually gets recorded under it (guaranteed smaller than
-// the hooked command's own key, by construction of the pair), or it is explicitly released via
-// CaptureManager::SkipCommandKey() when nothing needs recording - see that method's own header
-// comment (windowGeometryTrackingService.h).
+// a WindowGeometryMetaCommand always gets recorded under it (guaranteed smaller than the hooked
+// command's own key, by construction of the pair), with window 0 when the window could not be
+// queried - see that method's own header comment (windowGeometryTrackingService.h).
 #include "commandsAuto.h"
 #include "layerAuto.h"
 

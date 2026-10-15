@@ -650,6 +650,14 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
+    def test_buffer_storage_commands_are_enabled(self) -> None:
+        # Immutable-storage allocation - the EXT names alias the core names in gl.xml and are
+        # enabled through the alias fallback.
+        for name in ('glBufferStorage', 'glBufferStorageEXT', 'glNamedBufferStorage',
+                     'glNamedBufferStorageEXT'):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
     def test_compressed_texture_sub_image_2d_ext_is_enabled(self) -> None:
         # glCompressedTextureSubImage2DEXT (GL_EXT_direct_state_access) has no gl.xml <alias> to
         # any core command - needs its own explicit table entry, unlike glNamedBufferSubDataEXT
