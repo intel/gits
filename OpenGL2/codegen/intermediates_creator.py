@@ -624,6 +624,27 @@ def _validate_pointer_override(
                     f"{command_name}.{param.name}: LIST_NAME_ARRAY_BYTE_SIZE's {field_name} must "
                     f"name a plain scalar sibling (got {sibling_name!r})"
                 )
+    elif override.length_source_kind is LengthSourceKind.BITMAP_BYTE_SIZE:
+        if override.direction is not PointerDirection.IN or not override.unpack_pbo_guard:
+            raise ValueError(
+                f"{command_name}.{param.name}: BITMAP_BYTE_SIZE override must be IN direction "
+                f"with unpack_pbo_guard - the bitmap can be a GL_PIXEL_UNPACK_BUFFER offset"
+            )
+        if (override.pixel_width_param is None) != (override.pixel_height_param is None):
+            raise ValueError(
+                f"{command_name}.{param.name}: BITMAP_BYTE_SIZE needs both a width and a height "
+                f"sibling, or neither (a 32x32 polygon stipple)"
+            )
+        for field_name in ('pixel_width_param', 'pixel_height_param'):
+            sibling_name = getattr(override, field_name)
+            if sibling_name is None:
+                continue
+            sibling = next((p for p in other_params if p.name == sibling_name), None)
+            if sibling is None or not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: BITMAP_BYTE_SIZE's {field_name} must name a "
+                    f"plain scalar sibling (got {sibling_name!r})"
+                )
     # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
     # cross-check.
 

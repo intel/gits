@@ -10,6 +10,7 @@
 
 #include "log.h"
 
+#include <algorithm>
 #include <limits>
 #include <mutex>
 #include <string>
@@ -496,6 +497,23 @@ uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type) {
     return 0;
   }
   return static_cast<uint64_t>(n) * elementBytes;
+}
+
+uint64_t ComputeBitmapByteSize(GLsizei width,
+                               GLsizei height,
+                               GLint alignment,
+                               GLint rowLength,
+                               GLint skipRows,
+                               GLint skipPixels) {
+  if (width <= 0 || height <= 0) {
+    return 0;
+  }
+  const uint64_t align = alignment > 0 ? static_cast<uint64_t>(alignment) : 1;
+  const uint64_t rowPixels = rowLength > 0 ? static_cast<uint64_t>(rowLength) : width;
+  const uint64_t rowStride = align * ((rowPixels + 8 * align - 1) / (8 * align));
+  const uint64_t rows = static_cast<uint64_t>((std::max)(skipRows, 0)) + height;
+  const uint64_t lastRowBytes = (static_cast<uint64_t>((std::max)(skipPixels, 0)) + width + 7) / 8;
+  return (rows - 1) * rowStride + lastRowBytes;
 }
 
 uint64_t ComputeIndirectCommandsByteSize(GLsizei count, GLsizei stride, uint32_t commandSize) {

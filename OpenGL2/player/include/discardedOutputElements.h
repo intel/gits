@@ -29,6 +29,9 @@ size_t TexBumpListElements(GLenum pname);
 // glGetActiveAtomicCounterBufferiv(GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES).
 size_t AtomicCounterBufferListElements(GLuint program, GLuint bufferIndex, GLenum pname);
 
+// glGetActiveUniformBlockiv(GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES).
+size_t UniformBlockListElements(GLuint program, GLuint uniformBlockIndex, GLenum pname);
+
 // glGetActiveSubroutineUniformiv(GL_COMPATIBLE_SUBROUTINES).
 size_t SubroutineUniformListElements(GLuint program, GLenum shadertype, GLuint index, GLenum pname);
 

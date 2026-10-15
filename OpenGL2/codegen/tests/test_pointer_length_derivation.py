@@ -26,6 +26,7 @@ from pointer_length_derivation import (
     classify_len_attrib,
     derive_length_source,
     derive_pointer_param_override,
+    discarded_output_list_sizer,
     find_pointer_length_mismatches,
 )
 from registry import Registry
@@ -261,6 +262,36 @@ class DeriveIndirectDrawOverrideTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(commands[name].enabled)
         self.assertFalse(commands['glMultiDrawElementsIndirectCount'].enabled)
+
+
+class ActiveUniformQueryOutputTests(unittest.TestCase):
+    def test_uniforms_query_scratch_holds_one_value_per_uniform(self) -> None:
+        param = Parameter(name='params', type='GLint *', len='COMPSIZE(uniformCount,pname)')
+        siblings = [Parameter(name='program', type='GLuint'),
+                    Parameter(name='uniformCount', type='GLsizei'),
+                    Parameter(name='pname', type='GLenum')]
+        override = derive_pointer_param_override('glGetActiveUniformsiv', param, siblings)
+        self.assertEqual(override.direction, PointerDirection.OUT)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+        self.assertEqual(override.length_source_value, 'uniformCount')
+
+    def test_uniform_block_query_is_sized_by_its_active_uniform_list(self) -> None:
+        param = Parameter(name='params', type='GLint *',
+                          len='COMPSIZE(program,uniformBlockIndex,pname)')
+        siblings = [Parameter(name='program', type='GLuint'),
+                    Parameter(name='uniformBlockIndex', type='GLuint'),
+                    Parameter(name='pname', type='GLenum')]
+        override = derive_pointer_param_override('glGetActiveUniformBlockiv', param, siblings)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+        self.assertIsNone(override.length_source_value)
+        self.assertEqual(discarded_output_list_sizer('glGetActiveUniformBlockiv'),
+                         ('UniformBlockListElements', ('program', 'uniformBlockIndex', 'pname')))
+
+    def test_registry_commands_are_enabled(self) -> None:
+        commands = {c.name: c for c in load_all_commands()[Api.GL]}
+        for name in ('glGetActiveUniformsiv', 'glGetActiveUniformBlockiv'):
+            with self.subTest(command=name):
+                self.assertTrue(commands[name].enabled)
 
 
 class FindPointerLengthMismatchesTests(unittest.TestCase):

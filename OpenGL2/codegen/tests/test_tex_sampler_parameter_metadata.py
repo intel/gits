@@ -22,7 +22,8 @@ from intermediates_creator import (
     extract_commands_from_registry,
     get_commands_from_xml_data,
 )
-from pointer_metadata import LengthSourceKind, PointerDirection, POINTER_PARAM_OVERRIDES
+from pointer_metadata import (LengthSourceKind, PointerDirection, POINTER_PARAM_OVERRIDES,
+                              TexOrSamplerParameterFamily)
 from registry import Registry
 from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
 
@@ -137,14 +138,21 @@ class DeriveTexSamplerParameterOverrideUnitTests(unittest.TestCase):
 
         self.assertIsNone(derive_tex_sampler_parameter_override('glTexParameterxv', param, other))
 
-    def test_texture_dsa_variant_is_not_derived(self) -> None:
-        # glTextureParameterfv (4.5 direct-state-access) - "Texture" breaks the "Tex" + literal
-        # "Parameter" anchor structurally, not merely by vendor-suffix convention.
-        param = Parameter(name='params', type='const GLfloat *', len='COMPSIZE(pname)')
+    def test_texture_dsa_variant_is_tex_parameter_family(self) -> None:
+        param = Parameter(name='param', type='const GLfloat *', len='COMPSIZE(pname)')
+        other = [Parameter(name='texture', type='GLuint'), _pname_param()]
+
+        override = derive_tex_sampler_parameter_override('glTextureParameterfv', param, other)
+
+        assert override is not None
+        self.assertEqual(override.tex_sampler_family, TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+    def test_texture_dsa_get_variant_is_not_derived(self) -> None:
+        param = Parameter(name='params', type='GLfloat *', len='COMPSIZE(pname)')
         other = [Parameter(name='texture', type='GLuint'), _pname_param()]
 
         self.assertIsNone(
-            derive_tex_sampler_parameter_override('glTextureParameterfv', param, other))
+            derive_tex_sampler_parameter_override('glGetTextureParameterfv', param, other))
 
     def test_multi_tex_ext_variant_is_not_derived(self) -> None:
         param = Parameter(name='params', type='const GLfloat *', len='COMPSIZE(pname)')
@@ -267,10 +275,25 @@ class EndToEndTexSamplerParameterTests(unittest.TestCase):
                 override = pointer_override_for(cmd, 'params')
                 self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
 
-    def test_fixed_point_and_dsa_and_multitex_variants_stay_disabled(self) -> None:
+    def test_dsa_variants_are_tex_parameter_family(self) -> None:
+        for name, param_name in (
+            ('glTextureParameterfv', 'param'), ('glTextureParameteriv', 'param'),
+            ('glTextureParameterIiv', 'params'), ('glTextureParameterIuiv', 'params'),
+            ('glTextureParameterfvEXT', 'params'), ('glTextureParameterivEXT', 'params'),
+            ('glTextureParameterIivEXT', 'params'), ('glTextureParameterIuivEXT', 'params'),
+        ):
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, param_name)
+                self.assertEqual(override.length_source_kind,
+                                 LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT)
+                self.assertEqual(override.tex_sampler_family,
+                                 TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+    def test_fixed_point_and_multitex_variants_stay_disabled(self) -> None:
         for name in (
             'glTexParameterxv', 'glTexParameterxvOES',
-            'glTextureParameterfv', 'glTextureParameteriv',
             'glMultiTexParameterfvEXT', 'glMultiTexParameterivEXT',
             'glTexParameterIivEXT', 'glTexParameterIivOES',
         ):

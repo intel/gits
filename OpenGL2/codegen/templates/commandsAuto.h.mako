@@ -192,6 +192,11 @@ ${override.length_source_value or '1'}, ${override.indirect_stride_param or '0'}
 % elif override.length_source_kind == LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
 ## glCallLists' COMPSIZE(n,type). IN direction only.
 , m_${p.name}(${arg_expr}, ComputeListNameArrayByteSize(${override.length_source_value}, ${override.list_type_param}))\
+% elif override.length_source_kind == LengthSourceKind.BITMAP_BYTE_SIZE:
+## GL_BITMAP image; null (no capture) when GuardUnpackPixelsPointer() found an unpack buffer.
+, m_${p.name}(${arg_expr}, ComputeBitmapByteSize(${override.pixel_width_param or '32'}, \
+${override.pixel_height_param or '32'}, QueryUnpackAlignment(), QueryUnpackRowLength(), \
+QueryUnpackSkipRows(), QueryUnpackSkipPixels()))\
 % else:
 ## Passed as the sibling's own type verbatim, times length_multiplier as a plain int
 ## (no unsigned 'u' suffix) - no cast needed here at all: ArrayArgument<T>/

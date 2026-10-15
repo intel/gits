@@ -252,6 +252,25 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
 
+    def test_bitmap_byte_size_requires_unpack_pbo_guard_and_paired_dimensions(self) -> None:
+        param = Parameter(name='bitmap', type='const GLubyte *')
+        dims = [Parameter(name='width', type='GLsizei'), Parameter(name='height', type='GLsizei')]
+        for override in (
+            PointerParamOverride(
+                direction=PointerDirection.IN, length_source_kind=LengthSourceKind.BITMAP_BYTE_SIZE,
+                pixel_width_param='width', pixel_height_param='height'),
+            PointerParamOverride(
+                direction=PointerDirection.IN, length_source_kind=LengthSourceKind.BITMAP_BYTE_SIZE,
+                pixel_width_param='width', unpack_pbo_guard=True),
+        ):
+            with self.subTest(override=override), self.assertRaises(ValueError):
+                _validate_pointer_override('glBitmap', param, override, other_params=dims)
+
+        _validate_pointer_override('glBitmap', param, PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.BITMAP_BYTE_SIZE,
+            pixel_width_param='width', pixel_height_param='height', unpack_pbo_guard=True),
+            other_params=dims)
+
     def test_unpack_pbo_guard_requires_in_direction(self) -> None:
         # GL_PIXEL_UNPACK_BUFFER only ever redirects an IN-direction parameter - an
         # OUT-direction user would leave the flag silently inert (nothing checks it there).
@@ -958,6 +977,17 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             override.length_source_kind, LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE)
         self.assertEqual(override.length_source_value, 'n')
         self.assertEqual(override.list_type_param, 'type')
+
+    def test_bitmap_and_polygon_stipple_use_bitmap_byte_size(self) -> None:
+        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
+        for name, param_name, dims in (('glBitmap', 'bitmap', ('width', 'height')),
+                                       ('glPolygonStipple', 'mask', (None, None))):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+                override = POINTER_PARAM_OVERRIDES[(name, param_name)]
+                self.assertEqual(override.length_source_kind, LengthSourceKind.BITMAP_BYTE_SIZE)
+                self.assertEqual((override.pixel_width_param, override.pixel_height_param), dims)
+                self.assertTrue(override.unpack_pbo_guard)
 
     def test_named_buffer_sub_data_commands_are_enabled(self) -> None:
         # glNamedBufferSubDataEXT aliases glNamedBufferSubData (gl.xml's own <alias> tag) - one

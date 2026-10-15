@@ -90,11 +90,12 @@
 #     ComputeTexOrSamplerParameterValueCount() - excluded by this module's own regex (the
 #     type-suffix group is `(f|i|ui)`, never `x`) pending a real check of whether GLES's fixed-
 #     point pname set is actually identical, rather than assumed.
-#   - glTextureParameterfv/iv/Iiv/Iuiv/glGetTextureParameter*v/glMultiTexParameter*vEXT/
-#     glGetMultiTexParameter*vEXT (the 4.5 direct-state-access and pre-DSA multi-bind
-#     `EXT`/`Texture`-prefixed variants) never match this module's regex at all - the anchor
-#     requires "Tex" or "Sampler" immediately followed by "Parameter", which "Texture"/"Multi
-#     Tex" both break structurally, not merely by vendor-suffix convention.
+#   - glGetTextureParameter*v/glMultiTexParameter*vEXT/glGetMultiTexParameter*vEXT never match
+#     either regex. The direct-state-access setters glTextureParameterfv/iv/Iiv/Iuiv and their
+#     EXT_direct_state_access forms (_TEXTURE_PARAMETER_RE) do: they take a texture name instead
+#     of a target, but the same group="TextureParameterName" `pname` and len="COMPSIZE(pname)"
+#     values, so they are TEX_PARAMETER family members. Their value parameter is `param` for the
+#     core fv/iv forms and `params` for every other one.
 #   - glPatchParameterfv (a different COMPSIZE(pname) family entirely - 4 for
 #     GL_PATCH_DEFAULT_OUTER_LEVEL, 2 for GL_PATCH_DEFAULT_INNER_LEVEL, computed by its own
 #     ComputePatchParameterValueCount() helper) has no sibling family at all: GL defines no
@@ -120,6 +121,7 @@ from pointer_metadata import (
 # vendor/GLES suffix (EXT/OES/ARB/...) never match, exactly like uniform_setter_metadata.py's
 # own vector/matrix regexes anchor on `v$` with nothing after.
 _TEX_SAMPLER_PARAMETER_RE = re.compile(r'^gl(Tex|Sampler)Parameter(I)?(f|i|ui)v$')
+_TEXTURE_PARAMETER_RE = re.compile(r'^glTextureParameter(I)?(f|i|ui)v(EXT)?$')
 
 # The exact len= string every already-audited and newly-derived sibling carries - checked
 # verbatim, not merely inferred from the regex match, mirroring
@@ -141,11 +143,15 @@ def derive_tex_sampler_parameter_override(
     needs.
     """
     match = _TEX_SAMPLER_PARAMETER_RE.match(command_name)
-    if match is None:
-        return None
-
-    expected_param_name = 'params' if match.group(1) == 'Tex' else 'param'
-    if param.name != expected_param_name:
+    if match is not None:
+        is_tex = match.group(1) == 'Tex'
+        if param.name != ('params' if is_tex else 'param'):
+            return None
+    elif _TEXTURE_PARAMETER_RE.match(command_name) is not None:
+        is_tex = True
+        if param.name not in ('param', 'params'):
+            return None
+    else:
         return None
     if param.len != _EXPECTED_LEN:
         # gl.xml disagrees with the shape every already-audited sibling carries - not a
@@ -160,7 +166,7 @@ def derive_tex_sampler_parameter_override(
     # Family discriminator - never inferred at the C++/Mako call site, always
     # supplied here from the same regex match that already distinguished 'params' vs 'param'
     # above, so there is exactly one place in this module that decides Tex- vs Sampler-.
-    family = (TexOrSamplerParameterFamily.TEX_PARAMETER if match.group(1) == 'Tex'
+    family = (TexOrSamplerParameterFamily.TEX_PARAMETER if is_tex
               else TexOrSamplerParameterFamily.SAMPLER_PARAMETER)
 
     return PointerParamOverride(

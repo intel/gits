@@ -308,15 +308,23 @@ _GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
 _GEN_CREATE_DELETE_RE = re.compile(r'^gl(?:Gen|Create|Delete)(?:$|[A-Z])')
 
 # len= shapes of glGet* outputs whose size depends on live driver state: per-pname state,
-# indexed state, and a single uniform (at most a dmat4). A pname of these shapes returns a fixed
-# count, at most 16 values (a 4x4 matrix), unless it is a list whose length is live state; the
-# player queries those lengths before the call (discarded_output_list_sizer()).
+# indexed state, a single uniform (at most a dmat4), and a uniform block property. A pname of
+# these shapes returns a fixed count, at most 16 values (a 4x4 matrix), unless it is a list whose
+# length is live state; the player queries those lengths before the call
+# (discarded_output_list_sizer()).
 _DISCARDED_OUTPUT_LENS: frozenset[str] = frozenset({
     'COMPSIZE(pname)',
     'COMPSIZE(value)',
     'COMPSIZE(program,location)',
     'COMPSIZE(programObj,location)',
+    'COMPSIZE(program,uniformBlockIndex,pname)',
 })
+
+# len= shapes of glGet* outputs holding one value per element of a sibling count, e.g.
+# glGetActiveUniformsiv's one value per queried uniform.
+_DISCARDED_OUTPUT_PER_ELEMENT_LENS: dict[str, str] = {
+    'COMPSIZE(uniformCount,pname)': 'uniformCount',
+}
 
 # Enabled DISCARDED_OUTPUT commands that accept a list pname, found by pairing every registry
 # GL_NUM_<X> with a GL_<X> list query (plus the atomic counter and bump unit lists, whose
@@ -331,6 +339,8 @@ _DISCARDED_OUTPUT_LIST_SIZERS: dict[str, tuple[str, tuple[str, ...]]] = {
         'AtomicCounterBufferListElements', ('program', 'bufferIndex', 'pname')),
     'glGetActiveSubroutineUniformiv': (
         'SubroutineUniformListElements', ('program', 'shadertype', 'index', 'pname')),
+    'glGetActiveUniformBlockiv': (
+        'UniformBlockListElements', ('program', 'uniformBlockIndex', 'pname')),
 }
 
 
@@ -372,6 +382,13 @@ def derive_discarded_output_override(
         return None
     if param.class_ is not None:
         return None
+    count_name = _DISCARDED_OUTPUT_PER_ELEMENT_LENS.get(param.len or '')
+    if count_name is not None:
+        if not any(p.name == count_name and p.type_facts.is_scalar for p in other_params):
+            return None
+        return PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT,
+            length_source_value=count_name)
     has_index = any(p.name == 'index' and p.type_facts.is_scalar for p in other_params)
     if param.len not in _DISCARDED_OUTPUT_LENS and not (param.len == 'COMPSIZE(target)' and has_index):
         return None

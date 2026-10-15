@@ -293,6 +293,18 @@ uint32_t ComputePnameValueCount(GLenum pname);
 // `n` 4-byte elements can exceed 4 GiB.
 uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type);
 
+// Bytes the driver reads for a `width` x `height` GL_BITMAP image (one bit per pixel) under the
+// given unpack state - see pointer_metadata.py's LengthSourceKind.BITMAP_BYTE_SIZE. Rows are
+// `alignment` * ceil(rowLength / (8 * alignment)) bytes apart (rowLength 0: `width`); the last
+// row ends at its own last pixel. Returns 0 for a non-positive `width` or `height`, which reads
+// nothing (glBitmap(0, 0, ...) only moves the raster position).
+uint64_t ComputeBitmapByteSize(GLsizei width,
+                               GLsizei height,
+                               GLint alignment,
+                               GLint rowLength,
+                               GLint skipRows,
+                               GLint skipPixels);
+
 // Bytes the driver reads for `count` indirect draw commands of `commandSize` bytes each, `stride`
 // bytes apart (0: tightly packed) - see pointer_metadata.py's
 // LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE. The last command ends at its own size, not at the

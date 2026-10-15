@@ -78,6 +78,18 @@ size_t AtomicCounterBufferListElements(GLuint program, GLuint bufferIndex, GLenu
   return ListElements(length);
 }
 
+size_t UniformBlockListElements(GLuint program, GLuint uniformBlockIndex, GLenum pname) {
+  auto realGetActiveUniformBlockiv =
+      player::g_DispatchTable.glGetActiveUniformBlockiv.load(std::memory_order_acquire);
+  if (pname != GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES || !realGetActiveUniformBlockiv) {
+    return 0;
+  }
+  GLint length = 0;
+  realGetActiveUniformBlockiv(program, uniformBlockIndex, GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS,
+                              &length);
+  return ListElements(length);
+}
+
 size_t SubroutineUniformListElements(GLuint program,
                                      GLenum shadertype,
                                      GLuint index,

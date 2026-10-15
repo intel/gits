@@ -249,6 +249,12 @@ class LengthSourceKind(StrEnum):
         # length_source_value names the count sibling, `list_type_param` the ListNameType enum
         # sibling (GL_UNSIGNED_BYTE, GL_2_BYTES, ...). See
         # gits::opengl2::ComputeListNameArrayByteSize() (pixelTransferSize.h). IN direction only.
+    BITMAP_BYTE_SIZE = 'bitmap_byte_size'  # A 1-bit-per-pixel GL_BITMAP image unpacked with the
+        # live GL_UNPACK_ALIGNMENT/ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS state: glBitmap's `bitmap`
+        # (pixel_width_param/pixel_height_param name its `width`/`height`) and
+        # glPolygonStipple's `mask` (both None: the pattern is always 32x32). See
+        # gits::opengl2::ComputeBitmapByteSize() (pixelTransferSize.h). IN direction only;
+        # always paired with unpack_pbo_guard.
     DISCARDED_OUTPUT = 'discarded_output'  # An OUT-direction query result nothing on replay
         # reads (glGetIntegerv's `data`, ...). The recorder captures nothing and the player passes
         # a scratch buffer, so the size, which depends on live driver state, never has to be
@@ -494,6 +500,13 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE,
         length_source_value='n', list_type_param='type'),
+    # gl.xml's COMPSIZE(width,height)/COMPSIZE() hide the unpack-state dependence.
+    ('glBitmap', 'bitmap'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.BITMAP_BYTE_SIZE,
+        pixel_width_param='width', pixel_height_param='height', unpack_pbo_guard=True),
+    ('glPolygonStipple', 'mask'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.BITMAP_BYTE_SIZE,
+        unpack_pbo_guard=True),
     # A single PIXELFORMATDESCRIPTOR struct, not an array - wgl.xml's `ppfd` carries no len=
     # attribute at all (see docs/development/opengl2-player-skeleton-plan.md's Decision 9).
     #
