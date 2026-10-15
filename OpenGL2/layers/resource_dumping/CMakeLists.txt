@@ -7,6 +7,8 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(OpenGL2_resource_dumping STATIC
+  defaultFramebufferImage.h
+  defaultFramebufferImage.cpp
   screenshotsLayer.h
   screenshotsLayer.cpp
 )

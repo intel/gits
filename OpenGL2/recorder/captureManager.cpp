@@ -9,9 +9,11 @@
 #include "captureManager.h"
 
 #include "clientArraysLayerAuto.h"
+#include "configurator.h"
 #include "encoderLayerAuto.h"
 #include "mappedTextureLayer.h"
 #include "pixelFormatCaptureLayer.h"
+#include "recorderScreenshotsLayer.h"
 #include "uniformArrayCaptureLayer.h"
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryTrackingLayer.h"
@@ -86,6 +88,11 @@ void CaptureManager::LoadLayers() {
   // stay the LAST entry (see this class's own header comment on that invariant).
   m_PostLayers.push_back(pixelFormatCaptureLayer);
   m_PostLayers.push_back(new UniformArrayCaptureLayer());
+  if (Configurator::Get().common.shared.screenshots.enabled) {
+    auto* screenshotsLayer = new RecorderScreenshotsLayer();
+    m_PreLayers.push_back(screenshotsLayer);
+    m_PostLayers.push_back(screenshotsLayer);
+  }
   m_PostLayers.push_back(new EncoderLayer());
 }
 

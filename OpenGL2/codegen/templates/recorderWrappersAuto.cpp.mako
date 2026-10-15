@@ -131,7 +131,11 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % if cmd.name in pre_hook_extra_key_commands:
   // See generator_recorder.py's PRE_HOOK_EXTRA_KEY_COMMANDS: one more key, ahead of the pair,
   // for another Pre layer's metacommand, reserved in the same atomic step.
+% if cmd.name in frame_end_commands and cmd.enabled:
+  const uint64_t firstKey = record ? CaptureManager::Get().CreateFrameEndKeyRange(3) : 0;
+% else:
   const uint64_t firstKey = record ? CaptureManager::Get().CreateCommandKeyRange(3) : 0;
+% endif
   const std::pair<uint64_t, uint64_t> preHookKeyPair =
       record ? std::pair<uint64_t, uint64_t>{firstKey + 1, firstKey + 2}
              : std::pair<uint64_t, uint64_t>{0, 0};
@@ -306,6 +310,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
       preLayer->Pre(*command);
     }
+% if cmd.name in frame_end_commands:
+    CaptureManager::Get().FrameEndPreLayersRan(orderingKey);
+% endif
   }
 % endif
 % if cmd.name in client_array_setters:

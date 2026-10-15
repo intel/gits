@@ -14,9 +14,12 @@
 #include "orderingRecorder.h"
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -96,6 +99,27 @@ public:
   // and returns `first`.
   [[nodiscard]] uint64_t CreateCommandKeyRange(uint64_t count) {
     return m_CommandKey.fetch_add(count, std::memory_order_relaxed) + 1;
+  }
+
+  // CreateCommandKeyRange() for a command that can end a frame, whose ordering key is the last
+  // key of the range. The ordering key stays pending until FrameEndPreLayersRan(), and is made
+  // pending in the same step that reserves it, so a layer numbering frame ends in key order can
+  // tell whether a frame end with a lower key has not reached it yet.
+  [[nodiscard]] uint64_t CreateFrameEndKeyRange(uint64_t count) {
+    const std::lock_guard<std::mutex> lock(m_FrameEndMutex);
+    const uint64_t first = CreateCommandKeyRange(count);
+    m_PendingFrameEnds.insert(first + count - 1);
+    return first;
+  }
+  void FrameEndPreLayersRan(uint64_t key) {
+    const std::lock_guard<std::mutex> lock(m_FrameEndMutex);
+    m_PendingFrameEnds.erase(key);
+  }
+  // How many frame ends with a key lower than `key` have not run their Pre layers yet.
+  size_t FrameEndsPendingBefore(uint64_t key) {
+    const std::lock_guard<std::mutex> lock(m_FrameEndMutex);
+    return static_cast<size_t>(
+        std::distance(m_PendingFrameEnds.begin(), m_PendingFrameEnds.lower_bound(key)));
   }
 
   // Independent counter from CreateCommandKey() above - mirrors Vulkan's CaptureManager,
@@ -264,6 +288,8 @@ private:
   std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   std::atomic<uint64_t> m_CommandKey{0};
   std::atomic<GITSKey> m_HandleKey{0};
+  std::mutex m_FrameEndMutex;
+  std::set<uint64_t> m_PendingFrameEnds;
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
 

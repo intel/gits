@@ -32,6 +32,7 @@ add_library(OpenGL2_recorder STATIC
   include/pixelFormatCaptureLayer.h
   include/realDriver.h
   include/recorderInterface.h
+  include/recorderScreenshotsLayer.h
   include/recursionGuard.h
   include/recorderWrappers.h
   include/uniformArrayCaptureLayer.h
@@ -49,6 +50,7 @@ add_library(OpenGL2_recorder STATIC
   pixelFormatCaptureLayer.cpp
   realDriver.cpp
   recorder.cpp
+  recorderScreenshotsLayer.cpp
   recursionGuard.cpp
   uniformArrayCaptureLayer.cpp
   unsupportedCommand.cpp
@@ -75,7 +77,8 @@ target_link_libraries(OpenGL2_recorder
   # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
   # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
   # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
-  PRIVATE OpenGL2_services common_interface log tbb gdi32 user32 xxhash
+  # OpenGL2_resource_dumping: the screenshot readback and image writing shared with the player.
+  PRIVATE OpenGL2_services OpenGL2_resource_dumping common_interface log tbb gdi32 user32 xxhash
 )
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)

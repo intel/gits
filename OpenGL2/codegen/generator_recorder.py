@@ -83,6 +83,9 @@ PRE_HOOK_EXTRA_KEY_COMMANDS: dict[str, str] = {
     'wglSetPixelFormat': 'SetPendingPixelFormatKey',
 }
 assert PRE_HOOK_EXTRA_KEY_COMMANDS.keys() <= PRE_HOOK_KEY_PAIR_COMMANDS
+# A frame end's wrapper reserves its keys with CaptureManager::CreateFrameEndKeyRange(), which
+# only the PRE_HOOK_EXTRA_KEY_COMMANDS reservation calls.
+assert FRAME_END_COMMANDS <= PRE_HOOK_EXTRA_KEY_COMMANDS.keys()
 
 
 def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
@@ -121,6 +124,7 @@ def generate_recorder_files(commands: list[Command]) -> None:
                pre_hook_key_pair_commands=pre_hook_key_pair_commands(commands),
                post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
                pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
+               frame_end_commands=FRAME_END_COMMANDS,
                client_array_setters=client_array_setters(commands),
                buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,

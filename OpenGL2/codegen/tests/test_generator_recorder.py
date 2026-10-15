@@ -28,6 +28,7 @@ sys.path.insert(0, str(CODEGEN_DIR))
 from generator_helpers import mako_render
 from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
                                 PRE_HOOK_KEY_PAIR_COMMANDS)
+from handle_lifecycle import FRAME_END_COMMANDS
 from intermediates import Api, CmdType, Command, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
@@ -39,13 +40,13 @@ from registry import Registry
 TEMPLATE_PATH = str(CODEGEN_DIR / 'templates' / 'recorderWrappersAuto.cpp.mako')
 
 
-def fake_command(name: str) -> Command:
+def fake_command(name: str, enabled: bool = False) -> Command:
     """Minimal disabled Command - the ordering-key reservation shape under test (both the
     single-key `else` branch and the PRE_HOOK_KEY_PAIR_COMMANDS branch) is emitted unconditionally,
     before this function's own `% if cmd.enabled:` check, so no params/return-value machinery is
     needed to exercise it."""
     return Command(
-        name=name, api=Api.WGL, enabled=False, command_type=CmdType.NONE,
+        name=name, api=Api.WGL, enabled=enabled, command_type=CmdType.NONE,
         return_value=ReturnValue(type='void'), params=[])
 
 
@@ -59,14 +60,16 @@ def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: 
 
 def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset(),
-                    pre_hook_extra_key_commands: dict[str, str] | None = None) -> str:
+                    pre_hook_extra_key_commands: dict[str, str] | None = None,
+                    frame_end_commands: frozenset[str] = frozenset()) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
         context_share_param={}, share_lists_commands={},
         pre_hook_key_pair_commands=pre_hook_key_pair_commands,
         post_hook_key_pair_commands=post_hook_key_pair_commands,
-        pre_hook_extra_key_commands=pre_hook_extra_key_commands or {}, client_array_setters={},
+        pre_hook_extra_key_commands=pre_hook_extra_key_commands or {},
+        frame_end_commands=frame_end_commands, client_array_setters={},
         buffer_content_hooks={})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
@@ -190,6 +193,23 @@ class PreHookExtraKeyTests(unittest.TestCase):
         other = extract_wrapper_body(rendered, 'wglMakeCurrent')
         self.assertIn('CaptureManager::Get().CreateCommandKeyPair()', other)
         self.assertNotIn('firstKey', other)
+
+    def test_frame_end_is_pending_from_its_reservation_until_its_pre_layers_ran(self) -> None:
+        # RecorderScreenshotsLayer numbers swaps in key order, so a swap with a lower key must be
+        # known from the moment its key exists, not only once its Pre layers see it.
+        rendered = render_commands([fake_command('wglSwapBuffers', enabled=True)],
+                                   PRE_HOOK_KEY_PAIR_COMMANDS,
+                                   pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
+                                   frame_end_commands=FRAME_END_COMMANDS)
+        body = extract_wrapper_body(rendered, 'wglSwapBuffers')
+        self.assertIn('CaptureManager::Get().CreateFrameEndKeyRange(3)', body)
+        self.assertNotIn('CreateCommandKeyRange', body)
+        pre_layers = body.find('preLayer->Pre(*command);')
+        ran = body.find('CaptureManager::Get().FrameEndPreLayersRan(orderingKey);')
+        call = body.find('realFunction(')
+        self.assertNotEqual(pre_layers, -1, body)
+        self.assertLess(pre_layers, ran)
+        self.assertLess(ran, call)
 
 def registry_command(name: str) -> Command:
     path = next(path for path, api in FILE_TO_API.items() if api == Api.GL)
