@@ -81,4 +81,15 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # overwrite the main window's just-rendered frame on every other swap.
     'wglSwapBuffers': 'WglSwapBuffersRunner',
     'wglSwapLayerBuffers': 'WglSwapLayerBuffersRunner',
+    # Beyond the generic resolve/dispatch forward, also notes the unit this bind call affected
+    # with MipmapCompletionService::NoteUnit(), so the draw-time BeforeSampling() checks
+    # it - a defensive fixup for a real driver completeness quirk found investigating a
+    # black-rendered GL_TEXTURE_2D that only had base-level content sampled through a
+    # mipmap-family GL_TEXTURE_MIN_FILTER (its own, or an overriding bound sampler object's) -
+    # see that service's own header comment (mipmapCompletionService.h) for the full rationale.
+    # Texture and sampler binds are the calls that put a (texture, sampler) pair on a unit.
+    'glBindTexture': 'GlBindTextureRunner',
+    'glBindTextureEXT': 'GlBindTextureEXTRunner',
+    'glBindTextureUnit': 'GlBindTextureUnitRunner',
+    'glBindSampler': 'GlBindSamplerRunner',
 }

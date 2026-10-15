@@ -25,6 +25,8 @@ add_library(OpenGL2_player STATIC
   include/hdcVirtualizationService.h
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
+  include/mipmapCompletionService.h
+  include/replayContextCaps.h
   include/unsupportedCommandRunner.h
   include/uniformArrayMetaRunner.h
   include/uniformLocationMapService.h
@@ -35,6 +37,8 @@ add_library(OpenGL2_player STATIC
   playerManager.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
+  mipmapCompletionService.cpp
+  replayContextCaps.cpp
   unsupportedCommandRunner.cpp
   uniformArrayMetaRunner.cpp
   uniformLocationMapService.cpp

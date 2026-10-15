@@ -198,4 +198,71 @@ private:
   wglSwapLayerBuffersCommand command;
 };
 
+// glBindTexture's Run() - beyond the generic resolve/dispatch forward, also notes the currently
+// active unit with MipmapCompletionService::NoteUnit(), for its draw-time completeness fixup -
+// see that service's own header comment (mipmapCompletionService.h) for the full rationale.
+// glBindTexture always acts on whichever unit GL_ACTIVE_TEXTURE currently names, unlike
+// glBindSampler below (which takes an explicit unit argument), so this queries that first.
+class GlBindTextureRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindTextureCommand command;
+};
+
+// glBindTextureEXT's Run() - see GlBindTextureRunner's own comment above; identical fixup,
+// same rationale (glBindTextureEXT is DSA-free EXT-suffixed glBindTexture, same semantics).
+class GlBindTextureEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindTextureEXTCommand command;
+};
+
+// glBindTextureUnit's Run() - see GlBindTextureRunner's own comment above; identical fixup, same
+// rationale. This is the DSA single-call form (explicit unit argument, no GL_ACTIVE_TEXTURE
+// dependency) - a distinct bind entry point from glBindTexture(EXT) above, not a redundant one:
+// an application can bind a texture to a unit exclusively through this call and never call
+// glBindTexture(EXT) for that texture at all, so this needs its own hook, not reuse of theirs.
+class GlBindTextureUnitRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindTextureUnitCommand command;
+};
+
+// glBindSampler's Run() - beyond the generic resolve/dispatch forward, also notes the explicit
+// unit this call just (re)bound a sampler onto - see that service's own header comment
+// (mipmapCompletionService.h) and GlBindTextureRunner's own comment above.
+class GlBindSamplerRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glBindSamplerCommand command;
+};
+
 } // namespace gits::opengl2

@@ -11,11 +11,24 @@
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
+#include "mipmapCompletionService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "replayContextCaps.h"
 #include "uniformLocationMapService.h"
 
 namespace gits::opengl2 {
+
+namespace {
+void NoteActiveTextureUnit() {
+  GLint activeUnit = GL_TEXTURE0;
+  if (CurrentReplayContextCaps().MultiTexture) {
+    player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_ACTIVE_TEXTURE,
+                                                                          &activeUnit);
+  }
+  MipmapCompletionService::Get().NoteUnit(static_cast<GLuint>(activeUnit - GL_TEXTURE0));
+}
+} // namespace
 
 void WglCreateContextRunner::Run() {
   auto& manager = PlayerManager::Get();
@@ -89,6 +102,9 @@ void WglMakeCurrentRunner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.wglMakeCurrent.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hDc, command.m_newContext.Value);
+    if (command.m_Return.Value) {
+      InvalidateReplayContextCaps();
+    }
     if (command.m_Return.Value && command.m_newContext.Value) {
       // A context just became current on this thread - the only reliable window in which
       // wglGetProcAddress can resolve extension functions (see WarmUpResolvableFunctions's own
@@ -294,6 +310,90 @@ void WglSwapLayerBuffersRunner::Run() {
       !HdcVirtualizationService::Get().ShouldSuppressSwap()) {
     auto realFunction = player::g_DispatchTable.wglSwapLayerBuffers.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hdc, command.m_fuFlags.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlBindTextureRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a never-seen key here is the recorder
+  // having minted one right at this same Bind call (see the recorder-side ConfirmImplicitCreate),
+  // not a stream gap, so it mints a fresh replay-time name instead of substituting the
+  // kUnmappedObjectName sentinel.
+  UpdateHandleOrCreate(command.m_texture, GLObjectKind::Texture,
+                       player::g_DispatchTable.glGenTextures.load(std::memory_order_acquire));
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glBindTexture.load(std::memory_order_acquire);
+    realFunction(command.m_target.Value, command.m_texture.Value);
+    // Marks the unit for the draw-time completeness fixup - see MipmapCompletionService's own
+    // header comment. Only GL_TEXTURE_2D is fixed, and this bind can only have changed the
+    // active unit.
+    if (command.m_target.Value == GL_TEXTURE_2D) {
+      NoteActiveTextureUnit();
+      MipmapCompletionService::Get().NoteListTexture(command.m_texture.Value);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlBindTextureEXTRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  // See GlBindTextureRunner::Run()'s own comment above - identical fixup, same rationale.
+  UpdateHandleOrCreate(command.m_texture, GLObjectKind::Texture,
+                       player::g_DispatchTable.glGenTexturesEXT.load(std::memory_order_acquire));
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glBindTextureEXT.load(std::memory_order_acquire);
+    realFunction(command.m_target.Value, command.m_texture.Value);
+    if (command.m_target.Value == GL_TEXTURE_2D) {
+      NoteActiveTextureUnit();
+      MipmapCompletionService::Get().NoteListTexture(command.m_texture.Value);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlBindTextureUnitRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_texture, GLObjectKind::Texture);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glBindTextureUnit.load(std::memory_order_acquire);
+    realFunction(command.m_unit.Value, command.m_texture.Value);
+    // See GlBindTextureRunner::Run()'s own comment above. glBindTextureUnit carries its unit
+    // explicitly and binds to the texture's own target, which the draw-time check reads live.
+    MipmapCompletionService::Get().NoteUnit(command.m_unit.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlBindSamplerRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_sampler, GLObjectKind::Sampler);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glBindSampler.load(std::memory_order_acquire);
+    realFunction(command.m_unit.Value, command.m_sampler.Value);
+    // A sampler's GL_TEXTURE_MIN_FILTER overrides the texture's own - see
+    // MipmapCompletionService's own header comment.
+    MipmapCompletionService::Get().NoteUnit(command.m_unit.Value);
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
