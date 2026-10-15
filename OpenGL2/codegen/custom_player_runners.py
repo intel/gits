@@ -70,4 +70,15 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # that capture existed, or one where WindowFromDC/GetClientRect failed at capture time; not
     # because glViewport remains the only size signal available.
     'glViewport': 'GlViewportRunner',
+    # Skip the real driver call entirely when HdcVirtualizationService::ShouldSuppressSwap()
+    # says the geometry sample that was just sampled for this exact swap (an atomic pre-hook-key
+    # pair with WindowGeometryTrackingLayer's per-frame poll - see that layer's own header
+    # comment) reported a non-renderable (zero-area) window - see
+    # HdcVirtualizationService::SetGeometry()'s own header comment for the concrete repro (a
+    # second, permanently zero-area window/context in the same recorded process, aliased onto
+    # the one real player window along with the real main window - see this backend's own
+    # single-window HDC virtualization design) and why presenting its swaps would otherwise
+    # overwrite the main window's just-rendered frame on every other swap.
+    'wglSwapBuffers': 'WglSwapBuffersRunner',
+    'wglSwapLayerBuffers': 'WglSwapLayerBuffersRunner',
 }

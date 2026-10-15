@@ -94,8 +94,9 @@ public:
   // capture-side/schema change, and real apps reliably issue at least one full-window
   // glViewport(0, 0, W, H) call against the default framebuffer (most commonly once at startup
   // and/or once per frame for the main pass) - see this repro's own evidence (a stream
-  // recorded through this backend: window was stuck at the hardcoded 640x480 and its HUD, laid
-  // out in screen-space for a much larger real resolution, appeared corrupted/overlapping until
+  // recorded through this backend: window was stuck at the hardcoded
+  // 640x480 and its HUD, laid out in screen-space for a much larger real resolution, appeared
+  // corrupted/overlapping until
   // the window actually grew to match). Only ever grows (never shrinks) so a later, smaller
   // partial-viewport call cannot undo an earlier, correct full-window one.
   //
@@ -143,6 +144,16 @@ public:
   // exactly like width/height, immediately below.
   void SetGeometry(int x, int y, int width, int height, bool visible);
 
+  // Whether the swap that immediately follows the LAST SetGeometry() call above should skip
+  // its real driver call entirely - see that method's own comment (hdcVirtualizationService.cpp)
+  // for the concrete repro and rationale. Consulted by WglSwapBuffersRunner/
+  // WglSwapLayerBuffersRunner (player/commandRunnersCustom.cpp), which - thanks to
+  // WindowGeometryTrackingLayer's atomic pre-hook-key-pair guarantee (that layer's own header
+  // comment) - always run immediately after the one SetGeometry() call that was sampled for
+  // that exact swap, so "the last call's result" is always the right one to consult here, not
+  // a stale value from some earlier, unrelated swap.
+  bool ShouldSuppressSwap();
+
 private:
   HdcVirtualizationService() = default;
 
@@ -167,6 +178,11 @@ private:
   // nothing would ever shrink it back, since SetGeometry() only fires on a genuine captured
   // change, and the captured application window itself never changed in that scenario.
   bool m_HasRealGeometry{false};
+  // See ShouldSuppressSwap()'s own declaration comment above. Plain atomic rather than
+  // m_ResizeMutex-guarded: written only by SetGeometry() (always right before the one swap it
+  // was sampled for reads it), read only by the swap runners - a single bool with no other
+  // state to stay consistent with needs no broader lock.
+  std::atomic<bool> m_SuppressSwap{false};
   uint64_t m_NativeDisplay{};
   uint64_t m_NativeWindow{};
   int m_BorderExtraWidth{0};

@@ -128,10 +128,13 @@ void HdcVirtualizationService::GrowToFit(int width, int height) {
 void HdcVirtualizationService::SetGeometry(int x, int y, int width, int height, bool visible) {
   // Unlike GrowToFit()'s inferred lower bound, this is real, authoritative captured geometry
   // (a WindowGeometryMetaCommand), so an unusable width/height (e.g. a legitimately
-  // zero-sized/minimized Win32 client area) must NOT discard the rest of it: position and
-  // visibility are independent pieces of state and are always applied below. Only the resize
-  // itself is guarded defensively - an actual zero/negative ResizeWindow call would be a
-  // no-op at best, UB at worst (see GrowToFit()'s identical size guard).
+  // zero-sized/minimized Win32 client area) must NOT discard the rest of it in general:
+  // position and visibility are independent pieces of state and are normally always applied
+  // below. The one deliberate exception is HIDING the already-created window on a zero-area
+  // sample - see that call site's own comment (below, at the real SetWindowVisibility() call)
+  // for the concrete repro and rationale. Only the resize itself is otherwise guarded
+  // defensively - an actual zero/negative ResizeWindow call would be a no-op at best, UB at
+  // worst (see GrowToFit()'s identical size guard).
   const bool hasUsableSize = width > 0 && height > 0;
   std::lock_guard<std::mutex> lock(m_ResizeMutex);
   // Latches permanently once a real geometry command has actually been applied (either
@@ -149,8 +152,15 @@ void HdcVirtualizationService::SetGeometry(int x, int y, int width, int height, 
     if (hasUsableSize) {
       m_ClientWidth = width;
       m_ClientHeight = height;
+      m_InitialVisible = visible;
+    } else if (visible) {
+      // Mirrors the already-created-window branch's identical HIDE-suppression guard below
+      // (see that call site's own comment for the full rationale) - a zero-area sample can
+      // still legitimately request an initial SHOW, but must not be allowed to leave the
+      // window's initial visibility permanently false just because it happened to be the last
+      // sample applied before Resolve() creates the window.
+      m_InitialVisible = true;
     }
-    m_InitialVisible = visible;
     return;
   }
   // Window already exists - a later resize/move captured by WindowGeometryTrackingLayer's
@@ -168,8 +178,54 @@ void HdcVirtualizationService::SetGeometry(int x, int y, int width, int height, 
         static_cast<uint32_t>(m_ClientWidth + m_BorderExtraWidth),
         static_cast<uint32_t>(m_ClientHeight + m_BorderExtraHeight));
   }
-  windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Win,
-                                                      m_NativeDisplay, m_NativeWindow, visible);
+  // Observed in a recorded stream: a second
+  // window/context in the same recorded process - permanently zero-area (e.g. observed as a
+  // steady 120x0) for the entire capture, most likely an overlay's or a background worker's
+  // hidden helper GL context, never the app's real render target - issues its own
+  // WindowGeometryMetaCommand samples throughout the whole stream, interleaved roughly 1:1 with
+  // the real, positive-area main window's own per-frame samples (observed as a steady
+  // 3824x1421). Both get aliased onto this one player-owned window (see this class's own
+  // header comment: "every distinct recorded HDC maps to the same one live HDC"). Applying
+  // every sample's `visible` here unconditionally
+  // toggled the single real player window hidden/shown on roughly every other sample for the
+  // stream's entire duration - continuous visible flicker, with the window hidden roughly half
+  // of all wall-clock time, and no rendering ever appearing to stay on screen.
+  //
+  // Fix: a sample with no usable area cannot be describing the same on-screen surface as a
+  // positive-area sample, so it is not authoritative for HIDING a window that IS currently
+  // showing real content - suppress only the HIDE case (visible == false) when the sample
+  // itself has no usable size. A SHOW request (visible == true) is always applied regardless of
+  // size, since re-showing the window is never harmful, and a real app's own main window can
+  // legitimately request visibility before its first real-size layout pass.
+  //
+  // This is a pragmatic, single-window-scoped mitigation, not a full fix for two simultaneous
+  // real windows - see this class's own header comment and
+  // docs/development/modern-opengl-backend-architecture.md's "Model context topology before
+  // broad object state" decision's "Revisit when" note for the real fix (a per-recorded-HDC
+  // window pool) once a stream needs the second window to actually be visible/correct in its
+  // own right, rather than merely not corrupting the first one.
+  if (hasUsableSize || visible) {
+    windowing::WindowManager::Get().SetWindowVisibility(windowing::WindowProtocol::Win,
+                                                        m_NativeDisplay, m_NativeWindow, visible);
+  }
+  // Second half of the same fix: the HIDE-suppression above stops the phantom's samples from
+  // hiding the one real window, but does nothing about its actual GL rendering, which still
+  // lands in that same window's shared back buffer (every recorded HDC resolves to the one
+  // real HDC - see this class's own header comment). WindowGeometryTrackingLayer's per-frame
+  // poll runs immediately before the wglSwapBuffers/wglSwapLayerBuffers call it samples for
+  // (an atomic pre-hook-key pair - see that layer's own header comment), so a zero-area sample
+  // here means the very next swap belongs to the phantom, not the main window: latch that here
+  // for WglSwapBuffersRunner/WglSwapLayerBuffersRunner (commandRunnersCustom.cpp) to consult
+  // and skip the real driver call entirely for that one swap. Without this, the phantom's own
+  // (typically blank/uninitialized) back-buffer content would get presented on every one of its
+  // swaps, each one overwriting the main window's just-rendered frame right up until the main
+  // window's own next swap - real content would exist for a fraction of a frame at best, never
+  // long enough to actually be seen.
+  m_SuppressSwap.store(!hasUsableSize, std::memory_order_release);
+}
+
+bool HdcVirtualizationService::ShouldSuppressSwap() {
+  return m_SuppressSwap.load(std::memory_order_acquire);
 }
 
 bool HdcVirtualizationService::EnsurePixelFormatSet(const PIXELFORMATDESCRIPTOR* requestedPfd) {
@@ -216,9 +272,10 @@ bool HdcVirtualizationService::EnsurePixelFormatSet(const PIXELFORMATDESCRIPTOR*
     // Black-screen investigation fix, later corrected by a real-buffering-semantics review
     // finding: an app's *own* wglSetPixelFormat call used to be captured byte-for-byte and was
     // not a reliable source of the flags that actually matter for replay - a real repro against
-    // a stream recorded through this backend captured a sparse descriptor with dwFlags=0
-    // (no PFD_DOUBLEBUFFER bit), which ChoosePixelFormat/SetPixelFormat honored literally,
-    // silently picking a single-buffered format - wglSwapBuffers then kept returning TRUE
+    // a captured application's stream recorded through this backend captured a sparse
+    // descriptor with dwFlags=0 (no PFD_DOUBLEBUFFER bit), which ChoosePixelFormat/
+    // SetPixelFormat honored literally, silently picking a single-buffered format -
+    // wglSwapBuffers then kept returning TRUE
     // (nothing crashes) while GL_FRONT and GL_BACK are the same buffer, so real,
     // correctly-rendered frames (confirmed present via glReadPixels) never reached the window's
     // visible surface: a solid black window for the stream's entire duration.

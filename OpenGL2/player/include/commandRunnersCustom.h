@@ -163,4 +163,39 @@ private:
   glViewportCommand command;
 };
 
+// wglSwapBuffers's Run() - skips the real driver call entirely when
+// HdcVirtualizationService::ShouldSuppressSwap() says so - see that method's own declaration
+// comment (hdcVirtualizationService.h) and HdcVirtualizationService::SetGeometry()'s own header
+// comment (hdcVirtualizationService.cpp) for the concrete repro and full rationale: a second,
+// permanently zero-area window/context in the same recorded process shares this player's one
+// real window/HDC with the real main window, and presenting its swaps would otherwise overwrite
+// the main window's just-rendered frame on every other swap.
+class WglSwapBuffersRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglSwapBuffersCommand command;
+};
+
+// wglSwapLayerBuffers's Run() - see WglSwapBuffersRunner's own comment above; identical
+// suppression, same rationale.
+class WglSwapLayerBuffersRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglSwapLayerBuffersCommand command;
+};
+
 } // namespace gits::opengl2
