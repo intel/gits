@@ -6,16 +6,16 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "pbufferPixelFormatMetaRunner.h"
+#include "pixelFormatMetaRunner.h"
 
+#include "hdcVirtualizationService.h"
 #include "layerAuto.h"
-#include "pbufferService.h"
 #include "playerManager.h"
 #include "threadContextService.h"
 
 namespace gits::opengl2 {
 
-void PbufferPixelFormatMetaRunner::Run() {
+void PixelFormatMetaRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   for (Layer* layer : manager.GetPreLayers()) {
@@ -23,7 +23,8 @@ void PbufferPixelFormatMetaRunner::Run() {
   }
 
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    PbufferService::Get().SetPendingPixelFormat(command.m_ThreadId, command.m_Attributes.Data);
+    HdcVirtualizationService::Get().SetPendingPixelFormat(command.m_ThreadId,
+                                                          command.m_Attributes.Data);
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

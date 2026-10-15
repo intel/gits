@@ -34,7 +34,7 @@ public:
 
   // ---- Window geometry and pixel formats --------------------------------
   void Post(WindowGeometryMetaCommand& command) override;
-  void Post(PbufferPixelFormatMetaCommand& command) override;
+  void Post(PixelFormatMetaCommand& command) override;
   void Post(wglSetPixelFormatCommand& command) override;
 
   // ---- Contexts ---------------------------------------------------------

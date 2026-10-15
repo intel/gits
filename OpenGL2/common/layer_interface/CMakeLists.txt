@@ -33,7 +33,7 @@ add_library(OpenGL2_layer_interface STATIC
   layerBase.h
   mappedDataMetaTypes.h
   mappedTextureDataMetaTypes.h
-  pbufferPixelFormatMetaTypes.h
+  pixelFormatMetaTypes.h
   uniformArrayMetaTypes.h
   unsupportedCommandTypes.h
   windowGeometryMetaTypes.h

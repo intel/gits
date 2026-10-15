@@ -128,15 +128,15 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // guarantees no OTHER thread's own key can land between them, and that this command's own
   // orderingKey ends up in the exact same position relative to every OTHER, independently-
   // recording thread that a lone CreateCommandKey() call would have given it.
-% if cmd.name in pre_swap_texture_key_commands:
-  // See generator_recorder.py's PRE_SWAP_TEXTURE_KEY_COMMANDS: one more key, ahead of the pair,
-  // for MappedTextureLayer's update, reserved in the same atomic step.
+% if cmd.name in pre_hook_extra_key_commands:
+  // See generator_recorder.py's PRE_HOOK_EXTRA_KEY_COMMANDS: one more key, ahead of the pair,
+  // for another Pre layer's metacommand, reserved in the same atomic step.
   const uint64_t firstKey = record ? CaptureManager::Get().CreateCommandKeyRange(3) : 0;
   const std::pair<uint64_t, uint64_t> preHookKeyPair =
       record ? std::pair<uint64_t, uint64_t>{firstKey + 1, firstKey + 2}
              : std::pair<uint64_t, uint64_t>{0, 0};
   if (record) {
-    CaptureManager::Get().SetPendingMappedTextureKey(firstKey);
+    CaptureManager::Get().${pre_hook_extra_key_commands[cmd.name]}(firstKey);
   }
 % else:
   const auto preHookKeyPair =

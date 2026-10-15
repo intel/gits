@@ -20,20 +20,14 @@
 namespace gits::opengl2 {
 
 // WGL_ARB_pbuffer/WGL_EXT_pbuffer replay state. The pbuffer handle itself is a mapped handle
-// (PbufferHandleMapService/PbufferEXTHandleMapService); this keeps what that mapping cannot:
-//   - The capture-time pixel format attributes a PbufferPixelFormatMetaCommand delivers right
-//     before its wglCreatePbufferARB/EXT, keyed by recorded thread.
-//   - Each recorded pbuffer DC (wglGetPbufferDCARB/EXT) and the real one replay got for it, which
-//     HdcVirtualizationService::Resolve() returns instead of the player window's DC. A driver may
-//     return the same DC for repeated acquisitions, each matched by its own release, so every
-//     acquisition is kept until its release.
+// (PbufferHandleMapService/PbufferEXTHandleMapService); this keeps what that mapping cannot: each
+// recorded pbuffer DC (wglGetPbufferDCARB/EXT) and the real one replay got for it, which
+// HdcVirtualizationService::Resolve() returns instead of the player window's DC. A driver may
+// return the same DC for repeated acquisitions, each matched by its own release, so every
+// acquisition is kept until its release.
 class PbufferService {
 public:
   static PbufferService& Get();
-
-  void SetPendingPixelFormat(uint32_t threadId, std::vector<int32_t> attributes);
-  // Empty when the thread has no pending attributes.
-  std::vector<int32_t> TakePendingPixelFormat(uint32_t threadId);
 
   // `realDc` is nullptr when replay failed to get the DC capture got.
   void AcquireDc(HDC recordedDc, GITSKey pbufferKey, HDC realDc);
@@ -54,7 +48,6 @@ private:
   };
 
   std::mutex m_Mutex;
-  std::unordered_map<uint32_t, std::vector<int32_t>> m_PendingPixelFormats;
   // Acquisitions not yet released, latest last.
   std::unordered_map<HDC, std::vector<PbufferDc>> m_Dcs;
 };

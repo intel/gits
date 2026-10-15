@@ -12,9 +12,10 @@
 #include "glEnumsAuto.h"
 #include "log.h"
 #include "openglDriversAuto.h"
-#include "pbufferPixelFormatMetaTypes.h"
+#include "pixelFormatMetaTypes.h"
 
 #include <atomic>
+#include <span>
 
 // Hand-declared instead of including <windows.h>, which would redeclare HDC/PIXELFORMATDESCRIPTOR
 // etc. against glTypes.h's own self-contained declarations of those same names (pulled in here
@@ -45,44 +46,114 @@ constexpr int kPbufferPixelFormatAttributes[] = {
     WGL_SAMPLE_BUFFERS_ARB,      WGL_SAMPLES_ARB,        WGL_BIND_TO_TEXTURE_RGB_ARB,
     WGL_BIND_TO_TEXTURE_RGBA_ARB};
 
-// Records the meta command even when nothing could be queried: the pre-hook key must be used.
-void RecordPbufferPixelFormat(uint32_t threadId, HDC hdc, int pixelFormat) {
+// The same set for a window, which needs neither pbuffer drawing nor texture binding, plus the
+// stereo and auxiliary buffers its descriptor also describes, and the swap method, which decides
+// what the back buffer holds after a swap.
+constexpr int kWindowPixelFormatAttributes[] = {
+    WGL_DRAW_TO_WINDOW_ARB, WGL_SUPPORT_OPENGL_ARB, WGL_ACCELERATION_ARB,   WGL_PIXEL_TYPE_ARB,
+    WGL_DOUBLE_BUFFER_ARB,  WGL_STEREO_ARB,         WGL_RED_BITS_ARB,       WGL_GREEN_BITS_ARB,
+    WGL_BLUE_BITS_ARB,      WGL_ALPHA_BITS_ARB,     WGL_ACCUM_BITS_ARB,     WGL_DEPTH_BITS_ARB,
+    WGL_STENCIL_BITS_ARB,   WGL_AUX_BUFFERS_ARB,    WGL_SAMPLE_BUFFERS_ARB, WGL_SAMPLES_ARB,
+    WGL_SWAP_METHOD_ARB};
+
+// Records the meta command even when nothing could be queried: its key must be used.
+void RecordPixelFormat(uint64_t key,
+                       uint32_t threadId,
+                       HDC hdc,
+                       int pixelFormat,
+                       std::span<const int> queried,
+                       bool pbuffer) {
   // The queries, logging and recording below may set the thread's last error, which the
   // application may read after its own call.
   const DWORD lastError = GetLastError();
-  PbufferPixelFormatMetaCommand meta(threadId);
-  meta.m_Key = CaptureManager::Get().TakePendingPreHookKey();
+  PixelFormatMetaCommand meta(threadId);
+  meta.m_Key = key;
   meta.m_Attributes.HasValue = true;
   auto getAttributes = g_DispatchTable.wglGetPixelFormatAttribivARB.load(std::memory_order_acquire);
+  // Before any context is current, an unresolved extension function cannot be resolved.
+  const bool resolvable =
+      getAttributes != &ResolveAndCall_wglGetPixelFormatAttribivARB ||
+      g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire)() != nullptr;
   // One attribute per query: the whole query fails if any attribute belongs to an extension the
   // driver lacks (WGL_ARB_multisample, WGL_ARB_render_texture).
-  for (int attribute : kPbufferPixelFormatAttributes) {
+  for (int attribute : queried) {
     int value = 0;
-    if (getAttributes(hdc, pixelFormat, 0, 1, &attribute, &value)) {
+    if (resolvable && getAttributes(hdc, pixelFormat, 0, 1, &attribute, &value)) {
       meta.m_Attributes.Data.push_back(attribute);
       meta.m_Attributes.Data.push_back(value);
     }
   }
-  if (meta.m_Attributes.Data.empty()) {
+  if (pbuffer && meta.m_Attributes.Data.empty()) {
     static std::atomic<bool> warned{false};
     if (!warned.exchange(true)) {
       LOG_WARNING << "PixelFormatCaptureLayer: wglGetPixelFormatAttribivARB failed for a "
                      "pbuffer pixel format - replay will reuse its format index";
     }
   }
-  CaptureManager::Get().RecordCommand(meta, new PbufferPixelFormatMetaSerializer(meta));
+  CaptureManager::Get().RecordCommand(meta, new PixelFormatMetaSerializer(meta));
+  SetLastError(lastError);
+}
+
+// Resolves wglGetPixelFormatAttribivARB while the context a make-current call attached is
+// current; see Pre(wglSetPixelFormatCommand&).
+void ResolveAttributeQuery(bool succeeded, HGLRC context, HDC dc) {
+  auto getAttributes = g_DispatchTable.wglGetPixelFormatAttribivARB.load(std::memory_order_acquire);
+  if (!succeeded || context == nullptr ||
+      getAttributes != &ResolveAndCall_wglGetPixelFormatAttribivARB) {
+    return;
+  }
+  const DWORD lastError = GetLastError();
+  // The format index is ignored for this attribute.
+  const int attribute = WGL_NUMBER_PIXEL_FORMATS_ARB;
+  int value = 0;
+  getAttributes(dc, 1, 0, 1, &attribute, &value);
   SetLastError(lastError);
 }
 } // namespace
 
 void PixelFormatCaptureLayer::Pre(wglCreatePbufferARBCommand& command) {
-  RecordPbufferPixelFormat(command.m_ThreadId, command.m_hDC.Value, command.m_iPixelFormat.Value);
+  RecordPixelFormat(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_hDC.Value, command.m_iPixelFormat.Value,
+                    kPbufferPixelFormatAttributes, true);
   Pre(static_cast<Command&>(command));
 }
 
 void PixelFormatCaptureLayer::Pre(wglCreatePbufferEXTCommand& command) {
-  RecordPbufferPixelFormat(command.m_ThreadId, command.m_hDC.Value, command.m_iPixelFormat.Value);
+  RecordPixelFormat(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_hDC.Value, command.m_iPixelFormat.Value,
+                    kPbufferPixelFormatAttributes, true);
   Pre(static_cast<Command&>(command));
+}
+
+// The descriptor Post() records cannot express multisampling, so replay chooses the window's
+// format from these attributes; without them (no context was ever current, say), from the
+// descriptor.
+//
+// Applications commonly set the format of the window they render to with no context current,
+// after a throwaway context loaded the WGL extensions, when wglGetPixelFormatAttribivARB can no
+// longer be resolved. Each successful make-current call resolves it while a context is current.
+void PixelFormatCaptureLayer::Pre(wglSetPixelFormatCommand& command) {
+  RecordPixelFormat(CaptureManager::Get().TakePendingPixelFormatKey(), command.m_ThreadId,
+                    command.m_hdc.Value, command.m_ipfd.Value, kWindowPixelFormatAttributes, false);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Post(wglMakeCurrentCommand& command) {
+  ResolveAttributeQuery(command.m_Return.Value != 0, command.m_newContext.Value,
+                        command.m_hDc.Value);
+  Post(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Post(wglMakeContextCurrentARBCommand& command) {
+  ResolveAttributeQuery(command.m_Return.Value != 0, command.m_hglrc.Value,
+                        command.m_hDrawDC.Value);
+  Post(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Post(wglMakeContextCurrentEXTCommand& command) {
+  ResolveAttributeQuery(command.m_Return.Value != 0, command.m_hglrc.Value,
+                        command.m_hDrawDC.Value);
+  Post(static_cast<Command&>(command));
 }
 
 // Background (see HdcVirtualizationService::EnsurePixelFormatSet's own header comment for

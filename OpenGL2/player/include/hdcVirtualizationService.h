@@ -71,15 +71,27 @@ public:
   // sample, the draw DC's first.
   void BindSampledWindows(HDC drawDc, HDC readDc);
 
+  // The capture-time pixel format attributes a PixelFormatMetaCommand delivers right before its
+  // wglSetPixelFormat or wglCreatePbufferARB/EXT, keyed by recorded thread. Take returns an empty
+  // list when the thread has none pending.
+  void SetPendingPixelFormat(uint32_t threadId, std::vector<int32_t> attributes);
+  std::vector<int32_t> TakePendingPixelFormat(uint32_t threadId);
+
+  // Chooses a format on `realDc` with captured {WGL_*_ARB attribute, value} pairs using
+  // wglChoosePixelFormatARB, or returns 0 when there are none or none matches.
+  static int ChooseCapturedPixelFormat(HDC realDc, const std::vector<int32_t>& captured);
+
   // Sets a pixel format on the player window the recorded DC is bound to, at most once per window
   // (Win32 allows one SetPixelFormat per window). A failed attempt latches nothing, so a later
   // request can retry.
   //
   // requestedPfd is a replayed wglSetPixelFormat command's captured PIXELFORMATDESCRIPTOR, which
   // the recorder takes from DescribePixelFormat of the format actually set (see
-  // PixelFormatCaptureLayer). It is re-negotiated with ChoosePixelFormat on the replay driver, as
-  // the legacy backend's SelectPixelFormat() does, since the captured format index means nothing
-  // in another driver's format table.
+  // PixelFormatCaptureLayer), and `attributes` that format's captured attributes. The format is
+  // re-negotiated on the replay driver, as the legacy backend's SelectPixelFormat() does, since
+  // the captured format index means nothing in another driver's format table: from the
+  // attributes, which include multisampling, or with ChoosePixelFormat from the descriptor when
+  // there are none or they match no format.
   //
   // Null means no request is available: wglCreateContext(ARB)'s runners pass it, defensively, for
   // an application that never set a pixel format before creating its context, and a generic
@@ -88,7 +100,9 @@ public:
   // that would block the window's real request.
   //
   // Returns whether the window has a pixel format once this call returns.
-  bool EnsurePixelFormatSet(HDC recordedValue, const PIXELFORMATDESCRIPTOR* requestedPfd);
+  bool EnsurePixelFormatSet(HDC recordedValue,
+                            const PIXELFORMATDESCRIPTOR* requestedPfd,
+                            const std::vector<int32_t>& attributes = {});
 
   // Grows the fallback window's client area to at least (width, height), never shrinking it, if
   // `drawDc` (the real current draw DC) is the fallback's. GlViewportRunner calls this for every
@@ -162,6 +176,7 @@ private:
   std::vector<uint64_t> m_SampledWindows;
   // Identities reported destroyed.
   std::unordered_set<uint64_t> m_DestroyedWindows;
+  std::unordered_map<uint32_t, std::vector<int32_t>> m_PendingPixelFormats;
 };
 
 } // namespace gits::opengl2

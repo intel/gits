@@ -11,7 +11,7 @@
 // Pre layer feeding MappedTextureService (mappedTextureService.h) the swaps that capture
 // still-mapped textures and the deletions that end their mappings. A swap's capture is recorded
 // under the key its wrapper reserved ahead of the swap's own (generator_recorder.py's
-// PRE_SWAP_TEXTURE_KEY_COMMANDS), so it replays before that swap presents the frame.
+// PRE_HOOK_EXTRA_KEY_COMMANDS), so it replays before that swap presents the frame.
 #include "commandsAuto.h"
 #include "layerAuto.h"
 

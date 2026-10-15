@@ -21,9 +21,10 @@
 // (CaptureManager::LoadLayers()) - so mutating `command.m_ppfd` here still changes what
 // actually gets encoded.
 //
-// Also a Pre layer for wglCreatePbufferARB/EXT, whose pixel format attributes it records in a
-// PbufferPixelFormatMetaCommand (pbufferPixelFormatMetaTypes.h) under the command's pre-hook key
-// (generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS).
+// Also a Pre layer for wglCreatePbufferARB/EXT and wglSetPixelFormat, whose pixel format
+// attributes it records in a PixelFormatMetaCommand (pixelFormatMetaTypes.h): a pbuffer's under
+// the command's pre-hook key (generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS), a window's
+// under its pixel format key (PRE_HOOK_EXTRA_KEY_COMMANDS).
 #include "commandsAuto.h"
 #include "layerAuto.h"
 
@@ -42,7 +43,11 @@ public:
 
   void Pre(wglCreatePbufferARBCommand& command) override;
   void Pre(wglCreatePbufferEXTCommand& command) override;
+  void Pre(wglSetPixelFormatCommand& command) override;
   void Post(wglSetPixelFormatCommand& command) override;
+  void Post(wglMakeCurrentCommand& command) override;
+  void Post(wglMakeContextCurrentARBCommand& command) override;
+  void Post(wglMakeContextCurrentEXTCommand& command) override;
 };
 
 } // namespace gits::opengl2

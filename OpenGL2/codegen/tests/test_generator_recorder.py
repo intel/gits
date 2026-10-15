@@ -26,8 +26,8 @@ CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
 from generator_helpers import mako_render
-from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_KEY_PAIR_COMMANDS,
-                                PRE_SWAP_TEXTURE_KEY_COMMANDS)
+from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
+                                PRE_HOOK_KEY_PAIR_COMMANDS)
 from intermediates import Api, CmdType, Command, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
@@ -51,22 +51,22 @@ def fake_command(name: str) -> Command:
 
 def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset(),
-                    pre_swap_texture_key_commands: frozenset[str] = frozenset()) -> str:
+                    pre_hook_extra_key_commands: dict[str, str] | None = None) -> str:
     return render_commands([fake_command(name) for name in command_names],
                            pre_hook_key_pair_commands, post_hook_key_pair_commands,
-                           pre_swap_texture_key_commands)
+                           pre_hook_extra_key_commands)
 
 
 def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset(),
-                    pre_swap_texture_key_commands: frozenset[str] = frozenset()) -> str:
+                    pre_hook_extra_key_commands: dict[str, str] | None = None) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
         context_share_param={}, share_lists_commands={},
         pre_hook_key_pair_commands=pre_hook_key_pair_commands,
         post_hook_key_pair_commands=post_hook_key_pair_commands,
-        pre_swap_texture_key_commands=pre_swap_texture_key_commands, client_array_setters={},
+        pre_hook_extra_key_commands=pre_hook_extra_key_commands or {}, client_array_setters={},
         buffer_content_hooks={})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
@@ -165,26 +165,31 @@ class PostHookKeyPairTests(unittest.TestCase):
         self.assertNotIn('SetPendingPreHookKey', body)
 
 
-class PreSwapTextureKeyTests(unittest.TestCase):
+class PreHookExtraKeyTests(unittest.TestCase):
     def test_exact_membership(self) -> None:
-        self.assertEqual(PRE_SWAP_TEXTURE_KEY_COMMANDS,
-                         frozenset({'wglSwapBuffers', 'wglSwapLayerBuffers'}))
+        self.assertEqual(PRE_HOOK_EXTRA_KEY_COMMANDS,
+                         {'wglSwapBuffers': 'SetPendingMappedTextureKey',
+                          'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
+                          'wglSetPixelFormat': 'SetPendingPixelFormatKey'})
 
-    def test_texture_key_precedes_the_pre_hook_pair_in_one_reservation(self) -> None:
-        rendered = render_wrappers(('wglSwapBuffers', 'wglMakeCurrent'),
+    def test_extra_key_precedes_the_pre_hook_pair_in_one_reservation(self) -> None:
+        rendered = render_wrappers(('wglSwapBuffers', 'wglSetPixelFormat', 'wglMakeCurrent'),
                                    PRE_HOOK_KEY_PAIR_COMMANDS,
-                                   pre_swap_texture_key_commands=PRE_SWAP_TEXTURE_KEY_COMMANDS)
-        body = extract_wrapper_body(rendered, 'wglSwapBuffers')
-        self.assertIn('CaptureManager::Get().CreateCommandKeyRange(3)', body)
-        self.assertIn('CaptureManager::Get().SetPendingMappedTextureKey(firstKey);', body)
-        self.assertIn('{firstKey + 1, firstKey + 2}', body)
-        self.assertIn('SetPendingPreHookKey(preHookKeyPair.first);', body)
-        self.assertIn('const uint64_t orderingKey = preHookKeyPair.second;', body)
-        self.assertNotIn('CaptureManager::Get().CreateCommandKeyPair()', body)
+                                   pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS)
+        for name, setter in (('wglSwapBuffers', 'SetPendingMappedTextureKey'),
+                             ('wglSetPixelFormat', 'SetPendingPixelFormatKey')):
+            with self.subTest(command=name):
+                body = extract_wrapper_body(rendered, name)
+                self.assertIn('CaptureManager::Get().CreateCommandKeyRange(3)', body)
+                self.assertIn(f'CaptureManager::Get().{setter}(firstKey);', body)
+                self.assertIn('{firstKey + 1, firstKey + 2}', body)
+                self.assertIn('SetPendingPreHookKey(preHookKeyPair.first);', body)
+                self.assertIn('const uint64_t orderingKey = preHookKeyPair.second;', body)
+                self.assertNotIn('CaptureManager::Get().CreateCommandKeyPair()', body)
 
         other = extract_wrapper_body(rendered, 'wglMakeCurrent')
         self.assertIn('CaptureManager::Get().CreateCommandKeyPair()', other)
-        self.assertNotIn('SetPendingMappedTextureKey', other)
+        self.assertNotIn('firstKey', other)
 
 def registry_command(name: str) -> Command:
     path = next(path for path, api in FILE_TO_API.items() if api == Api.GL)

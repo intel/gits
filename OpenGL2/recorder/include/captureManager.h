@@ -211,7 +211,7 @@ public:
   }
 
   // Same handoff as SetPendingPreHookKey()/TakePendingPreHookKey(), for generator_recorder.py's
-  // PRE_SWAP_TEXTURE_KEY_COMMANDS: the swap's wrapper reserves this key ahead of its pre-hook
+  // PRE_HOOK_EXTRA_KEY_COMMANDS: the swap's wrapper reserves this key ahead of its pre-hook
   // pair, for the mapped-texture update MappedTextureLayer records (or skips) before the swap.
   void SetPendingMappedTextureKey(uint64_t key) {
     GITS_ASSERT(s_PendingMappedTextureKey == 0);
@@ -221,6 +221,18 @@ public:
     GITS_ASSERT(s_PendingMappedTextureKey != 0);
     const uint64_t key = s_PendingMappedTextureKey;
     s_PendingMappedTextureKey = 0;
+    return key;
+  }
+  // The same for wglSetPixelFormat's pixel format attributes, which PixelFormatCaptureLayer
+  // records before the call.
+  void SetPendingPixelFormatKey(uint64_t key) {
+    GITS_ASSERT(s_PendingPixelFormatKey == 0);
+    s_PendingPixelFormatKey = key;
+  }
+  uint64_t TakePendingPixelFormatKey() {
+    GITS_ASSERT(s_PendingPixelFormatKey != 0);
+    const uint64_t key = s_PendingPixelFormatKey;
+    s_PendingPixelFormatKey = 0;
     return key;
   }
   std::vector<Layer*>& GetPreLayers() {
@@ -262,6 +274,7 @@ private:
   static thread_local uint64_t s_PendingPreHookKey;
   static thread_local uint64_t s_PendingPostHookKey;
   static thread_local uint64_t s_PendingMappedTextureKey;
+  static thread_local uint64_t s_PendingPixelFormatKey;
 };
 
 } // namespace gits::opengl2

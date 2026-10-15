@@ -18,22 +18,6 @@ PbufferService& PbufferService::Get() {
   return instance;
 }
 
-void PbufferService::SetPendingPixelFormat(uint32_t threadId, std::vector<int32_t> attributes) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  m_PendingPixelFormats[threadId] = std::move(attributes);
-}
-
-std::vector<int32_t> PbufferService::TakePendingPixelFormat(uint32_t threadId) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  auto it = m_PendingPixelFormats.find(threadId);
-  if (it == m_PendingPixelFormats.end()) {
-    return {};
-  }
-  std::vector<int32_t> attributes = std::move(it->second);
-  m_PendingPixelFormats.erase(it);
-  return attributes;
-}
-
 void PbufferService::AcquireDc(HDC recordedDc, GITSKey pbufferKey, HDC realDc) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_Dcs[recordedDc].push_back(PbufferDc{pbufferKey, realDc});

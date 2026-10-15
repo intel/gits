@@ -27,27 +27,10 @@
 namespace gits::opengl2 {
 
 namespace {
-// Zero-valued attributes are left out: wglChoosePixelFormatARB matches booleans exactly, so
-// requiring e.g. WGL_BIND_TO_TEXTURE_RGB_ARB to be FALSE would reject formats that merely support
-// more. WGL_DOUBLE_BUFFER_ARB and WGL_SAMPLE_BUFFERS_ARB are kept either way: the first decides
-// the default draw buffer, the second whether the pbuffer is multisampled.
 int ChoosePbufferPixelFormat(HDC hdc, const std::vector<int32_t>& captured, int recordedFormat) {
-  std::vector<int> attributes;
-  for (size_t i = 0; i + 1 < captured.size(); i += 2) {
-    if (captured[i + 1] != 0 || captured[i] == WGL_DOUBLE_BUFFER_ARB ||
-        captured[i] == WGL_SAMPLE_BUFFERS_ARB) {
-      attributes.push_back(captured[i]);
-      attributes.push_back(captured[i + 1]);
-    }
-  }
-  if (!attributes.empty()) {
-    attributes.push_back(0);
-    int format = 0;
-    UINT count = 0;
-    auto choose = player::g_DispatchTable.wglChoosePixelFormatARB.load(std::memory_order_acquire);
-    if (choose(hdc, attributes.data(), nullptr, 1, &format, &count) && count > 0) {
-      return format;
-    }
+  const int format = HdcVirtualizationService::ChooseCapturedPixelFormat(hdc, captured);
+  if (format != 0) {
+    return format;
   }
   static std::atomic<bool> warned{false};
   if (!warned.exchange(true)) {
@@ -63,7 +46,7 @@ void RunCreatePbuffer(CommandT& command, const std::atomic<RealFunctionT>& realF
   auto& manager = PlayerManager::Get();
   HDC real_hDC = HdcVirtualizationService::Get().Resolve(command.m_hDC.Value);
   const std::vector<int32_t> pixelFormat =
-      PbufferService::Get().TakePendingPixelFormat(command.m_ThreadId);
+      HdcVirtualizationService::Get().TakePendingPixelFormat(command.m_ThreadId);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -406,6 +389,10 @@ void RunMakeContextCurrent(MakeContextCurrentCommand& command, RealFunction& rea
     if (command.m_Return.Value) {
       InvalidateReplayContextCaps();
     }
+    // See WglMakeCurrentRunner::Run().
+    if (command.m_Return.Value && command.m_hglrc.Value) {
+      player::WarmUpResolvableFunctions(command.m_hglrc.Key);
+    }
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
@@ -486,6 +473,8 @@ void WglSetPixelFormatRunner::Run() {
   auto& manager = PlayerManager::Get();
   HdcVirtualizationService::Get().BindSampledWindow(command.m_hdc.Value, true);
   HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
+  const std::vector<int32_t> pixelFormat =
+      HdcVirtualizationService::Get().TakePendingPixelFormat(command.m_ThreadId);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -513,13 +502,13 @@ void WglSetPixelFormatRunner::Run() {
                                   // against the same recorded HDC value works.
     } else {
       // The recorded format index (*ipfd) is a driver/GPU-specific value with no defined meaning
-      // on a possibly different replay-time driver - re-negotiate the captured
-      // PIXELFORMATDESCRIPTOR request instead of replaying that index verbatim (mirrors
+      // on a possibly different replay-time driver - re-negotiate the captured attributes and
+      // PIXELFORMATDESCRIPTOR instead of replaying that index verbatim (mirrors
       // OpenGL/common/wglFunctions.cpp's CwglSetPixelFormat::Run(), which does the same
       // re-derivation for the legacy backend - see Decision 9). EnsurePixelFormatSet() itself
       // enforces "at most once" per player window.
       command.m_Return.Value = HdcVirtualizationService::Get().EnsurePixelFormatSet(
-          command.m_hdc.Value, command.m_ppfd.Data.data());
+          command.m_hdc.Value, command.m_ppfd.Data.data(), pixelFormat);
     }
   }
   for (Layer* layer : manager.GetPostLayers()) {

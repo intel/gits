@@ -33,8 +33,8 @@ void StatisticsLayer::Post(MappedTextureDataMetaCommand& command) {
   m_StatisticsService.Command("MappedTextureDataMeta", command.m_Key);
 }
 
-void StatisticsLayer::Post(PbufferPixelFormatMetaCommand& command) {
-  m_StatisticsService.Command("PbufferPixelFormatMeta", command.m_Key);
+void StatisticsLayer::Post(PixelFormatMetaCommand& command) {
+  m_StatisticsService.Command("PixelFormatMeta", command.m_Key);
 }
 
 void StatisticsLayer::Post(UnsupportedCommand& command) {

@@ -11,7 +11,7 @@
 #include "commandSerializersAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "liveGl.h"
-#include "pbufferPixelFormatMetaTypes.h"
+#include "pixelFormatMetaTypes.h"
 #include "stateRestorer.h"
 #include "uniformLocationMapService.h"
 
@@ -123,8 +123,8 @@ void StateTrackingLayer::Post(WindowGeometryMetaCommand& command) {
   m_State.SetGeometry(command);
 }
 
-void StateTrackingLayer::Post(PbufferPixelFormatMetaCommand& command) {
-  m_State.AddTopology(Unsampled<PbufferPixelFormatMetaSerializer>(command));
+void StateTrackingLayer::Post(PixelFormatMetaCommand& command) {
+  m_State.AddTopology(Unsampled<PixelFormatMetaSerializer>(command));
 }
 
 void StateTrackingLayer::Post(wglSetPixelFormatCommand& command) {

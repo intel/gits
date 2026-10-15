@@ -22,6 +22,7 @@ namespace gits::opengl2 {
 thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
 thread_local uint64_t CaptureManager::s_PendingPostHookKey = 0;
 thread_local uint64_t CaptureManager::s_PendingMappedTextureKey = 0;
+thread_local uint64_t CaptureManager::s_PendingPixelFormatKey = 0;
 CaptureManager& CaptureManager::Get() {
   // Thread-safe function-local static initialization (C++11 "magic statics") replaces a
   // hand-rolled, unsynchronized check-then-write of a raw pointer, which could race two
@@ -76,8 +77,8 @@ void CaptureManager::LoadLayers() {
   m_PreLayers.push_back(new ClientArraysLayer());
   // Captures still-mapped GL_INTEL_map_texture textures at swaps - see mappedTextureLayer.h.
   m_PreLayers.push_back(new MappedTextureLayer());
-  // One stateless instance in both lists: Pre() for wglCreatePbufferARB/EXT, Post() for
-  // wglSetPixelFormat.
+  // One stateless instance in both lists: Pre() for wglCreatePbufferARB/EXT and wglSetPixelFormat,
+  // Post() for wglSetPixelFormat and wglMakeCurrent.
   auto* pixelFormatCaptureLayer = new PixelFormatCaptureLayer();
   m_PreLayers.push_back(pixelFormatCaptureLayer);
   // PixelFormatCaptureLayer must run BEFORE EncoderLayer (see that layer's own header comment

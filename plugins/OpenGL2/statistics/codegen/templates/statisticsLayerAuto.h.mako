@@ -27,7 +27,7 @@ public:
   void Post(ClientArraysMetaCommand& command) override;
   void Post(UniformArrayMetaCommand& command) override;
   void Post(MappedTextureDataMetaCommand& command) override;
-  void Post(PbufferPixelFormatMetaCommand& command) override;
+  void Post(PixelFormatMetaCommand& command) override;
   void Post(UnsupportedCommand& command) override;
 % for cmd in commands:
 % if cmd.enabled:

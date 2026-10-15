@@ -81,7 +81,8 @@ private:
 };
 
 // wglMakeContextCurrentARB/EXT's Run() - binds the recorded draw and read DCs to the windows of
-// their geometry samples (HdcVirtualizationService::BindSampledWindows()) before resolving either.
+// their geometry samples (HdcVirtualizationService::BindSampledWindows()) before resolving either,
+// and warms up extension functions as wglMakeCurrent's does.
 class WglMakeContextCurrentARBRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -108,9 +109,10 @@ private:
   wglMakeContextCurrentEXTCommand command;
 };
 
-// wglSetPixelFormat's Run() - re-negotiates the captured PIXELFORMATDESCRIPTOR request instead
-// of replaying the recorded, driver-specific format index verbatim, see
-// docs/development/opengl2-player-skeleton-plan.md's Decision 9.
+// wglSetPixelFormat's Run() - re-negotiates the attributes of the PixelFormatMetaCommand replayed
+// right before it and the captured PIXELFORMATDESCRIPTOR instead of replaying the recorded,
+// driver-specific format index verbatim, see docs/development/opengl2-player-skeleton-plan.md's
+// Decision 9.
 class WglSetPixelFormatRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -302,7 +304,7 @@ private:
 };
 
 // wglCreatePbufferARB's Run() - chooses the pixel format from the attributes of the
-// PbufferPixelFormatMetaCommand replayed right before it (PbufferService) rather than reusing
+// PixelFormatMetaCommand replayed right before it (HdcVirtualizationService) rather than reusing
 // the capture driver's format index.
 class WglCreatePbufferARBRunner : public stream::CommandRunner {
 public:

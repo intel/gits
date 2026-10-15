@@ -9,14 +9,14 @@
 #pragma once
 
 #include "commandRunner.h"
-#include "pbufferPixelFormatMetaTypes.h"
+#include "pixelFormatMetaTypes.h"
 
 namespace gits::opengl2 {
 
-// Hands a PbufferPixelFormatMetaCommand's attributes to PbufferService for the recorded thread's
-// next wglCreatePbufferARB/EXT (WglCreatePbufferARBRunner/WglCreatePbufferEXTRunner,
-// commandRunnersCustom.h).
-class PbufferPixelFormatMetaRunner : public stream::CommandRunner {
+// Hands a PixelFormatMetaCommand's attributes to HdcVirtualizationService for the recorded
+// thread's next wglSetPixelFormat or wglCreatePbufferARB/EXT (WglSetPixelFormatRunner,
+// WglCreatePbufferARBRunner, WglCreatePbufferEXTRunner, commandRunnersCustom.h).
+class PixelFormatMetaRunner : public stream::CommandRunner {
 public:
   void Run() override;
 
@@ -26,7 +26,7 @@ protected:
   }
 
 private:
-  PbufferPixelFormatMetaCommand command;
+  PixelFormatMetaCommand command;
 };
 
 } // namespace gits::opengl2

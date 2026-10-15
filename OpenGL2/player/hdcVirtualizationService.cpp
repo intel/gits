@@ -9,6 +9,8 @@
 #include "hdcVirtualizationService.h"
 
 #include "configurator.h"
+#include "glEnumsAuto.h"
+#include "openglDriversAuto.h"
 #include "pbufferService.h"
 #include "windowManager.h"
 
@@ -275,8 +277,58 @@ void HdcVirtualizationService::ApplyVisibility(PlayerWindow& window, bool shown)
   }
 }
 
+void HdcVirtualizationService::SetPendingPixelFormat(uint32_t threadId,
+                                                     std::vector<int32_t> attributes) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_PendingPixelFormats[threadId] = std::move(attributes);
+}
+
+std::vector<int32_t> HdcVirtualizationService::TakePendingPixelFormat(uint32_t threadId) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_PendingPixelFormats.find(threadId);
+  if (it == m_PendingPixelFormats.end()) {
+    return {};
+  }
+  std::vector<int32_t> attributes = std::move(it->second);
+  m_PendingPixelFormats.erase(it);
+  return attributes;
+}
+
+// Zero-valued attributes are left out: wglChoosePixelFormatARB matches booleans exactly, so
+// requiring e.g. WGL_BIND_TO_TEXTURE_RGB_ARB to be FALSE would reject formats that merely support
+// more. WGL_DOUBLE_BUFFER_ARB, WGL_STEREO_ARB and WGL_SAMPLE_BUFFERS_ARB are kept either way: the
+// first two decide the buffers of the default framebuffer, the last whether the format is
+// multisampled. An undefined swap method is left out too, as it is matched exactly and promises
+// nothing about the back buffer.
+int HdcVirtualizationService::ChooseCapturedPixelFormat(HDC realDc,
+                                                        const std::vector<int32_t>& captured) {
+  std::vector<int> attributes;
+  for (size_t i = 0; i + 1 < captured.size(); i += 2) {
+    if (captured[i] == WGL_SWAP_METHOD_ARB && captured[i + 1] == WGL_SWAP_UNDEFINED_ARB) {
+      continue;
+    }
+    if (captured[i + 1] != 0 || captured[i] == WGL_DOUBLE_BUFFER_ARB ||
+        captured[i] == WGL_STEREO_ARB || captured[i] == WGL_SAMPLE_BUFFERS_ARB) {
+      attributes.push_back(captured[i]);
+      attributes.push_back(captured[i + 1]);
+    }
+  }
+  if (attributes.empty()) {
+    return 0;
+  }
+  attributes.push_back(0);
+  int format = 0;
+  UINT count = 0;
+  auto choose = player::g_DispatchTable.wglChoosePixelFormatARB.load(std::memory_order_acquire);
+  if (choose(realDc, attributes.data(), nullptr, 1, &format, &count) && count > 0) {
+    return format;
+  }
+  return 0;
+}
+
 bool HdcVirtualizationService::EnsurePixelFormatSet(HDC recordedValue,
-                                                    const PIXELFORMATDESCRIPTOR* requestedPfd) {
+                                                    const PIXELFORMATDESCRIPTOR* requestedPfd,
+                                                    const std::vector<int32_t>& attributes) {
   if (PbufferService::Get().FindDc(recordedValue)) {
     return true; // A pbuffer's pixel format is chosen when it is created.
   }
@@ -312,7 +364,10 @@ bool HdcVirtualizationService::EnsurePixelFormatSet(HDC recordedValue,
   if (pfd.iPixelType != kPfdTypeRgba && pfd.iPixelType != kPfdTypeColorIndex) {
     pfd.iPixelType = kPfdTypeRgba;
   }
-  const int format = ChoosePixelFormat(window.RealHdc, &pfd);
+  int format = ChooseCapturedPixelFormat(window.RealHdc, attributes);
+  if (format == 0) {
+    format = ChoosePixelFormat(window.RealHdc, &pfd);
+  }
   if (format != 0 && SetPixelFormat(window.RealHdc, format, &pfd)) {
     window.PixelFormatSet = true;
   }

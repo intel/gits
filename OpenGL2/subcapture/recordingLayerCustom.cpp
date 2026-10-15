@@ -11,7 +11,7 @@
 #include "clientArraysMetaTypes.h"
 #include "mappedDataMetaTypes.h"
 #include "mappedTextureDataMetaTypes.h"
-#include "pbufferPixelFormatMetaTypes.h"
+#include "pixelFormatMetaTypes.h"
 #include "uniformArrayMetaTypes.h"
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryMetaTypes.h"
@@ -78,9 +78,9 @@ void RecordingLayer::Pre(MappedTextureDataMetaCommand& command) {
   }
 }
 
-void RecordingLayer::Pre(PbufferPixelFormatMetaCommand& command) {
+void RecordingLayer::Pre(PixelFormatMetaCommand& command) {
   if (m_Range.InRange()) {
-    m_Recorder.Record(PbufferPixelFormatMetaSerializer(command));
+    m_Recorder.Record(PixelFormatMetaSerializer(command));
   }
 }
 

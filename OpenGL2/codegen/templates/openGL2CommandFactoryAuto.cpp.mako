@@ -21,7 +21,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandRunnersCustom.h"
 #include "mappedDataMetaRunner.h"
 #include "mappedTextureDataMetaRunner.h"
-#include "pbufferPixelFormatMetaRunner.h"
+#include "pixelFormatMetaRunner.h"
 #include "uniformArrayMetaRunner.h"
 #include "unsupportedCommandRunner.h"
 #include "windowGeometryMetaRunner.h"
@@ -34,7 +34,7 @@ stream::CommandRunner* OpenGL2CommandFactory::CreateCommand(unsigned id) {
   // player/include/unsupportedCommandRunner.h, player/include/mappedDataMetaRunner.h,
   // player/include/windowGeometryMetaRunner.h, player/include/clientArraysMetaRunner.h,
   // player/include/uniformArrayMetaRunner.h, player/include/mappedTextureDataMetaRunner.h and
-  // player/include/pbufferPixelFormatMetaRunner.h.
+  // player/include/pixelFormatMetaRunner.h.
   case CommandId::ID_META_UNSUPPORTED_COMMAND:
     return new UnsupportedCommandRunner();
   case CommandId::ID_META_MAPPED_DATA:
@@ -47,8 +47,8 @@ stream::CommandRunner* OpenGL2CommandFactory::CreateCommand(unsigned id) {
     return new UniformArrayMetaRunner();
   case CommandId::ID_META_MAPPED_TEXTURE_DATA:
     return new MappedTextureDataMetaRunner();
-  case CommandId::ID_META_PBUFFER_PIXEL_FORMAT:
-    return new PbufferPixelFormatMetaRunner();
+  case CommandId::ID_META_PIXEL_FORMAT:
+    return new PixelFormatMetaRunner();
 % for name, runner_class in custom_player_runners.items():
   // Hand-written case, overriding the generated (but unused for this one name - see
   // custom_player_runners.py) ${name}Runner below - see player/include/commandRunnersCustom.h.
