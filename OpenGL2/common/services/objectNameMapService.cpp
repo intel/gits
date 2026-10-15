@@ -100,6 +100,18 @@ void ObjectNameMapService::Delete(GLObjectKind kind, uint64_t shareGroup, GLuint
   if (name == 0) {
     return;
   }
+  // Program/Shader keep their forward mapping alive across a delete - see this method's own
+  // header comment for the GL deferred-deletion rationale. TransformFeedback keeps its
+  // mapping alive here too, for the related-but-distinct
+  // "the driver may have rejected this specific delete outright" reason also documented in
+  // this method's own header comment (objectNameMapService.h) - see that comment before
+  // changing this condition. Nothing else to do here for any of the three: a still-legal
+  // reference keeps resolving against the existing (correct) entry, and an eventual
+  // reused-name create overwrites it via Register() exactly as before.
+  if (kind == GLObjectKind::Program || kind == GLObjectKind::Shader ||
+      kind == GLObjectKind::TransformFeedback) {
+    return;
+  }
   const NameKey nameKey{shareGroup, name};
   Bucket& bucket = BucketFor(kind);
   std::lock_guard<std::mutex> lock(bucket.Mutex);

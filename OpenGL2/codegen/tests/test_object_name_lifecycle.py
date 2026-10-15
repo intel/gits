@@ -6,6 +6,7 @@
 #
 # ===================== end_copyright_notice ==============================
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -431,6 +432,60 @@ class EndToEndClassificationTests(unittest.TestCase):
         self.assertEqual(override.kind, GLObjectKind.BUFFER)
         self.assertEqual(override.role, ObjectNameRole.DELETE)
         self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArgument')
+
+    def test_deletetransformfeedbacks_is_remapped_as_delete(self) -> None:
+        # Confirms glDeleteTransformFeedbacks' `ids` array is genuinely classified as a
+        # DELETE-role TransformFeedback field - the precondition for
+        # ObjectNameMapServiceDeleteCppSourceTests below
+        # to matter at all: if this were somehow unmapped, TransformFeedback name deletion
+        # would never call ObjectNameMapService::Delete() in the first place.
+        cmd = self._get_command(Api.GL, 'glDeleteTransformFeedbacks')
+        self.assertTrue(cmd.enabled)
+        param = next(p for p in cmd.params if p.name == 'ids')
+        override = object_name_override_for('glDeleteTransformFeedbacks', 'ids', param.class_)
+        self.assertIsNotNone(override)
+        assert override is not None
+        self.assertEqual(override.kind, GLObjectKind.TRANSFORM_FEEDBACK)
+        self.assertEqual(override.role, ObjectNameRole.DELETE)
+
+
+class ObjectNameMapServiceDeleteCppSourceTests(unittest.TestCase):
+    """Source-text regression coverage:
+    ObjectNameMapService::Delete() must not erase a TransformFeedback name's forward mapping,
+    for the same "do not resolve a still-legal reference to key 0" reason already established
+    for Program/Shader - see that method's own header comment
+    (common/services/objectNameMapService.h). There is no C++ unit test infrastructure in this
+    repo (see AGENTS.md's hard build/test constraints), so this parses the actual hand-written
+    C++ text the same way test_tex_sampler_parameter_metadata.py's CROP_RECT_OES regression
+    test already does."""
+
+    _OBJECT_NAME_MAP_SERVICE_CPP = (
+        CODEGEN_DIR.parent / 'common' / 'services' / 'objectNameMapService.cpp')
+
+    def test_delete_keeps_transform_feedback_mapping_alive_alongside_program_and_shader(
+            self) -> None:
+        source = self._OBJECT_NAME_MAP_SERVICE_CPP.read_text(encoding='utf-8')
+        match = re.search(r'void ObjectNameMapService::Delete\((.*?)\n\}', source, re.DOTALL)
+        self.assertIsNotNone(match, 'ObjectNameMapService::Delete() definition not found')
+        assert match is not None
+        body = match.group(1)
+        # The early-return special case must name all three kinds together, then return
+        # before ever reaching the unconditional NameToKey.erase() below it.
+        condition_match = re.search(
+            r'if \((.*?GLObjectKind::Program.*?)\)\s*\{\s*return;\s*\}', body, re.DOTALL)
+        self.assertIsNotNone(
+            condition_match, 'No early-return special-case "if (...) { return; }" found in '
+            'ObjectNameMapService::Delete()')
+        assert condition_match is not None
+        condition = condition_match.group(1)
+        self.assertIn('GLObjectKind::Program', condition)
+        self.assertIn('GLObjectKind::Shader', condition)
+        self.assertIn('GLObjectKind::TransformFeedback', condition)
+        erase_pos = body.find('NameToKey.erase(')
+        self.assertNotEqual(erase_pos, -1, 'NameToKey.erase() call not found')
+        self.assertLess(condition_match.end(), erase_pos,
+                        'The Program/Shader/TransformFeedback early return must run before '
+                        'the unconditional NameToKey.erase() call')
 
 
 if __name__ == '__main__':
