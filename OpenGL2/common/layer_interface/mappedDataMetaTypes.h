@@ -18,8 +18,8 @@
 
 namespace gits::opengl2 {
 
-// Recorded by CustomWrapper_glUnmapBuffer (see recorder/mapTrackingWrappers.cpp) instead of a
-// generated command for glMapBufferRange/glUnmapBuffer themselves - see
+// Recorded by MapTrackingService::UnmapBufferAndCapture (see recorder/mapTrackingService.cpp)
+// instead of a generated command for glMapBufferRange/glUnmapBuffer themselves - see
 // docs/development/opengl2-buffer-map-tracking-plan.md's Decision 3 for why those two functions
 // bypass the generated per-command path entirely, and Decision 6 for this command's own wire
 // format. Carries the snapshot taken "update on unmap only" (Decision 2): the buffer's identity
@@ -54,7 +54,7 @@ public:
 // m_Data previously needed its own bespoke, hand-rolled 64-bit coder here (GetMappedPayloadSize/
 // EncodeMappedPayload/DecodeMappedPayload), because argumentCoders.h's own generic
 // ArrayArgument<T> overloads were 32-bit at the time - this field's length originates from a
-// 64-bit GLsizeiptr (see mapTrackingWrappers.cpp) and can legitimately approach or exceed 4 GiB
+// 64-bit GLsizeiptr (see mapTrackingService.cpp) and can legitimately approach or exceed 4 GiB
 // on this x64-only backend, which the then-32-bit generic coder could silently truncate/
 // corrupt. Now that argumentCoders.h's generic overloads are 64-bit throughout (see that
 // header's own top-of-file comment - the same change also closed this gap for every

@@ -23,7 +23,7 @@ namespace gits::opengl2 {
 // every Pre/Post hook, generic or typed) entirely - see
 // CaptureManager::RecordUnsupportedCommand() (captureManager.cpp) for UnsupportedCommand (an
 // unsupported/disabled call, recorded as a passthrough placeholder instead of a typed command)
-// and RecordMappedDataMetaCommand() (mapTrackingWrappers.cpp) for MappedDataMetaCommand (a
+// and RecordMappedDataMetaCommand() (mapTrackingService.cpp) for MappedDataMetaCommand (a
 // glUnmapBuffer-adjacent data snapshot with no corresponding GL call of its own to hang a
 // generated wrapper off of). `layerAuto.h` adds, for every enabled command only (per
 // modern-opengl-backend-architecture.md's "Use enabled-only typed layers with generic

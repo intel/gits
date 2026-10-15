@@ -20,7 +20,7 @@ namespace gits::opengl2 {
 namespace {
 
 // Warn-once state for the ComputePixelTransferByteSize() gating below -
-// mirrors OpenGL2/recorder/mapTrackingWrappers.cpp's own warn-once conventions (e.g.
+// mirrors OpenGL2/recorder/clientMemoryCapture.cpp's own warn-once conventions (e.g.
 // g_WarnedPixelBufferGuardCommands), kept local to this translation unit since this is the
 // only place that needs it.
 std::mutex g_PixelStoreWarningMutex;

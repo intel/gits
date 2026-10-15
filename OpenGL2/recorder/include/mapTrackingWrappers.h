@@ -14,6 +14,8 @@
 // pointer_metadata.py's vocabulary, and resolving the bound buffer needs an extra driver call no
 // other generated wrapper needs). Mirrors unsupportedCommand.h's "small, hand-written, not
 // generated" precedent in shape, applied to command *dispatch* instead of command *reporting*.
+// The wrappers themselves only dispatch to the real driver and guard against recursion; all
+// tracking and capture policy lives in MapTrackingService (mapTrackingService.h).
 
 namespace gits::opengl2 {
 

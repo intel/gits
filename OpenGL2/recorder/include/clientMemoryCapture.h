@@ -15,7 +15,7 @@ namespace gits::opengl2 {
 // crash/read garbage when a pixel-unpack buffer is bound, and glReadPixels-shaped commands
 // would crash/write garbage when a pixel-pack buffer is bound. Both query the real, current
 // GL_PIXEL_(UN)PACK_BUFFER_BINDING directly via the real driver (same technique as
-// ResolveBoundBuffer() in mapTrackingWrappers.cpp, but quiet - "nothing bound" is the
+// ResolveBoundBuffer() in mapTrackingService.cpp, but quiet - "nothing bound" is the
 // overwhelmingly common, unremarkable case here, unlike ResolveBoundBuffer's own map/unmap-
 // specific callers) - but only once ContextSupportsPixelBufferObject()
 // (clientMemoryCapture.cpp) has confirmed the binding-point enum itself is legal on the current
@@ -97,6 +97,6 @@ const void* GuardQueryBufferPointer(const char* commandName, const void* params)
 // (shared common/layer_interface code) but DEFINED in this file's .cpp, not this header - see
 // that header's own comment for why (recorder-only, needs the real driver dispatch table via
 // glGetIntegerv, same technique as QueryBoundBufferQuiet() in clientMemoryCapture.cpp and
-// ResolveBoundBuffer() in mapTrackingWrappers.cpp).
+// ResolveBoundBuffer() in mapTrackingService.cpp).
 
 } // namespace gits::opengl2

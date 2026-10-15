@@ -21,6 +21,7 @@ add_library(OpenGL2_recorder STATIC
   include/captureManager.h
   include/clientMemoryCapture.h
   include/handleArgumentUpdaters.h
+  include/mapTrackingService.h
   include/mapTrackingWrappers.h
   include/pixelFormatCaptureLayer.h
   include/realDriver.h
@@ -32,6 +33,7 @@ add_library(OpenGL2_recorder STATIC
   include/windowGeometryTrackingService.h
   captureManager.cpp
   clientMemoryCapture.cpp
+  mapTrackingService.cpp
   mapTrackingWrappers.cpp
   pixelFormatCaptureLayer.cpp
   realDriver.cpp

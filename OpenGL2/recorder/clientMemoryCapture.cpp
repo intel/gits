@@ -25,7 +25,7 @@ namespace gits::opengl2 {
 
 namespace {
 
-// Quiet counterpart of ResolveBoundBuffer() in mapTrackingWrappers.cpp, for
+// Quiet counterpart of ResolveBoundBuffer() in mapTrackingService.cpp, for
 // GuardUnpackPixelsPointer/GuardPackPixelsPointer below: "nothing bound" is the expected,
 // common case on every single glTexImage2D/glReadPixels-shaped call (no pixel buffer object in
 // use at all), not a warning-worthy anomaly the way it is for ResolveBoundBuffer's own

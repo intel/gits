@@ -59,7 +59,9 @@ public:
   CaptureManager(const CaptureManager&) = delete;
   CaptureManager& operator=(const CaptureManager&) = delete;
 
-  uint64_t CreateCommandKey() {
+  // Every key this hands out MUST reach RecordCommand(), RecordUnsupportedCommand(), or
+  // SkipCommandKey() - see SkipCommandKey() for why dropping one stalls the stream forever.
+  [[nodiscard]] uint64_t CreateCommandKey() {
     return m_CommandKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
 
@@ -115,7 +117,7 @@ public:
   // entry, before the real driver dispatch, not merely before `serializer` - so concurrent
   // top-level calls on different threads get keys in dispatch order rather than driver-call-
   // completion order (see recorderWrappersAuto.cpp.mako's own header comment for the full
-  // rationale and mapTrackingWrappers.cpp's CustomWrapper_glUnmapBuffer for a hand-written
+  // rationale and mapTrackingService.cpp's UnmapBufferAndCapture for a hand-written
   // example). This function only enforces the (necessary but not sufficient) "before
   // `serializer`" half of that ordering requirement.
   void RecordCommand(Command& command, stream::CommandSerializer* serializer);
@@ -141,7 +143,7 @@ public:
   // Releases a key reserved via CreateCommandKey() that will never be filled by RecordCommand/
   // RecordUnsupportedCommand - e.g. a wrapper that reserves a key before dispatch to preserve
   // ordering, then discovers post-dispatch that it has nothing to actually record (see
-  // mapTrackingWrappers.cpp's CustomWrapper_glUnmapBuffer). Every reserved key MUST eventually
+  // mapTrackingService.cpp's UnmapBufferAndCapture). Every reserved key MUST eventually
   // reach either RecordCommand/RecordUnsupportedCommand or this method - OrderingRecorder's own
   // CheckPendingSerializers() waits for keys strictly in sequence, so a key that is reserved and
   // then silently dropped (neither recorded nor skipped) would permanently stall every
