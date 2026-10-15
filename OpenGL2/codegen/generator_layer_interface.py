@@ -11,7 +11,16 @@
 from collections.abc import Iterable
 
 from generator_helpers import mako_write
-from intermediates import Command
+from intermediates import Api, Command, EnumValue
+from pname_value_counts import multi_value_pname_cases, validate_pname_groups
+
+
+def generate_pname_value_count_file(enums_by_api: dict[Api, list[EnumValue]]) -> None:
+    """Generate ComputePnameValueCount() - see pname_value_counts.py."""
+    validate_pname_groups(enums_by_api)
+    mako_write('templates/pnameValueCountsAuto.cpp.mako',
+               'common/layer_interface/pnameValueCountsAuto.cpp',
+               cases=multi_value_pname_cases(enums_by_api))
 
 
 def generate_layer_interface_files(

@@ -92,4 +92,9 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'glBindTextureEXT': 'GlBindTextureEXTRunner',
     'glBindTextureUnit': 'GlBindTextureUnitRunner',
     'glBindSampler': 'GlBindSamplerRunner',
+    # Bracket the display-list compilation MipmapCompletionService records, and replay a
+    # GL_COMPILE_AND_EXECUTE compilation as GL_COMPILE followed by glCallList, so its immediate
+    # execution gets the same fixup - see MipmapCompletionService::NewListMode().
+    'glNewList': 'GlNewListRunner',
+    'glEndList': 'GlEndListRunner',
 }

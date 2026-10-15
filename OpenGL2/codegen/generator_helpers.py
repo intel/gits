@@ -25,6 +25,7 @@ from array_of_arrays_metadata import (
     consumed_pointer_params,
 )
 from intermediates import CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue, TypeFacts
+from intermediates_creator import is_discarded_string_return
 from object_name_lifecycle import (
     GLObjectKind,
     ObjectNameOverride,
@@ -40,7 +41,8 @@ from pointer_metadata import (
     PointerParamOverride,
     TexOrSamplerParameterFamily,
 )
-from pointer_length_derivation import derive_pointer_param_override
+from pname_value_counts import derive_pname_value_count_override
+from pointer_length_derivation import derive_pointer_param_override, discarded_output_list_sizer
 from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
 from uniform_setter_metadata import derive_uniform_setter_override
 
@@ -267,7 +269,18 @@ def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride 
     override = derive_tex_sampler_parameter_override(cmd.name, param, other_params)
     if override is not None:
         return override
+    override = derive_pname_value_count_override(cmd.name, param, other_params)
+    if override is not None:
+        return override
     return derive_pointer_param_override(cmd.name, param, other_params)
+
+
+def has_return_member(cmd: Command) -> bool:
+    """Whether the typed Command stores its return value in m_Return. False for void and for a
+    discarded string return (see intermediates_creator.py's is_discarded_string_return)."""
+    if cmd.return_value.type.strip().lower() == 'void':  # WGL uses Win32 'VOID'.
+        return False
+    return not is_discarded_string_return(cmd.name, cmd.return_value)
 
 
 def mako_render(inpath: str, **kwargs) -> str | None:
@@ -297,6 +310,8 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'array_of_arrays_override_for': array_of_arrays_override_for,
         'consumed_pointer_params': consumed_pointer_params,
         'consumed_param_owner': consumed_param_owner,
+        'has_return_member': has_return_member,
+        'discarded_output_list_sizer': discarded_output_list_sizer,
     }
 
     try:

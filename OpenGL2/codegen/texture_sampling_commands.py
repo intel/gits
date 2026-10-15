@@ -50,13 +50,9 @@ def sampling_hook_before(cmd_name: str) -> str | None:
 
 def sampling_hook_after(cmd_name: str) -> str | None:
     """The MipmapCompletionService call right after `cmd_name`'s real call, if any. glNewList
-    and glEndList bracket the compilation that NoteListTexture() records."""
+    and glEndList have custom runners (custom_player_runners.py) instead."""
     if cmd_name == 'glBegin':
         return 'EnterBeginEnd()'
     if cmd_name == 'glEnd':
         return 'LeaveBeginEnd()'
-    if cmd_name == 'glNewList':
-        return 'BeginListCompile(command.m_list.Value)'
-    if cmd_name == 'glEndList':
-        return 'EndListCompile()'
     return 'AfterSampling()' if samples_textures(cmd_name) else None

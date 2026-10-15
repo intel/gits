@@ -282,6 +282,17 @@ uint32_t ComputeClearBufferValueCount(GLenum buffer);
 // clear value, so it is not captured.
 uint32_t ComputeTexelByteSize(GLenum format, GLenum type);
 
+// Element count of an audited COMPSIZE(pname) setter's value array (glLightfv, glFogfv,
+// glTexEnvfv, ...) - see pointer_metadata.py's LengthSourceKind.PNAME_VALUE_COUNT. Defined in
+// the generated pnameValueCountsAuto.cpp from codegen/pname_value_counts.py.
+uint32_t ComputePnameValueCount(GLenum pname);
+
+// Byte size of glCallLists' `lists` array: `n` list offsets of the ListNameType `type` - see
+// pointer_metadata.py's LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE. Returns 0 for a negative `n`
+// or an unrecognized `type`, which the driver rejects without reading the array. 64-bit, since
+// `n` 4-byte elements can exceed 4 GiB.
+uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type);
+
 // Distinguishes the two command families that share ComputeTexOrSamplerParameterValueCount()
 // below - see that function's own comment for why this matters.
 // GL_TEXTURE_SWIZZLE_RGBA (and its single-channel GL_TEXTURE_SWIZZLE_R/G/B/A siblings) is a

@@ -27,6 +27,7 @@ set(SCRIPTS_SRC
   handle_lifecycle.py
   object_name_lifecycle.py
   pixel_transfer_metadata.py
+  pname_value_counts.py
   pointer_length_derivation.py
   pointer_metadata.py
   tex_sampler_parameter_metadata.py
@@ -62,6 +63,7 @@ set(OPENGL2_GENERATED_LAYER_INTERFACE_FILES
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandSerializersAuto.h
   ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.h
   ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.cpp
+  ${OPENGL2_LAYER_INTERFACE_DIR}/pnameValueCountsAuto.cpp
 )
 set(OPENGL2_INTERCEPTOR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../interceptor)
 set(OPENGL2_GENERATED_INTERCEPTOR_FILES

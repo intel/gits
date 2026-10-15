@@ -35,9 +35,6 @@ namespace gits::opengl2 {
 
 % for cmd in commands:
 % if cmd.enabled:
-<%
-  is_void = cmd.return_value.type.strip().lower() == 'void'
-%>\
 uint64_t GetSize(const ${cmd.name}Command& command) {
   return GetSize(command.m_Key) +
          GetSize(command.m_ThreadId)\
@@ -56,7 +53,7 @@ uint64_t GetSize(const ${cmd.name}Command& command) {
 % endif
 % endif
 % endfor
-% if not is_void:
+% if has_return_member(cmd):
  +
          GetSize(command.m_Return)\
 % endif
@@ -79,7 +76,7 @@ void Encode(const ${cmd.name}Command& command, char* dest) {
 % endif
 % endif
 % endfor
-% if not is_void:
+% if has_return_member(cmd):
   Encode(dest, offset, command.m_Return);
 % endif
 }
@@ -100,7 +97,7 @@ void Decode(const char* src, ${cmd.name}Command& command) {
 % endif
 % endif
 % endfor
-% if not is_void:
+% if has_return_member(cmd):
   Decode(src, offset, command.m_Return);
 % endif
 }

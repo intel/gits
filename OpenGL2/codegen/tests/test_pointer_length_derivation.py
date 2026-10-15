@@ -154,11 +154,19 @@ class DerivePointerParamOverrideTests(unittest.TestCase):
         self.assertEqual(override.length_source_value, 'count')
         self.assertEqual(override.length_multiplier, 4)
 
-    def test_non_const_typed_array_is_out(self) -> None:
+    def test_capacity_sized_out_array_is_discarded(self) -> None:
         param = Parameter(name='params', type='GLint *', len='count')
         sibling = Parameter(name='count', type='GLsizei')
         override = derive_pointer_param_override('glGetProgramResourceiv', param, [sibling])
         self.assertEqual(override.direction, PointerDirection.OUT)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+        self.assertEqual(override.length_source_value, 'count')
+
+    def test_fixed_count_out_array_is_out(self) -> None:
+        param = Parameter(name='equation', type='GLdouble *', len='4')
+        override = derive_pointer_param_override('glGetClipPlane', param, [])
+        self.assertEqual(override.direction, PointerDirection.OUT)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.FIXED_COUNT)
 
     def test_fixed_count_typed_array(self) -> None:
         param = Parameter(name='v', type='const GLfloat *', len='3')

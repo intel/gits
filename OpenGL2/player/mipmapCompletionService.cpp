@@ -62,6 +62,11 @@ bool CompilingDisplayList(const ReplayContextCaps& caps) {
 // glEndList.
 thread_local GLuint t_CompilingList = 0;
 
+// A GL_COMPILE_AND_EXECUTE request replayed as GL_COMPILE: whether glNewList was asked to defer,
+// and the list glEndList then executes.
+thread_local bool t_DeferExecute = false;
+thread_local GLuint t_DeferredList = 0;
+
 // The lists glCallLists executes: GL_LIST_BASE plus each offset of `type`.
 std::vector<GLuint> ListNames(GLsizei n, GLenum type, const uint8_t* lists, size_t size) {
   std::vector<GLuint> names;
@@ -163,19 +168,39 @@ void MipmapCompletionService::BeforeCallLists(GLsizei n,
   OverrideListTextures(names);
 }
 
+GLenum MipmapCompletionService::NewListMode(GLenum mode) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const ReplayContextCaps& caps = CurrentReplayContextCaps();
+  t_DeferExecute = mode == GL_COMPILE_AND_EXECUTE && !m_InBeginEnd && t_CompilingList == 0 &&
+                   caps.DisplayLists && caps.TextureMaxLevel;
+  return t_DeferExecute ? GL_COMPILE : mode;
+}
+
 void MipmapCompletionService::BeginListCompile(GLuint list) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   t_CompilingList = m_InBeginEnd ? 0 : CompiledList(CurrentReplayContextCaps());
   if (t_CompilingList == list) {
     m_Lists.erase(list);
+    t_DeferredList = t_DeferExecute ? list : 0;
   }
+  t_DeferExecute = false;
 }
 
 void MipmapCompletionService::EndListCompile() {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  if (!m_InBeginEnd) {
-    t_CompilingList = CompiledList(CurrentReplayContextCaps());
+  if (m_InBeginEnd) {
+    return;
   }
+  t_CompilingList = CompiledList(CurrentReplayContextCaps());
+  if (t_CompilingList != 0 || t_DeferredList == 0) {
+    return;
+  }
+  const GLuint list = t_DeferredList;
+  t_DeferredList = 0;
+  BeforeSamplingLocked();
+  OverrideListTextures({list});
+  player::g_DispatchTable.glCallList.load(std::memory_order_acquire)(list);
+  RestoreFilters();
 }
 
 void MipmapCompletionService::NoteListTexture(GLuint texture) {
@@ -189,7 +214,8 @@ void MipmapCompletionService::BeforeSamplingLocked() {
   if (m_InBeginEnd || m_Units.empty()) {
     return;
   }
-  // A list being compiled is fixed when glCallList executes it, itself a sampling command.
+  // A list being compiled is fixed when glCallList executes it, itself a sampling command, or
+  // when EndListCompile() does (see NewListMode()).
   const ReplayContextCaps& caps = CurrentReplayContextCaps();
   if (CompilingDisplayList(caps)) {
     return;

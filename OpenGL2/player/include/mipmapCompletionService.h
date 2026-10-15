@@ -70,11 +70,20 @@ public:
   void BeforeCallList(GLuint list);
   void BeforeCallLists(GLsizei n, GLenum type, const uint8_t* lists, size_t size);
 
-  // Called right after glNewList and glEndList: between them, NoteListTexture() and
-  // BeforeCallList(s) record what the list binds and calls, replacing what an earlier
-  // compilation of the same list recorded.
+  // Called right after glNewList and glEndList (GlNewListRunner/GlEndListRunner,
+  // commandRunnersCustom.cpp): between them, NoteListTexture() and BeforeCallList(s) record what
+  // the list binds and calls, replacing what an earlier compilation of the same list recorded.
   void BeginListCompile(GLuint list);
   void EndListCompile();
+
+  // The mode glNewList is replayed with. A draw inside a GL_COMPILE_AND_EXECUTE compilation
+  // executes immediately, but the override cannot be applied then: its state changes would be
+  // compiled into the list too. So such a list is compiled with GL_COMPILE, and EndListCompile()
+  // executes it right after glEndList, with the fixes of BeforeCallList(). The compiled commands
+  // then execute after, not interleaved with, the non-compilable commands issued during the
+  // compilation (glGen*, glBufferData, glReadPixels, ...), which only matters to those that
+  // read what the list's commands render or write.
+  GLenum NewListMode(GLenum mode);
 
   // Called from the GL_TEXTURE_2D bind runners after their real bind call: while a list is being
   // compiled, records `texture` as bound by it.

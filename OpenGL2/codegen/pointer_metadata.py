@@ -227,6 +227,23 @@ class LengthSourceKind(StrEnum):
         # is the only command in this shape's own family (no glGetVertexAttribfv/dv sibling is
         # enabled today, and even if one were, GL_CURRENT_VERTEX_ATTRIB's 4-element arity is the
         # same regardless of the destination's own scalar type).
+    PNAME_VALUE_COUNT = 'pname_value_count'  # length_source_value is unused (None); the
+        # `pname_param` sibling's value selects the element count of an IN-direction
+        # COMPSIZE(pname) setter (glLightfv, glFogfv, glTexEnvfv, ...) via the generated
+        # gits::opengl2::ComputePnameValueCount(). Only derived for pname groups audited in
+        # pname_value_counts.py.
+    LIST_NAME_ARRAY_BYTE_SIZE = 'list_name_array_byte_size'  # glCallLists' COMPSIZE(n,type):
+        # length_source_value names the count sibling, `list_type_param` the ListNameType enum
+        # sibling (GL_UNSIGNED_BYTE, GL_2_BYTES, ...). See
+        # gits::opengl2::ComputeListNameArrayByteSize() (pixelTransferSize.h). IN direction only.
+    DISCARDED_OUTPUT = 'discarded_output'  # An OUT-direction query result nothing on replay
+        # reads (glGetIntegerv's `data`, ...). The recorder captures nothing and the player passes
+        # a scratch buffer, so the size, which depends on live driver state, never has to be
+        # known. length_source_value is None, or names the scalar capacity sibling (times
+        # length_multiplier) of an output the driver only partially fills
+        # (glGetProgramResourceiv's `params`), which sizes the scratch. See
+        # pointer_length_derivation.py's derive_discarded_output_override() and
+        # derive_pointer_param_override().
 
 
 class TexOrSamplerParameterFamily(StrEnum):
@@ -269,9 +286,14 @@ class PointerParamOverride:
     # `buffer` enum param name ComputeClearBufferValueCount() needs. None for every other kind.
     clear_buffer_param: str | None = None
 
+    # Only meaningful when length_source_kind is LIST_NAME_ARRAY_BYTE_SIZE - the sibling `type`
+    # enum param name ComputeListNameArrayByteSize() needs. None for every other kind.
+    list_type_param: str | None = None
+
     # Only meaningful when length_source_kind is TEX_SAMPLER_PARAMETER_VALUE_COUNT,
     # PATCH_PARAMETER_VALUE_COUNT, MATERIAL_PARAMETER_VALUE_COUNT, POINT_PARAMETER_VALUE_COUNT,
-    # or VERTEX_ATTRIB_PARAMETER_VALUE_COUNT - the sibling `pname` enum param name
+    # PNAME_VALUE_COUNT or VERTEX_ATTRIB_PARAMETER_VALUE_COUNT - the sibling `pname` enum param
+    # name
     # ComputeTexOrSamplerParameterValueCount()/ComputePatchParameterValueCount()/
     # ComputeMaterialParameterValueCount()/ComputePointParameterValueCount()/
     # ComputeVertexAttribParameterValueCount() needs. None for every other kind.
@@ -426,14 +448,30 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     # A {key, value, key, value, ..., 0} attribute list, terminated only by a zero KEY - see
     # LengthSourceKind.KEY_VALUE_LIST's own comment above for why this must not use plain
-    # NULL_TERMINATED. wglChoosePixelFormatARB/wglChoosePixelFormatEXT's own piAttribIList/
-    # pfAttribFList and wglCreatePbufferARB/EXT's piAttribList and
+    # NULL_TERMINATED. wglCreatePbufferARB/EXT's piAttribList and
     # wglCreateAssociatedContextAttribsAMD's attribList share this exact same shape but stay
-    # unsupported (no override entry) - none of the 8 currently-enabled commands' own callers
-    # need them, and adding one speculatively without a tested caller would be exactly the kind
-    # of unverified table entry this file's own header comment warns against.
+    # unsupported (no override entry) until a caller needs them.
     ('wglCreateContextAttribsARB', 'attribList'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    # wglChoosePixelFormatARB/EXT: wgl.xml gives none of these a len=. Both attribute lists may
+    # be null. The chosen formats are a pure query result: WglSetPixelFormatRunner renegotiates
+    # the format from the captured descriptor, so nothing on replay reads them.
+    ('wglChoosePixelFormatARB', 'piAttribIList'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('wglChoosePixelFormatARB', 'pfAttribFList'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('wglChoosePixelFormatARB', 'piFormats'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.DISCARDED_OUTPUT, length_source_value='nMaxFormats'),
+    ('wglChoosePixelFormatARB', 'nNumFormats'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    # glCallLists' `lists`: n list offsets of the ListNameType `type` (1 to 4 bytes each), added
+    # to glListBase. Always client memory - no buffer binding redirects it.
+    ('glCallLists', 'lists'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE,
+        length_source_value='n', list_type_param='type'),
     # A single PIXELFORMATDESCRIPTOR struct, not an array - wgl.xml's `ppfd` carries no len=
     # attribute at all (see docs/development/opengl2-player-skeleton-plan.md's Decision 9).
     #

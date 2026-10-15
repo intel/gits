@@ -50,8 +50,7 @@ class TextureSamplingCommandsTests(unittest.TestCase):
         self.assertEqual(sampling_hook_after('glCallList'), 'AfterSampling()')
         self.assertEqual(sampling_hook_after('glBegin'), 'EnterBeginEnd()')
         self.assertEqual(sampling_hook_after('glEnd'), 'LeaveBeginEnd()')
-        self.assertEqual(sampling_hook_after('glNewList'), 'BeginListCompile(command.m_list.Value)')
-        self.assertEqual(sampling_hook_after('glEndList'), 'EndListCompile()')
+        self.assertIsNone(sampling_hook_after('glNewList'))
         self.assertIsNone(sampling_hook_after('glBindTexture'))
 
 

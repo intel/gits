@@ -275,9 +275,9 @@ class EndToEndSystemicGateTests(unittest.TestCase):
         # exactly like every other LOOKUP does, with nothing left to add by hand - see
         # EndToEndAutoDerivationTests below for that expanded-coverage behavior instead.
         for cmd_name in (
-            'glGenLists',            # display list - no GLObjectKind at all.
-            'glCallList',            # display list.
-            'glDeleteLists',         # display list.
+            # glGenLists/glCallList/glDeleteLists USED TO be listed here too. Display lists are
+            # now an identity-name class (object_name_lifecycle.py's IDENTITY_NAME_CLASSES) - see
+            # test_display_list_commands_use_identity_names below.
             # glBindTransformFeedback/glIsTransformFeedback USED TO be listed here too
             # ("transform feedback - no GLObjectKind at all"). GLObjectKind.TRANSFORM_FEEDBACK
             # now exists (object_name_lifecycle.py), so both are now genuinely enabled - see
@@ -293,6 +293,18 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             with self.subTest(command=cmd_name):
                 cmd = get_command(Api.GL, cmd_name)
                 self.assertFalse(cmd.enabled)
+
+    def test_display_list_commands_use_identity_names(self) -> None:
+        for cmd_name in (
+            'glGenLists', 'glNewList', 'glEndList', 'glCallList', 'glCallLists',
+            'glDeleteLists', 'glListBase', 'glIsList',
+        ):
+            with self.subTest(command=cmd_name):
+                self.assertTrue(get_command(Api.GL, cmd_name).enabled)
+        gen_lists = get_command(Api.GL, 'glGenLists')
+        self.assertEqual(gen_lists.return_value.class_, 'display list')
+        self.assertIsNone(object_name_override_for(
+            'glGenLists', 'return_value', gen_lists.return_value.class_))
 
     def test_glflushmappedbufferrange_is_force_disabled(self) -> None:
         # Structurally capturable (plain scalar target/offset/length, no

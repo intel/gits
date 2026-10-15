@@ -413,4 +413,34 @@ void GlBindSamplerRunner::Run() {
   }
 }
 
+void GlNewListRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto& mipmapCompletion = MipmapCompletionService::Get();
+    auto realFunction = player::g_DispatchTable.glNewList.load(std::memory_order_acquire);
+    realFunction(command.m_list.Value, mipmapCompletion.NewListMode(command.m_mode.Value));
+    mipmapCompletion.BeginListCompile(command.m_list.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlEndListRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    player::g_DispatchTable.glEndList.load(std::memory_order_acquire)();
+    MipmapCompletionService::Get().EndListCompile();
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 } // namespace gits::opengl2

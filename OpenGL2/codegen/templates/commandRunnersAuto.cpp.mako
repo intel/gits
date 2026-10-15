@@ -68,6 +68,7 @@ ${AUTO_GENERATED_HEADER}
 // the driver actually reads/writes a real, nonzero range through at replay time.
 
 #include "commandRunnersAuto.h"
+#include "discardedOutputElements.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -83,6 +84,27 @@ ${AUTO_GENERATED_HEADER}
 #include <vector>
 
 namespace gits::opengl2 {
+
+namespace {
+
+// Destination for a DISCARDED_OUTPUT query result (pointer_metadata.py), which is never
+// recorded. `listElements` is the live length of a list result, queried from the replay driver
+// (discardedOutputElements.h), the recorded capacity of a capacity-sized result, or 0. Other
+// results have a fixed count of at most 16 values (pointer_length_derivation.py's
+// _DISCARDED_OUTPUT_LENS); the minimum capacity is far above it. `Slot` is the parameter index,
+// so outputs of one call never share a buffer.
+constexpr size_t DISCARDED_OUTPUT_MIN_ELEMENTS = 4096;
+
+template <typename T, size_t Slot>
+T* DiscardedOutputScratch(size_t listElements) {
+  thread_local std::vector<T> scratch(DISCARDED_OUTPUT_MIN_ELEMENTS);
+  if (scratch.size() < listElements) {
+    scratch.resize(listElements);
+  }
+  return scratch.data();
+}
+
+} // namespace
 
 % for cmd in commands:
 % if cmd.enabled:
@@ -207,6 +229,17 @@ namespace gits::opengl2 {
           # the value is really a buffer-relative offset or (unsupported here) a client
           # -memory address.
           return f'reinterpret_cast<{p.type}>(command.m_{p.name}.Value)'
+      if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.DISCARDED_OUTPUT:
+          slot = next(i for i, q in enumerate(cmd.params) if q.name == p.name)
+          scratch = f'DiscardedOutputScratch<{p.type_facts.base_type}, {slot}>'
+          if ptr_override.length_source_value is not None:
+              return (f'{scratch}(ClampCountToSizeT(command.m_{ptr_override.length_source_value}.Value) * '
+                      f'{ptr_override.length_multiplier})')
+          sizer = discarded_output_list_sizer(cmd.name)
+          if sizer is None:
+              return f'{scratch}(0)'
+          sizer_args = ', '.join(f'command.m_{name}.Value' for name in sizer[1])
+          return f'{scratch}({sizer[0]}({sizer_args}))'
       override = object_name_override_for(cmd.name, p.name, p.class_)
       w = wrapper_for(p.type_facts, override, ptr_override, array_of_arrays_override_for(cmd.name, p.name))
       if w == 'ArrayArgument':
@@ -411,10 +444,10 @@ void ${cmd.name}Runner::Run() {
       }
     } else {
 % endif
-% if is_void:
-${call_indent}realFunction(${call_args});
-% else:
+% if has_return_member(cmd):
 ${call_indent}command.m_Return.Value = realFunction(${call_args});
+% else:
+${call_indent}realFunction(${call_args});
 % endif
 % if pixel_transfer_size_params:
     }

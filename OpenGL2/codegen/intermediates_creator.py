@@ -24,8 +24,14 @@ from array_of_arrays_metadata import (
     consumed_pointer_params,
 )
 from intermediates import Api, CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue, TypeFacts
-from object_name_lifecycle import ObjectNameOverride, ObjectNameRole, resolve_object_name_override
+from object_name_lifecycle import (
+    IDENTITY_NAME_CLASSES,
+    ObjectNameOverride,
+    ObjectNameRole,
+    resolve_object_name_override,
+)
 from pixel_transfer_metadata import derive_pixel_transfer_override
+from pname_value_counts import derive_pname_value_count_override
 from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride
 from registry import Registry
 from pointer_length_derivation import derive_pointer_param_override
@@ -410,6 +416,7 @@ def _validate_pointer_override(
     elif override.length_source_kind in (
         LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT,
         LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT, LengthSourceKind.POINT_PARAMETER_VALUE_COUNT,
+        LengthSourceKind.PNAME_VALUE_COUNT,
     ):
         if override.length_source_value is not None:
             raise ValueError(
@@ -526,6 +533,24 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
                 f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
             )
+    elif override.length_source_kind is LengthSourceKind.DISCARDED_OUTPUT:
+        if override.direction is not PointerDirection.OUT:
+            raise ValueError(
+                f"{command_name}.{param.name}: DISCARDED_OUTPUT override must be OUT direction - "
+                f"an IN value the driver reads can never be dropped"
+            )
+        if override.length_source_value is not None:
+            sibling = next((p for p in other_params if p.name == override.length_source_value), None)
+            if sibling is None or not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: DISCARDED_OUTPUT's length_source_value "
+                    f"'{override.length_source_value}' must name a scalar capacity sibling"
+                )
+        if param.type_facts.base_type == 'void':
+            raise ValueError(
+                f"{command_name}.{param.name}: DISCARDED_OUTPUT needs a typed element - the "
+                f"player's scratch buffer is sized in elements"
+            )
     elif override.length_source_kind is LengthSourceKind.TEXEL_BYTE_SIZE:
         if override.length_source_value is not None:
             raise ValueError(
@@ -544,6 +569,20 @@ def _validate_pointer_override(
                 raise ValueError(
                     f"{command_name}.{param.name}: TEXEL_BYTE_SIZE's {field_name} must name a "
                     f"plain scalar sibling (got {sibling_name!r})"
+                )
+    elif override.length_source_kind is LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
+        if override.direction is not PointerDirection.IN:
+            raise ValueError(
+                f"{command_name}.{param.name}: LIST_NAME_ARRAY_BYTE_SIZE override must be IN "
+                f"direction - the Mako templates have no OUT-direction branch for it"
+            )
+        for field_name in ('length_source_value', 'list_type_param'):
+            sibling_name = getattr(override, field_name)
+            sibling = next((p for p in other_params if p.name == sibling_name), None)
+            if sibling is None or not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: LIST_NAME_ARRAY_BYTE_SIZE's {field_name} must "
+                    f"name a plain scalar sibling (got {sibling_name!r})"
                 )
     # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
     # cross-check.
@@ -630,6 +669,8 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
     modern-opengl-backend-architecture.md).
     """
     if field.type_facts.is_mapped_handle:
+        return False
+    if field.class_ in IDENTITY_NAME_CLASSES:
         return False
     return (field.class_ is not None
             and resolve_object_name_override(command_name, field.name, field.class_) is None)
@@ -745,6 +786,9 @@ def _is_param_capturable(
         # exactly what evidence it requires before returning non-None.
         override = derive_tex_sampler_parameter_override(command_name, param, other_params)
     if override is None:
+        # Audited COMPSIZE(pname) setter groups - see pname_value_counts.py.
+        override = derive_pname_value_count_override(command_name, param, other_params)
+    if override is None:
         # Last fallback: the generic type-and-len= rule - see pointer_length_derivation.py's
         # derive_pointer_param_override().
         override = derive_pointer_param_override(command_name, param, other_params)
@@ -799,6 +843,21 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
 })
 
 
+_STRING_QUERY_RE = re.compile(r'^(?:glGetString|wglGetExtensionsString)')
+
+
+def is_discarded_string_return(command_name: str, return_value: ReturnValue) -> bool:
+    """Whether the return value is a driver-owned string from a pure query (glGetString,
+    glGetStringi, wglGetExtensionsStringARB/EXT). The call is recorded and replayed, but the
+    returned pointer is not captured: its address is meaningless in another process and nothing
+    on replay reads its contents."""
+    facts = return_value.type_facts
+    return (_STRING_QUERY_RE.match(command_name) is not None
+            and facts.pointer_depth == 1
+            and facts.base_type in ('GLubyte', 'char')
+            and return_value.type.startswith('const '))
+
+
 def _is_fully_capturable_command(
     command_name: str, return_value: ReturnValue, params: list[Parameter], alias: str | None = None,
 ) -> bool:
@@ -824,7 +883,8 @@ def _is_fully_capturable_command(
     if command_name in _FORCE_DISABLED_COMMANDS:
         return False
     return_facts = return_value.type_facts
-    if not (return_facts.is_scalar or return_facts.is_opaque_handle or return_facts.is_mapped_handle):
+    if not (return_facts.is_scalar or return_facts.is_opaque_handle or return_facts.is_mapped_handle
+            or is_discarded_string_return(command_name, return_value)):
         return False
     if _requires_object_name_override(command_name, return_value):
         return False

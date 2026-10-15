@@ -8,6 +8,7 @@
 
 import sys
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
@@ -779,19 +780,85 @@ class EndToEndEnabledGateTests(unittest.TestCase):
                 self.assertEqual(override.length_source_kind, LengthSourceKind.SIBLING_PARAM)
                 self.assertEqual(override.length_source_value, 'count')
 
-    def test_get_integerv_stays_disabled(self) -> None:
-        # glGetIntegerv's element count genuinely depends on `pname` (1/2/4/16 elements) -
-        # still no LengthSourceKind can express this safely; see the "Reduce replay warning
-        # noise" decision's own explanation of why this is different from glGetShaderiv/
-        # glGetProgramiv/glGetFramebufferAttachmentParameteriv above.
-        self.assertFalse(self._get_command(Api.GL, 'glGetIntegerv').enabled)
+    def test_state_dependent_getters_discard_output(self) -> None:
+        # glGetIntegerv's element count depends on `pname` and on implementation state. The
+        # output is never captured, so no count is needed.
+        from generator_helpers import pointer_override_for
+        from pointer_metadata import LengthSourceKind, PointerDirection
+        for name, param_name in (
+            ('glGetIntegerv', 'data'), ('glGetFloatv', 'data'), ('glGetBooleani_v', 'data'),
+            ('glGetUniformfv', 'params'),
+        ):
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, param_name)
+                self.assertEqual(override.direction, PointerDirection.OUT)
+                self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
 
-    def test_get_string_commands_stay_disabled(self) -> None:
-        # Return-value pointers stay out of scope entirely - see
-        # _is_fully_capturable_command's own docstring.
+    def test_discarded_list_outputs_are_sized_from_their_own_parameters(self) -> None:
+        # A list result (GL_COMPRESSED_TEXTURE_FORMATS, ...) has a live length; the player
+        # queries it with the command's own arguments before the call.
+        from generator_helpers import pointer_override_for
+        from pointer_length_derivation import (
+            _DISCARDED_OUTPUT_LIST_SIZERS, discarded_output_list_sizer)
+        from pointer_metadata import LengthSourceKind
+        names = ['glGetIntegerv', 'glGetFloatv', 'glGetBooleanv', 'glGetInteger64v',
+                 *_DISCARDED_OUTPUT_LIST_SIZERS]
+        for name in names:
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                self.assertTrue(any(
+                    pointer_override_for(cmd, p.name) is not None and
+                    pointer_override_for(cmd, p.name).length_source_kind is
+                    LengthSourceKind.DISCARDED_OUTPUT for p in cmd.params))
+                sizer = discarded_output_list_sizer(name)
+                self.assertIsNotNone(sizer)
+                scalars = {p.name for p in cmd.params if p.type_facts.is_scalar}
+                self.assertLessEqual(set(sizer[1]), scalars)
+        self.assertIsNone(discarded_output_list_sizer('glGetTexParameteriv'))
+
+    def test_query_object_getters_are_not_discarded(self) -> None:
+        # With a GL_QUERY_BUFFER bound, `params` is an offset the driver writes GPU-side, so
+        # the discarded-output fallback must not apply. Hand-audited entries in
+        # POINTER_PARAM_OVERRIDES (glGetQueryObjectui64v, ...) are unaffected.
+        from pointer_length_derivation import derive_discarded_output_override
+        cmd = self._get_command(Api.GL, 'glGetQueryObjectiv')
+        self.assertFalse(cmd.enabled)
+        params = next(p for p in cmd.params if p.name == 'params')
+        others = [p for p in cmd.params if p.name != 'params']
+        self.assertIsNone(
+            derive_discarded_output_override('glGetQueryObjectiv', params, others))
+
+    def test_getter_with_unrecognized_compsize_stays_disabled(self) -> None:
+        from pointer_length_derivation import derive_discarded_output_override
+        cmd = self._get_command(Api.GL, 'glGetIntegerv')
+        pname, data = cmd.params
+        self.assertIsNone(derive_discarded_output_override(
+            'glGetIntegerv', replace(data, len='COMPSIZE(foo,bar)'), [pname]))
+        self.assertIsNone(derive_discarded_output_override(
+            'glSetIntegerv', data, [pname]))
+
+    def test_get_string_commands_are_enabled_without_return_member(self) -> None:
+        from generator_helpers import has_return_member
         for name in ('glGetString', 'glGetStringi'):
             with self.subTest(command=name):
-                self.assertFalse(self._get_command(Api.GL, name).enabled)
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                self.assertFalse(has_return_member(cmd))
+        self.assertTrue(has_return_member(self._get_command(Api.GL, 'glGenLists')))
+
+    def test_pname_value_count_setters_are_enabled(self) -> None:
+        from generator_helpers import pointer_override_for
+        from pointer_metadata import LengthSourceKind
+        for name in ('glLightfv', 'glLightModelfv', 'glFogfv', 'glTexEnvfv', 'glTexGenfv'):
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, 'params')
+                self.assertEqual(override.length_source_kind, LengthSourceKind.PNAME_VALUE_COUNT)
+                self.assertEqual(override.pname_param, 'pname')
 
     def test_generic_rule_enables_commands_without_hand_entries(self) -> None:
         for name in (
@@ -835,11 +902,25 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.WGL, name).enabled)
 
-    def test_wgl_extensions_string_commands_stay_disabled(self) -> None:
-        # const char* return values - same return-value-pointer limitation as glGetString.
+    def test_wgl_extensions_string_commands_are_enabled(self) -> None:
+        from generator_helpers import has_return_member
         for name in ('wglGetExtensionsStringARB', 'wglGetExtensionsStringEXT'):
             with self.subTest(command=name):
-                self.assertFalse(self._get_command(Api.WGL, name).enabled)
+                cmd = self._get_command(Api.WGL, name)
+                self.assertTrue(cmd.enabled)
+                self.assertFalse(has_return_member(cmd))
+
+    def test_wgl_choose_pixel_format_arb_is_enabled(self) -> None:
+        self.assertTrue(self._get_command(Api.WGL, 'wglChoosePixelFormatARB').enabled)
+
+    def test_gl_call_lists_uses_list_name_array_byte_size(self) -> None:
+        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
+        self.assertTrue(self._get_command(Api.GL, 'glCallLists').enabled)
+        override = POINTER_PARAM_OVERRIDES[('glCallLists', 'lists')]
+        self.assertEqual(
+            override.length_source_kind, LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE)
+        self.assertEqual(override.length_source_value, 'n')
+        self.assertEqual(override.list_type_param, 'type')
 
     def test_named_buffer_sub_data_commands_are_enabled(self) -> None:
         # glNamedBufferSubDataEXT aliases glNamedBufferSubData (gl.xml's own <alias> tag) - one

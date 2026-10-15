@@ -208,6 +208,13 @@ _CLASS_TO_KIND: dict[str, GLObjectKind | None] = {
     'perf query id': None,
 }
 
+# gl.xml classes whose recorded names are replayed verbatim, without ObjectNameMapService. Display
+# lists: glNewList defines any unused name (glGenLists only reserves a range), and on replay only
+# the stream itself creates lists, so every recorded name is a valid replay-time name. Identity
+# also keeps glListBase offsets and glCallLists' list arrays (base + offset arithmetic) correct,
+# which per-name remapping could not.
+IDENTITY_NAME_CLASSES: frozenset[str] = frozenset({'display list'})
+
 # `glGen*`/`glCreate*` as a whole next CamelCase word (immediately followed by either the end
 # of the name or an uppercase letter) creates a name; `glDelete*` (same rule) deletes one;
 # everything else looks one up. The lookahead is load-bearing, not decorative:

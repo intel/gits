@@ -468,6 +468,36 @@ uint32_t ComputeTexelByteSize(GLenum format, GLenum type) {
   return PixelByteSize(format, type);
 }
 
+uint64_t ComputeListNameArrayByteSize(GLsizei n, GLenum type) {
+  if (n < 0) {
+    return 0;
+  }
+  uint32_t elementBytes = 0;
+  switch (type) {
+  case 0x1400: // GL_BYTE
+  case 0x1401: // GL_UNSIGNED_BYTE
+    elementBytes = 1;
+    break;
+  case 0x1402: // GL_SHORT
+  case 0x1403: // GL_UNSIGNED_SHORT
+  case 0x1407: // GL_2_BYTES
+    elementBytes = 2;
+    break;
+  case 0x1408: // GL_3_BYTES
+    elementBytes = 3;
+    break;
+  case 0x1404: // GL_INT
+  case 0x1405: // GL_UNSIGNED_INT
+  case 0x1406: // GL_FLOAT
+  case 0x1409: // GL_4_BYTES
+    elementBytes = 4;
+    break;
+  default:
+    return 0;
+  }
+  return static_cast<uint64_t>(n) * elementBytes;
+}
+
 uint32_t ComputeClearBufferValueCount(GLenum buffer) {
   switch (buffer) {
   case 0x1800: // GL_COLOR

@@ -265,4 +265,33 @@ private:
   glBindSamplerCommand command;
 };
 
+// glNewList's and glEndList's Run() - bracket the compilation MipmapCompletionService records,
+// and let it replay GL_COMPILE_AND_EXECUTE as GL_COMPILE followed by an executing glCallList - see
+// MipmapCompletionService::NewListMode().
+class GlNewListRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glNewListCommand command;
+};
+
+class GlEndListRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glEndListCommand command;
+};
+
 } // namespace gits::opengl2

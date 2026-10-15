@@ -305,6 +305,65 @@ _GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
 
 _GEN_CREATE_DELETE_RE = re.compile(r'^gl(?:Gen|Create|Delete)(?:$|[A-Z])')
 
+# len= shapes of glGet* outputs whose size depends on live driver state: per-pname state,
+# indexed state, and a single uniform (at most a dmat4). A pname of these shapes returns a fixed
+# count, at most 16 values (a 4x4 matrix), unless it is a list whose length is live state; the
+# player queries those lengths before the call (discarded_output_list_sizer()).
+_DISCARDED_OUTPUT_LENS: frozenset[str] = frozenset({
+    'COMPSIZE(pname)',
+    'COMPSIZE(value)',
+    'COMPSIZE(program,location)',
+    'COMPSIZE(programObj,location)',
+})
+
+# Enabled DISCARDED_OUTPUT commands that accept a list pname, found by pairing every registry
+# GL_NUM_<X> with a GL_<X> list query (plus the atomic counter and bump unit lists, whose
+# lengths have other names). Value: the player function (discardedOutputElements.h) and the
+# command parameters it takes.
+_STATE_LIST_GETTER_RE = re.compile(
+    r'^glGet(Boolean|Double|Fixed|Float|Integer|Integer64|UnsignedByte)v(EXT|OES)?$')
+_DISCARDED_OUTPUT_LIST_SIZERS: dict[str, tuple[str, tuple[str, ...]]] = {
+    'glGetTexBumpParameterivATI': ('TexBumpListElements', ('pname',)),
+    'glGetTexBumpParameterfvATI': ('TexBumpListElements', ('pname',)),
+    'glGetActiveAtomicCounterBufferiv': (
+        'AtomicCounterBufferListElements', ('program', 'bufferIndex', 'pname')),
+    'glGetActiveSubroutineUniformiv': (
+        'SubroutineUniformListElements', ('program', 'shadertype', 'index', 'pname')),
+}
+
+
+def discarded_output_list_sizer(command_name: str) -> tuple[str, tuple[str, ...]] | None:
+    """The player function sizing a DISCARDED_OUTPUT list result of `command_name` and the
+    parameters it takes, or None for a command whose every pname returns a fixed count."""
+    if _STATE_LIST_GETTER_RE.match(command_name):
+        return ('StateListElements', ('pname',))
+    return _DISCARDED_OUTPUT_LIST_SIZERS.get(command_name)
+
+
+def derive_discarded_output_override(
+    command_name: str, param: Parameter, other_params: list[Parameter],
+) -> PointerParamOverride | None:
+    """DISCARDED_OUTPUT override for a glGet* query output whose size depends on driver state,
+    or None. Nothing on replay reads a query result, so the recorder skips it and the player
+    passes a scratch buffer."""
+    if not command_name.startswith('glGet'):
+        return None
+    # With GL_QUERY_BUFFER bound the pointer is a buffer offset the driver writes through, which
+    # a scratch buffer would silently redirect.
+    if 'QueryObject' in command_name or 'QueryBufferObject' in command_name:
+        return None
+    facts = param.type_facts
+    if (facts.pointer_depth != 1 or facts.base_type == 'void' or param.type.startswith('const ')
+            or not facts.is_array_element_eligible):
+        return None
+    if param.class_ is not None:
+        return None
+    has_index = any(p.name == 'index' and p.type_facts.is_scalar for p in other_params)
+    if param.len not in _DISCARDED_OUTPUT_LENS and not (param.len == 'COMPSIZE(target)' and has_index):
+        return None
+    return PointerParamOverride(
+        direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT)
+
 
 def derive_pointer_param_override(
     command_name: str, param: Parameter, other_params: list[Parameter],
@@ -318,6 +377,10 @@ def derive_pointer_param_override(
       - A single-level pointer to a typed element (GLfloat*, GLuint*, ...; never void*) whose
         len= derives a length source (a literal or a sibling count). A typed element is never
         an opaque buffer offset; `const T*` is read by the driver (IN), `T*` is written (OUT).
+        A sibling count on an OUT array that is not an object-name array is only the caller's
+        capacity (glGetProgramResourceiv's `count`, with `*length` reporting what was written),
+        so the tail may be uninitialized: it becomes DISCARDED_OUTPUT with a scratch buffer of
+        that capacity instead of being captured.
       - `const void *` whose len= is a plain sibling byte count (glNamedBufferData's `data`,
         glProgramBinary's `binary`, glCompressed*Image*'s `data`/`bits`). `imageSize` siblings
         are compressed pixel uploads and get the unpack-PBO guard. OUT void* is never derived:
@@ -336,7 +399,7 @@ def derive_pointer_param_override(
         return None
     derived = derive_length_source(param, other_params)
     if derived is None:
-        return None
+        return derive_discarded_output_override(command_name, param, other_params)
 
     if facts.base_type == 'void':
         if param.type != 'const void *' or derived.kind is not LengthSourceKind.SIBLING_PARAM:
@@ -359,6 +422,13 @@ def derive_pointer_param_override(
             return None
     elif _GEN_CREATE_DELETE_RE.match(command_name) and facts.base_type in ('GLuint', 'GLint'):
         return None
+    elif (direction is PointerDirection.OUT and derived.kind is LengthSourceKind.SIBLING_PARAM
+            and 'QueryObject' not in command_name and 'QueryBufferObject' not in command_name):
+        return PointerParamOverride(
+            direction=direction,
+            length_source_kind=LengthSourceKind.DISCARDED_OUTPUT,
+            length_source_value=derived.value,
+            length_multiplier=derived.multiplier)
 
     return PointerParamOverride(
         direction=direction,

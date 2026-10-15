@@ -294,7 +294,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 <%
     override = pointer_override_for(cmd, p.name)
 %>\
-% if override is not None and override.direction == PointerDirection.OUT:
+% if override is not None and override.length_source_kind == LengthSourceKind.DISCARDED_OUTPUT:
+    // m_${p.name} stays empty - see LengthSourceKind.DISCARDED_OUTPUT (pointer_metadata.py).
+% elif override is not None and override.direction == PointerDirection.OUT:
     // Read only now that the driver has actually written into the app's buffer.
 <%
     # 'void *' OUT params (glReadPixels et al.) need an explicit cast to the substituted
@@ -421,7 +423,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endif
 % endfor
-% if not is_void:
+% if has_return_member(cmd):
     command->m_Return.Value = result;
 <%
     return_obj_override = object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_)

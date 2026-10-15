@@ -250,9 +250,11 @@ class EndToEndTexSamplerParameterTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
-    def test_get_variants_stay_disabled(self) -> None:
+    def test_get_variants_use_discarded_output(self) -> None:
         # Same COMPSIZE(pname) shape, but no OUT-direction Mako branch exists for this
-        # LengthSourceKind - see tex_sampler_parameter_metadata.py's own header comment.
+        # LengthSourceKind - see tex_sampler_parameter_metadata.py's own header comment. The
+        # getters are enabled through the generic DISCARDED_OUTPUT fallback instead.
+        from pointer_metadata import LengthSourceKind
         for name in (
             'glGetTexParameterfv', 'glGetTexParameteriv',
             'glGetTexParameterIiv', 'glGetTexParameterIuiv',
@@ -260,7 +262,10 @@ class EndToEndTexSamplerParameterTests(unittest.TestCase):
             'glGetSamplerParameterIiv', 'glGetSamplerParameterIuiv',
         ):
             with self.subTest(command=name):
-                self.assertFalse(self._get_command(Api.GL, name).enabled)
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, 'params')
+                self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
 
     def test_fixed_point_and_dsa_and_multitex_variants_stay_disabled(self) -> None:
         for name in (

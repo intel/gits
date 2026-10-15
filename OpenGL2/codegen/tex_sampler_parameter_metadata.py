@@ -82,9 +82,9 @@
 #     TEX_SAMPLER_PARAMETER_VALUE_COUNT override that isn't PointerDirection.IN, because
 #     commandsAuto.h.mako/recorderWrappersAuto.cpp.mako only ever emit an IN-direction call to
 #     ComputeTexOrSamplerParameterValueCount() - there is no OUT-direction Mako branch to emit
-#     into. Enabling these would need new template/runtime work, not just a metadata-table
-#     fallback, so this module deliberately never derives a non-IN override and never matches
-#     a `glGet...` command name at all.
+#     into. This module therefore never matches a `glGet...` command name; those getters are
+#     enabled instead by pointer_length_derivation.py's DISCARDED_OUTPUT fallback, which
+#     captures no output at all.
 #   - glTexParameterxv/glTexParameterxvOES (GLES/OES fixed-point `GLfixed` variants) share the
 #     COMPSIZE(pname) shape but were not part of the audit that introduced
 #     ComputeTexOrSamplerParameterValueCount() - excluded by this module's own regex (the

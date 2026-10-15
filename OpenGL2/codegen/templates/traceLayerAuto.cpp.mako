@@ -64,7 +64,7 @@ void TraceLayer::Pre(${cmd.name}Command& command) {
 % endif
 % endif
 % endfor
-% if cmd.return_value.type.strip().lower() != 'void':
+% if has_return_member(cmd):
 % if cmd.return_value.type_facts.base_type == 'GLenum':
   printer.ResultEnum(command.m_Return.Value, GLenumApi::${cmd.api},
                      GLenumGroup::${cmd.return_value.group if cmd.return_value.group in enum_groups else 'Unknown'});

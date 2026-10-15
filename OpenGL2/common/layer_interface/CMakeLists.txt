@@ -19,6 +19,7 @@ set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pnameValueCountsAuto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
 source_group("Generated Files" FILES ${GENERATED_SRC})

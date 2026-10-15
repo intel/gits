@@ -36,9 +36,6 @@ namespace gits::opengl2 {
 
 % for cmd in commands:
 % if cmd.enabled:
-<%
-  is_void = cmd.return_value.type.strip().lower() == 'void'  # WGL uses Win32 'VOID', GL uses 'void'.
-%>\
 class ${cmd.name}Command : public Command {
 public:
   ${cmd.name}Command() : Command(CommandId::ID_${cmd.name.upper()}) {}
@@ -180,6 +177,12 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
 ## only - see _validate_pointer_override's own direction check for this kind.
 , m_${p.name}(${arg_expr}, ComputePointParameterValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.PNAME_VALUE_COUNT:
+## Audited COMPSIZE(pname) setter - see pname_value_counts.py. IN direction only.
+, m_${p.name}(${arg_expr}, ComputePnameValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
+## glCallLists' COMPSIZE(n,type). IN direction only.
+, m_${p.name}(${arg_expr}, ComputeListNameArrayByteSize(${override.length_source_value}, ${override.list_type_param}))\
 % else:
 ## Passed as the sibling's own type verbatim, times length_multiplier as a plain int
 ## (no unsigned 'u' suffix) - no cast needed here at all: ArrayArgument<T>/
@@ -242,7 +245,7 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 % endif
 % endif
 % endfor
-% if not is_void:
+% if has_return_member(cmd):
   ${wrapper_for(cmd.return_value.type_facts, object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_))}<${cmd.return_value.type}> m_Return;
 % endif
 };

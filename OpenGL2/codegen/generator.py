@@ -18,7 +18,7 @@ from pathlib import Path
 from command_ids import build_command_ids
 from generator_enums import generate_enum_files
 from generator_interceptor import build_interceptor_command_list, generate_interceptor_files
-from generator_layer_interface import generate_layer_interface_files
+from generator_layer_interface import generate_layer_interface_files, generate_pname_value_count_file
 from generator_player import generate_player_files
 from generator_recorder import generate_recorder_files
 from intermediates import Api, Command, EnumValue
@@ -72,6 +72,7 @@ def main() -> None:
     interceptor_commands = build_interceptor_command_list(commands)
     command_ids = build_command_ids(interceptor_commands, Path(__file__).with_name('command_ids.json'))
     generate_layer_interface_files(interceptor_commands, command_ids)
+    generate_pname_value_count_file(enums)
 
     # Derived/postprocessed data (enum canonical names, bitmask groups).
     enum_name_map = build_enum_name_map(enums)
