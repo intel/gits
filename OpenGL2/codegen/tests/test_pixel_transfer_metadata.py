@@ -597,10 +597,15 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
         source = self._COMMAND_RUNNERS_AUTO_CPP_MAKO.read_text(encoding='utf-8')
         # The per-parameter contribution to the skip gate must be
         # "SizeUnknown && !IsBufferOffset", not SizeUnknown alone - i.e. a buffer-offset call
-        # bypasses the skip regardless of whether its size is otherwise unknown.
+        # bypasses the skip regardless of whether its size is otherwise unknown. So does a null
+        # client pointer of a command that then only allocates storage.
         self.assertIn(
             '(command.m_${p.name}SizeUnknown.Value && '
             '!command.m_${p.name}IsBufferOffset.Value)', source)
+        self.assertIn(
+            '(command.m_${p.name}SizeUnknown.Value && '
+            '!command.m_${p.name}IsBufferOffset.Value && '
+            'command.m_${p.name}RawPointer.Value != 0)', source)
 
     def test_generated_runner_bypasses_skip_for_gltteximage2d(self) -> None:
         # End-to-end check against the actual generated (not template) source for a real
@@ -616,6 +621,21 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
         expr = match.group(1)
         self.assertIn('m_pixelsSizeUnknown.Value', expr)
         self.assertIn('!command.m_pixelsIsBufferOffset.Value', expr)
+        self.assertIn('command.m_pixelsRawPointer.Value != 0', expr)
+
+    def test_generated_runner_skips_null_pointer_updates_and_readbacks(self) -> None:
+        # A null pointer allocates only for glTexImage*; updates, draws and readbacks would
+        # read or write through it, so they keep the skip.
+        generated = CODEGEN_DIR.parent / 'player' / 'commandRunnersAuto.cpp'
+        if not generated.exists():
+            self.skipTest('generated commandRunnersAuto.cpp not present (codegen not run)')
+        source = generated.read_text(encoding='utf-8')
+        for name in ('glTexSubImage2D', 'glDrawPixels', 'glReadPixels'):
+            match = re.search(name + r'PixelTransferSizeUnknown = (.*?);', source)
+            self.assertIsNotNone(match, name + 'PixelTransferSizeUnknown not found')
+            assert match is not None
+            self.assertIn('SizeUnknown.Value', match.group(1))
+            self.assertNotIn('RawPointer', match.group(1), name)
 
 
 if __name__ == '__main__':

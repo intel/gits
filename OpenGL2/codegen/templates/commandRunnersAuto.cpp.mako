@@ -181,6 +181,9 @@ T* DiscardedOutputScratch(size_t listElements) {
           pointer_override_for(cmd, p.name).length_source_kind ==
               LengthSourceKind.PIXEL_TRANSFER_SIZE)
   ]
+  # Only glTexImage*-shaped commands accept a null client pointer, which allocates storage
+  # without data. Every other pixel transfer reads or writes through the pointer.
+  null_pixels_allocate = cmd.name.startswith(('glTexImage', 'glTextureImage', 'glMultiTexImage'))
 
   # Any command with a scalar GLint parameter literally named 'location' is one of the
   # glUniform*(location, ...) family (glUniform1f/.../4fv, glUniformMatrix*fv, ...) - a
@@ -455,12 +458,19 @@ void ${cmd.name}Runner::Run() {
     // IsBufferOffset reasons about buffer bindings only), so each parameter's own contribution to
     // this skip gate is `SizeUnknown && !IsBufferOffset` - buffer-offset mode always takes
     // priority over an otherwise-unknown size, never the other way around.
+% if null_pixels_allocate:
+    // A null client pointer only allocates storage, so its size never matters either.
+% endif
     const bool ${cmd.name}PixelTransferSizeUnknown = \
 % for p in pixel_transfer_size_params:
 % if not loop.first:
   || \
 % endif
+% if null_pixels_allocate:
+    (command.m_${p.name}SizeUnknown.Value && !command.m_${p.name}IsBufferOffset.Value && command.m_${p.name}RawPointer.Value != 0)\
+% else:
     (command.m_${p.name}SizeUnknown.Value && !command.m_${p.name}IsBufferOffset.Value)\
+% endif
 % endfor
 ;
     if (${cmd.name}PixelTransferSizeUnknown) {
