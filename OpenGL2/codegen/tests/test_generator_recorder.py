@@ -28,6 +28,12 @@ sys.path.insert(0, str(CODEGEN_DIR))
 from generator_helpers import mako_render
 from generator_recorder import POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_KEY_PAIR_COMMANDS
 from intermediates import Api, CmdType, Command, ReturnValue
+from intermediates_creator import (
+    FILE_TO_API,
+    extract_commands_from_registry,
+    get_commands_from_xml_data,
+)
+from registry import Registry
 
 TEMPLATE_PATH = str(CODEGEN_DIR / 'templates' / 'recorderWrappersAuto.cpp.mako')
 
@@ -44,7 +50,12 @@ def fake_command(name: str) -> Command:
 
 def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset()) -> str:
-    commands = [fake_command(name) for name in command_names]
+    return render_commands([fake_command(name) for name in command_names],
+                           pre_hook_key_pair_commands, post_hook_key_pair_commands)
+
+
+def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozenset[str],
+                    post_hook_key_pair_commands: frozenset[str] = frozenset()) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
@@ -143,6 +154,36 @@ class PostHookKeyPairTests(unittest.TestCase):
         self.assertIn('CaptureManager::Get().SetPendingPostHookKey(postHookKeyPair.second);', body)
         self.assertIn('CaptureManager::Get().ReleasePendingPostHookKey();', body)
         self.assertNotIn('SetPendingPreHookKey', body)
+
+
+def registry_command(name: str) -> Command:
+    path = next(path for path, api in FILE_TO_API.items() if api == Api.GL)
+    registry = Registry()
+    registry.loadFile(path)
+    raw = next(c for c in extract_commands_from_registry(registry)
+               if c['command_attribs']['name'] == name)
+    return get_commands_from_xml_data({Api.GL: [raw]})[Api.GL][0]
+
+
+class ExistenceQueryWrapperTests(unittest.TestCase):
+    """glIs* keeps a registered name's key, looked up without the unmapped fallback before the
+    call, and confirms an unregistered name against the driver's result after it. Neither half
+    missing nor emitted in the wrong phase is a compile error."""
+
+    def test_lookup_precedes_the_call_and_confirmation_follows_it(self) -> None:
+        body = extract_wrapper_body(
+            render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
+        lookup = body.find(
+            'UpdateHandleIfRegistered(command->m_texture, GLObjectKind::Texture);')
+        call = body.find('GLboolean result = realFunction(texture);')
+        confirm = body.find(
+            'ConfirmExistenceQuery(command->m_texture, GLObjectKind::Texture, result);')
+        self.assertNotEqual(lookup, -1, body)
+        self.assertNotEqual(call, -1, body)
+        self.assertNotEqual(confirm, -1, body)
+        self.assertLess(lookup, call)
+        self.assertLess(call, confirm)
+        self.assertNotIn('UpdateHandle(command->m_texture', body)
 
 
 if __name__ == '__main__':

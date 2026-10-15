@@ -332,11 +332,19 @@ std::mutex g_BufferObjectFeatureMutex;
 std::unordered_map<GITSKey, bool> g_BufferObjectFeatureByContext;
 std::mutex g_CopyBufferFeatureMutex;
 std::unordered_map<GITSKey, bool> g_CopyBufferFeatureByContext;
+std::mutex g_DirectStateAccessFeatureMutex;
+std::unordered_map<GITSKey, bool> g_DirectStateAccessFeatureByContext;
 } // namespace
 
 bool ContextSupportsCopyBuffer() {
   return ContextSupportsGLFeature(g_CopyBufferFeatureMutex, g_CopyBufferFeatureByContext,
                                   "GL_ARB_copy_buffer", 3, 1);
+}
+
+bool ContextSupportsDirectStateAccess() {
+  return ContextSupportsGLFeature(g_DirectStateAccessFeatureMutex,
+                                  g_DirectStateAccessFeatureByContext, "GL_ARB_direct_state_access",
+                                  4, 5);
 }
 
 bool ElementArrayBufferIsBound() {

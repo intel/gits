@@ -144,6 +144,11 @@ bool TryCacheRealFunction(const char* name, void* value) {
   return true;
 }
 
+bool TryResolveRealFunction(const char* name) {
+  void* real = ResolveDriverFunction(name, /*logFailure=*/false);
+  return real != nullptr && TryCacheRealFunction(name, real);
+}
+
 void WarmUpResolvableFunctions(GITSKey contextKey) {
   // Skip the entire pass below for a context this function has already warmed up - see this
   // function's own declaration comment in openglDriversAuto.h. Keyed by the context's stable

@@ -176,6 +176,29 @@ inline void UpdateHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
   }
 }
 
+// Before the real call of a glIs* existence query: resolves a registered name without warning.
+// ConfirmExistenceQuery decides about a miss once the result is known.
+inline void UpdateHandleIfRegistered(HandleArgument<GLuint>& arg, GLObjectKind kind) {
+  if (arg.Value != 0) {
+    arg.Key = ObjectNameMapService::Get().TryGetKey(kind, GroupIdentityFor(kind), arg.Value);
+  }
+}
+
+// After the real call of a glIs* existence query. An unregistered name the driver reports as no
+// object (typically one the application just deleted) keeps key 0: glIs*(0) is GL_FALSE by
+// spec, so replay gives the same answer. Only a live object without a key is unmapped.
+inline void ConfirmExistenceQuery(HandleArgument<GLuint>& arg,
+                                  GLObjectKind kind,
+                                  GLboolean result) {
+  if (arg.Value == 0 || arg.Key != 0 || result == GL_FALSE) {
+    return;
+  }
+  arg.Key = ObjectNameMapService::Get().GetKey(kind, GroupIdentityFor(kind), arg.Value);
+  if (arg.Key == 0) {
+    arg.Key = UNMAPPED_OBJECT_NAME_KEY;
+  }
+}
+
 // New-name create for a single GL object name (glCreateProgram/glCreateShader's return value -
 // see object_name_lifecycle.py's CREATE role). A zero name (a failed create) is left
 // unregistered, mirroring UpdateOutputHandle(HandleArgument<HGLRC>&)'s null-handle handling

@@ -231,7 +231,8 @@ T* DiscardedOutputScratch(size_t listElements) {
           return f'reinterpret_cast<{p.type}>(command.m_{p.name}.Value)'
       if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.DISCARDED_OUTPUT:
           slot = next(i for i, q in enumerate(cmd.params) if q.name == p.name)
-          scratch = f'DiscardedOutputScratch<{p.type_facts.base_type}, {slot}>'
+          element = p.type[:p.type.rindex('*')].strip() if p.type_facts.pointer_depth == 2 else p.type_facts.base_type
+          scratch = f'DiscardedOutputScratch<{element}, {slot}>'
           if ptr_override.length_source_value is not None:
               return (f'{scratch}(ClampCountToSizeT(command.m_{ptr_override.length_source_value}.Value) * '
                       f'{ptr_override.length_multiplier})')

@@ -546,7 +546,7 @@ def _validate_pointer_override(
                     f"{command_name}.{param.name}: DISCARDED_OUTPUT's length_source_value "
                     f"'{override.length_source_value}' must name a scalar capacity sibling"
                 )
-        if param.type_facts.base_type == 'void':
+        if param.type_facts.base_type == 'void' and param.type_facts.pointer_depth != 2:
             raise ValueError(
                 f"{command_name}.{param.name}: DISCARDED_OUTPUT needs a typed element - the "
                 f"player's scratch buffer is sized in elements"
@@ -792,6 +792,13 @@ def _is_param_capturable(
         # ARRAY_OF_ARRAYS_PARAM_OVERRIDES would be actively wrong here, not just an unrelated
         # alternative path. See that LengthSourceKind's own comment (pointer_metadata.py).
         if _requires_object_name_override(command_name, param):
+            return False
+        _validate_pointer_override(command_name, param, override, other_params)
+        return True
+    if override is None and facts.pointer_depth == 2 and facts.base_type == 'void':
+        # glGet*Pointerv's `void **` result - see derive_pointer_query_output_override().
+        override = derive_pointer_param_override(command_name, param, other_params)
+        if override is None:
             return False
         _validate_pointer_override(command_name, param, override, other_params)
         return True

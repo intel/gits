@@ -856,6 +856,19 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         self.assertIsNone(
             derive_discarded_output_override('glGetQueryObjectiv', params, others))
 
+    def test_pointer_queries_discard_their_result(self) -> None:
+        # A glGet*Pointerv result is an address in the recording process.
+        from generator_helpers import pointer_override_for
+        for name, param_name in (('glGetBufferPointerv', 'params'),
+                                 ('glGetNamedBufferPointervEXT', 'params'),
+                                 ('glGetVertexAttribPointerv', 'pointer')):
+            with self.subTest(command=name):
+                cmd = self._get_command(Api.GL, name)
+                self.assertTrue(cmd.enabled)
+                override = pointer_override_for(cmd, param_name)
+                assert override is not None
+                self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+
     def test_getter_with_unrecognized_compsize_stays_disabled(self) -> None:
         from pointer_length_derivation import derive_discarded_output_override
         cmd = self._get_command(Api.GL, 'glGetIntegerv')

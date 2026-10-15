@@ -119,6 +119,10 @@ bool ElementArrayBufferIsBound();
 // context, like the feature probes behind the guards above.
 bool ContextSupportsCopyBuffer();
 
+// Whether the current context has core direct state access (GL 4.5 / ARB_direct_state_access).
+// Cached per context, like ContextSupportsCopyBuffer().
+bool ContextSupportsDirectStateAccess();
+
 // (major, minor) parsed from the current context's GL_VERSION; (0, 0) if it cannot be parsed,
 // which callers treat as "supports nothing".
 std::pair<int, int> CurrentContextGLVersion();

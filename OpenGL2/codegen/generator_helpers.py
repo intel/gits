@@ -30,6 +30,7 @@ from object_name_lifecycle import (
     GLObjectKind,
     ObjectNameOverride,
     ObjectNameRole,
+    is_existence_query,
     resolve_object_name_override,
 )
 from pixel_transfer_metadata import derive_pixel_transfer_override
@@ -311,6 +312,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'object_name_override_for': object_name_override_for,
         'GLObjectKind': GLObjectKind,
         'ObjectNameRole': ObjectNameRole,
+        'is_existence_query': is_existence_query,
         'array_of_arrays_override_for': array_of_arrays_override_for,
         'consumed_pointer_params': consumed_pointer_params,
         'consumed_param_owner': consumed_param_owner,

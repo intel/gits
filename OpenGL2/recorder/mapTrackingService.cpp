@@ -117,20 +117,6 @@ bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* 
          &ResolveAndCall_glGetBufferSubData;
 }
 
-bool ReadNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizeiptr length, void* data) {
-  g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire)(buffer, offset, length,
-                                                                          data);
-  return g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire) !=
-         &ResolveAndCall_glGetNamedBufferSubData;
-}
-
-bool ReadNamedBufferSubDataEXT(GLuint buffer, GLintptr offset, GLsizeiptr length, void* data) {
-  g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire)(buffer, offset, length,
-                                                                             data);
-  return g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire) !=
-         &ResolveAndCall_glGetNamedBufferSubDataEXT;
-}
-
 } // namespace
 
 MapTrackingService& MapTrackingService::Get() {
@@ -215,43 +201,14 @@ void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedP
                       static_cast<GLsizeiptr>(size));
 }
 
-void MapTrackingService::OnMapNamedBuffer(GLuint buffer, GLenum access, void* mappedPointer) {
+void MapTrackingService::OnMapNamedBuffer(GLuint buffer,
+                                          GLenum access,
+                                          void* mappedPointer,
+                                          NamedBufferSizeFn querySize) {
   if (mappedPointer == nullptr || buffer == 0) {
     return;
   }
-  GLint64 size = 0;
-  g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire)(
-      buffer, GL_BUFFER_SIZE, &size);
-  if (size <= 0) {
-    LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
-                << " could not be queried - buffer-map tracking skipped for this map";
-    return;
-  }
-  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer,
-                      static_cast<GLsizeiptr>(size));
-}
-
-void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer) {
-  if (mappedPointer == nullptr || buffer == 0) {
-    return;
-  }
-  // Like OnMapBuffer above, glMapNamedBufferEXT maps the entire buffer implicitly - its length
-  // is queried the same way, but via the DSA-EXT getter (glGetNamedBufferParameterivEXT):
-  // the EXT-suffixed getter is used on older contexts. The EXT family has no 64-bit getter, so
-  // a GL 4.5 context uses the core glGetNamedBufferParameteri64v for GLsizeiptr-sized buffers.
-  GLint64 size = 0;
-  const auto [major, minor] = CurrentContextGLVersion();
-  if (major > 4 || (major == 4 && minor >= 5)) {
-    auto realGetNamedBufferParameteri64v =
-        g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire);
-    realGetNamedBufferParameteri64v(buffer, GL_BUFFER_SIZE, &size);
-  } else {
-    GLint size32 = 0;
-    auto realGetNamedBufferParameterivEXT =
-        g_DispatchTable.glGetNamedBufferParameterivEXT.load(std::memory_order_acquire);
-    realGetNamedBufferParameterivEXT(buffer, GL_BUFFER_SIZE, &size32);
-    size = size32;
-  }
+  const GLint64 size = querySize(buffer);
   if (size <= 0) {
     LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
                 << " could not be queried - buffer-map tracking skipped for this map";
@@ -267,7 +224,7 @@ void MapTrackingService::OnMapNamedBufferRange(
     return;
   }
   // Explicit offset/length/access bitfield already match MappedRange's own shape exactly - no
-  // translation or extra driver query needed here, unlike the whole-buffer EXT map above.
+  // translation or extra driver query needed here, unlike a whole-buffer named map.
   if (access & GL_MAP_COHERENT_BIT) {
     ReportUnsupportedCoherentMapping(buffer);
   }
@@ -353,52 +310,22 @@ GLboolean MapTrackingService::UnmapBufferARBAndCapture(GLenum target) {
       });
 }
 
-GLboolean MapTrackingService::UnmapNamedBufferAndCapture(GLuint buffer) {
-  auto realUnmapNamedBuffer = g_DispatchTable.glUnmapNamedBuffer.load(std::memory_order_acquire);
+GLboolean MapTrackingService::UnmapNamedBufferAndCapture(const char* callerName,
+                                                         GLuint buffer,
+                                                         NamedUnmapFn unmap,
+                                                         NamedReadOnlyRemapFn readOnlyRemap,
+                                                         NamedReadSubDataFn readSubData) {
   return SnapshotBufferAndUnmap(
-      "glUnmapNamedBuffer", buffer, CurrentShareGroup(),
-      /*realUnmap=*/[realUnmapNamedBuffer, buffer] { return realUnmapNamedBuffer(buffer); },
+      callerName, buffer, CurrentShareGroup(),
+      /*realUnmap=*/[unmap, buffer] { return unmap(buffer); },
       /*realReadOnlyRemap=*/
-      [buffer](GLintptr offset, GLsizeiptr length) {
-        return g_DispatchTable.glMapNamedBufferRange.load(std::memory_order_acquire)(
-            buffer, offset, length, GL_MAP_READ_BIT);
+      [buffer, readOnlyRemap](GLintptr offset, GLsizeiptr length) {
+        return readOnlyRemap(buffer, offset, length);
       },
-      /*realInternalUnmap=*/[realUnmapNamedBuffer, buffer] { return realUnmapNamedBuffer(buffer); },
+      /*realInternalUnmap=*/[unmap, buffer] { return unmap(buffer); },
       /*realReadSubData=*/
-      [buffer](GLintptr offset, GLsizeiptr length, void* data) {
-        return ReadNamedBufferSubData(buffer, offset, length, data);
-      });
-}
-
-GLboolean MapTrackingService::UnmapNamedBufferEXTAndCapture(GLuint buffer) {
-  auto realUnmapNamedBufferEXT =
-      g_DispatchTable.glUnmapNamedBufferEXT.load(std::memory_order_acquire);
-  return SnapshotBufferAndUnmap(
-      "glUnmapNamedBufferEXT", buffer, CurrentShareGroup(),
-      /*realUnmap=*/[realUnmapNamedBufferEXT, buffer] { return realUnmapNamedBufferEXT(buffer); },
-      /*realReadOnlyRemap=*/
-      [buffer](GLintptr offset, GLsizeiptr length) {
-        // Use the EXT family for this EXT-addressed buffer. If its range entry point is
-        // unavailable, read-map the whole buffer through its whole-buffer entry point.
-        auto mapRange = g_DispatchTable.glMapNamedBufferRangeEXT.load(std::memory_order_acquire);
-        if (mapRange != nullptr) {
-          void* pointer = mapRange(buffer, offset, length, GL_MAP_READ_BIT);
-          if (pointer != nullptr ||
-              g_DispatchTable.glMapNamedBufferRangeEXT.load(std::memory_order_acquire) !=
-                  &ResolveAndCall_glMapNamedBufferRangeEXT) {
-            return pointer;
-          }
-        }
-        auto map = g_DispatchTable.glMapNamedBufferEXT.load(std::memory_order_acquire);
-        void* whole = map != nullptr ? map(buffer, GL_READ_ONLY) : nullptr;
-        return whole != nullptr ? static_cast<void*>(static_cast<uint8_t*>(whole) + offset)
-                                : nullptr;
-      },
-      /*realInternalUnmap=*/
-      [realUnmapNamedBufferEXT, buffer] { return realUnmapNamedBufferEXT(buffer); },
-      /*realReadSubData=*/
-      [buffer](GLintptr offset, GLsizeiptr length, void* data) {
-        return ReadNamedBufferSubDataEXT(buffer, offset, length, data);
+      [buffer, readSubData](GLintptr offset, GLsizeiptr length, void* data) {
+        return readSubData(buffer, offset, length, data);
       });
 }
 

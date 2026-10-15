@@ -73,6 +73,11 @@ extern OpenGLDispatchTable g_DispatchTable;
 // since (e.g. the bootstrap context was already destroyed).
 bool TryCacheRealFunction(const char* name, void* value);
 
+// Resolves and caches the real function for `name` like its resolve-thunk would, but without
+// warning on failure - for optional entry points a caller only prefers over a fallback. Returns
+// whether it resolved.
+bool TryResolveRealFunction(const char* name);
+
 // Proactively resolves and caches every command's real function pointer that isn't cached yet
 // (best-effort - failures are silently skipped, leaving that entry's lazy resolve-thunk in
 // place for a later retry). Meant to be called right after a real wglMakeCurrent call makes

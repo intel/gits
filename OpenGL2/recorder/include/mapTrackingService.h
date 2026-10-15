@@ -57,27 +57,32 @@ public:
   // resolvable buffer bound.
   void OnMapBuffer(GLenum target, GLenum access, void* mappedPointer);
 
-  // Core and EXT DSA maps provide the buffer name directly. Whole-buffer maps query
-  // GL_BUFFER_SIZE; range maps already provide their offset, length, and access flags.
-  void OnMapNamedBuffer(GLuint buffer, GLenum access, void* mappedPointer);
+  // Core and EXT DSA maps provide the buffer name directly. `querySize` uses the appropriate
+  // family's GL_BUFFER_SIZE getter; range maps already provide offset, length, and access.
+  using NamedBufferSizeFn = GLint64 (*)(GLuint);
+  void OnMapNamedBuffer(GLuint buffer,
+                        GLenum access,
+                        void* mappedPointer,
+                        NamedBufferSizeFn querySize);
+
+  // Registers a successful core or EXT named-buffer range map.
   void OnMapNamedBufferRange(
       GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
 
-  // Registers a just-succeeded glMapNamedBufferEXT (DSA, implicit whole-buffer range) - like
-  // OnMapBuffer above, but the buffer name is already given directly by the caller, so no
-  // target-to-bound-buffer resolution is needed.
-  void OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer);
-
-  // Performs the application-visible glUnmapBufferARB and returns its result unchanged.
-  // A separate entry point must call its own, specific real
-  // dispatch-table entry: glUnmapBuffer and glUnmapBufferARB are functionally identical but
-  // distinct driver exports, and a driver is not guaranteed to resolve both.
+  // Uses its own real driver entry point; glUnmapBuffer and glUnmapBufferARB may resolve
+  // independently.
   GLboolean UnmapBufferARBAndCapture(GLenum target);
-  GLboolean UnmapNamedBufferAndCapture(GLuint buffer);
 
-  // Performs the application-visible glUnmapNamedBufferEXT and returns its result unchanged;
-  // the buffer name needs no target resolution.
-  GLboolean UnmapNamedBufferEXTAndCapture(GLuint buffer);
+  // Named-buffer unmap uses its own core or EXT dispatch family. Readback falls back to a
+  // whole-buffer map only when the range entry point is unavailable, then to subdata if needed.
+  using NamedUnmapFn = GLboolean(APIENTRY*)(GLuint);
+  using NamedReadOnlyRemapFn = void* (*)(GLuint, GLintptr, GLsizeiptr);
+  using NamedReadSubDataFn = bool (*)(GLuint, GLintptr, GLsizeiptr, void*);
+  GLboolean UnmapNamedBufferAndCapture(const char* callerName,
+                                       GLuint buffer,
+                                       NamedUnmapFn unmap,
+                                       NamedReadOnlyRemapFn readOnlyRemap,
+                                       NamedReadSubDataFn readSubData);
 
 private:
   MapTrackingService() = default;
@@ -124,7 +129,7 @@ private:
   // std::nullopt when the buffer has no tracked mapping in that share group.
   std::optional<MappedRange> TakeMappedRange(uint64_t shareGroup, GLuint buffer);
 
-  // Translates glMapBuffer/glMapBufferARB/glMapNamedBufferEXT's own `access` parameter - one of
+  // Translates glMapBuffer/glMapBufferARB/glMapNamedBuffer(EXT)'s own `access` parameter - one of
   // GL_READ_ONLY/GL_WRITE_ONLY/GL_READ_WRITE (gl.xml's BufferAccessARB group - NOT a bitfield,
   // unlike glMapBufferRange's GL_MAP_*_BIT `access`) - into the GL_MAP_READ_BIT/GL_MAP_WRITE_BIT
   // bitfield convention MappedRange::Access already uses. An access value outside the three
@@ -133,7 +138,7 @@ private:
   // to snapshot", the same fallback every other unrecognized-input path in this service uses.
   static GLbitfield TranslateWholeBufferAccessToBits(GLenum access);
 
-  // Shared tail of whole-buffer map calls: they map the entire buffer implicitly (no
+  // Shared tail of target and named whole-buffer maps: they map the entire buffer implicitly (no
   // explicit length), so each separately queries it (via its own target/DSA-appropriate
   // GL_BUFFER_SIZE getter) before reaching this common StoreMappedRange call. Unlike
   // OnMapBufferRange/OnMapNamedBufferRange, this never checks GL_MAP_COHERENT_BIT: `access`

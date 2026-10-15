@@ -26,6 +26,7 @@ from object_name_lifecycle import (
     GLObjectKind,
     ObjectNameOverride,
     ObjectNameRole,
+    is_existence_query,
     resolve_object_name_override,
 )
 from registry import Registry
@@ -107,6 +108,16 @@ class ValidateObjectNameOverrideTests(unittest.TestCase):
 
 class WrapperForTests(unittest.TestCase):
     """wrapper_for()'s object-name-override fork - see generator_helpers.py."""
+
+    def test_is_commands_are_existence_queries(self) -> None:
+        lookup = ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP)
+        self.assertTrue(is_existence_query('glIsTexture', 'GLboolean', lookup))
+        self.assertTrue(is_existence_query('glIsTextureEXT', 'GLboolean', lookup))
+        self.assertFalse(is_existence_query('glBindTexture', 'void', lookup))
+        self.assertFalse(is_existence_query('glIsEnabled', 'void', lookup))
+        self.assertFalse(is_existence_query('glIsNamedBufferResidentNV', 'GLboolean', lookup))
+        delete = ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.DELETE)
+        self.assertFalse(is_existence_query('glIsTexture', 'GLboolean', delete))
 
     def test_scalar_with_no_override_is_plain_argument(self) -> None:
         self.assertEqual(wrapper_for(TypeFacts.from_type('GLuint'), None), 'Argument')

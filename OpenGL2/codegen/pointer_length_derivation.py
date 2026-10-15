@@ -342,6 +342,18 @@ def discarded_output_list_sizer(command_name: str) -> tuple[str, tuple[str, ...]
     return _DISCARDED_OUTPUT_LIST_SIZERS.get(command_name)
 
 
+def derive_pointer_query_output_override(
+    command_name: str, param: Parameter,
+) -> PointerParamOverride | None:
+    """DISCARDED_OUTPUT override for the single `void *` a glGet*Pointerv-shaped query writes
+    (glGetBufferPointerv's `params`, ...), or None. The value is an address in the recording
+    process, which nothing on replay can use."""
+    if not command_name.startswith('glGet') or param.type != 'void **' or param.len != '1':
+        return None
+    return PointerParamOverride(
+        direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT)
+
+
 def derive_discarded_output_override(
     command_name: str, param: Parameter, other_params: list[Parameter],
 ) -> PointerParamOverride | None:
@@ -458,6 +470,9 @@ def derive_pointer_param_override(
         derived_draw = derive(command_name, param, other_params)
         if derived_draw is not None:
             return derived_draw
+    pointer_query = derive_pointer_query_output_override(command_name, param)
+    if pointer_query is not None:
+        return pointer_query
     facts = param.type_facts
     if facts.pointer_depth != 1:
         return None

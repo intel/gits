@@ -280,6 +280,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     ${p.name}ExistedBeforeBind = UpdateHandleIfKnown(
         command->m_${p.name}, GLObjectKind::${obj_override.kind.value},
         g_DispatchTable.${obj_override.is_command}.load(std::memory_order_acquire));
+% elif is_existence_query(cmd.name, cmd.return_value.type, obj_override):
+    UpdateHandleIfRegistered(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % else:
     UpdateHandle(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % endif
@@ -331,6 +333,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
         command->m_${p.name}, GLObjectKind::${create_override.kind.value},
         g_DispatchTable.${create_override.is_command}.load(std::memory_order_acquire),
         ${p.name}ExistedBeforeBind);
+% elif create_override is not None and not p.type_facts.is_array_element_eligible and is_existence_query(cmd.name, cmd.return_value.type, create_override):
+    ConfirmExistenceQuery(command->m_${p.name}, GLObjectKind::${create_override.kind.value}, result);
 % endif
 % endfor
 % for p in cmd.params:

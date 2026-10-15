@@ -227,6 +227,17 @@ IDENTITY_NAME_CLASSES: frozenset[str] = frozenset({'display list'})
 # no other Gen*/Create*/Delete*-prefixed command was found to misclassify this way.
 _GEN_OR_CREATE_RE = re.compile(r'^gl(?:Gen|Create)(?:$|[A-Z])')
 _DELETE_RE = re.compile(r'^glDelete(?:$|[A-Z])')
+# glIs<Object> existence queries. Residency queries (glIsNamedBufferResidentNV) test a property
+# of an existing object, so their GL_FALSE does not mean the name is unused.
+_IS_RE = re.compile(r'^glIs(?!.*Resident)[A-Z]')
+
+
+def is_existence_query(command_name: str, return_type: str, override: ObjectNameOverride) -> bool:
+    """Whether `override` is the object name a glIs* query tests (glIsTexture's `texture`, ...).
+    Such a lookup keeps key 0 for an unregistered name the driver reports as no object - see
+    ConfirmExistenceQuery (recorder/include/handleArgumentUpdaters.h)."""
+    return (bool(_IS_RE.match(command_name)) and return_type.strip() == 'GLboolean'
+            and override.role is ObjectNameRole.LOOKUP)
 
 
 def _infer_role(command_name: str) -> ObjectNameRole:
