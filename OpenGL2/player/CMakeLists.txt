@@ -26,6 +26,7 @@ add_library(OpenGL2_player STATIC
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
   include/unsupportedCommandRunner.h
+  include/uniformArrayMetaRunner.h
   include/uniformLocationMapService.h
   include/windowGeometryMetaRunner.h
   include/commandRunnersCustom.h
@@ -35,6 +36,7 @@ add_library(OpenGL2_player STATIC
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   unsupportedCommandRunner.cpp
+  uniformArrayMetaRunner.cpp
   uniformLocationMapService.cpp
   windowGeometryMetaRunner.cpp
   commandRunnersCustom.cpp

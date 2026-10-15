@@ -49,16 +49,17 @@ namespace gits::opengl2 {
 // Scope decision (see modern-opengl-backend-architecture.md's own copy of this note): supports
 // the common initial-sharing case (wglCreateContextAttribsARB's hShareContext at context-
 // creation time, handled by RegisterNewContext()) and wglShareLists called before either
-// context has created any GL objects of its own (the typical, immediately-after-creation use,
-// handled by MergeGroups()). Calling wglShareLists to merge two contexts that have *already*
-// independently created same-numbered objects is a known, out-of-scope case: MergeGroups()
-// repoints one context's *future* lookups onto the other's existing bucket, but does not
-// retroactively reconcile or move any objects the two contexts already registered
-// independently before the merge - those remain split across what are now, incorrectly, two
-// different buckets for the same logical share group. This is a real, documented limitation,
-// not a silent one: a real application scenario that hits it would see ObjectNameMapService's
-// existing "no registered key/name" warnings for the pre-merge objects, not silently wrong
-// results.
+// context has created any GL objects of its own (the typical, immediately-after-creation use).
+// wglShareLists merging two contexts that have *already* independently created same-numbered
+// objects (e.g. a dummy context used briefly before being shared with the real one) is a known,
+// accepted out-of-scope case: MergeGroups() repoints one context's future lookups onto the
+// other's existing bucket, but does not retroactively reconcile or move any objects the two
+// contexts already registered independently before the merge. Revisit only with a concrete
+// repro that actually exercises wglShareLists this way - a real target application's captured
+// stream's "Texture has no registered key" warnings were suspected to be this, but a live,
+// instrumented repro showed wglShareLists is never called in that stream at all (all its
+// contexts join their share group via wglCreateContextAttribsARB's hShareContext instead,
+// which RegisterNewContext() already handles correctly), so this gap was not the cause there.
 class ShareGroupService {
 public:
   static ShareGroupService& Get();
@@ -74,9 +75,9 @@ public:
 
   // Call after a successful wglShareLists(hglrc1, hglrc2) - see
   // codegen/handle_lifecycle.py's SHARE_LISTS_COMMANDS. Merges hglrc2's group into hglrc1's
-  // (each is lazily registered as a fresh, singleton group first if never seen). See this
-  // class's own header comment for the exact, documented scope limitation on merging contexts
-  // that already have independently-created objects.
+  // (each is lazily registered as a fresh, singleton group first if never seen). Does not
+  // retroactively reconcile objects either context already registered independently before
+  // this call - see this class's own header comment.
   void MergeGroups(HGLRC hglrc1, HGLRC hglrc2);
 
   // Returns the share-group identity for `context` (typically the current thread's real

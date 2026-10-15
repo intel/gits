@@ -10,6 +10,7 @@
 
 #include "encoderLayerAuto.h"
 #include "pixelFormatCaptureLayer.h"
+#include "uniformArrayCaptureLayer.h"
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryTrackingLayer.h"
 
@@ -71,6 +72,7 @@ void CaptureManager::LoadLayers() {
   // for why) - pushed first, since m_PostLayers runs in push_back order and EncoderLayer must
   // stay the LAST entry (see this class's own header comment on that invariant).
   m_PostLayers.push_back(new PixelFormatCaptureLayer());
+  m_PostLayers.push_back(new UniformArrayCaptureLayer());
   m_PostLayers.push_back(new EncoderLayer());
 }
 

@@ -138,12 +138,35 @@ class ObjectNameRole(StrEnum):
                         # glGetUniformLocation's object-name parameter.
     DELETE = 'delete'   # an existing name (or names) destroyed on success, looked up first -
                         # glDeleteTextures/glDeleteProgram/glDeleteShader.
+    # A LOOKUP that is *also* a legal CREATE the instant the name has never been seen before -
+    # see _EXPLICIT_OVERRIDES's own comment on exactly which commands this applies to and why
+    # (the GL spec text itself, not a heuristic). A miss here may be the real driver
+    # implicitly creating a brand-new object with this exact name, or (a core profile's
+    # texture/buffer bind) an invalid bind. The recorder decides after the real call: if the
+    # entry's is_command reports the object exists, it registers a fresh key like an ordinary
+    # CREATE-role field's Register(); otherwise it is an ordinary LOOKUP miss (see
+    # recorder/include/handleArgumentUpdaters.h's UpdateHandleIfKnown/ConfirmImplicitCreate).
+    LOOKUP_OR_CREATE = 'lookup_or_create'
 
 
 @dataclass(frozen=True, kw_only=True)
 class ObjectNameOverride:
     kind: GLObjectKind
     role: ObjectNameRole
+    # LOOKUP_OR_CREATE only, both required: the same entry-point family's Gen command, which the
+    # player uses to create the replay-time name (an APPLE vertex array name is not valid for
+    # core glBindVertexArray, nor the reverse), and Is command, which the recorder uses after
+    # the real bind to confirm the object was created (a core profile rejects an unknown
+    # texture or buffer name instead).
+    gen_command: str | None = None
+    is_command: str | None = None
+
+    def __post_init__(self) -> None:
+        implicit_create = self.role == ObjectNameRole.LOOKUP_OR_CREATE
+        if implicit_create != (self.gen_command is not None and self.is_command is not None):
+            raise ValueError(
+                f'{self.kind}: gen_command and is_command are required for, and only for, '
+                f'ObjectNameRole.LOOKUP_OR_CREATE')
 
 
 # gl.xml's own `class="..."` string -> GLObjectKind, or None for a namespace gl.xml itself
@@ -238,6 +261,93 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     # genuinely is a LOOKUP of an existing name - see that audit log for the full list checked).
     ('glFreeObjectBufferATI', 'buffer'): ObjectNameOverride(
         kind=GLObjectKind.BUFFER, role=ObjectNameRole.DELETE),
+
+    # ObjectNameRole.LOOKUP_OR_CREATE: commands whose own GL/extension spec text says binding a
+    # name that does not yet exist implicitly creates a new object and assigns it that exact
+    # name, rather than requiring a prior Gen call (auto-derivation has no way to know this from
+    # `class=`/naming alone - "Bind*" always infers plain LOOKUP otherwise, which is correct for
+    # the vast majority of Bind commands that really do require a pre-existing name). This was a
+    # real, concrete bug: a real target application's captured OpenGL stream - a GL 3.2
+    # COMPATIBILITY profile app (compatibility profile keeps every one of these implicit-create
+    # paths legal) - binds hundreds of textures by name with no corresponding glGenTextures ever
+    # observed by the recorder, each one producing an ObjectNameMapService "no registered key"
+    # warning and, on replay, an unresolvable reference (see kUnmappedObjectName's own comment) -
+    # not a startup race, not a missing EXT/ARB alias (see the pointer_metadata.py
+    # glGenTexturesEXT/glGenQueriesEXT fix for that separate, already-covered gap), just this
+    # GL-spec-legal calling pattern the backend had no representation for at all.
+    #
+    # Base GL 1.0, not extension-gated - see glBindTexture's own man page: "If <texture> is not
+    # the name of an existing texture object, a new texture object named <texture> is created
+    # ...". Compatibility profile only; the core profile (GL 3.1+) rejects names glGenTextures
+    # never returned with GL_INVALID_OPERATION, which is why the recorder confirms creation
+    # with is_command after the bind instead of assuming it:
+    ('glBindTexture', 'texture'): ObjectNameOverride(
+        kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenTextures', is_command='glIsTexture'),
+    ('glBindTextureEXT', 'texture'): ObjectNameOverride(
+        kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenTexturesEXT', is_command='glIsTextureEXT'),
+
+    # GL_EXT_framebuffer_object (both the framebuffer and renderbuffer halves) - spec'd with the
+    # identical "if <framebuffer>/<renderbuffer> is not zero, and if it is not the name of an
+    # existing ... object, a new ... object is created" text as glBindTexture above. The later
+    # ARB-promoted core glBindFramebuffer/glBindRenderbuffer deliberately keep plain,
+    # auto-derived LOOKUP here - ARB_framebuffer_object's own spec text requires a pre-existing
+    # name from Gen*, dropping the EXT version's implicit-create behavior on purpose.
+    #
+    # NOT the same problem as the legacy OpenGL backend's handleFBOExtMixing()/
+    # isSchedulefboEXTAsCoreWA() (OpenGL/common/include/mapping.h, OpenGL/common/openglTools.cpp)
+    # - an earlier version of this comment wrongly claimed it was; corrected after being
+    # directly challenged, so recording the actual distinction here instead of just quietly
+    # fixing it. Those two legacy mechanisms exist because the legacy backend gives EXT and core
+    # FBO/RBO commands two SEPARATE C++ map classes (CGLFramebufferEXT vs CGLFramebuffer) -
+    # ScheduleFboEXTAsCoreWA (opt-in, default OFF) rewrites the app's EXT calls into core ones in
+    # the recorded stream itself so everything lands in one map; handleFBOExtMixing() is the
+    # always-on fallback for when that option is off, letting a core-map miss fall back to
+    # checking the EXT map too. It is deliberately opt-in, not the default, because silently
+    # rewriting which API entry point the app actually called changes what is being validated -
+    # a real concern for a driver-validation tool, where an EXT vs. core entry point can legally
+    # take a different internal driver path even for equivalent GL semantics.
+    # This backend has no such problem to work around in the first place: _CLASS_TO_KIND above
+    # maps gl.xml's class="framebuffer"/"renderbuffer" straight to one single GLObjectKind
+    # bucket regardless of which command spells it EXT or core, so glGenFramebuffersEXT and
+    # glGenFramebuffers already register into (and glBindFramebufferEXT/glBindFramebuffer
+    # already look up from) the exact same ObjectNameMapService bucket - an app mixing EXT and
+    # core FBO/RBO calls for the same object already resolves correctly with zero special-casing,
+    # and this backend never rewrites which entry point was actually called on the wire or at
+    # replay either. LOOKUP_OR_CREATE below is solving a completely different, narrower problem:
+    # an app that never calls ANY Gen variant at all and only ever binds via the EXT entry point
+    # directly - legal per GL_EXT_framebuffer_object's own spec text quoted above, independent of
+    # whether that same app also happens to mix in core calls elsewhere.
+    ('glBindFramebufferEXT', 'framebuffer'): ObjectNameOverride(
+        kind=GLObjectKind.FRAMEBUFFER, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenFramebuffersEXT', is_command='glIsFramebufferEXT'),
+    ('glBindRenderbufferEXT', 'renderbuffer'): ObjectNameOverride(
+        kind=GLObjectKind.RENDERBUFFER, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenRenderbuffersEXT', is_command='glIsRenderbufferEXT'),
+
+    # GL_APPLE_vertex_array_object - same "if <array> is not the name of an existing vertex
+    # array object, a new vertex array object ... is created" text as the FBO extensions above;
+    # the later ARB-promoted core glBindVertexArray again requires a pre-existing name from
+    # glGenVertexArrays and stays plain LOOKUP.
+    #
+    # glBindVertexArrayOES (GL_OES_vertex_array_object, the ES-side promotion) deliberately has
+    # NO override here, unlike its APPLE sibling above - gl.xml gives it
+    # <alias name="glBindVertexArray"/>, Khronos's own declaration that this command is the
+    # identical command as core glBindVertexArray, not merely a same-shaped one - so it already
+    # auto-derives the correct plain LOOKUP (requires a pre-existing glGenVertexArraysOES/
+    # glGenVertexArrays name, exactly like core) without needing an override at all. An earlier
+    # version of this file gave it LOOKUP_OR_CREATE anyway, by pattern-matching it to the APPLE
+    # extension above without checking gl.xml's own alias for it first - caught only when
+    # directly asked "should EXT and core really share one map/namespace" prompted rechecking
+    # every one of this section's entries against gl.xml's <alias> tags specifically (see
+    # glBindFramebufferEXT's own comment above for the fuller cross-check: every Gen/Delete/Is
+    # EXT command in this whole file that IS aliased to a core command needs no override, and
+    # every Bind command that overrides to LOOKUP_OR_CREATE correctly has NO alias - this was
+    # the one entry that broke that pattern).
+    ('glBindVertexArrayAPPLE', 'array'): ObjectNameOverride(
+        kind=GLObjectKind.VERTEX_ARRAY, role=ObjectNameRole.LOOKUP_OR_CREATE,
+        gen_command='glGenVertexArraysAPPLE', is_command='glIsVertexArrayAPPLE'),
 }
 
 

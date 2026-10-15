@@ -341,6 +341,35 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glDeleteTextures', 'textures'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateTextures (GL_ARB_direct_state_access/GL 4.5's DSA sibling of glGenTextures - see
+    # glCreateQueries' own comment below for why this whole "Create" family had no
+    # POINTER_PARAM_OVERRIDES entry at all before this fix, and is a distinct gap from the
+    # EXT-alias gap immediately below).
+    ('glCreateTextures', 'textures'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glGenTexturesEXT/glDeleteTexturesEXT (GL_EXT_texture_object, GL 1.0-era) are byte-for-
+    # byte functional duplicates of glGenTextures/glDeleteTextures - same params, same
+    # semantics - but gl.xml carries no <alias> element for either (verified directly against
+    # third_party/OpenGL-Registry/xml/gl.xml: neither command has an <alias> child, unlike e.g.
+    # glGenBuffersARB's <alias name="glGenBuffers"/> below). EXT_texture_object predates the
+    # ARB-suffixed-pre-promotion-alias convention gl.xml's <alias> tag models, so
+    # _pointer_override_for_command_or_alias's alias fallback (intermediates_creator.py) never
+    # applies to these two - they need their own table entry, not inherited coverage, or they
+    # fall back to the generic "unsupported command" passthrough with no object-name tracking
+    # at all. This was a real, concrete bug: a real target application's captured OpenGL stream
+    # calls glGenTexturesEXT for some of its textures (this app leans on ARB/EXT-suffixed entry
+    # points throughout - see the matching glGenQueriesEXT/glDeleteQueriesEXT comment below),
+    # so every later glDeleteTextures/glBindTexture/etc. reference to one of those names hit
+    # ObjectNameMapService's "no registered key" warning - not a startup race or an
+    # attach-mid-session gap, just this codegen coverage hole (accounted for the large majority
+    # of that stream's Texture-kind warnings).
+    ('glGenTexturesEXT', 'textures'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    ('glDeleteTexturesEXT', 'textures'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
     ('glGenBuffers', 'buffers'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
@@ -488,7 +517,15 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glDeleteVertexArrays', 'arrays'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateVertexArrays - see glCreateQueries' own comment below for the "Create" family gap.
+    ('glCreateVertexArrays', 'arrays'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
     ('glGenFramebuffers', 'framebuffers'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateFramebuffers - see glCreateQueries' own comment below for the "Create" family gap.
+    ('glCreateFramebuffers', 'framebuffers'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
     ('glDeleteFramebuffers', 'framebuffers'): PointerParamOverride(
@@ -580,6 +617,45 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glDeleteQueries', 'ids'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateQueries (GL_ARB_direct_state_access/GL 4.5's DSA sibling of glGenQueries - creates
+    # and immediately gives every returned name a real query object of `target`'s type, rather
+    # than merely reserving unused names the way glGenQueries does) had NO POINTER_PARAM_OVERRIDES
+    # entry at all before this fix - not an alias gap like glGenQueriesEXT/glGenTexturesEXT above
+    # (gl.xml gives it no <alias> either way, but it is not a pre-1.1/EXT-era entry point that
+    # predates gl.xml's alias convention - it is simply a whole DSA "Create" family this backend
+    # never added POINTER_PARAM_OVERRIDES support for at all yet, along with its
+    # glCreateTextures/glCreateFramebuffers/glCreateRenderbuffers/glCreateVertexArrays siblings
+    # elsewhere in this file). Added on its own merits (completeness with the rest of the
+    # already-supported Gen/Delete family for the same namespace), not because it was confirmed
+    # to explain any specific observed warning pattern - a real target application's captured
+    # stream that motivated this whole investigation had a residual, highly regular block of
+    # Query "no registered key" misses whose shape (contiguous runs of exactly 128 names, spaced
+    # exactly 256 apart) looked exactly like a single missed N-name batch create, but adding this
+    # entry and re-testing against that same stream showed zero change in that specific warning
+    # count - that application does not call glCreateQueries at all, so its root cause remains
+    # open. Recorded here so a future investigation does not re-suspect this same command
+    # without first checking this comment.
+    ('glCreateQueries', 'ids'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+
+    # glGenQueriesEXT/glDeleteQueriesEXT (GL_EXT_occlusion_query_boolean/GL_EXT_disjoint_timer_
+    # query) - same "no <alias> element in gl.xml" gap as glGenTexturesEXT/glDeleteTexturesEXT
+    # above (verified directly against third_party/OpenGL-Registry/xml/gl.xml). Note this is
+    # deliberately distinct from glGenQueriesARB/glDeleteQueriesARB, which DO carry
+    # <alias name="glGenQueries"/>/<alias name="glDeleteQueries"/> and were therefore already
+    # enabled via _pointer_override_for_command_or_alias's alias fallback with no table entry
+    # of their own - only the EXT-suffixed pair needed one. This was the other half of the same
+    # real-target-application capture bug described in the glGenTexturesEXT comment above:
+    # that stream's ~4,096 Query-kind "no registered key" warnings - the large majority of that
+    # capture's total warning count - trace to this app calling glGenQueriesEXT (not
+    # the already-enabled glGenQueriesARB) for its query-object pool.
+    ('glGenQueriesEXT', 'ids'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    ('glDeleteQueriesEXT', 'ids'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
 
     # glGenRenderbuffers/glDeleteRenderbuffers, glGenSamplers/glDeleteSamplers,
     # glGenProgramPipelines/glDeleteProgramPipelines: same SIBLING_PARAM array-output-creation/
@@ -592,6 +668,10 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # driver unresolved. glGenSamplers/glDeleteSamplers's sibling count param is named `count`,
     # not `n` - the other two follow every other Gen/Delete pair's `n` convention.
     ('glGenRenderbuffers', 'renderbuffers'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # glCreateRenderbuffers - see glCreateQueries' own comment below for the "Create" family gap.
+    ('glCreateRenderbuffers', 'renderbuffers'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
     ('glDeleteRenderbuffers', 'renderbuffers'): PointerParamOverride(

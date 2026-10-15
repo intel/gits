@@ -12,6 +12,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandsAuto.h"
 #include "layerBase.h"
 #include "mappedDataMetaTypes.h"
+#include "uniformArrayMetaTypes.h"
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryMetaTypes.h"
 
@@ -68,6 +69,12 @@ public:
     Pre(static_cast<Command&>(command));
   }
   virtual void Post(WindowGeometryMetaCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
+  virtual void Pre(UniformArrayMetaCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(UniformArrayMetaCommand& command) {
     Post(static_cast<Command&>(command));
   }
 };

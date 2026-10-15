@@ -46,6 +46,21 @@ void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
   printer.Finish(m_Flush);
 }
 
+void TraceLayer::Pre(UniformArrayMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "UniformArrayMeta");
+  printer.Add(command.m_Program);
+  if (command.m_Name.HasValue && !command.m_Name.Data.empty()) {
+    const auto& text = command.m_Name.Data;
+    printer.AddText(std::string_view(text.data(), text.size() - 1));
+  } else {
+    printer.Add(command.m_Name);
+  }
+  printer.Add(command.m_Location);
+  printer.Add(command.m_ArraySize);
+  printer.Add(command.m_ArrayIndex);
+  printer.Finish(m_Flush);
+}
+
 void TraceLayer::Pre(UnsupportedCommand& command) {
   CommandPrinter printer(m_Stream, m_Mutex, command, "UnsupportedCommand");
   printer.AddText(command.GetName());

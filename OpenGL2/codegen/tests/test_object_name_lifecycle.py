@@ -131,12 +131,96 @@ class WrapperForTests(unittest.TestCase):
 
 
 class ObjectNameOverrideForTests(unittest.TestCase):
+    _raw_commands: dict[str, dict] | None = None
+
+    def _raw_command(self, name: str) -> dict:
+        if ObjectNameOverrideForTests._raw_commands is None:
+            ObjectNameOverrideForTests._raw_commands = {
+                c['command_attribs']['name']: c
+                for c in extract_commands_from_registry(load_registry(Api.GL))}
+        return ObjectNameOverrideForTests._raw_commands[name]
+
+    def _assert_same_family_gen_and_is(
+            self, bind_name: str, override: ObjectNameOverride, class_: str) -> None:
+        # The replay-time name must come from the bind's own entry-point family, and the
+        # recorder confirms creation with that family's Is command.
+        suffix = re.search(r'(ARB|EXT|APPLE)$', bind_name)
+        family = suffix.group(1) if suffix else ''
+        for name in (override.gen_command, override.is_command):
+            assert name is not None
+            self.assertTrue(name.endswith(family) if family else not re.search(
+                r'(ARB|EXT|APPLE)$', name), name)
+        cmd = get_commands_from_xml_data(
+            {Api.GL: [self._raw_command(override.gen_command)]})[Api.GL][0]
+        self.assertEqual([p.type for p in cmd.params], ['GLsizei', 'GLuint *'])
+        self.assertEqual(cmd.params[1].class_, class_)
+        is_cmd = get_commands_from_xml_data(
+            {Api.GL: [self._raw_command(override.is_command)]})[Api.GL][0]
+        self.assertEqual(is_cmd.return_value.type.strip(), 'GLboolean')
+        self.assertEqual([p.type for p in is_cmd.params], ['GLuint'])
+
+    def test_implicit_create_fields_are_only_for_lookup_or_create(self) -> None:
+        with self.assertRaises(ValueError):
+            ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP_OR_CREATE)
+        with self.assertRaises(ValueError):
+            ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP,
+                               gen_command='glGenTextures', is_command='glIsTexture')
+
     def test_known_entry_is_found(self) -> None:
-        override = object_name_override_for('glBindTexture', 'texture', 'texture')
+        # glBindBuffer, not glBindTexture, is the plain-LOOKUP example here on purpose -
+        # glBindTexture is now one of the explicit ObjectNameRole.LOOKUP_OR_CREATE entries (see
+        # test_lookup_or_create_entries_resolve below), since the base GL 1.0 spec says binding
+        # a never-before-seen texture name implicitly creates it.
+        override = object_name_override_for('glBindBuffer', 'buffer', 'buffer')
         self.assertIsNotNone(override)
         assert override is not None
-        self.assertEqual(override.kind, GLObjectKind.TEXTURE)
+        self.assertEqual(override.kind, GLObjectKind.BUFFER)
         self.assertEqual(override.role, ObjectNameRole.LOOKUP)
+
+    def test_lookup_or_create_entries_resolve(self) -> None:
+        # See _EXPLICIT_OVERRIDES' own comment for exactly why each of these five (command,
+        # field) pairs is a documented exception to plain auto-derived LOOKUP: each one's own
+        # GL/extension spec text says binding a never-before-seen name implicitly creates a new
+        # object with that name, unlike the later ARB-promoted core Bind commands for the same
+        # three namespaces (glBindFramebuffer/glBindRenderbuffer/glBindVertexArray), which
+        # correctly keep plain LOOKUP. glBindVertexArrayOES is deliberately NOT here - see
+        # its own case in core_cases below and _EXPLICIT_OVERRIDES' comment on why (gl.xml
+        # aliases it directly to core glBindVertexArray, unlike its APPLE sibling here).
+        cases = [
+            ('glBindTexture', 'texture', 'texture', GLObjectKind.TEXTURE),
+            ('glBindTextureEXT', 'texture', 'texture', GLObjectKind.TEXTURE),
+            ('glBindFramebufferEXT', 'framebuffer', 'framebuffer', GLObjectKind.FRAMEBUFFER),
+            ('glBindRenderbufferEXT', 'renderbuffer', 'renderbuffer', GLObjectKind.RENDERBUFFER),
+            ('glBindVertexArrayAPPLE', 'array', 'vertex array', GLObjectKind.VERTEX_ARRAY),
+        ]
+        for command_name, field_name, class_, kind in cases:
+            with self.subTest(command=command_name):
+                override = object_name_override_for(command_name, field_name, class_)
+                self.assertIsNotNone(override)
+                assert override is not None
+                self.assertEqual(override.kind, kind)
+                self.assertEqual(override.role, ObjectNameRole.LOOKUP_OR_CREATE)
+                self._assert_same_family_gen_and_is(command_name, override, class_)
+
+        # The later, ARB-promoted core Bind commands for the same three namespaces deliberately
+        # keep plain, auto-derived LOOKUP - core FBO/renderbuffer/vertex-array spec text
+        # requires a pre-existing name from the matching Gen call, unlike the EXT/APPLE
+        # variants above. glBindVertexArrayOES joins this list (not the LOOKUP_OR_CREATE one
+        # above) because gl.xml declares it a true <alias> of glBindVertexArray itself - Khronos's
+        # own statement that the two are the identical command, not merely same-shaped ones.
+        core_cases = [
+            ('glBindFramebuffer', 'framebuffer', 'framebuffer', GLObjectKind.FRAMEBUFFER),
+            ('glBindRenderbuffer', 'renderbuffer', 'renderbuffer', GLObjectKind.RENDERBUFFER),
+            ('glBindVertexArray', 'array', 'vertex array', GLObjectKind.VERTEX_ARRAY),
+            ('glBindVertexArrayOES', 'array', 'vertex array', GLObjectKind.VERTEX_ARRAY),
+        ]
+        for command_name, field_name, class_, kind in core_cases:
+            with self.subTest(command=command_name):
+                override = object_name_override_for(command_name, field_name, class_)
+                self.assertIsNotNone(override)
+                assert override is not None
+                self.assertEqual(override.kind, kind)
+                self.assertEqual(override.role, ObjectNameRole.LOOKUP)
 
     def test_unknown_entry_is_none(self) -> None:
         # A field with no class_ at all (a plain GLenum/index/whatever, not an object name)
@@ -186,7 +270,10 @@ class ResolveObjectNameOverrideTests(unittest.TestCase):
         self.assertEqual(override.role, ObjectNameRole.DELETE)
 
     def test_everything_else_infers_lookup(self) -> None:
-        override = resolve_object_name_override('glBindTexture', 'texture', 'texture')
+        # glBindBuffer, not glBindTexture, is the auto-derivation example here on purpose - see
+        # ObjectNameOverrideForTests.test_known_entry_is_found's own comment for why
+        # glBindTexture itself no longer plain-LOOKUP-auto-derives.
+        override = resolve_object_name_override('glBindBuffer', 'buffer', 'buffer')
         assert override is not None
         self.assertEqual(override.role, ObjectNameRole.LOOKUP)
 
@@ -512,19 +599,26 @@ class GroupIdentityForCppSourceTests(unittest.TestCase):
         CODEGEN_DIR.parent / 'recorder' / 'include' / 'handleArgumentUpdaters.h')
 
     def test_group_identity_for_buckets_query_per_context(self) -> None:
+        # The per-context-bucket condition itself now lives in IsPerContextObjectKind() (pulled
+        # out of GroupIdentityFor's own body so ConfirmImplicitCreate's identity-mismatch sanity
+        # check - see that function's own comment, handleArgumentUpdaters.h - can name the same
+        # classification without duplicating the condition); GroupIdentityFor() itself now just
+        # calls it. Assert both: the condition itself (still exactly this GL-spec-derived kind
+        # list, just relocated) and that GroupIdentityFor() actually delegates to it rather than
+        # having drifted back out of sync with its own helper.
         source = self._HANDLE_ARGUMENT_UPDATERS_H.read_text(encoding='utf-8')
-        match = re.search(
-            r'inline uint64_t GroupIdentityFor\(GLObjectKind kind\) \{(.*?)\n\}',
+        helper_match = re.search(
+            r'inline bool IsPerContextObjectKind\(GLObjectKind kind\) \{(.*?)\n\}',
             source, re.DOTALL)
-        self.assertIsNotNone(match, 'GroupIdentityFor() definition not found')
-        assert match is not None
-        body = match.group(1)
+        self.assertIsNotNone(helper_match, 'IsPerContextObjectKind() definition not found')
+        assert helper_match is not None
+        helper_body = helper_match.group(1)
         condition_match = re.search(
-            r'if \((.*?GLObjectKind::Framebuffer.*?)\)\s*\{', body, re.DOTALL)
+            r'return (.*?GLObjectKind::Framebuffer.*?);', helper_body, re.DOTALL)
         self.assertIsNotNone(
             condition_match,
-            'No per-context-bucket "if (kind == GLObjectKind::Framebuffer || ...)" condition '
-            'found in GroupIdentityFor()')
+            'No per-context-bucket "kind == GLObjectKind::Framebuffer || ..." condition found '
+            'in IsPerContextObjectKind()')
         assert condition_match is not None
         condition = condition_match.group(1)
         self.assertIn('GLObjectKind::Framebuffer', condition)
@@ -536,6 +630,15 @@ class GroupIdentityForCppSourceTests(unittest.TestCase):
                       'Framebuffer/VertexArray/ProgramPipeline/TransformFeedback - query '
                       'objects are container objects never shared between contexts per the GL '
                       'spec\'s "Shared Objects and Multiple Contexts" rule')
+
+        group_identity_for_match = re.search(
+            r'inline uint64_t GroupIdentityFor\(GLObjectKind kind\) \{(.*?)\n\}',
+            source, re.DOTALL)
+        self.assertIsNotNone(group_identity_for_match, 'GroupIdentityFor() definition not found')
+        assert group_identity_for_match is not None
+        self.assertIn('IsPerContextObjectKind(kind)', group_identity_for_match.group(1),
+                      'GroupIdentityFor() must delegate to IsPerContextObjectKind() rather than '
+                      're-deriving (and risking drifting out of sync with) the same condition')
 
 
 if __name__ == '__main__':

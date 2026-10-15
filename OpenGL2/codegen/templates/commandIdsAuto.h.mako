@@ -33,6 +33,9 @@ enum class CommandId {
   // header comment (common/layer_interface/windowGeometryMetaTypes.h) for the full rationale and
   // the DX12/Vulkan precedent this mirrors.
   ID_META_WINDOW_GEOMETRY = 0xF0003,
+  // Capture-time uniform array facts for a glGetUniformLocation - see UniformArrayMetaCommand
+  // (common/layer_interface/uniformArrayMetaTypes.h).
+  ID_META_UNIFORM_ARRAY = 0xF0005,
 
   // ID_META_BEGIN + 0x500
   ID_GL_BEGIN = 0xF0500,

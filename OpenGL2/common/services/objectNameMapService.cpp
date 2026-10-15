@@ -97,6 +97,33 @@ GITSKey ObjectNameMapService::GetKey(GLObjectKind kind, uint64_t shareGroup, GLu
   return 0;
 }
 
+GITSKey ObjectNameMapService::TryGetKey(GLObjectKind kind, uint64_t shareGroup, GLuint name) {
+  if (name == 0) {
+    return 0;
+  }
+  const NameKey nameKey{shareGroup, name};
+  Bucket& bucket = BucketFor(kind);
+  std::lock_guard<std::mutex> lock(bucket.Mutex);
+  auto it = bucket.NameToKey.find(nameKey);
+  if (it != bucket.NameToKey.end()) {
+    return it->second;
+  }
+  return 0;
+}
+
+uint64_t ObjectNameMapService::FindOtherIdentityForName(GLObjectKind kind,
+                                                        uint64_t identity,
+                                                        GLuint name) {
+  Bucket& bucket = BucketFor(kind);
+  std::lock_guard<std::mutex> lock(bucket.Mutex);
+  for (const auto& entry : bucket.NameToKey) {
+    if (entry.first.Name == name && entry.first.ShareGroup != identity) {
+      return entry.first.ShareGroup;
+    }
+  }
+  return 0;
+}
+
 void ObjectNameMapService::Delete(GLObjectKind kind, uint64_t shareGroup, GLuint name) {
   if (name == 0) {
     return;
@@ -143,6 +170,19 @@ GLuint ObjectNameMapService::GetHandle(GLObjectKind kind, GITSKey key) {
     LOG_WARNING << "ObjectNameMapService: " << KindName(kind) << " key " << key
                 << " has no registered name (never created during this replay, or the "
                    "creating command has not been replayed yet)";
+  }
+  return 0;
+}
+
+GLuint ObjectNameMapService::TryGetHandle(GLObjectKind kind, GITSKey key) {
+  if (key == 0) {
+    return 0;
+  }
+  Bucket& bucket = BucketFor(kind);
+  std::lock_guard<std::mutex> lock(bucket.Mutex);
+  auto it = bucket.KeyToName.find(key);
+  if (it != bucket.KeyToName.end()) {
+    return it->second;
   }
   return 0;
 }

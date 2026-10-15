@@ -29,6 +29,7 @@ add_library(OpenGL2_recorder STATIC
   include/recursionGuard.h
   include/recorderWrappers.h
   include/shareGroupService.h
+  include/uniformArrayCaptureLayer.h
   include/unsupportedCommand.h
   include/windowGeometryTrackingLayer.h
   include/windowGeometryTrackingService.h
@@ -41,6 +42,7 @@ add_library(OpenGL2_recorder STATIC
   recorder.cpp
   recursionGuard.cpp
   shareGroupService.cpp
+  uniformArrayCaptureLayer.cpp
   unsupportedCommand.cpp
   windowGeometryTrackingLayer.cpp
   windowGeometryTrackingService.cpp

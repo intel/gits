@@ -260,6 +260,13 @@ void ${cmd.name}Runner::Run() {
 %>\
 % if p.type_facts.is_array_element_eligible:
   UpdateHandleArray(command.m_${p.name}, GLObjectKind::${kind});
+% elif resolve_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+  // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a never-seen key here is the recorder
+  // having minted one right at this same Bind call (see the recorder-side ConfirmImplicitCreate),
+  // not a stream gap, so it mints a fresh replay-time name, through this bind's own family's
+  // Gen command, instead of substituting the kUnmappedObjectName sentinel.
+  UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
+                       player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire));
 % else:
   UpdateHandle(command.m_${p.name}, GLObjectKind::${kind});
 % if purges_uniform_locations:

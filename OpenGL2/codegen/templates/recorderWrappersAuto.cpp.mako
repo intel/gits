@@ -142,6 +142,14 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // the driver has actually written into the app's buffer. std::optional defers construction
   // to the `record` branch, matching prior behavior of only building a Command when recording.
   std::optional<${cmd.name}Command> command;
+% for p in cmd.params:
+<%
+    bind_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if bind_override is not None and bind_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+  bool ${p.name}ExistedBeforeBind = false;
+% endif
+% endfor
   if (record) {
     command.emplace(static_cast<uint32_t>(GetCurrentThreadId())\
 % for p in cmd.params:
@@ -242,6 +250,12 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % if obj_override is not None and obj_override.role != ObjectNameRole.CREATE:
 % if p.type_facts.is_array_element_eligible:
     UpdateHandleArray(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif obj_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+    // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a miss here may be the real driver
+    // about to implicitly create a new object; ConfirmImplicitCreate decides after the call.
+    ${p.name}ExistedBeforeBind = UpdateHandleIfKnown(
+        command->m_${p.name}, GLObjectKind::${obj_override.kind.value},
+        g_DispatchTable.${obj_override.is_command}.load(std::memory_order_acquire));
 % else:
     UpdateHandle(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % endif
@@ -263,6 +277,17 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
   if (record) {
 % if cmd.enabled:
+% for p in cmd.params:
+<%
+    create_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if create_override is not None and create_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+    ConfirmImplicitCreate(
+        command->m_${p.name}, GLObjectKind::${create_override.kind.value},
+        g_DispatchTable.${create_override.is_command}.load(std::memory_order_acquire),
+        ${p.name}ExistedBeforeBind);
+% endif
+% endfor
 % for p in cmd.params:
 <%
     override = pointer_override_for(cmd, p.name)

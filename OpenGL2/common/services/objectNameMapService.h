@@ -95,6 +95,12 @@ enum class GLObjectKind : uint8_t {
   kCount, // Not a real bucket - array size sentinel only.
 };
 
+// Key recorded for a non-zero object name the recorder has no key for (its creation was never
+// observed). Only the key crosses the wire, so key 0 alone cannot tell such a name from name 0
+// (an unbind); the player replays this key as an invalid name instead. Never minted:
+// CaptureManager::CreateHandleKey counts up from 1.
+inline constexpr GITSKey UNMAPPED_OBJECT_NAME_KEY = ~GITSKey{0};
+
 class ObjectNameMapService {
 public:
   static ObjectNameMapService& Get();
@@ -117,6 +123,17 @@ public:
   // (e.g. glBindTexture(target, 0) unbinds the target - a normal, expected call, not a missing
   // registration).
   GITSKey GetKey(GLObjectKind kind, uint64_t shareGroup, GLuint name);
+
+  // Same lookup as GetKey, but silent on a miss: returns 0 with no warning and no
+  // WarnedMissingNames bookkeeping. For a caller for whom a miss is not a bug report at all -
+  // ObjectNameRole.LOOKUP_OR_CREATE's whole point (see handleArgumentUpdaters.h's
+  // UpdateHandleIfKnown on the recorder side, UpdateHandleOrCreate on the player side) is that
+  // the *first* reference to a
+  // given name is expected to miss, every single time, for the commands that use it - so
+  // GetKey's own one-warning-per-unique-miss deduplication would still fire exactly once per
+  // name for no reason: the caller already knows what a miss means here and handles it (by
+  // registering a fresh key) without ever needing to be told.
+  GITSKey TryGetKey(GLObjectKind kind, uint64_t shareGroup, GLuint name);
 
   // Removes a destroyed name's mapping (glDeleteTextures/glDeleteProgram/glDeleteShader) in the
   // given namespace and share group, so a later create that happens to reuse the same GLuint
@@ -196,6 +213,32 @@ public:
   // pair if it is not registered. A zero key returns 0 silently (mirrors GetKey's zero-name
   // handling above).
   GLuint GetHandle(GLObjectKind kind, GITSKey key);
+
+  // Same lookup as GetHandle, but silent on a miss - see TryGetKey's own comment above; the
+  // player-side counterpart used by UpdateHandleOrCreate for the identical reason.
+  GLuint TryGetHandle(GLObjectKind kind, GITSKey key);
+
+  // Permanent sanity check for a share-group-scoped kind's TryGetKey miss inside
+  // ConfirmImplicitCreate (recorder/include/handleArgumentUpdaters.h - see that function's own
+  // comment): scans this kind's WHOLE bucket (every identity, not just `identity`) for `name`
+  // and returns the first other identity it is registered under, or 0 if truly never seen
+  // anywhere. A real hit here means this specific "implicit create" is not the ordinary,
+  // expected "genuinely brand-new name" case - it means this exact name was already Register()'d
+  // under some OTHER identity our own bucketing computed - which, for a share-group-scoped kind,
+  // is only supposed to happen for two contexts that do NOT share (in which case the reuse of
+  // the same small integer is coincidental and harmless) or, if the two contexts DO actually
+  // share GL objects, a genuine bug in this backend's own share-group tracking (ShareGroupService/
+  // wglShareLists handling) silently duplicating what should have been one object into two. This
+  // service has no way to tell those two cases apart on its own - see ConfirmImplicitCreate's
+  // caller-side comment for why every hit is logged (not silently ignored) so a human can check
+  // per-stream whether it is the benign or the buggy case. Deliberately NOT called for a
+  // per-context kind (IsPerContextObjectKind() in handleArgumentUpdaters.h) - two sharing
+  // contexts each independently reusing a small integer for their own, deliberately non-shared
+  // per-context namespace is the ordinary, designed case there, not something worth flagging on
+  // every single multi-context stream. O(bucket size) linear scan - only runs on a
+  // LOOKUP_OR_CREATE miss (first-ever reference to a given name), never in any hot per-frame
+  // path, so this is not a perf concern at the frequency it actually runs.
+  uint64_t FindOtherIdentityForName(GLObjectKind kind, uint64_t identity, GLuint name);
 
 private:
   ObjectNameMapService() = default;

@@ -87,15 +87,14 @@ namespace gits::opengl2 {
 // each of which would need its own object-name-lifecycle/handle-mapping work before being
 // safe to enable, not just this one command - out of scope for a single-command fix. The
 // legacy backend's own
-// CGLUniformLocation additionally remaps whole *uniform arrays* by tracking each array's
-// runtime size and offsetting inactive elements to -1 (see playerRunWrap.h's
-// HandleUniformLocationMapping array branch) - that additional bookkeeping is out of scope for
-// this pass. A location value a captured application computed itself (e.g.
-// `glGetUniformLocation(prog, "arr[0]") + i` for array element i, without ever calling
-// glGetUniformLocation for that exact index) is not covered: Resolve() falls back to the raw
-// captured value with a one-time warning for any (program, location) pair it never saw
-// registered, rather than guessing - a real, but explicitly documented, limitation, not a
-// silent wrong-result risk (the warning makes the degraded case visible).
+// CGLUniformLocation additionally remaps whole *uniform arrays* (see playerRunWrap.h's
+// HandleUniformLocationMapping array branch), since an application commonly computes array
+// element locations itself (`glGetUniformLocation(prog, "arr[0]") + i`). The same is done here
+// from a UniformArrayMetaCommand (uniformArrayMetaTypes.h), which carries the array's
+// capture-time size: UniformArrayMetaRunner registers each element both drivers keep active,
+// and maps elements only the capture driver kept active to -1, which GL ignores. Any other
+// (program, location) pair Resolve() never saw registered falls back to the raw captured value
+// with a one-time warning, rather than guessing.
 //
 // Also owns simple "current program" tracking (SetCurrentProgram/GetCurrentProgram): classic,
 // non-DSA glUniform*() calls apply to whichever program is currently in use

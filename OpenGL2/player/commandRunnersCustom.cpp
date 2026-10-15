@@ -133,8 +133,12 @@ void GlGetUniformLocationRunner::Run() {
     // the live handle collides across independent, non-sharing contexts (each share group's
     // driver-assigned names start again from small integers, so two unrelated programs can both
     // be live handle 1 at the same time).
+    const GLint replayLocation = command.m_Return.Value;
     UniformLocationMapService::Get().Register(command.m_program.Key, capturedLocation,
-                                              command.m_Return.Value);
+                                              replayLocation);
+    // The other elements of a uniform array this location belongs to are registered by the
+    // UniformArrayMetaCommand the recorder records right after this command
+    // (uniformArrayMetaRunner.h): only it knows the capture-time array size.
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);

@@ -39,6 +39,7 @@
 #include "captureManager.h"
 #include "glTypes.h"
 #include "handleMapService.h"
+#include "log.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "shareGroupService.h"
@@ -95,10 +96,25 @@ inline uint64_t HandleShareGroupFor(GLsync /*handle*/) {
 // rather than by CurrentShareGroup()'s share-group id, which two sharing contexts would
 // otherwise have in common. Every other kind continues to use the share group, since those
 // object types genuinely are shared and must collide-check across the whole group.
+// Named so ConfirmImplicitCreate's identity-mismatch sanity check below can tell the two cases
+// apart without duplicating this list: for a per-context kind, a LOOKUP_OR_CREATE miss finding
+// the same name under a *different* identity is completely ordinary (any second context - sharing
+// or not - independently reusing a small integer for its own, deliberately non-shared FBO/VAO/
+// query/etc.) and not worth ever reporting. For a share-group-scoped kind, the exact same
+// situation is NOT expected by design - a genuine implicit-create miss should only ever be a
+// name nobody in this share group has ever touched - so finding it registered under some other
+// identity is at least worth a permanent, low-noise flag for whoever looks at that stream's log,
+// even though it turned out benign (an unrelated, non-sharing second context reusing the same
+// small integer) the one time this was actually chased down (see ConfirmImplicitCreate's own
+// comment for that investigation and why a single clean stream cannot rule this out in general).
+inline bool IsPerContextObjectKind(GLObjectKind kind) {
+  return kind == GLObjectKind::Framebuffer || kind == GLObjectKind::VertexArray ||
+         kind == GLObjectKind::ProgramPipeline || kind == GLObjectKind::TransformFeedback ||
+         kind == GLObjectKind::Query;
+}
+
 inline uint64_t GroupIdentityFor(GLObjectKind kind) {
-  if (kind == GLObjectKind::Framebuffer || kind == GLObjectKind::VertexArray ||
-      kind == GLObjectKind::ProgramPipeline || kind == GLObjectKind::TransformFeedback ||
-      kind == GLObjectKind::Query) {
+  if (IsPerContextObjectKind(kind)) {
     auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
     return reinterpret_cast<uint64_t>(realFunction ? realFunction() : nullptr);
   }
@@ -144,12 +160,17 @@ inline void UpdateOutputHandle(HandleArgument<HandleT>& arg) {
 // glDeleteProgram/glDeleteShader's about-to-be-destroyed name - see object_name_lifecycle.py's
 // LOOKUP/DELETE roles, both of which need this same pre-call lookup). A zero name (e.g.
 // glBindTexture(target, 0) to unbind) is left at key 0 without a lookup or warning, mirroring
-// UpdateHandle(HandleArgument<HGLRC>&)'s null-handle handling above exactly.
+// UpdateHandle(HandleArgument<HGLRC>&)'s null-handle handling above exactly. A non-zero name
+// without a key (GetKey warns) gets UNMAPPED_OBJECT_NAME_KEY, so replay does not turn it into
+// name 0.
 inline void UpdateHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
   if (arg.Value == 0) {
     return;
   }
   arg.Key = ObjectNameMapService::Get().GetKey(kind, GroupIdentityFor(kind), arg.Value);
+  if (arg.Key == 0) {
+    arg.Key = UNMAPPED_OBJECT_NAME_KEY;
+  }
 }
 
 // New-name create for a single GL object name (glCreateProgram/glCreateShader's return value -
@@ -162,6 +183,87 @@ inline void UpdateOutputHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
   }
   arg.Key = CaptureManager::Get().CreateHandleKey();
   ObjectNameMapService::Get().Register(kind, GroupIdentityFor(kind), arg.Value, arg.Key);
+}
+
+// Before the real call of a LOOKUP_OR_CREATE bind (see object_name_lifecycle.py's
+// ObjectNameRole.LOOKUP_OR_CREATE for the commands and why): resolves an already-registered name
+// and leaves Key 0 for a never-seen one without warning, since the bind may create it.
+// ConfirmImplicitCreate decides after the call. A zero name (unbind) is left alone.
+//
+// `isObject` is the bind family's own glIs* entry point. Returns whether a never-seen name was
+// already an object before the bind - one created before capture started, or by an unsupported
+// command - which ConfirmImplicitCreate must not mistake for one the bind itself created.
+template <typename IsObjectFn>
+inline bool UpdateHandleIfKnown(HandleArgument<GLuint>& arg,
+                                GLObjectKind kind,
+                                IsObjectFn isObject) {
+  if (arg.Value == 0) {
+    return false;
+  }
+  arg.Key = ObjectNameMapService::Get().TryGetKey(kind, GroupIdentityFor(kind), arg.Value);
+  return arg.Key == 0 && isObject != nullptr && isObject(arg.Value) != GL_FALSE;
+}
+
+// After the real call of a LOOKUP_OR_CREATE bind whose name UpdateHandleIfKnown did not find:
+// `isObject` is the bind family's own glIs* entry point and `existedBefore` is
+// UpdateHandleIfKnown's result. Only a name that was not an object before the bind and is one
+// now was implicitly created by it; a fresh key is then registered like an ordinary Gen call's
+// result. Otherwise this is an ordinary lookup miss - the bind was rejected (a core profile's
+// unknown texture or buffer name), or bound an object this capture never saw created: GetKey
+// warns and Key becomes UNMAPPED_OBJECT_NAME_KEY, so replay binds an invalid name and is rejected
+// instead of silently binding a fresh, empty object.
+//
+// Permanent sanity check (not stream-specific - runs on every capture, not just the one this was
+// first chased down on): a real target application's captured stream's "implicit create" hits
+// for GLObjectKind::Framebuffer were, on inspection, entirely explained by IsPerContextObjectKind's
+// own designed behavior (two sharing-but-FBO-non-shared contexts each legitimately owning their
+// own small integer), not a bug - but that is one topology, on one stream, and proves nothing
+// about every other app's context-sharing pattern this backend will ever capture. For a
+// share-group-scoped kind specifically (Texture/Renderbuffer, currently the only two
+// LOOKUP_OR_CREATE kinds that are NOT per-context), the identical situation is NOT an expected
+// outcome by this service's own design - a genuine implicit create should only ever be a name no
+// context in this share group has ever touched - so ObjectNameMapService::FindOtherIdentityForName
+// checks every single time this path runs (not just when manually investigating a specific
+// warning count) and logs a permanent, one-line-per-hit flag whenever it finds one, so this class
+// of "did we just silently duplicate an already-shared object instead of really implicit-
+// creating one" risk is visible in every future stream's log by construction, not something that
+// has to be manually re-derived per stream the way it was here.
+template <typename IsObjectFn>
+inline void ConfirmImplicitCreate(HandleArgument<GLuint>& arg,
+                                  GLObjectKind kind,
+                                  IsObjectFn isObject,
+                                  bool existedBefore) {
+  if (arg.Value == 0 || arg.Key != 0) {
+    return;
+  }
+  const uint64_t groupIdentity = GroupIdentityFor(kind);
+  ObjectNameMapService& service = ObjectNameMapService::Get();
+  if (existedBefore || isObject == nullptr || isObject(arg.Value) == GL_FALSE) {
+    arg.Key = service.GetKey(kind, groupIdentity, arg.Value);
+    if (arg.Key == 0) {
+      arg.Key = UNMAPPED_OBJECT_NAME_KEY;
+    }
+    return;
+  }
+  if (!IsPerContextObjectKind(kind)) {
+    const uint64_t otherIdentity = service.FindOtherIdentityForName(kind, groupIdentity, arg.Value);
+    if (otherIdentity != 0) {
+      LOG_WARNING << "ConfirmImplicitCreate: GLObjectKind " << static_cast<int>(kind) << " name "
+                  << arg.Value << " was implicitly created under identity " << groupIdentity
+                  << ", but the SAME name is already registered under a "
+                  << "DIFFERENT identity " << otherIdentity
+                  << " - if these two identities' contexts actually share GL objects with "
+                     "each other, this is a real bug (a shared object silently duplicated "
+                     "instead of resolved) rather than a legitimate implicit create; if they "
+                     "are genuinely independent, non-sharing contexts that happen to reuse "
+                     "the same small integer, this is expected and harmless - see this "
+                     "function's own header comment for how to tell the two apart";
+    }
+  }
+  // Never seen before (under this identity) and now an object - the bind created it, so it is
+  // registered exactly as UpdateOutputHandle does for an ordinary Gen call's result.
+  arg.Key = CaptureManager::Get().CreateHandleKey();
+  service.Register(kind, groupIdentity, arg.Value, arg.Key);
 }
 
 // Existing-name lookup for an array of GL object names (glDeleteTextures' `textures` - see
