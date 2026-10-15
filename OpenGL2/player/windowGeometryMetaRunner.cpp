@@ -9,13 +9,26 @@
 #include "windowGeometryMetaRunner.h"
 
 #include "hdcVirtualizationService.h"
+#include "layerAuto.h"
+#include "playerManager.h"
 
 namespace gits::opengl2 {
 
 void WindowGeometryMetaRunner::Run() {
-  HdcVirtualizationService::Get().SetGeometry(command.m_X.Value, command.m_Y.Value,
-                                              command.m_Width.Value, command.m_Height.Value,
-                                              command.m_Visible.Value);
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    HdcVirtualizationService::Get().SetGeometry(command.m_X.Value, command.m_Y.Value,
+                                                command.m_Width.Value, command.m_Height.Value,
+                                                command.m_Visible.Value);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 } // namespace gits::opengl2

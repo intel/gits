@@ -11,6 +11,9 @@ ${AUTO_GENERATED_HEADER}
 
 #include "commandsAuto.h"
 #include "layerBase.h"
+#include "mappedDataMetaTypes.h"
+#include "unsupportedCommandTypes.h"
+#include "windowGeometryMetaTypes.h"
 
 namespace gits::opengl2 {
 
@@ -48,6 +51,25 @@ public:
   }
 % endif
 % endfor
+
+  virtual void Pre(MappedDataMetaCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(MappedDataMetaCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
+  virtual void Pre(UnsupportedCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(UnsupportedCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
+  virtual void Pre(WindowGeometryMetaCommand& command) {
+    Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(WindowGeometryMetaCommand& command) {
+    Post(static_cast<Command&>(command));
+  }
 };
 
 } // namespace gits::opengl2

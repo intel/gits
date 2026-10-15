@@ -17,21 +17,16 @@ namespace gits::opengl2 {
 
 // Hand-written base for the generated `Layer` (see layerAuto.h, added by
 // docs/development/opengl2-layer-architecture-alignment-plan.md): generic Pre/Post
-// hooks, run for every generated, enabled API command - NOT literally every captured command:
-// a handful of meta-commands are built and recorded directly via
-// CaptureManager::RecordCommand(), bypassing GetPreLayers()/GetPostLayers() (and therefore
-// every Pre/Post hook, generic or typed) entirely - see
-// CaptureManager::RecordUnsupportedCommand() (captureManager.cpp) for UnsupportedCommand (an
-// unsupported/disabled call, recorded as a passthrough placeholder instead of a typed command)
-// and RecordMappedDataMetaCommand() (mapTrackingService.cpp) for MappedDataMetaCommand (a
-// glUnmapBuffer-adjacent data snapshot with no corresponding GL call of its own to hang a
-// generated wrapper off of). `layerAuto.h` adds, for every enabled command only (per
+// hooks, run for every generated, enabled API command and every backend-specific player-side
+// meta-command. Meta-commands are built directly rather than generated from an API registry, so
+// layerAuto.h's template declares their typed overloads explicitly. `layerAuto.h` adds, for every
+// enabled command only (per
 // modern-opengl-backend-architecture.md's "Use enabled-only typed layers with generic
 // fallbacks"), a typed `Pre(FooCommand&)`/`Post(FooCommand&)` override pair on top of this
 // class, each with a default body that simply forwards to the generic hooks declared here - so
-// a logging/metrics layer needs only one override here to see every enabled command routed
-// through the normal generated wrapper/runner path, while specialized layers can still opt
-// into a typed overload for compile-time parameter access.
+// a logging/metrics layer needs only one override here to see every command routed through a
+// layer path, while specialized layers can still opt into a typed overload for compile-time
+// parameter access.
 //
 // Deliberately its own, separately-named class rather than being named `Layer` itself: a fresh
 // codegen run regenerates layerAuto.h's entire typed-overload surface from scratch every build

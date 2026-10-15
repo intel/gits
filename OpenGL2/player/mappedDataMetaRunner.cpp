@@ -10,20 +10,18 @@
 
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
+#include "layerAuto.h"
 #include "log.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
+#include "playerManager.h"
 
 #include <cstring>
 
 namespace gits::opengl2 {
 
-void MappedDataMetaRunner::Run() {
-  // Fills command.m_Buffer.Value from the decoded .Key via the pre-existing key->live-GLuint
-  // direction (player/include/handleArgumentUpdaters.h) - no service changes needed, per the
-  // plan doc's Decision 6. A never-registered key logs its own warning inside UpdateHandle/
-  // ObjectNameMapService::GetHandle and leaves Value at 0.
-  UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
+namespace {
+void ReplayMappedData(MappedDataMetaCommand& command) {
   const GLuint buffer = command.m_Buffer.Value;
   if (buffer == 0) {
     LOG_WARNING << "MappedDataMetaRunner: buffer key " << command.m_Buffer.Key
@@ -57,6 +55,23 @@ void MappedDataMetaRunner::Run() {
   }
 
   realBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(previousBinding));
+}
+} // namespace
+
+void MappedDataMetaRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    ReplayMappedData(command);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 
 } // namespace gits::opengl2

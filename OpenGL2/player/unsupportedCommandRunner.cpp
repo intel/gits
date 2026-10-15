@@ -8,13 +8,20 @@
 
 #include "unsupportedCommandRunner.h"
 
+#include "layerAuto.h"
 #include "log.h"
+#include "playerManager.h"
 
 #include <unordered_set>
 
 namespace gits::opengl2 {
 
 void UnsupportedCommandRunner::Run() {
+  auto& manager = PlayerManager::Get();
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
   // StreamReader::Run() calls every block's runners sequentially from one thread (see
   // streamReader.cpp) - unlike the recorder's ReportUnsupportedCommand, which must tolerate
   // concurrent GL calls from multiple application threads and so uses a
@@ -24,6 +31,10 @@ void UnsupportedCommandRunner::Run() {
   if (alreadyWarnedNames.insert(command.GetName()).second) {
     LOG_WARNING << "Replay skipped unsupported OpenGL command (degraded fidelity): "
                 << command.GetName();
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
   }
 }
 
