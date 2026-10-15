@@ -126,6 +126,65 @@ TextureLevel QueryLevel(GLenum imageTarget, GLint level) {
   return info;
 }
 
+// Compressed images read with glGetCompressedTexImage can differ from the uploaded data. Their
+// blocks copied into the texels of an uncompressed texture of the same size read back exactly.
+// Images that are not a whole number of blocks are read directly.
+void ReadCompressedImage(GLenum target,
+                         GLuint texture,
+                         GLenum imageTarget,
+                         GLint level,
+                         const TextureLevel& info,
+                         std::vector<uint8_t>& data,
+                         bool copy) {
+  GLint blockWidth = 0;
+  GLint blockHeight = 0;
+  if (copy) {
+    const auto format = static_cast<GLenum>(info.InternalFormat);
+    GL_FN(glGetInternalformativ)
+    (GL_TEXTURE_2D, format, GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
+    GL_FN(glGetInternalformativ)
+    (GL_TEXTURE_2D, format, GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT, 1, &blockHeight);
+  }
+  const GLsizei width = info.Width;
+  const GLsizei height = std::max(info.Height, 1);
+  const GLsizei layers = std::max(info.Depth, 1);
+  const bool whole =
+      blockWidth > 0 && blockHeight > 0 && width % blockWidth == 0 && height % blockHeight == 0;
+  const GLsizei columns = whole ? width / blockWidth : 0;
+  const GLsizei rows = whole ? height / blockHeight : 0;
+  // The block size follows from the image size.
+  const size_t blocks = static_cast<size_t>(columns) * rows * layers;
+  const size_t blockSize = blocks > 0 && data.size() % blocks == 0 ? data.size() / blocks : 0;
+  if (blockSize != 8 && blockSize != 16) {
+    GL_FN(glGetCompressedTexImage)(imageTarget, level, data.data());
+    return;
+  }
+  const bool wide = blockSize == 16;
+  const GLint face =
+      target == GL_TEXTURE_CUBE_MAP ? static_cast<GLint>(imageTarget - CUBE_MAP_FACES[0]) : 0;
+  // A 3D texture can be deeper than an array texture can have layers, so the layers are copied
+  // in parts.
+  const GLsizei maxLayers = std::max(GetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS), 1);
+  const size_t layerSize = static_cast<size_t>(columns) * rows * blockSize;
+  const GLuint bound = GetName(GL_TEXTURE_BINDING_2D_ARRAY);
+  for (GLsizei first = 0; first < layers; first += maxLayers) {
+    const GLsizei count = std::min(maxLayers, layers - first);
+    GLuint uncompressed = 0;
+    GL_FN(glGenTextures)(1, &uncompressed);
+    GL_FN(glBindTexture)(GL_TEXTURE_2D_ARRAY, uncompressed);
+    GL_FN(glTexStorage3D)
+    (GL_TEXTURE_2D_ARRAY, 1, wide ? GL_RGBA32UI : GL_RG32UI, columns, rows, count);
+    GL_FN(glCopyImageSubData)
+    (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+     width, height, count);
+    GL_FN(glGetTexImage)
+    (GL_TEXTURE_2D_ARRAY, 0, wide ? GL_RGBA_INTEGER : GL_RG_INTEGER, GL_UNSIGNED_INT,
+     data.data() + first * layerSize);
+    GL_FN(glDeleteTextures)(1, &uncompressed);
+  }
+  GL_FN(glBindTexture)(GL_TEXTURE_2D_ARRAY, bound);
+}
+
 // Levels above log2 of the maximum size are invalid to query.
 GLint MaxLevels(GLenum target) {
   if (target == GL_TEXTURE_RECTANGLE) {
@@ -587,7 +646,11 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
       PixelFormat pixelFormat{};
       if (info.Compressed) {
         data.resize(static_cast<size_t>(std::max(info.CompressedSize, 0)));
-        GL_FN(glGetCompressedTexImage)(imageTarget, level, data.data());
+        const bool copy = m_Version.AtLeast(4, 3) ||
+                          (m_Version.AtLeast(3, 0) && HasExtension("GL_ARB_copy_image") &&
+                           HasExtension("GL_ARB_texture_storage") &&
+                           HasExtension("GL_ARB_internalformat_query2"));
+        ReadCompressedImage(target, name, imageTarget, level, info, data, copy);
       } else {
         pixelFormat = ReadbackFormat(imageTarget, level, m_Version.Compatibility);
         data.resize(width * height * depth * pixelFormat.PixelSize);
