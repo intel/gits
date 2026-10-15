@@ -368,14 +368,15 @@ class TypeFactsTests(unittest.TestCase):
             # POINTER_PARAM_OVERRIDES entry (see pointer_metadata.py), so this moved here from
             # disabled_cases below once array/pointer coder support (scale_pointer) landed.
             'wglCreateContextAttribsARB',
+            # (HDC, const PIXELFORMATDESCRIPTOR *pPfd) - pPfd now has a POINTER_PARAM_OVERRIDES
+            # entry (FIXED_COUNT, mirroring SetPixelFormat/DescribePixelFormat's own `ppfd`), so
+            # this moved here from disabled_cases below - see pointer_metadata.py's own comment
+            # on the ('ChoosePixelFormat', 'pPfd') entry for why.
+            'ChoosePixelFormat',
         )
-        # Still disabled: has a genuine pointer-to-data parameter that neither opaque-handle
-        # nor array/pointer coder support addresses (a PIXELFORMATDESCRIPTOR struct pointer -
-        # not a memcpy-safe scalar element type, so is_array_element_eligible is false and no
-        # POINTER_PARAM_OVERRIDES entry could apply regardless).
-        disabled_cases = (
-            'ChoosePixelFormat',           # (HDC, const PIXELFORMATDESCRIPTOR *)
-        )
+        # No remaining disabled cases in this test for now - kept as an empty tuple (rather than
+        # deleted) so a future genuinely-uncapturable WGL shape has an obvious place to land.
+        disabled_cases: tuple[str, ...] = ()
 
         registry = load_registry(Api.WGL)
         raw_commands = extract_commands_from_registry(registry)

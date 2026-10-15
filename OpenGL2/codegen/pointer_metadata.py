@@ -173,6 +173,29 @@ class LengthSourceKind(StrEnum):
         # GL_PATCH_DEFAULT_OUTER_LEVEL, 2 for GL_PATCH_DEFAULT_INNER_LEVEL (the only two legal
         # pnames). See gits::opengl2::ComputePatchParameterValueCount() (pixelTransferSize.h).
         # IN direction only today - see _validate_pointer_override's own direction check.
+    MATERIAL_PARAMETER_VALUE_COUNT = 'material_parameter_value_count'  # length_source_value is
+        # unused (None); instead the extra `pname_param` field names the sibling `pname` enum
+        # param glMaterialfv's len="COMPSIZE(pname)" value count actually depends on: 4 for
+        # GL_AMBIENT/GL_DIFFUSE/GL_SPECULAR/GL_EMISSION/GL_AMBIENT_AND_DIFFUSE, 1 for
+        # GL_SHININESS, 3 for GL_COLOR_INDEXES - verified exhaustively against every
+        # third_party/OpenGL-Registry/xml/gl.xml <enum> tag carrying group="MaterialParameter"
+        # (the exact group glMaterialfv's own `pname` <param> carries; `face`'s own
+        # group="TriangleFace" plays no part in the value count). See gits::opengl2::
+        # ComputeMaterialParameterValueCount() (pixelTransferSize.h). IN direction only - see
+        # _validate_pointer_override's own direction check. This was part of the concrete
+        # "playback skipped unsupported OpenGL command: glMaterialfv" gap (black-screen replay,
+        # fixed-function lighting material state never replayed) reported against a real
+        # capture.
+    POINT_PARAMETER_VALUE_COUNT = 'point_parameter_value_count'  # length_source_value is
+        # unused (None); instead the extra `pname_param` field names the sibling `pname` enum
+        # param glPointParameterfv's len="COMPSIZE(pname)" value count actually depends on: 3
+        # for GL_POINT_DISTANCE_ATTENUATION, 1 for GL_POINT_SIZE_MIN/GL_POINT_SIZE_MAX/
+        # GL_POINT_FADE_THRESHOLD_SIZE - verified exhaustively against every
+        # third_party/OpenGL-Registry/xml/gl.xml <enum> tag carrying
+        # group="PointParameterNameARB" (the exact group glPointParameterfv's own `pname`
+        # <param> carries). See gits::opengl2::ComputePointParameterValueCount()
+        # (pixelTransferSize.h). IN direction only - see _validate_pointer_override's own
+        # direction check.
     VERTEX_ATTRIB_PARAMETER_VALUE_COUNT = 'vertex_attrib_parameter_value_count'  # length_source_
         # value is unused (None); instead the extra `pname_param` field names the sibling
         # `pname` enum param glGetVertexAttribiv's own gl.xml len="4" annotation mis-describes
@@ -238,10 +261,11 @@ class PointerParamOverride:
     clear_buffer_param: str | None = None
 
     # Only meaningful when length_source_kind is TEX_SAMPLER_PARAMETER_VALUE_COUNT,
-    # PATCH_PARAMETER_VALUE_COUNT, or VERTEX_ATTRIB_PARAMETER_VALUE_COUNT - the sibling
-    # `pname` enum param name ComputeTexOrSamplerParameterValueCount()/
-    # ComputePatchParameterValueCount()/ComputeVertexAttribParameterValueCount() needs. None
-    # for every other kind.
+    # PATCH_PARAMETER_VALUE_COUNT, MATERIAL_PARAMETER_VALUE_COUNT, POINT_PARAMETER_VALUE_COUNT,
+    # or VERTEX_ATTRIB_PARAMETER_VALUE_COUNT - the sibling `pname` enum param name
+    # ComputeTexOrSamplerParameterValueCount()/ComputePatchParameterValueCount()/
+    # ComputeMaterialParameterValueCount()/ComputePointParameterValueCount()/
+    # ComputeVertexAttribParameterValueCount() needs. None for every other kind.
     pname_param: str | None = None
 
     # True when this IN-direction
@@ -326,6 +350,13 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glBufferSubData', 'data'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
+    # glNamedBufferSubDataEXT aliases glNamedBufferSubData (gl.xml: <alias name=
+    # "glNamedBufferSubData"/>) - this entry enables both via _pointer_override_for_command_or_alias's
+    # alias fallback, mirroring glBufferSubData's own entry immediately above exactly (same
+    # (offset, size, data) shape, just DSA-addressed by buffer name instead of bound target).
+    ('glNamedBufferSubData', 'data'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='size'),
     ('glGetUniformLocation', 'name'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     ('glBindAttribLocation', 'name'): PointerParamOverride(
@@ -357,6 +388,29 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
 
+    # ChoosePixelFormat's `pPfd`: the app's REQUESTED PIXELFORMATDESCRIPTOR (an IN struct, not
+    # OUT like DescribePixelFormat's own `ppfd` below) - same single-struct FIXED_COUNT shape as
+    # SetPixelFormat's `ppfd` above, just a different param name (`pPfd`, capital P) and a
+    # different verb (a pure query the app typically feeds into a following SetPixelFormat call,
+    # not a mutation) - see opengl2-player-skeleton-plan.md's Decision 9, which originally left
+    # this one unsupported alongside the other pixel-format *query* commands (nothing in this
+    # backend's replay model consumed a query's result) but is revised by the same real-capture
+    # evidence this override responds to: a real application
+    # calls plain `ChoosePixelFormat`/`wglChoosePixelFormat`, not just `wglChoosePixelFormatARB`.
+    # This is also the SECOND renamed-and-overridden command (`SetPixelFormat` above was the
+    # first) - Decision 9's own "Revisit when" names this exact trigger ("a second renamed-and-
+    # overridden command ever needs a pointer override") as the point to replace this
+    # dual-registration workaround with a real fix in intermediates_creator.py/generator.py
+    # instead of one more per-entry pair; not done here to keep this a targeted, minimal-risk
+    # addition, but tracked as a real, now-doubly-motivated follow-up rather than deferred
+    # speculation.
+    ('ChoosePixelFormat', 'pPfd'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('wglChoosePixelFormat', 'pPfd'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+
     # Buffer-relative offsets disguised as pointers (see
     # docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's offset-vs-pointer
     # decision): captured as a bit pattern, never dereferenced - see
@@ -368,6 +422,30 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glDrawElementsInstanced', 'indices'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
     ('glDrawElementsInstancedBaseVertex', 'indices'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    # glDrawElementsBaseVertex(mode, count, type, indices, basevertex): identical `indices` shape
+    # to glDrawElements above (gl.xml: same `len="COMPSIZE(count,type)"` const void* pointer) -
+    # `basevertex` is a plain GLint scalar needing no override, same as glDrawElementsInstanced-
+    # BaseVertex's own `basevertex`. Missing table entry only.
+    ('glDrawElementsBaseVertex', 'indices'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+
+    # Legacy fixed-function client vertex-array pointers (glVertexPointer/glColorPointer/
+    # glNormalPointer/glTexCoordPointer/glSecondaryColorPointer): gl.xml gives each `pointer`
+    # the identical `const void *` + `len="COMPSIZE(...)"` shape as glVertexAttribPointer's own
+    # `pointer` above, and the exact same client-memory-pointer-or-GL_ARRAY_BUFFER-relative-
+    # byte-offset duality (these predate generic vertex attributes but share GL_ARRAY_BUFFER
+    # binding semantics via glBindBuffer since GL 1.5) - same OPAQUE_BIT_PATTERN shape, missing
+    # table entries only. `size`/`type`/`stride` on each are plain scalars needing no override.
+    ('glVertexPointer', 'pointer'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    ('glColorPointer', 'pointer'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    ('glNormalPointer', 'pointer'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    ('glTexCoordPointer', 'pointer'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    ('glSecondaryColorPointer', 'pointer'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
 
     # glMultiDrawElementsBaseVertex(mode, count, type, indices, drawcount, basevertex): all
@@ -609,6 +687,17 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='imageSize',
         unpack_pbo_guard=True),
+    # glCompressedTextureSubImage2DEXT (GL_EXT_direct_state_access) has no <alias> in gl.xml to
+    # any core command (EXT DSA predates ARB/core DSA's differently-shaped equivalent, which
+    # drops the redundant `target` param) - needs its own entry, not just an alias fallback.
+    # Same len="imageSize" sibling shape as glCompressedTexSubImage2D above; its pointer param
+    # is named `bits` instead of `data` (gl.xml's own naming for this one command), and the same
+    # GL_PIXEL_UNPACK_BUFFER-binding ambiguity applies regardless of bind-vs-DSA addressing, so
+    # unpack_pbo_guard=True carries over unchanged.
+    ('glCompressedTextureSubImage2DEXT', 'bits'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='imageSize',
+        unpack_pbo_guard=True),
     ('glCompressedTexSubImage3D', 'data'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='imageSize',
@@ -759,6 +848,24 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glPatchParameterfv', 'values'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT, pname_param='pname'),
+
+    # glMaterialfv's `params`: len="COMPSIZE(pname)", genuinely pname-dependent (4 for
+    # GL_AMBIENT/GL_DIFFUSE/GL_SPECULAR/GL_EMISSION/GL_AMBIENT_AND_DIFFUSE, 1 for
+    # GL_SHININESS, 3 for GL_COLOR_INDEXES) - see
+    # LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT's own comment and gits::opengl2::
+    # ComputeMaterialParameterValueCount() (pixelTransferSize.h). `face` (group="TriangleFace")
+    # is a plain scalar sibling playing no part in the value count, needing no override.
+    ('glMaterialfv', 'params'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT, pname_param='pname'),
+
+    # glPointParameterfv's `params`: len="COMPSIZE(pname)", genuinely pname-dependent (3 for
+    # GL_POINT_DISTANCE_ATTENUATION, 1 for GL_POINT_SIZE_MIN/GL_POINT_SIZE_MAX/
+    # GL_POINT_FADE_THRESHOLD_SIZE) - see LengthSourceKind.POINT_PARAMETER_VALUE_COUNT's own
+    # comment and gits::opengl2::ComputePointParameterValueCount() (pixelTransferSize.h).
+    ('glPointParameterfv', 'params'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.POINT_PARAMETER_VALUE_COUNT, pname_param='pname'),
 
     # glUniform4dv/glUniformMatrix4dv/glProgramUniform4dv/glProgramUniformMatrix4dv/
     # glProgramUniformMatrix4fv's `value` USED TO have manual entries here too (the

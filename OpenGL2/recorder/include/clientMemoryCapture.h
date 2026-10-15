@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "glTypes.h"
+
 namespace gits::opengl2 {
 
 // Guards against treating a pixel-transfer "pointer" as client memory when it is actually a
@@ -92,6 +94,11 @@ bool PackPixelsPointerIsBufferOffset(const void* pixels);
 // companion m_paramsRawPointer field, so a bound query buffer's real offset still replays
 // against the correct byte range instead of silently defaulting to offset 0.
 const void* GuardQueryBufferPointer(const char* commandName, const void* params);
+
+// glGetBufferParameteriv of the buffer bound to `target`, through the core entry point or, on a
+// context exposing only ARB_vertex_buffer_object, glGetBufferParameterivARB. False (and `value`
+// untouched) if neither resolved.
+bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value);
 
 // Note: pixelTransferSize.h's QueryUnpackAlignment()/QueryPackAlignment() are declared there
 // (shared common/layer_interface code) but DEFINED in this file's .cpp, not this header - see

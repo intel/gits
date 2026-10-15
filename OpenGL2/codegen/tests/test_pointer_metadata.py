@@ -376,6 +376,53 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         # Should not raise.
         _validate_pointer_override('glPatchParameterfv', param, override, other_params=[pname])
 
+    def test_material_parameter_value_count_rejects_tex_sampler_family(self) -> None:
+        # glMaterialfv has no sibling family at all (like glPatchParameterfv) - a
+        # MATERIAL_PARAMETER_VALUE_COUNT override must never set tex_sampler_family.
+        param = Parameter(name='params', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT,
+            pname_param='pname', tex_sampler_family=TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glMaterialfv', param, override, other_params=[pname])
+
+    def test_material_parameter_value_count_accepts_no_tex_sampler_family(self) -> None:
+        param = Parameter(name='params', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        # Should not raise.
+        _validate_pointer_override('glMaterialfv', param, override, other_params=[pname])
+
+    def test_point_parameter_value_count_rejects_out_direction(self) -> None:
+        # glPointParameterfv is a setter, like glPatchParameterfv/glMaterialfv - IN only.
+        param = Parameter(name='params', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT,
+            length_source_kind=LengthSourceKind.POINT_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glPointParameterfv', param, override, other_params=[pname])
+
+    def test_point_parameter_value_count_accepts_in_direction(self) -> None:
+        param = Parameter(name='params', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.POINT_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        # Should not raise.
+        _validate_pointer_override('glPointParameterfv', param, override, other_params=[pname])
+
 
 class PointerNeedsRawOffsetCaptureTests(unittest.TestCase):
     """Unit tests for pointer_needs_raw_offset_capture() (generator_helpers.py) - which
@@ -495,6 +542,51 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
+    def test_arb_ext_aliases_of_already_enabled_commands_are_enabled(self) -> None:
+        # gl.xml's <alias name="..."/> marks each of these ARB/EXT-suffixed pre-promotion
+        # entry points as a byte-for-byte functional duplicate of an already-enabled core
+        # command (glDeleteBuffersARB/glGenBuffersARB/glBufferDataARB/
+        # glVertexAttribPointerARB/glCompressedTexImage2DARB -> glDeleteBuffers/glGenBuffers/
+        # glBufferData/glVertexAttribPointer/glCompressedTexImage2D; glGenFramebuffersEXT ->
+        # glGenFramebuffers) - see _pointer_override_for_command_or_alias's own comment
+        # (intermediates_creator.py) for why this makes them enabled from the SAME
+        # POINTER_PARAM_OVERRIDES entry as their alias target, with no new table row of their
+        # own. This was the concrete "playback skipped unsupported OpenGL command:
+        # glDeleteBuffersARB/glMapBufferARB/..." gap.
+        for name in (
+            'glDeleteBuffersARB',
+            'glGenBuffersARB',
+            'glBufferDataARB',
+            'glVertexAttribPointerARB',
+            'glCompressedTexImage2DARB',
+            'glGenFramebuffersEXT',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_glmapbufferarb_stays_disabled_pending_its_alias_target(self) -> None:
+        # glMapBufferARB's alias, glMapBuffer, is itself deliberately NOT enabled at this
+        # (Python, pointer_metadata.py-driven) layer - its return value is a live mapped
+        # pointer, which pointer_metadata.py's PointerParamOverride/LengthSourceKind vocabulary
+        # has no way to express for a *return* value at all (only for parameters - see
+        # OPAQUE_BIT_PATTERN's own scoping). The alias fallback only ever inherits an override
+        # that already exists for the alias target - it cannot make a command whose own alias
+        # is disabled newly enabled, so this one correctly stays disabled=False here.
+        #
+        # This does NOT mean glMapBuffer/glMapBufferARB have no capture support at all: both
+        # gained real, hand-written support via CustomWrapper_glMapBuffer/glMapBufferARB
+        # (OpenGL2/recorder/mapTrackingWrappers.cpp), which bypasses this enabled flag entirely
+        # by intercepting the recorder's per-name wrapper dispatch directly - see
+        # docs/development/opengl2-buffer-map-tracking-plan.md's Decision 3 (this is exactly
+        # the same mechanism glMapBufferRange itself already uses - also enabled=False here for
+        # the identical "return value is a live pointer" reason - and the same reason
+        # glUnmapBuffer's own generated wrapper, despite being enabled=True here, is unused
+        # dead code in practice: Decision 3's dispatch-level override intercepts its name too).
+        # This test only asserts what this Python layer alone would produce; it says nothing
+        # about whether the command is actually captured end-to-end.
+        self.assertFalse(self._get_command(Api.GL, 'glMapBuffer').enabled)
+        self.assertFalse(self._get_command(Api.GL, 'glMapBufferARB').enabled)
+
     def test_wgl_create_context_attribs_arb_is_enabled(self) -> None:
         self.assertTrue(
             self._get_command(Api.WGL, 'wglCreateContextAttribsARB').enabled
@@ -515,6 +607,56 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         for name in ('glVertexAttribPointer', 'glDrawElements'):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_legacy_client_vertex_array_pointers_are_enabled(self) -> None:
+        # glVertexPointer/glColorPointer/glNormalPointer/glTexCoordPointer/
+        # glSecondaryColorPointer's `pointer` share glVertexAttribPointer's exact
+        # OPAQUE_BIT_PATTERN shape - see pointer_metadata.py's own comment on these entries.
+        # This was part of the concrete "playback skipped unsupported OpenGL command" gap
+        # (black-screen replay).
+        for name in (
+            'glVertexPointer',
+            'glColorPointer',
+            'glNormalPointer',
+            'glTexCoordPointer',
+            'glSecondaryColorPointer',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_draw_elements_base_vertex_is_enabled(self) -> None:
+        # glDrawElementsBaseVertex's `indices` shares glDrawElements' exact OPAQUE_BIT_PATTERN
+        # shape; `basevertex` is a plain GLint scalar needing no override.
+        self.assertTrue(self._get_command(Api.GL, 'glDrawElementsBaseVertex').enabled)
+
+    def test_material_and_point_parameter_commands_are_enabled(self) -> None:
+        # glMaterialfv/glPointParameterfv's value count depends on the `pname` enum's value -
+        # see LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT/POINT_PARAMETER_VALUE_COUNT's own
+        # comments. This was part of the concrete "playback skipped unsupported OpenGL
+        # command: glMaterialfv/glPointParameterfv" gap (black-screen replay, fixed-function
+        # lighting/point-sprite state never replayed).
+        for name in ('glMaterialfv', 'glPointParameterfv'):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_named_buffer_sub_data_commands_are_enabled(self) -> None:
+        # glNamedBufferSubDataEXT aliases glNamedBufferSubData (gl.xml: <alias name=
+        # "glNamedBufferSubData"/>) - one table entry on the core name enables both via the
+        # alias fallback. Same SIBLING_PARAM('size') shape as glBufferSubData's own entry, just
+        # DSA-addressed. Part of the DSA buffer/texture content-upload gap (buffers allocated
+        # and bound correctly but never filled with real content -> visual corruption on
+        # replay).
+        for name in ('glNamedBufferSubData', 'glNamedBufferSubDataEXT'):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_compressed_texture_sub_image_2d_ext_is_enabled(self) -> None:
+        # glCompressedTextureSubImage2DEXT (GL_EXT_direct_state_access) has no gl.xml <alias> to
+        # any core command - needs its own explicit table entry, unlike glNamedBufferSubDataEXT
+        # above. Same len="imageSize" SIBLING_PARAM shape as glCompressedTexSubImage2D, with the
+        # pointer param named `bits` instead of `data`.
+        self.assertTrue(
+            self._get_command(Api.GL, 'glCompressedTextureSubImage2DEXT').enabled)
 
     def test_multi_draw_elements_base_vertex_is_enabled(self) -> None:
         # See pointer_metadata.py's LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY - `indices` must
@@ -645,7 +787,11 @@ class EndToEndEnabledGateTests(unittest.TestCase):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
 
     def test_wgl_pixel_format_commands_are_enabled(self) -> None:
-        for name in ('DescribePixelFormat', 'wglGetPixelFormatAttribivARB'):
+        for name in (
+            'DescribePixelFormat',
+            'wglGetPixelFormatAttribivARB',
+            'ChoosePixelFormat',
+        ):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.WGL, name).enabled)
 
@@ -654,6 +800,25 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         for name in ('wglGetExtensionsStringARB', 'wglGetExtensionsStringEXT'):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.WGL, name).enabled)
+
+    def test_named_buffer_sub_data_commands_are_enabled(self) -> None:
+        # glNamedBufferSubDataEXT aliases glNamedBufferSubData (gl.xml's own <alias> tag) - one
+        # POINTER_PARAM_OVERRIDES entry on the core name enables both via
+        # _pointer_override_for_command_or_alias's alias fallback. Part of the same replay-log
+        # gap analysis as glMaterialfv/glPointParameterfv above (DSA buffer-content upload never
+        # replayed, contributing to visual corruption once the vertex-array-pointer family was
+        # separately fixed).
+        for name in ('glNamedBufferSubData', 'glNamedBufferSubDataEXT'):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_compressed_texture_sub_image_2d_ext_is_enabled(self) -> None:
+        # glCompressedTextureSubImage2DEXT (GL_EXT_direct_state_access) has no <alias> in gl.xml
+        # to any core command - needs its own POINTER_PARAM_OVERRIDES entry, not just an alias
+        # fallback. Same len="imageSize" sibling shape as glCompressedTexSubImage2D, just DSA-
+        # addressed and named `bits` instead of `data`.
+        self.assertTrue(
+            self._get_command(Api.GL, 'glCompressedTextureSubImage2DEXT').enabled)
 
 
 if __name__ == '__main__':

@@ -224,18 +224,23 @@ def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | N
 def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride | None:
     """Resolve a (command, param) pointer classification, for use directly from Mako templates
     (see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako/commandRunnersAuto.cpp.mako). An
-    explicit POINTER_PARAM_OVERRIDES entry always wins; if none exists, falls back first to
-    pixel_transfer_metadata.py's derive_pixel_transfer_override() for the one narrow,
-    exhaustively-audited COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes, then
-    to uniform_setter_metadata.py's derive_uniform_setter_override() for the glUniform*v/
+    explicit POINTER_PARAM_OVERRIDES entry for `cmd.name` always wins; if none exists, falls
+    back to `cmd.alias`'s entry for the same param_name (see intermediates_creator.py's
+    _pointer_override_for_command_or_alias - gl.xml's <alias name="..."/> marks `cmd` as a
+    byte-for-byte functional duplicate of `cmd.alias`'s command, e.g. glDeleteBuffersARB's
+    alias is glDeleteBuffers, so glDeleteBuffers' own already-validated `buffers` entry applies
+    unchanged); if still none, falls back to pixel_transfer_metadata.py's
+    derive_pixel_transfer_override() for the one narrow, exhaustively-audited
+    COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes, then to
+    uniform_setter_metadata.py's derive_uniform_setter_override() for the glUniform*v/
     glProgramUniform*v/glUniformMatrix*v/glProgramUniformMatrix*v sibling-family shape it
     recognizes, then to tex_sampler_parameter_metadata.py's
     derive_tex_sampler_parameter_override() for the glTexParameter*v/glSamplerParameter*v
     sibling-family shape it recognizes (see each module's own header comment for exactly what
     it requires before returning non-None). This mirrors intermediates_creator.py's
-    _is_param_capturable, which gates the `enabled` flag with the exact same precedence
-    (explicit table, then each fallback in the same order) - a command's generated code and
-    its enabled-ness must never disagree about which override applies, or a Mako template
+    _is_param_capturable, which gates the `enabled` flag with the exact same precedence (own
+    entry, then alias entry, then each fallback in the same order) - a command's generated code
+    and its enabled-ness must never disagree about which override applies, or a Mako template
     would either silently drop a real override or try to use one _is_param_capturable never
     validated.
 
@@ -244,6 +249,8 @@ def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride 
     shape references), which only the full param list provides.
     """
     override = POINTER_PARAM_OVERRIDES.get((cmd.name, param_name))
+    if override is None and cmd.alias is not None:
+        override = POINTER_PARAM_OVERRIDES.get((cmd.alias, param_name))
     if override is not None:
         return override
     param = next((p for p in cmd.params if p.name == param_name), None)

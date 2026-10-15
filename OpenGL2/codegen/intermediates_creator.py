@@ -408,6 +408,7 @@ def _validate_pointer_override(
                 )
     elif override.length_source_kind in (
         LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT,
+        LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT, LengthSourceKind.POINT_PARAMETER_VALUE_COUNT,
     ):
         if override.length_source_value is not None:
             raise ValueError(
@@ -444,12 +445,13 @@ def _validate_pointer_override(
             )
         # tex_sampler_family is TEX_SAMPLER_PARAMETER_VALUE_COUNT-only - it
         # disambiguates GL_TEXTURE_SWIZZLE_RGBA's family-dependent legality (see
-        # pointer_metadata.py's TexOrSamplerParameterFamily comment), which
-        # PATCH_PARAMETER_VALUE_COUNT has no equivalent of at all (glPatchParameterfv is the
-        # only command in that family - see tex_sampler_parameter_metadata.py's own header
-        # comment). Enforce both halves explicitly rather than silently ignoring a
-        # mismatched/missing field on either kind - a broken table/derivation entry is a bug,
-        # matching every other check in this function.
+        # pointer_metadata.py's TexOrSamplerParameterFamily comment), which none of
+        # PATCH_PARAMETER_VALUE_COUNT/MATERIAL_PARAMETER_VALUE_COUNT/
+        # POINT_PARAMETER_VALUE_COUNT has an equivalent of at all (each is the only command in
+        # its own family - see tex_sampler_parameter_metadata.py's own header comment).
+        # Enforce both halves explicitly rather than silently ignoring a mismatched/missing
+        # field on either kind - a broken table/derivation entry is a bug, matching every other
+        # check in this function.
         if override.length_source_kind is LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
             if override.tex_sampler_family is None:
                 raise ValueError(
@@ -458,7 +460,7 @@ def _validate_pointer_override(
                 )
         elif override.tex_sampler_family is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: PATCH_PARAMETER_VALUE_COUNT override must not "
+                f"{command_name}.{param.name}: {override.length_source_kind} override must not "
                 f"set tex_sampler_family - only TEX_SAMPLER_PARAMETER_VALUE_COUNT uses it"
             )
     elif override.length_source_kind is LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT:
@@ -613,7 +615,45 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
             and resolve_object_name_override(command_name, field.name, field.class_) is None)
 
 
-def _is_param_capturable(command_name: str, param: Parameter, other_params: list[Parameter]) -> bool:
+def _pointer_override_for_command_or_alias(
+    command_name: str, param_name: str, alias: str | None,
+) -> PointerParamOverride | None:
+    """POINTER_PARAM_OVERRIDES lookup that falls back to `alias`'s entry for the same
+    `param_name` when `command_name` has no entry of its own.
+
+    gl.xml's <alias name="..."/> element (Command.alias, populated in
+    get_commands_from_xml_data() below) marks `command_name` as a byte-for-byte functional
+    duplicate of `alias`'s command - the same underlying entry point under a pre-promotion
+    extension name (e.g. glDeleteBuffersARB/glGenBuffersARB/glBufferDataARB/
+    glVertexAttribPointerARB/glCompressedTexImage2DARB alias their later-promoted-to-core
+    glDeleteBuffers/glGenBuffers/glBufferData/glVertexAttribPointer/glCompressedTexImage2D, and
+    glGenFramebuffersEXT aliases glGenFramebuffers), not merely a similarly-named, independently
+    -shaped command - so an already-validated POINTER_PARAM_OVERRIDES entry keyed to the alias
+    target applies unchanged. This makes an entire family of ARB/EXT/OES-suffixed names
+    capturable from ONE hand-authored table entry (the promoted core command's own), instead of
+    requiring a byte-for-byte duplicate entry per suffixed name - the "generic" fix; see
+    modern-opengl-backend-architecture.md's command-support-contract section.
+
+    Does not change validation: _validate_pointer_override is still called (by every caller of
+    this function) with `command_name`'s OWN param/other_params, so an alias whose actual
+    gl.xml shape (len=, sibling names) has drifted from its target is still caught, never
+    silently trusted just because the alias link exists.
+
+    Deliberately not extended to ARRAY_OF_ARRAYS_PARAM_OVERRIDES: no currently-known ARB/EXT
+    alias needs the doubly-indirect shape that table covers. Extend the same way here if one
+    ever does.
+    """
+    override = POINTER_PARAM_OVERRIDES.get((command_name, param_name))
+    if override is not None:
+        return override
+    if alias is None:
+        return None
+    return POINTER_PARAM_OVERRIDES.get((alias, param_name))
+
+
+def _is_param_capturable(
+    command_name: str, param: Parameter, other_params: list[Parameter], alias: str | None = None,
+) -> bool:
     """Whether a single parameter is safe to capture: a fixed-size scalar/enum, an opaque
     native handle, a native handle GITS gives a real GITSKey mapping (see TypeFacts.is_scalar /
     is_opaque_handle / is_mapped_handle); a parameter absorbed into a sibling's ArrayOfArrays<T>
@@ -622,9 +662,11 @@ def _is_param_capturable(command_name: str, param: Parameter, other_params: list
     -indirect pointer (is_array_of_arrays_eligible) with a validated
     ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry; or a pointer to a memcpy-safe element type
     (is_array_element_eligible) that also has an explicit, validated POINTER_PARAM_OVERRIDES
-    entry (see pointer_metadata.py and "Classify payloads from evidence" -  direction/length
-    are never inferred from the type alone). A pointer parameter with no override entry simply
-    stays uncapturable; that is always the safe outcome.
+    entry, either `command_name`'s own or (see _pointer_override_for_command_or_alias)
+    inherited from `alias` (see pointer_metadata.py and "Classify payloads from evidence" -
+    direction/length are never inferred from the type alone). A pointer parameter with no
+    override entry (own or inherited) simply stays uncapturable; that is always the safe
+    outcome.
 
     On top of all of that, ANY of the above shapes is only actually capturable if it is not a
     GL object name missing its required OBJECT_NAME_PARAM_OVERRIDES entry - see
@@ -640,7 +682,7 @@ def _is_param_capturable(command_name: str, param: Parameter, other_params: list
         return not _requires_object_name_override(command_name, param)
     if param.name in consumed_pointer_params(command_name):
         return True
-    override = POINTER_PARAM_OVERRIDES.get((command_name, param.name))
+    override = _pointer_override_for_command_or_alias(command_name, param.name, alias)
     if override is not None and override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
         # Checked before is_array_of_arrays_eligible below on purpose: structurally this is a
         # pointer_depth == 2 `const void* const*` field exactly like glShaderSource's `string`
@@ -664,7 +706,7 @@ def _is_param_capturable(command_name: str, param: Parameter, other_params: list
         return False
     if _requires_object_name_override(command_name, param):
         return False
-    override = POINTER_PARAM_OVERRIDES.get((command_name, param.name))
+    override = _pointer_override_for_command_or_alias(command_name, param.name, alias)
     if override is None:
         # Explicit table entry always wins; only fall back to the generic
         # COMPSIZE(format,type,<dims>) pixel-transfer auto-derivation when this (command,
@@ -733,7 +775,9 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
 })
 
 
-def _is_fully_capturable_command(command_name: str, return_value: ReturnValue, params: list[Parameter]) -> bool:
+def _is_fully_capturable_command(
+    command_name: str, return_value: ReturnValue, params: list[Parameter], alias: str | None = None,
+) -> bool:
     """Whether every param and the return value can be captured (see _is_param_capturable).
 
     Return-value pointers stay entirely out of scope this increment (see
@@ -744,6 +788,14 @@ def _is_fully_capturable_command(command_name: str, return_value: ReturnValue, p
 
     Also unconditionally rejects any command named in _FORCE_DISABLED_COMMANDS above, regardless
     of how capturable its shape looks otherwise - see that table's own comment.
+
+    `alias` is this command's gl.xml <alias name="..."/> target if it has one (e.g.
+    glDeleteBuffersARB's alias is "glDeleteBuffers") - passed through to
+    _is_param_capturable/_validate_object_name_overrides so a POINTER_PARAM_OVERRIDES entry
+    keyed to the promoted core name also covers the ARB/EXT/OES alias that has no entry of its
+    own. Return-value capturability itself needs no alias fallback: every currently-enabled
+    return value is a plain scalar/opaque/mapped-handle shape that never consults
+    POINTER_PARAM_OVERRIDES at all.
     """
     if command_name in _FORCE_DISABLED_COMMANDS:
         return False
@@ -752,8 +804,8 @@ def _is_fully_capturable_command(command_name: str, return_value: ReturnValue, p
         return False
     if _requires_object_name_override(command_name, return_value):
         return False
-    _validate_object_name_overrides(command_name, return_value, params)
-    return all(_is_param_capturable(command_name, p, params) for p in params)
+    _validate_object_name_overrides(command_name, return_value, params, alias)
+    return all(_is_param_capturable(command_name, p, params, alias) for p in params)
 
 
 # ObjectNameRole -> the PointerDirection an array-shaped field with that role must also carry
@@ -767,6 +819,7 @@ _EXPECTED_POINTER_DIRECTION_FOR_ROLE: dict[ObjectNameRole, PointerDirection] = {
 
 def _validate_object_name_override(
     command_name: str, param_name: str, type_facts: TypeFacts, override: ObjectNameOverride,
+    alias: str | None = None,
 ) -> None:
     """Raise ValueError if a resolved object-name override doesn't match this field's actual
     shape - mirrors _validate_pointer_override's precedent: a broken classification is a
@@ -782,11 +835,12 @@ def _validate_object_name_override(
                 f"scalar object-name fields today - no enabled command needs an "
                 f"array-of-existing-names lookup yet"
             )
-        pointer_override = POINTER_PARAM_OVERRIDES.get((command_name, param_name))
+        pointer_override = _pointer_override_for_command_or_alias(command_name, param_name, alias)
         if pointer_override is None:
             raise ValueError(
                 f"{command_name}.{param_name}: object-name array field with no matching "
-                f"POINTER_PARAM_OVERRIDES entry"
+                f"POINTER_PARAM_OVERRIDES entry (checked {command_name!r}"
+                f"{f' and alias {alias!r}' if alias else ''})"
             )
         expected_direction = _EXPECTED_POINTER_DIRECTION_FOR_ROLE[override.role]
         if pointer_override.direction != expected_direction:
@@ -808,26 +862,28 @@ def _validate_object_name_override(
 
 
 def _validate_object_name_overrides(
-    command_name: str, return_value: ReturnValue, params: list[Parameter],
+    command_name: str, return_value: ReturnValue, params: list[Parameter], alias: str | None = None,
 ) -> None:
     """Validate every resolved object-name override that actually matters for this command's
     generated code - see _validate_object_name_override.
 
     Restricted to a field that is either scalar (always capturable, always uses its override
     if one resolves) or array-eligible with a matching POINTER_PARAM_OVERRIDES entry already
-    present (meaning pointer_metadata.py has independently decided this array field is genuinely
+    present, own or inherited from `alias` (see _pointer_override_for_command_or_alias) -
+    meaning pointer_metadata.py has independently decided this array field is genuinely
     captured, so its object-name classification will actually reach generated code too). An
-    array-eligible field with no POINTER_PARAM_OVERRIDES entry stays uncapturable regardless of
-    what resolve_object_name_override() says about its kind/role (see _is_param_capturable's own
-    pointer-override check) - validating it here anyway would reject a perfectly fine (kind,
-    role) pair (e.g. auto-derivation's LOOKUP-role `buffers` on glBindBuffersBase) purely because
-    nobody has separately wired up a pointer_metadata.py entry for it yet, an entirely different,
-    independent gap this function has no business raising about. This distinction did not exist
-    before object-name auto-derivation: every one of the old hand-written table's ~80 entries
-    happened to already satisfy it by construction (whoever added an entry made sure it was
-    either scalar or paired with a matching pointer override), so this filter was previously
-    unnecessary - auto-derivation produces classifications for hundreds of fields with no such
-    per-entry curation, so the filter now has to be explicit.
+    array-eligible field with no POINTER_PARAM_OVERRIDES entry (own or inherited) stays
+    uncapturable regardless of what resolve_object_name_override() says about its kind/role
+    (see _is_param_capturable's own pointer-override check) - validating it here anyway would
+    reject a perfectly fine (kind, role) pair (e.g. auto-derivation's LOOKUP-role `buffers` on
+    glBindBuffersBase) purely because nobody has separately wired up a pointer_metadata.py
+    entry for it yet, an entirely different, independent gap this function has no business
+    raising about. This distinction did not exist before object-name auto-derivation: every one
+    of the old hand-written table's ~80 entries happened to already satisfy it by construction
+    (whoever added an entry made sure it was either scalar or paired with a matching pointer
+    override), so this filter was previously unnecessary - auto-derivation produces
+    classifications for hundreds of fields with no such per-entry curation, so the filter now
+    has to be explicit.
     """
     for field in (return_value, *params):
         override = resolve_object_name_override(command_name, field.name, field.class_)
@@ -836,9 +892,10 @@ def _validate_object_name_overrides(
         facts = field.type_facts
         reaches_codegen = (facts.is_scalar or
                             (facts.is_array_element_eligible and
-                             (command_name, field.name) in POINTER_PARAM_OVERRIDES))
+                             _pointer_override_for_command_or_alias(
+                                 command_name, field.name, alias) is not None))
         if reaches_codegen:
-            _validate_object_name_override(command_name, field.name, facts, override)
+            _validate_object_name_override(command_name, field.name, facts, override, alias)
 
 
 # APIs the Windows interceptor actually forwards today (see generator_interceptor.py's
@@ -876,8 +933,9 @@ def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) ->
             )
 
             command_name = command_attribs['name']
+            alias = raw_command['alias_attribs'].get('name')
             enabled = (api in _INTERCEPTED_APIS
-                       and _is_fully_capturable_command(command_name, return_value, params))
+                       and _is_fully_capturable_command(command_name, return_value, params, alias))
 
             commands.append(Command(
                 name=command_name,
@@ -885,7 +943,7 @@ def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) ->
                 enabled=enabled,
                 command_type=CmdType.NONE,
                 comment=command_attribs.get('comment'),
-                alias=raw_command['alias_attribs'].get('name'),
+                alias=alias,
                 return_value=return_value,
                 params=params,
             ))

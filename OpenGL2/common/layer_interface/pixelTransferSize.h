@@ -322,6 +322,24 @@ uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname, TexOrSamplerParame
 // default) for any other `pname` value rather than 0.
 uint32_t ComputePatchParameterValueCount(GLenum pname);
 
+// Computes the element count of glMaterialfv's `params` array (gl.xml's COMPSIZE(pname)
+// pseudo-length) - see pointer_metadata.py's LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT.
+// 4 for GL_AMBIENT/GL_DIFFUSE/GL_SPECULAR/GL_EMISSION/GL_AMBIENT_AND_DIFFUSE, 1 for
+// GL_SHININESS, 3 for GL_COLOR_INDEXES - the only 7 legal pnames (verified exhaustively
+// against every third_party/OpenGL-Registry/xml/gl.xml <enum> tag carrying
+// group="MaterialParameter"). Returns 1 (a safe, non-zero default matching
+// ComputeClearBufferValueCount()'s own fallback convention) for any other `pname` value.
+uint32_t ComputeMaterialParameterValueCount(GLenum pname);
+
+// Computes the element count of glPointParameterfv's `params` array (gl.xml's
+// COMPSIZE(pname) pseudo-length) - see pointer_metadata.py's
+// LengthSourceKind.POINT_PARAMETER_VALUE_COUNT. 3 for GL_POINT_DISTANCE_ATTENUATION, 1 for
+// GL_POINT_SIZE_MIN/GL_POINT_SIZE_MAX/GL_POINT_FADE_THRESHOLD_SIZE - the only 4 legal pnames
+// (verified exhaustively against every third_party/OpenGL-Registry/xml/gl.xml <enum> tag
+// carrying group="PointParameterNameARB"). Returns 1 (a safe, non-zero default) for any other
+// `pname` value.
+uint32_t ComputePointParameterValueCount(GLenum pname);
+
 // Computes the element count of glGetVertexAttribiv's `params` array - see pointer_metadata.py's
 // LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT. Unlike every other
 // COMPSIZE(pname)-shaped helper above, this is NOT a gl.xml COMPSIZE annotation at all - gl.xml

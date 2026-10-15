@@ -463,6 +463,37 @@ uint32_t ComputePatchParameterValueCount(GLenum pname) {
   }
 }
 
+uint32_t ComputeMaterialParameterValueCount(GLenum pname) {
+  switch (pname) {
+  case 0x1200: // GL_AMBIENT
+  case 0x1201: // GL_DIFFUSE
+  case 0x1202: // GL_SPECULAR
+  case 0x1600: // GL_EMISSION
+  case 0x1602: // GL_AMBIENT_AND_DIFFUSE
+    return 4;
+  case 0x1601: // GL_SHININESS
+    return 1;
+  case 0x1603: // GL_COLOR_INDEXES - ambient, diffuse, specular color indices (color-index mode
+               // lighting)
+    return 3;
+  default:
+    return 1; // See this function's own header comment.
+  }
+}
+
+uint32_t ComputePointParameterValueCount(GLenum pname) {
+  switch (pname) {
+  case 0x8129: // GL_POINT_DISTANCE_ATTENUATION
+    return 3;
+  case 0x8126: // GL_POINT_SIZE_MIN
+  case 0x8127: // GL_POINT_SIZE_MAX
+  case 0x8128: // GL_POINT_FADE_THRESHOLD_SIZE
+    return 1;
+  default:
+    return 1; // See this function's own header comment.
+  }
+}
+
 uint32_t ComputeVertexAttribParameterValueCount(GLenum pname) {
   switch (pname) {
   case 0x8626: // GL_CURRENT_VERTEX_ATTRIB - the sole 4-element member of VertexAttribPropertyARB

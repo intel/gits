@@ -167,6 +167,16 @@ TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family =
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
 ## only - see _validate_pointer_override's own direction check for this kind.
 , m_${p.name}(${arg_expr}, ComputePatchParameterValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT:
+## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
+## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
+## only - see _validate_pointer_override's own direction check for this kind.
+, m_${p.name}(${arg_expr}, ComputeMaterialParameterValueCount(${override.pname_param}))\
+% elif override.length_source_kind == LengthSourceKind.POINT_PARAMETER_VALUE_COUNT:
+## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
+## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
+## only - see _validate_pointer_override's own direction check for this kind.
+, m_${p.name}(${arg_expr}, ComputePointParameterValueCount(${override.pname_param}))\
 % else:
 ## Passed as the sibling's own type verbatim, times length_multiplier as a plain int
 ## (no unsigned 'u' suffix) - no cast needed here at all: ArrayArgument<T>/

@@ -448,4 +448,16 @@ GLint QueryPackSkipPixels() {
   return value;
 }
 
+bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
+  auto get = g_DispatchTable.glGetBufferParameteriv.load(std::memory_order_acquire);
+  if (get == nullptr) {
+    get = g_DispatchTable.glGetBufferParameterivARB.load(std::memory_order_acquire);
+  }
+  if (get == nullptr) {
+    return false;
+  }
+  get(target, pname, &value);
+  return true;
+}
+
 } // namespace gits::opengl2
