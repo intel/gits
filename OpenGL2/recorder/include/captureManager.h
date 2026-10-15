@@ -10,12 +10,14 @@
 
 #include "arguments.h"
 #include "command.h"
+#include "log.h"
 #include "orderingRecorder.h"
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <utility>
 #include <vector>
 
 namespace gits::opengl2 {
@@ -59,6 +61,33 @@ public:
 
   uint64_t CreateCommandKey() {
     return m_CommandKey.fetch_add(1, std::memory_order_relaxed) + 1;
+  }
+
+  // Atomically reserves TWO consecutive, strictly-increasing keys as one indivisible unit - a
+  // single fetch_add(2), not two separate CreateCommandKey() calls - so no OTHER thread's own
+  // CreateCommandKey()/CreateCommandKeyPair() call can ever observe (or be assigned) a key
+  // value that falls between the pair returned here; the pair is exclusively owned by this
+  // call's caller from the instant fetch_add returns. Returns {first, first + 1}.
+  //
+  // Exists specifically so a wrapper that must reserve its OWN command's ordering key AND a
+  // second, synthetic command's key that has to sort strictly BEFORE it (e.g.
+  // recorderWrappersAuto.cpp.mako's PRE_HOOK_KEY_PAIR_COMMANDS handling for
+  // WindowGeometryTrackingLayer - see that table's own header comment) can do so at THE SAME
+  // wrapper-entry point a single CreateCommandKey() call would otherwise occupy - preserving
+  // this command's own relative dispatch-order position versus every OTHER, independently-
+  // recording thread exactly as if only one key had been reserved here (see CreateCommandKey's
+  // own header comment on RecordCommand for why that position matters), while *also*
+  // guaranteeing the earlier of the two keys is available, up front, for the synthetic command
+  // - with no possibility of a third party's key landing between them. Deliberately NOT the
+  // same shape as UpdateCommandKey() used to be (see git history: SkipCommandKey() followed by
+  // a separate, later CreateCommandKey() call) - that pattern reserves the "later" key only
+  // AFTER the original single key was already fixed relative to every concurrent thread, so a
+  // thread that raced in in-between could end up sandwiched between the two, silently
+  // reordering this command relative to one it had originally out-raced. Reserving both keys
+  // together, up front, before either is ever exposed to another thread, has no such window.
+  std::pair<uint64_t, uint64_t> CreateCommandKeyPair() {
+    const uint64_t first = m_CommandKey.fetch_add(2, std::memory_order_relaxed) + 1;
+    return {first, first + 1};
   }
 
   // Independent counter from CreateCommandKey() above - mirrors Vulkan's CaptureManager,
@@ -119,23 +148,35 @@ public:
   // higher-keyed command from ever reaching the stream.
   void SkipCommandKey(uint64_t key);
 
-  // Re-keys an already-key-reserved command to a NEW, strictly later key than any key minted
-  // so far - mirrors DirectX's identically-named CaptureManager::UpdateCommandKey (DirectX/
-  // recorder/captureManager.h). Skips `command.m_Key`'s current (pre-dispatch-reserved, see
-  // recorderWrappersAuto.cpp.mako's own header comment) key - it will never be filled now -
-  // and mints a fresh one in its place.
-  //
-  // Used when a Pre-layer hook needs to record a SEPARATE, synthetic command (e.g.
-  // WindowGeometryTrackingLayer's WindowGeometryMetaCommand) that must decode/replay BEFORE
-  // the command it is hooked on: minting the synthetic command's own key first and then
-  // pushing the hooked command's key later (via this method) is the only way to achieve that
-  // ordering, since CreateCommandKey() is a monotonically-increasing counter - a key handed
-  // out later can never sort earlier than one handed out before it. Calling this bumps the
-  // hooked command later than it would otherwise have been (a small, deliberate trade-off:
-  // see the call site's own comment for why this is safe for that specific hook).
-  void UpdateCommandKey(Command& command) {
-    SkipCommandKey(command.m_Key);
-    command.m_Key = CreateCommandKey();
+  // Thread-local handoff from a generated Wrapper_<cmd> (recorderWrappersAuto.cpp.mako's
+  // PRE_HOOK_KEY_PAIR_COMMANDS handling) to the Pre layer that consumes the SPARE key of a
+  // CreateCommandKeyPair() reservation - today, exclusively WindowGeometryTrackingLayer's four
+  // hooked WGL commands (see that layer's own header comment). thread_local, not a single
+  // shared slot: the wrapper sets this immediately before entering the (whole-process-shared)
+  // Pre layer loop, on the SAME thread that will consume it a few lines later, with no other
+  // GITS code running on that thread in between - so there is no cross-thread interference to
+  // guard against, and every call that sets this is matched by exactly one TakePendingPreHookKey()
+  // call before the next one is ever set (enforced by the asserts below, not just documented).
+  void SetPendingPreHookKey(uint64_t key) {
+    GITS_ASSERT(s_PendingPreHookKey == 0);
+    s_PendingPreHookKey = key;
+  }
+
+  // Consumes (reads AND clears) the key set by SetPendingPreHookKey() above - "clears" matters
+  // just as much as "reads" here: it is what lets the next SetPendingPreHookKey() call's own
+  // assert actually catch a real bug (two reservations on the same thread with no consumption
+  // in between) instead of silently overwriting a still-pending key. Asserts the key was
+  // actually set - a Pre() override that calls this MUST correspond 1:1 with a
+  // PRE_HOOK_KEY_PAIR_COMMANDS entry that always calls SetPendingPreHookKey() first (see that
+  // table's own header comment); 0 can otherwise never be a real key (CreateCommandKeyPair()'s
+  // own m_CommandKey counter starts at 0 and only ever hands out fetch_add results plus 1, so
+  // the smallest key it can ever produce is 1), so it doubles as a safe "never actually set"
+  // sentinel.
+  uint64_t TakePendingPreHookKey() {
+    GITS_ASSERT(s_PendingPreHookKey != 0);
+    const uint64_t key = s_PendingPreHookKey;
+    s_PendingPreHookKey = 0;
+    return key;
   }
 
   std::vector<Layer*>& GetPreLayers() {
@@ -169,6 +210,12 @@ private:
   std::atomic<GITSKey> m_HandleKey{0};
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
+
+  // See SetPendingPreHookKey()/TakePendingPreHookKey() above for the full contract. A plain
+  // `static thread_local` data member (one instance per thread, not per CaptureManager
+  // instance - there is only ever one CaptureManager instance anyway, see Get()) rather than a
+  // non-static member, since C++ does not allow a non-static thread_local class member at all.
+  static thread_local uint64_t s_PendingPreHookKey;
 };
 
 } // namespace gits::opengl2

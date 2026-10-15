@@ -24,6 +24,32 @@ from intermediates import Command
 # header comment for why a single generic table, not a per-consumer union of per-type modules,
 # is the right shape now that a second mapped-handle type has actually shown up.
 
+# Commands whose Wrapper_<cmd> must reserve its ordering key TOGETHER with a second, "spare"
+# key - via CaptureManager::CreateCommandKeyPair(), one atomic fetch_add(2), not two separate
+# CreateCommandKey() calls - rather than the single CreateCommandKey() every other command
+# reserves. Exclusively WindowGeometryTrackingLayer's four hooked WGL commands today (see that
+# layer's own header comment, OpenGL2/recorder/include/windowGeometryTrackingLayer.h): each may
+# need to record a SEPARATE, synthetic WindowGeometryMetaCommand that must decode/replay
+# strictly BEFORE the hooked call itself, and the only race-free way to guarantee that ordering
+# is to reserve both keys as one indivisible unit at the SAME wrapper-entry point a single
+# CreateCommandKey() call would otherwise occupy - see CreateCommandKeyPair()'s own header
+# comment (OpenGL2/recorder/include/captureManager.h) for why reserving them separately, at two
+# different points in time (the pattern this table replaced), cannot give the same guarantee.
+#
+# recorderWrappersAuto.cpp.mako's own header comment covers the exact generated shape; the
+# short version: for a command in this set, the spare (first, smaller) key of the pair is
+# handed to CaptureManager::SetPendingPreHookKey() immediately, on the same thread, before this
+# wrapper's own Pre layer loop runs - WindowGeometryTrackingLayer::Pre() is the only consumer,
+# via TakePendingPreHookKey() - and the second (larger) key becomes this wrapper's own
+# `orderingKey`, used exactly like every other command's single reserved key from here on.
+#
+# A plain Python set, not a dict, unlike CONTEXT_SHARE_PARAM/SHARE_LISTS_COMMANDS above:
+# membership alone is everything the template needs here (there is no per-command payload to
+# carry - every entry is handled completely uniformly).
+PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
+    'wglSetPixelFormat', 'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
+})
+
 
 def generate_recorder_files(commands: list[Command]) -> None:
     """Generate forwarding wrappers and real-driver dispatch for interceptor commands."""
@@ -37,7 +63,8 @@ def generate_recorder_files(commands: list[Command]) -> None:
                handle_param_to_erase_on_success=HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
                mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES,
                context_share_param=CONTEXT_SHARE_PARAM,
-               share_lists_commands=SHARE_LISTS_COMMANDS)
+               share_lists_commands=SHARE_LISTS_COMMANDS,
+               pre_hook_key_pair_commands=PRE_HOOK_KEY_PAIR_COMMANDS)
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,
     # last-registered Post layer, dispatched through by the wrapper above via its
     # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.

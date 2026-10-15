@@ -22,10 +22,14 @@
 // WGL command's own, though: every generated wrapper (recorderWrappersAuto.cpp.mako) reserves
 // and assigns its command's ordering key BEFORE invoking any Pre layer, precisely so
 // concurrent top-level calls on different threads get keys in dispatch order. By the time
-// Pre(wglMakeCurrentCommand&) below runs, `command.m_Key` is therefore already reserved and
-// smaller than whatever CreateCommandKey() would hand out next - so a naive
-// CaptureManager::CreateCommandKey() call from inside CaptureIfChanged() would always give the
-// geometry command a LARGER key, not a smaller one.
+// Pre(wglMakeCurrentCommand&) below runs, `command.m_Key` is therefore already reserved - so a
+// naive CaptureManager::CreateCommandKey() call from inside WindowGeometryTrackingService's own
+// capture method would always give the geometry command a LARGER key than `command`'s own,
+// not a smaller one; and a naive
+// "skip the old key, mint a fresh one, later" fix for THAT (this class's own git history) is
+// itself racy against a concurrent thread's own key reservation - see
+// CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for exactly
+// why.
 //
 // This matters on replay two ways. First: HdcVirtualizationService::Resolve() (which creates
 // the player's window, today at a hardcoded 640x480) is only ever triggered by a
@@ -35,11 +39,18 @@
 // immediately, with no growing. Second: a resize/move/visibility change sampled for the SAME
 // present it is hooked on (wglSwapBuffers/wglSwapLayerBuffers) must reach
 // WindowGeometryMetaRunner no later than that present - otherwise the change applies one frame
-// late. Both cases need the exact same fix: every Pre() override below pushes the HOOKED
-// command's key later, via CaptureManager::UpdateCommandKey() - mirroring DirectX's identical
-// idiom (see that method's own header comment) - whenever CaptureIfChanged() actually recorded
-// a geometry command. That leaves the geometry command at its original (smaller) key and the
-// hooked WGL command at a fresh, strictly later one.
+// late. Both cases need the exact same fix, and all four commands below get it the exact same
+// way: generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS lists all four, so each one's own
+// Wrapper_<cmd> (recorderWrappersAuto.cpp.mako) reserves its own ordering key TOGETHER with a
+// second, spare key - via CaptureManager::CreateCommandKeyPair(), one atomic operation, before
+// either key is ever exposed to another thread - and hands the spare key to this layer via
+// CaptureManager::SetPendingPreHookKey(). Each Pre() override below consumes it via
+// TakePendingPreHookKey() and passes it straight into
+// WindowGeometryTrackingService::Capture(), which takes ownership of it from there:
+// either a WindowGeometryMetaCommand actually gets recorded under it (guaranteed smaller than
+// the hooked command's own key, by construction of the pair), or it is explicitly released via
+// CaptureManager::SkipCommandKey() when nothing needs recording - see that method's own header
+// comment (windowGeometryTrackingService.h).
 #include "commandsAuto.h"
 #include "layerAuto.h"
 
@@ -73,10 +84,11 @@ public:
   // Per-frame poll hook points - mirrors Vulkan's WindowTrackingService::UpdateWindowsForPresent
   // (called on every vkQueuePresentKHR); catches a real resize/move/visibility change that
   // happens after the initial capture above, without needing a WM_SIZE-level hook (OpenGL2 has
-  // no window-message plumbing of its own to hook - see this layer's own investigation, and
-  // WindowGeometryTrackingService::CaptureIfChanged's own no-op-when-unchanged behavior, which
-  // keeps this cheap even though it runs every frame). Also push the key later on an actual
-  // change, exactly like the first-capture hooks above - see this class's own header comment.
+  // no window-message plumbing of its own to hook - see this layer's own investigation).
+  // Unconditionally records a fresh sample every frame - see
+  // WindowGeometryTrackingService::Capture's own header comment for why an unchanged-sample
+  // skip is not safe here. Gets the exact same pre-reserved pair-of-keys treatment as the
+  // first-capture hooks above - see this class's own header comment.
   void Pre(wglSwapBuffersCommand& command) override;
   void Pre(wglSwapLayerBuffersCommand& command) override;
 };

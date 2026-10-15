@@ -102,9 +102,10 @@ void HdcVirtualizationService::GrowToFit(int width, int height) {
             // then on, or an origin-anchored viewport call for something other than the default
             // framebuffer (e.g. a large off-screen FBO/shadow map bound at (0, 0)) would grow
             // the window past its real, already-correct size, with no later geometry command to
-            // shrink it back (SetGeometry() only fires on an actual position/size/visibility
-            // CHANGE - see WindowGeometryTrackingService::CaptureIfChanged - and the captured
-            // window itself never changed here).
+            // shrink it back (SetGeometry() fires for every successfully-captured sample - see
+            // WindowGeometryTrackingService::Capture - not just an actual position/size/
+            // visibility change, but the captured window itself never changed here either
+            // way).
   }
   if (m_NativeWindow == 0) {
     return; // Resolve() hasn't created the window yet - can't happen in practice (a GL context

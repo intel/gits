@@ -15,6 +15,9 @@
 
 namespace gits::opengl2 {
 
+// See SetPendingPreHookKey()/TakePendingPreHookKey()'s own header comment (captureManager.h).
+thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
+
 CaptureManager& CaptureManager::Get() {
   // Thread-safe function-local static initialization (C++11 "magic statics") replaces a
   // hand-rolled, unsynchronized check-then-write of a raw pointer, which could race two

@@ -19,19 +19,23 @@ namespace gits::opengl2 {
 // which cannot coexist in the same translation unit as this file's own commandsAuto.h/
 // glTypes.h include.
 //
-// CaptureIfChanged()'s bool return says whether it actually recorded a WindowGeometryMetaCommand
-// (using a key minted right now, before `command`'s own key is touched). When it did, push
-// `command`'s key later via CaptureManager::UpdateCommandKey() so the geometry command it just
-// recorded is guaranteed to decode/replay BEFORE this WGL call - never skip this when
-// CaptureIfChanged returned true, or OrderingRecorder would replay the WGL call (and any
-// HdcVirtualizationService::Resolve() it triggers, for these two "first capture" hooks; or a
-// visibility/position/size change that was sampled for this very present, for
-// wglSwapBuffers/wglSwapLayerBuffers below) using the stale prior geometry instead.
+// This command is one of generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS
+// (recorderWrappersAuto.cpp.mako), so its wrapper already reserved TWO keys as one atomic
+// pair before this Pre() hook ever ran, and handed the spare (smaller) one off via
+// CaptureManager::SetPendingPreHookKey() - see that table's own header comment and
+// CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for why this
+// is the only race-free way to guarantee the geometry command below decodes/replays BEFORE
+// this WGL call. TakePendingPreHookKey() consumes it exactly once per call - Capture()
+// unconditionally takes ownership of it from here on (either a genuine WindowGeometryMetaCommand
+// gets recorded under it, or it is explicitly released - see that method's own header comment,
+// windowGeometryTrackingService.h), so this call site never needs to know which happened.
+// Never skip taking it, even though the value itself is unused here beyond being handed off -
+// TakePendingPreHookKey()'s own assert is what actually catches a wrapper/layer table mismatch
+// (a command reserving a pair with nothing to consume it, or vice versa) - see that method's
+// own header comment.
 void WindowGeometryTrackingLayer::Pre(wglSetPixelFormatCommand& command) {
-  if (WindowGeometryTrackingService::Get().CaptureIfChanged(command.m_ThreadId,
-                                                            command.m_hdc.Value)) {
-    CaptureManager::Get().UpdateCommandKey(command);
-  }
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+                                               CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
 
@@ -39,41 +43,34 @@ void WindowGeometryTrackingLayer::Pre(wglMakeCurrentCommand& command) {
   // A detach call (wglMakeCurrent(NULL, NULL) or wglMakeCurrent(hdc, NULL) after the app is
   // done with a context) still carries a real, capturable HDC in the common case - only a
   // fully-null recorded HDC (the detach's own "no context" form) has nothing to resolve a
-  // window from, and CaptureIfChanged already no-ops safely on a HDC whose WindowFromDC fails,
-  // so no extra null check is needed here beyond what that function already does internally.
+  // window from, and Capture() already no-ops safely (releasing the pre-hook key) on a
+  // HDC whose WindowFromDC fails, so no extra null check is needed here beyond what that
+  // function already does internally.
   //
-  // See Pre(wglSetPixelFormatCommand&) above for why the key is pushed later exactly when
-  // CaptureIfChanged returns true.
-  if (WindowGeometryTrackingService::Get().CaptureIfChanged(command.m_ThreadId,
-                                                            command.m_hDc.Value)) {
-    CaptureManager::Get().UpdateCommandKey(command);
-  }
+  // See Pre(wglSetPixelFormatCommand&) above for where this pre-hook key comes from.
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hDc.Value,
+                                               CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
 
 void WindowGeometryTrackingLayer::Pre(wglSwapBuffersCommand& command) {
   // Per-frame poll, not a "first capture" hook - the context (and therefore the player
   // window/HdcVirtualizationService::Resolve()) must already be current for this call to be
-  // valid at all, so there is no default-geometry race to guard against here. The key still
-  // needs pushing later on an actual change, though (see Pre(wglSetPixelFormatCommand&)
-  // above's general comment): the wrapper reserves this swap call's own key before invoking
-  // Pre() (recorderWrappersAuto.cpp.mako), so a resize/move/visibility change sampled for THIS
-  // present would otherwise replay with a LARGER key than the swap - one frame late - unless
-  // pushed later here exactly like the first-capture hooks.
-  if (WindowGeometryTrackingService::Get().CaptureIfChanged(command.m_ThreadId,
-                                                            command.m_hdc.Value)) {
-    CaptureManager::Get().UpdateCommandKey(command);
-  }
+  // valid at all, so there is no default-geometry race to guard against here. This command is
+  // still listed in PRE_HOOK_KEY_PAIR_COMMANDS, though (see Pre(wglSetPixelFormatCommand&)
+  // above for where this pre-hook key comes from): a resize/move/visibility change sampled for
+  // THIS present must decode/replay no later than the swap itself, or it would apply one frame
+  // late - the same atomic-pair guarantee that protects the two first-capture hooks above
+  // applies here for that reason.
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+                                               CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
 
 void WindowGeometryTrackingLayer::Pre(wglSwapLayerBuffersCommand& command) {
-  // See Pre(wglSwapBuffersCommand&) above - same per-frame poll, same reason to push the key
-  // later on an actual change.
-  if (WindowGeometryTrackingService::Get().CaptureIfChanged(command.m_ThreadId,
-                                                            command.m_hdc.Value)) {
-    CaptureManager::Get().UpdateCommandKey(command);
-  }
+  // See Pre(wglSwapBuffersCommand&) above - same per-frame poll, same pre-hook key contract.
+  WindowGeometryTrackingService::Get().Capture(command.m_ThreadId, command.m_hdc.Value,
+                                               CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
 

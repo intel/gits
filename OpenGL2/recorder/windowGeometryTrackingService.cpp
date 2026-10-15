@@ -36,7 +36,7 @@ WindowGeometryTrackingService& WindowGeometryTrackingService::Get() {
   return instance;
 }
 
-bool WindowGeometryTrackingService::CaptureIfChanged(uint32_t threadId, void* hdc) {
+void WindowGeometryTrackingService::Capture(uint32_t threadId, void* hdc, uint64_t geometryKey) {
   HWND hwnd = WindowFromDC(static_cast<HDC>(hdc));
   if (hwnd == nullptr) {
     // Common and expected for an HDC that isn't a real, on-screen window DC (e.g. a
@@ -51,7 +51,11 @@ bool WindowGeometryTrackingService::CaptureIfChanged(uint32_t threadId, void* hd
                      "GlViewportRunner's glViewport-inferred fallback will apply on replay "
                      "instead";
     }
-    return false;
+    // `geometryKey` was already reserved by the caller (see this method's own header comment)
+    // and will never be filled now - release it, or OrderingRecorder would wait for it
+    // forever.
+    CaptureManager::Get().SkipCommandKey(geometryKey);
+    return;
   }
 
   RECT clientRect{};
@@ -65,7 +69,9 @@ bool WindowGeometryTrackingService::CaptureIfChanged(uint32_t threadId, void* hd
                      "for it; GlViewportRunner's glViewport-inferred fallback will apply on "
                      "replay instead";
     }
-    return false;
+    // See the WindowFromDC-failure branch above - same reservation to release.
+    CaptureManager::Get().SkipCommandKey(geometryKey);
+    return;
   }
 
   // Matches window_handle::get_dimensions's own math (OpenGL/common/windowing.cpp) - the
@@ -84,29 +90,20 @@ bool WindowGeometryTrackingService::CaptureIfChanged(uint32_t threadId, void* hd
   // instead (`!= 0`, not `== TRUE`).
   const bool visible = IsWindowVisible(hwnd) != 0;
 
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  if (m_HaveLast && m_LastX == x && m_LastY == y && m_LastWidth == width &&
-      m_LastHeight == height && m_LastVisible == visible) {
-    return false; // Unchanged since the last recorded capture - mirrors Vulkan's
-                  // RecordUpdateIfChanged, so a per-frame poll (wglSwapBuffers) does not
-                  // re-record an identical geometry on every single frame of a static window.
-  }
-  m_HaveLast = true;
-  m_LastX = x;
-  m_LastY = y;
-  m_LastWidth = width;
-  m_LastHeight = height;
-  m_LastVisible = visible;
-
+  // Unconditional - no cache, no skip-if-unchanged - see this method's own header comment
+  // (windowGeometryTrackingService.h) for why a stateful dedup here is unsafe against a
+  // smaller, not-yet-processed geometryKey still in flight on another thread. No mutex is
+  // needed either: there is no shared state left in this class for one to protect
+  // (CaptureManager::RecordCommand/SkipCommandKey are themselves already safe to call
+  // concurrently from multiple threads, same as every other caller of either).
   WindowGeometryMetaCommand command(threadId);
-  command.m_Key = CaptureManager::Get().CreateCommandKey();
+  command.m_Key = geometryKey;
   command.m_X.Value = x;
   command.m_Y.Value = y;
   command.m_Width.Value = width;
   command.m_Height.Value = height;
   command.m_Visible.Value = visible;
   CaptureManager::Get().RecordCommand(command, new WindowGeometryMetaSerializer(command));
-  return true;
 }
 
 } // namespace gits::opengl2
