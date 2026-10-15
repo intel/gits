@@ -208,6 +208,27 @@ _CLASS_TO_KIND: dict[str, GLObjectKind | None] = {
     'perf query id': None,
 }
 
+# GL_ARB_shader_objects' GLhandleARB fields carry no class= in gl.xml. Those of a command with a
+# core <alias> take the class of the alias's field at the same position (glAttachObjectARB's
+# containerObj/obj -> glAttachShader's program/shader - see intermediates_creator.py's
+# _inherit_handle_arb_classes); these are the commands without one. Their handle may name a
+# shader or a program: both share one namespace (GL 2.0 "Shader Objects"), and
+# ObjectNameMapService keeps GLObjectKind::Shader and GLObjectKind::Program in one bucket, so
+# 'program' resolves either.
+HANDLE_ARB_CLASSES: dict[tuple[str, str], str] = {
+    ('glDeleteObjectARB', 'obj'): 'program',
+    ('glGetInfoLogARB', 'obj'): 'program',
+    ('glGetObjectParameterfvARB', 'obj'): 'program',
+    ('glGetObjectParameterivARB', 'obj'): 'program',
+}
+
+# GLhandleARB fields captured as a plain value: glGetHandleARB returns the current program, a
+# query result nothing on replay reads. Every other GLhandleARB field needs a class (see
+# intermediates_creator.py's _requires_object_name_override).
+UNMAPPED_HANDLE_ARB_FIELDS: frozenset[tuple[str, str]] = frozenset({
+    ('glGetHandleARB', 'return_value'),
+})
+
 # gl.xml classes whose recorded names are replayed verbatim, without ObjectNameMapService. Display
 # lists: glNewList defines any unused name (glGenLists only reserves a range), and on replay only
 # the stream itself creates lists, so every recorded name is a valid replay-time name. Identity

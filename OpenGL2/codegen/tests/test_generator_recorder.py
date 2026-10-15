@@ -149,7 +149,8 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
 
 class PostHookKeyPairTests(unittest.TestCase):
     def test_exact_membership(self) -> None:
-        self.assertEqual(POST_HOOK_KEY_PAIR_COMMANDS, frozenset({'glGetUniformLocation'}))
+        self.assertEqual(POST_HOOK_KEY_PAIR_COMMANDS,
+                         frozenset({'glGetUniformLocation', 'glGetUniformLocationARB'}))
 
     def test_wrapper_keeps_the_first_key_and_releases_an_unconsumed_second(self) -> None:
         rendered = render_wrappers(('glGetUniformLocation',), frozenset(),

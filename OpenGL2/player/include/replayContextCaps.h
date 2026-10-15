@@ -28,6 +28,9 @@ struct ReplayContextCaps {
   bool BufferObjectsCore{false};
   bool GenericAttribs{false}; // GL 2.0 / ARB_vertex_shader / ARB_vertex_program.
   bool GenericAttribsCore{false};
+  // GL 2.0 / ARB_shader_objects: glGetProgramiv, glGetActiveUniform, glGetUniformLocation.
+  bool ShaderObjects{false};
+  bool ShaderObjectsCore{false};
   bool IntegerAttribs{false}; // GL 3.0 / EXT_gpu_shader4: glVertexAttribIPointer.
   bool IntegerAttribsCore{false};
   // GL 4.1 / ARB_vertex_attrib_64bit (unsuffixed entry points) / EXT_vertex_attrib_64bit.

@@ -47,6 +47,7 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # decoded - see that service's own header comment and
     # modern-opengl-backend-architecture.md's uniform-location decision record.
     'glGetUniformLocation': 'GlGetUniformLocationRunner',
+    'glGetUniformLocationARB': 'GlGetUniformLocationARBRunner',
     # Tracks per-context "current program" in UniformLocationMapService after the real call -
     # see that service's own header comment for why (classic glUniform*() calls have no
     # program parameter of their own to resolve against). Previously a `% if cmd.name ==
@@ -55,6 +56,7 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # (a hardcoded per-command-name branch in a shared generated template, rather than in this
     # table of hand-written exceptions).
     'glUseProgram': 'GlUseProgramRunner',
+    'glUseProgramObjectARB': 'GlUseProgramObjectARBRunner',
     # Grows the player's single skeleton window (created at an arbitrary, hardcoded 640x480
     # fallback default by HdcVirtualizationService::Resolve() - see
     # docs/development/opengl2-player-skeleton-plan.md's Decision 1) to fit the app's real

@@ -12,13 +12,18 @@
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
+#include "replayContextCaps.h"
 #include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
 namespace gits::opengl2 {
 
 namespace {
-void ReplayUniformArray(const UniformArrayMetaCommand& command) {
+template <typename GetProgramivFn, typename GetActiveUniformFn, typename GetUniformLocationFn>
+void ReplayUniformArray(const UniformArrayMetaCommand& command,
+                        GetProgramivFn getProgramiv,
+                        GetActiveUniformFn getActiveUniform,
+                        GetUniformLocationFn getUniformLocation) {
   const GITSKey programKey = command.m_Program.Value;
   const GLint capturedSize = command.m_ArraySize.Value;
   if (programKey == 0 || programKey == UNMAPPED_OBJECT_NAME_KEY || capturedSize <= 1 ||
@@ -27,18 +32,14 @@ void ReplayUniformArray(const UniformArrayMetaCommand& command) {
   }
   const GLuint program = ObjectNameMapService::Get().GetHandle(GLObjectKind::Program, programKey);
   const GLchar* name = command.m_Name.Data.data();
-  auto& table = player::g_DispatchTable;
-  auto getUniformLocation = table.glGetUniformLocation.load(std::memory_order_acquire);
   if (program == 0 || getUniformLocation == nullptr) {
     return;
   }
 
   // An element the replay driver does not keep active maps to -1, which glUniform* ignores.
   const GLint replayLocation = getUniformLocation(program, name);
-  const UniformArrayElement replay =
-      FindUniformArrayElement(table.glGetProgramiv.load(std::memory_order_acquire),
-                              table.glGetActiveUniform.load(std::memory_order_acquire),
-                              getUniformLocation, program, name, replayLocation);
+  const UniformArrayElement replay = FindUniformArrayElement(
+      getProgramiv, getActiveUniform, getUniformLocation, program, name, replayLocation);
   const GLint replaySize = replay.ArraySize > 0 ? replay.ArraySize : 0;
   const GLint capturedBase = command.m_Location.Value - command.m_ArrayIndex.Value;
   const GLint replayBase = replayLocation - replay.ArrayIndex;
@@ -60,7 +61,21 @@ void UniformArrayMetaRunner::Run() {
   }
 
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    ReplayUniformArray(command);
+    // The command does not say whether the core or the GL_ARB_shader_objects lookup recorded it;
+    // either family answers for the same program, so the one the replay context has is used.
+    // GL_OBJECT_ACTIVE_UNIFORMS_ARB/GL_OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB have the values of
+    // the GL_ACTIVE_UNIFORMS/GL_ACTIVE_UNIFORM_MAX_LENGTH FindUniformArrayElement queries.
+    const ReplayContextCaps& caps = CurrentReplayContextCaps();
+    auto& table = player::g_DispatchTable;
+    if (caps.ShaderObjectsCore) {
+      ReplayUniformArray(command, table.glGetProgramiv.load(std::memory_order_acquire),
+                         table.glGetActiveUniform.load(std::memory_order_acquire),
+                         table.glGetUniformLocation.load(std::memory_order_acquire));
+    } else if (caps.ShaderObjects) {
+      ReplayUniformArray(command, table.glGetObjectParameterivARB.load(std::memory_order_acquire),
+                         table.glGetActiveUniformARB.load(std::memory_order_acquire),
+                         table.glGetUniformLocationARB.load(std::memory_order_acquire));
+    }
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

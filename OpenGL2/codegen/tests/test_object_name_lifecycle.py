@@ -18,6 +18,7 @@ from generator_helpers import object_name_override_for, wrapper_for
 from intermediates import Api, Parameter, ReturnValue, TypeFacts
 from intermediates_creator import (
     FILE_TO_API,
+    _is_fully_capturable_command,  # pyright: ignore[reportPrivateUsage]
     _validate_object_name_override,  # pyright: ignore[reportPrivateUsage]
     extract_commands_from_registry,
     get_commands_from_xml_data,
@@ -567,6 +568,83 @@ class EndToEndClassificationTests(unittest.TestCase):
         self.assertIsNotNone(override)
         assert override is not None
         self.assertEqual(override.kind, GLObjectKind.QUERY)
+
+
+class ShaderObjectsARBTests(unittest.TestCase):
+    """GL_ARB_shader_objects' GLhandleARB fields carry no class= in gl.xml; they take their
+    alias's class, or HANDLE_ARB_CLASSES'."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        raw_commands = extract_commands_from_registry(load_registry(Api.GL))
+        commands = get_commands_from_xml_data({Api.GL: raw_commands})[Api.GL]
+        cls.commands = {command.name: command for command in commands}
+
+    def _override(self, cmd_name: str, param_name: str) -> ObjectNameOverride | None:
+        cmd = self.commands[cmd_name]
+        field = (cmd.return_value if param_name == 'return_value'
+                 else next(p for p in cmd.params if p.name == param_name))
+        return object_name_override_for(cmd_name, param_name, field.class_)
+
+    def test_commands_are_enabled(self) -> None:
+        for name in (
+            'glAttachObjectARB', 'glBindAttribLocationARB', 'glCompileShaderARB',
+            'glCreateProgramObjectARB', 'glCreateShaderObjectARB', 'glDeleteObjectARB',
+            'glDetachObjectARB', 'glGetActiveAttribARB', 'glGetActiveUniformARB',
+            'glGetAttribLocationARB', 'glGetHandleARB', 'glGetInfoLogARB',
+            'glGetObjectParameterfvARB', 'glGetObjectParameterivARB', 'glGetShaderSourceARB',
+            'glGetUniformLocationARB', 'glGetUniformfvARB', 'glGetUniformivARB',
+            'glLinkProgramARB', 'glShaderSourceARB', 'glUseProgramObjectARB',
+            'glValidateProgramARB',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self.commands[name].enabled)
+
+    def test_attached_objects_query_stays_disabled(self) -> None:
+        # Like glGetAttachedShaders: its `obj` output array has no class.
+        self.assertFalse(self.commands['glGetAttachedObjectsARB'].enabled)
+
+    def test_classes_are_inherited_from_the_alias(self) -> None:
+        for cmd_name, param_name, kind, role in (
+            ('glCreateShaderObjectARB', 'return_value', GLObjectKind.SHADER, ObjectNameRole.CREATE),
+            ('glCreateProgramObjectARB', 'return_value', GLObjectKind.PROGRAM,
+             ObjectNameRole.CREATE),
+            ('glAttachObjectARB', 'containerObj', GLObjectKind.PROGRAM, ObjectNameRole.LOOKUP),
+            ('glAttachObjectARB', 'obj', GLObjectKind.SHADER, ObjectNameRole.LOOKUP),
+            ('glShaderSourceARB', 'shaderObj', GLObjectKind.SHADER, ObjectNameRole.LOOKUP),
+            ('glUseProgramObjectARB', 'programObj', GLObjectKind.PROGRAM, ObjectNameRole.LOOKUP),
+            ('glGetUniformfvARB', 'programObj', GLObjectKind.PROGRAM, ObjectNameRole.LOOKUP),
+        ):
+            with self.subTest(command=cmd_name, param=param_name):
+                self.assertEqual(self._override(cmd_name, param_name),
+                                 ObjectNameOverride(kind=kind, role=role))
+
+    def test_unaliased_commands_use_the_explicit_table(self) -> None:
+        self.assertEqual(self._override('glDeleteObjectARB', 'obj'),
+                         ObjectNameOverride(kind=GLObjectKind.PROGRAM, role=ObjectNameRole.DELETE))
+        for cmd_name in ('glGetInfoLogARB', 'glGetObjectParameterivARB'):
+            with self.subTest(command=cmd_name):
+                self.assertEqual(
+                    self._override(cmd_name, 'obj'),
+                    ObjectNameOverride(kind=GLObjectKind.PROGRAM, role=ObjectNameRole.LOOKUP))
+
+    def test_current_program_query_result_is_not_mapped(self) -> None:
+        self.assertIsNone(self._override('glGetHandleARB', 'return_value'))
+
+    def test_unclassified_handle_disables_the_command(self) -> None:
+        params = [Parameter(name='obj', type='GLhandleARB')]
+        self.assertFalse(_is_fully_capturable_command(
+            'glHypotheticalARB', ReturnValue(type='void'), params))
+
+    def test_shader_and_program_share_a_bucket(self) -> None:
+        source = (CODEGEN_DIR.parent / 'common' / 'services' /
+                  'objectNameMapService.cpp').read_text(encoding='utf-8')
+        match = re.search(r'ObjectNameMapService::BucketFor\(GLObjectKind kind\) \{(.*?)\n\}',
+                          source, re.DOTALL)
+        self.assertIsNotNone(match, 'ObjectNameMapService::BucketFor() definition not found')
+        assert match is not None
+        self.assertRegex(match.group(1), r'if \(kind == GLObjectKind::Shader\) \{\s*'
+                                         r'kind = GLObjectKind::Program;')
 
 
 class ObjectNameMapServiceDeleteCppSourceTests(unittest.TestCase):

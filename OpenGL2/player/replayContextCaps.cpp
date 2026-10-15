@@ -80,6 +80,8 @@ ReplayContextCaps QueryCaps() {
   caps.GenericAttribsCore = GlVersionAtLeast(version, 2, 0);
   caps.GenericAttribs = caps.GenericAttribsCore || extensions.Has("GL_ARB_vertex_shader") ||
                         extensions.Has("GL_ARB_vertex_program");
+  caps.ShaderObjectsCore = GlVersionAtLeast(version, 2, 0);
+  caps.ShaderObjects = caps.ShaderObjectsCore || extensions.Has("GL_ARB_shader_objects");
   caps.IntegerAttribsCore = GlVersionAtLeast(version, 3, 0);
   caps.IntegerAttribs = caps.IntegerAttribsCore || extensions.Has("GL_EXT_gpu_shader4");
   caps.LongAttribsCore =

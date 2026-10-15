@@ -159,7 +159,7 @@ class TypeFactsTests(unittest.TestCase):
         self.assertFalse(callback_param.type_facts.is_scalar)
 
     def test_is_scalar_accepts_plain_gl_value_types(self) -> None:
-        for base_type in ('GLenum', 'GLfloat', 'GLuint', 'GLsizei', 'void'):
+        for base_type in ('GLenum', 'GLfloat', 'GLuint', 'GLsizei', 'GLhandleARB', 'void'):
             with self.subTest(base_type=base_type):
                 self.assertTrue(TypeFacts(base_type=base_type, pointer_depth=0).is_scalar)
 

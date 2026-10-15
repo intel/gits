@@ -197,6 +197,9 @@ _SCALAR_BASE_TYPES: frozenset[str] = frozenset({
     'GLintptr', 'GLintptrARB', 'GLsizeiptr', 'GLsizeiptrARB',
     'GLint64', 'GLint64EXT', 'GLuint64', 'GLuint64EXT',
     'GLvdpauSurfaceNV',
+    # `unsigned int` everywhere but macOS, which this backend does not target. Always a shader or
+    # program name - see object_name_lifecycle.py's HANDLE_ARB_CLASSES.
+    'GLhandleARB',
     # WGL (Win32)
     'BOOL', 'INT', 'INT32', 'INT64', 'UINT', 'DWORD', 'FLOAT', 'VOID',
     # GLX (X11)

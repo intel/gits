@@ -60,6 +60,11 @@ ObjectNameMapService& ObjectNameMapService::Get() {
 }
 
 ObjectNameMapService::Bucket& ObjectNameMapService::BucketFor(GLObjectKind kind) {
+  // Shader and program objects share one name space, and a GL_ARB_shader_objects handle may
+  // name either.
+  if (kind == GLObjectKind::Shader) {
+    kind = GLObjectKind::Program;
+  }
   return m_Buckets[static_cast<size_t>(kind)];
 }
 

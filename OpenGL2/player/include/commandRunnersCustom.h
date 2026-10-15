@@ -115,6 +115,20 @@ private:
   glGetUniformLocationCommand command;
 };
 
+// glGetUniformLocationARB's Run() - same as GlGetUniformLocationRunner's.
+class GlGetUniformLocationARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glGetUniformLocationARBCommand command;
+};
+
 // glUseProgram's Run() - see uniformLocationMapService.h's header comment:
 // classic (non-DSA) glUniform*() calls carry no program parameter of their own, so
 // UniformLocationMapService must track "current program" itself, per-context, updated at the
@@ -133,6 +147,20 @@ protected:
 
 private:
   glUseProgramCommand command;
+};
+
+// glUseProgramObjectARB's Run() - same as GlUseProgramRunner's.
+class GlUseProgramObjectARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glUseProgramObjectARBCommand command;
 };
 
 // glViewport's Run() - beyond the generic real-call forward, also grows the player's single

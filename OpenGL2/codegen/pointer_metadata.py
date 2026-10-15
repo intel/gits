@@ -22,6 +22,9 @@ from dataclasses import dataclass
 TEXT_OUTPUT_BUFFERS: dict[tuple[str, str], str] = {
     ('glGetActiveAttrib', 'name'): 'length',
     ('glGetActiveUniform', 'name'): 'length',
+    ('glGetActiveAttribARB', 'name'): 'length',
+    ('glGetActiveUniformARB', 'name'): 'length',
+    ('glGetInfoLogARB', 'infoLog'): 'length',
     ('glGetTransformFeedbackVarying', 'name'): 'length',
     ('glGetProgramInfoLog', 'infoLog'): 'length',
     ('glGetProgramPipelineInfoLog', 'infoLog'): 'length',
@@ -975,6 +978,21 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glGetShaderInfoLog', 'infoLog'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='bufSize'),
+    # GL_ARB_shader_objects names the capacity `maxLength`, so the core `bufSize` entries
+    # glGetActiveAttribARB/glGetActiveUniformARB would inherit through their alias don't fit.
+    # glGetInfoLogARB has no alias; its shape matches glGetShaderInfoLog's.
+    ('glGetActiveAttribARB', 'name'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='maxLength'),
+    ('glGetActiveUniformARB', 'name'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='maxLength'),
+    ('glGetInfoLogARB', 'length'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glGetInfoLogARB', 'infoLog'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='maxLength'),
 
     # glGetQueryObjecti64v's `params`: len="COMPSIZE(pname)" mis-describes a variable count -
     # every legal pname (GL_QUERY_RESULT/_AVAILABLE/_NO_WAIT/_TARGET) returns exactly one

@@ -73,20 +73,11 @@ namespace gits::opengl2 {
 // applies unchanged.
 //
 // Scope decision (documented further in modern-opengl-backend-architecture.md): only exact
-// locations returned by glGetUniformLocation are remapped, keyed by (program identity,
-// captured location). glGetUniformLocationARB is NOT currently remapped - it is not
-// even a captured/enabled command yet: its `programObj` parameter is a GLhandleARB, a type
-// intermediates.py's TypeFacts does not currently classify as scalar (unlike GLuint, which
-// glGetUniformLocation's own `program` parameter uses), so
-// intermediates_creator.py's _is_fully_capturable_command() rejects the whole command and it
-// falls back to the generic unsupported-command path like every other still-disabled command
-// (see CUSTOM_PLAYER_RUNNERS/GlGetUniformLocationRunner below, which glGetUniformLocationARB
-// has no counterpart in). Enabling it would require classifying GLhandleARB as scalar, which
-// would also auto-enable the rest of the legacy GL_ARB_shader_objects command family sharing
-// that same type (glCreateShaderObjectARB, glAttachObjectARB, glUseProgramObjectARB, ...) -
-// each of which would need its own object-name-lifecycle/handle-mapping work before being
-// safe to enable, not just this one command - out of scope for a single-command fix. The
-// legacy backend's own
+// locations returned by glGetUniformLocation(ARB) are remapped, keyed by (program identity,
+// captured location). GL_ARB_shader_objects' glGetUniformLocationARB/glUseProgramObjectARB
+// share GlGetUniformLocationRunner's/GlUseProgramRunner's code; its `programObj` handle maps
+// through the same Program bucket as a core program name (see object_name_lifecycle.py's
+// HANDLE_ARB_CLASSES). The legacy backend's own
 // CGLUniformLocation additionally remaps whole *uniform arrays* (see playerRunWrap.h's
 // HandleUniformLocationMapping array branch), since an application commonly computes array
 // element locations itself (`glGetUniformLocation(prog, "arr[0]") + i`). The same is done here
@@ -114,9 +105,8 @@ class UniformLocationMapService {
 public:
   static UniformLocationMapService& Get();
 
-  // Called by GlGetUniformLocationRunner (player/commandRunnersCustom.cpp) right after a real
-  // glGetUniformLocation call returns (see this class's own header comment for why
-  // glGetUniformLocationARB has no equivalent runner/call site yet), with the program's
+  // Called by GlGetUniformLocation(ARB)Runner (player/commandRunnersCustom.cpp) right after a
+  // real glGetUniformLocation(ARB) call returns, with the program's
   // stream-stable GITSKey (command.m_program.Key - see this class's own header comment for why
   // this, not the live replay-time handle, is the correct identity to key by),
   // the captured (recorder-time) location this call's Command originally decoded, and the real,

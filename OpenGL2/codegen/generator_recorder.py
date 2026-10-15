@@ -60,10 +60,11 @@ PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
 # Commands whose Wrapper_<cmd> reserves a key pair whose SECOND key goes to a Post layer, for a
 # metacommand that must replay right after the hooked call with no other thread's command in
 # between - see CaptureManager::SetPendingPostHookKey() (captureManager.h). Exclusively
-# UniformArrayCaptureLayer's glGetUniformLocation today: a glUniform* on another thread using a
-# computed array-element location must not replay before the UniformArrayMetaCommand that maps it.
+# UniformArrayCaptureLayer's glGetUniformLocation(ARB) today: a glUniform* on another thread using
+# a computed array-element location must not replay before the UniformArrayMetaCommand that maps
+# it.
 POST_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
-    'glGetUniformLocation',
+    'glGetUniformLocation', 'glGetUniformLocationARB',
 })
 
 

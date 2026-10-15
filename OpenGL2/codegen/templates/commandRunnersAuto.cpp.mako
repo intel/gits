@@ -185,26 +185,32 @@ T* DiscardedOutputScratch(size_t listElements) {
               and p.type_facts.is_scalar)
 
   # glProgramUniform*(program, location, ...) DSA commands also have a 'location' param, but
-  # unlike classic glUniform*(), they resolve against their own explicit 'program' parameter
+  # unlike classic glUniform*(), they resolve against their own explicit program parameter
   # instead of whichever program happens to be glUseProgram-bound at replay time - see
   # UniformLocationMapService::ResolveForProgram's own comment. Also a structural rule (any
-  # command with both an explicit 'program' parameter and a 'location' parameter), not a
-  # per-command-name table, for the same reason as is_uniform_location_param above.
-  def is_explicit_program_uniform_command():
-      return any(p.name == 'program' and p.type_facts.base_type == 'GLuint' for p in cmd.params)
+  # command with both a Program-kind object-name parameter and a 'location' parameter), not a
+  # per-command-name table, for the same reason as is_uniform_location_param above. The
+  # parameter is `program` in core and `programObj` in GL_ARB_shader_objects.
+  def explicit_program_param():
+      for p in cmd.params:
+          override = object_name_override_for(cmd.name, p.name, p.class_)
+          if override is not None and override.kind == GLObjectKind.PROGRAM:
+              return p
+      return None
 
   def call_arg(p):
       if is_uniform_location_param(p):
-          if is_explicit_program_uniform_command():
+          program_param = explicit_program_param()
+          if program_param is not None:
               # UniformLocationMapService keys by the program's stream-stable GITSKey
-              # (command.m_program.Key), not its live replay-time handle - see that class's
+              # (command.m_<program>.Key), not its live replay-time handle - see that class's
               # own header comment for why keying by the live handle collides across
               # independent, non-sharing contexts (each share group's driver-assigned names
               # independently start from small integers, so two unrelated programs can both be
               # live handle 1 at the same time). Unrelated to the real call itself, which still
-              # uses command.m_program.Value via this same function's own fallback branch below.
+              # uses command.m_<program>.Value via this same function's own fallback branch below.
               return (f'UniformLocationMapService::Get().ResolveForProgram('
-                      f'command.m_program.Key, command.m_{p.name}.Value)')
+                      f'command.m_{program_param.name}.Key, command.m_{p.name}.Value)')
           return (f'UniformLocationMapService::Get().Resolve(CurrentContext(), '
                   f'command.m_{p.name}.Value)')
       if p.name in hdc_names:
@@ -331,7 +337,7 @@ void ${cmd.name}Runner::Run() {
 % for p in cmd.params:
 % if (cmd.name, p.name) in TEXT_OUTPUT_BUFFERS:
   if (command.m_${p.name}.HasValue) {
-    command.m_${p.name}.Data.resize(std::max<size_t>(1, ClampCountToSizeT(command.m_bufSize.Value)));
+    command.m_${p.name}.Data.resize(std::max<size_t>(1, ClampCountToSizeT(command.m_${pointer_override_for(cmd, p.name).length_source_value}.Value)));
   }
 % endif
 % endfor

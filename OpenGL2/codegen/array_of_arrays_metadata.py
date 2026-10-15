@@ -59,6 +59,8 @@ class ArrayOfArraysOverride:
 ARRAY_OF_ARRAYS_PARAM_OVERRIDES: dict[tuple[str, str], ArrayOfArraysOverride] = {
     ('glShaderSource', 'string'): ArrayOfArraysOverride(
         outer_count_param='count', element_length_param='length'),
+    ('glShaderSourceARB', 'string'): ArrayOfArraysOverride(
+        outer_count_param='count', element_length_param='length'),
 
     # glCreateShaderProgramv(type, count, strings)/glTransformFeedbackVaryings(program, count,
     # varyings, bufferMode): both `strings`/`varyings` are `const GLchar *const*` with

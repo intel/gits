@@ -25,7 +25,9 @@ from array_of_arrays_metadata import (
 )
 from intermediates import Api, CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue, TypeFacts
 from object_name_lifecycle import (
+    HANDLE_ARB_CLASSES,
     IDENTITY_NAME_CLASSES,
+    UNMAPPED_HANDLE_ARB_FIELDS,
     ObjectNameOverride,
     ObjectNameRole,
     resolve_object_name_override,
@@ -733,6 +735,8 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
         return False
     if field.class_ in IDENTITY_NAME_CLASSES:
         return False
+    if field.class_ is None and field.type_facts.base_type == 'GLhandleARB':
+        return (command_name, field.name) not in UNMAPPED_HANDLE_ARB_FIELDS
     return (field.class_ is not None
             and resolve_object_name_override(command_name, field.name, field.class_) is None)
 
@@ -761,9 +765,8 @@ def _pointer_override_for_command_or_alias(
     gl.xml shape (len=, sibling names) has drifted from its target is still caught, never
     silently trusted just because the alias link exists.
 
-    Deliberately not extended to ARRAY_OF_ARRAYS_PARAM_OVERRIDES: no currently-known ARB/EXT
-    alias needs the doubly-indirect shape that table covers. Extend the same way here if one
-    ever does.
+    Deliberately not extended to ARRAY_OF_ARRAYS_PARAM_OVERRIDES: glShaderSourceARB is the only
+    ARB/EXT alias needing the doubly-indirect shape that table covers, and it has its own entry.
     """
     override = POINTER_PARAM_OVERRIDES.get((command_name, param_name))
     if override is not None:
@@ -1066,6 +1069,24 @@ def _validate_object_name_overrides(
 _INTERCEPTED_APIS: frozenset[Api] = frozenset({Api.GL, Api.WGL})
 
 
+def _inherit_handle_arb_classes(commands: list[Command]) -> None:
+    """Gives each unclassified GLhandleARB field the class of its alias's field at the same
+    position (both commands have the same shape - see _pointer_override_for_command_or_alias),
+    or its HANDLE_ARB_CLASSES entry."""
+    by_name = {command.name: command for command in commands}
+    for command in commands:
+        alias = by_name.get(command.alias) if command.alias else None
+        fields = (command.return_value, *command.params)
+        alias_fields = (alias.return_value, *alias.params) if alias else ()
+        for index, field in enumerate(fields):
+            if field.class_ is not None or field.type_facts.base_type != 'GLhandleARB':
+                continue
+            if len(alias_fields) == len(fields):
+                field.class_ = alias_fields[index].class_
+            if field.class_ is None:
+                field.class_ = HANDLE_ARB_CLASSES.get((command.name, field.name))
+
+
 def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) -> dict[Api, list[Command]]:
     """Take raw command data from XML and return processed commands; both grouped by API (registry)."""
     result: dict[Api, list[Command]] = {api: [] for api in Api}
@@ -1089,21 +1110,21 @@ def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) ->
                 **normalize_attribs(raw_return_value['attribs']),
             )
 
-            command_name = command_attribs['name']
-            alias = raw_command['alias_attribs'].get('name')
-            enabled = (api in _INTERCEPTED_APIS
-                       and _is_fully_capturable_command(command_name, return_value, params, alias))
-
             commands.append(Command(
-                name=command_name,
+                name=command_attribs['name'],
                 api=api,
-                enabled=enabled,
+                enabled=False,
                 command_type=CmdType.NONE,
                 comment=command_attribs.get('comment'),
-                alias=alias,
+                alias=raw_command['alias_attribs'].get('name'),
                 return_value=return_value,
                 params=params,
             ))
+
+        _inherit_handle_arb_classes(commands)
+        for command in commands:
+            command.enabled = (api in _INTERCEPTED_APIS and _is_fully_capturable_command(
+                command.name, command.return_value, command.params, command.alias))
 
         result[api] = commands
 

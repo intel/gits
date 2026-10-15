@@ -25,6 +25,7 @@ from intermediates_creator import (
 )
 from pointer_metadata import (
     POINTER_PARAM_OVERRIDES,
+    TEXT_OUTPUT_BUFFERS,
     LengthSourceKind,
     PointerDirection,
     PointerParamOverride,
@@ -536,6 +537,16 @@ class IsParamCapturableTests(unittest.TestCase):
         param = Parameter(name='textures', type='GLuint *')
         with self.assertRaises(ValueError):
             _is_param_capturable('glGenTextures', param, other_params=[])
+
+
+class TextOutputBuffersTests(unittest.TestCase):
+    def test_capacity_is_a_sibling_param(self) -> None:
+        # The recorder and player templates read the buffer capacity from the override's
+        # sibling: `bufSize` in core, `maxLength` in GL_ARB_shader_objects.
+        for key in TEXT_OUTPUT_BUFFERS:
+            with self.subTest(command=key[0], param=key[1]):
+                override = POINTER_PARAM_OVERRIDES[key]
+                self.assertEqual(override.length_source_kind, LengthSourceKind.SIBLING_PARAM)
 
 
 class EndToEndEnabledGateTests(unittest.TestCase):

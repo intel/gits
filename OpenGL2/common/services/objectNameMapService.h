@@ -270,7 +270,8 @@ private:
     }
   };
 
-  // One independent {mutex, both maps, both warned-sets} bucket per GLObjectKind - see this
+  // One independent {mutex, both maps, both warned-sets} bucket per GLObjectKind, except that
+  // Shader uses Program's (see BucketFor()) - see this
   // header's own comment for why a namespace tag is unavoidable here (unlike
   // ContextHandleMapService, which has exactly one namespace and needs no bucketing at all).
   // KeyToName/WarnedMissingKeys are plain GITSKey-keyed maps, not share-group-keyed - see this
