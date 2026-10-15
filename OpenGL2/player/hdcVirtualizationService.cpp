@@ -212,32 +212,42 @@ bool HdcVirtualizationService::EnsurePixelFormatSet(const PIXELFORMATDESCRIPTOR*
       genericPfd.cStencilBits = 8;
       pfd = &genericPfd;
     }
-    // Black-screen investigation fix: an app's *own* wglSetPixelFormat call is not a reliable
-    // source of the flags that actually matter for replay, for two independent reasons, so a
-    // captured `requestedPfd` is sanitized into a local, corrected copy rather than passed to
-    // ChoosePixelFormat/SetPixelFormat verbatim:
-    //   1. On real Windows, only `ppfd->iPixelType`/`cColorBits`/depth-ish fields are loosely
-    //      cross-checked by SetPixelFormat - dwFlags is essentially unvalidated by the OS, and
-    //      the *real* PFD_DOUBLEBUFFER request happens earlier, via wglChoosePixelFormat(ARB) -
-    //      both currently unsupported/skipped commands (see ReportUnsupportedCommand's "degraded
-    //      fidelity" warning for either). Apps commonly pass a sparse/reused descriptor to
-    //      SetPixelFormat itself, since the OS mostly only honors the numeric format index. A
-    //      real repro against a stream recorded through this backend captured exactly this:
-    //      dwFlags=0 (no PFD_DOUBLEBUFFER bit), which ChoosePixelFormat/SetPixelFormat honored
-    //      literally, silently picking a single-buffered format - wglSwapBuffers then kept
-    //      returning TRUE (nothing crashes) while GL_FRONT and GL_BACK are the same buffer,
-    //      so real, correctly-rendered frames (confirmed present via glReadPixels) never reach
-    //      the window's visible surface: a solid black window for the stream's entire duration.
-    //   2. Even when a captured descriptor's *bytes* look wrong altogether (e.g. an iPixelType
-    //      outside the only two legal values, 0=RGBA/1=COLORINDEX) - plausible on some captures
-    //      of this same sparse-descriptor pattern - blindly forwarding it to ChoosePixelFormat
-    //      risks an equally arbitrary match.
-    // This player is always driving one player-owned, actually-visible window (see this
-    // method's own Resolve() and Decision 1's single-window scope), so PFD_DRAW_TO_WINDOW/
-    // PFD_SUPPORT_OPENGL/PFD_DOUBLEBUFFER are always genuine replay-time requirements
-    // regardless of what the app captured - OR them in rather than trusting dwFlags verbatim.
+    // Black-screen investigation fix, later corrected by a real-buffering-semantics review
+    // finding: an app's *own* wglSetPixelFormat call used to be captured byte-for-byte and was
+    // not a reliable source of the flags that actually matter for replay - a real repro against
+    // a stream recorded through this backend captured a sparse descriptor with dwFlags=0
+    // (no PFD_DOUBLEBUFFER bit), which ChoosePixelFormat/SetPixelFormat honored literally,
+    // silently picking a single-buffered format - wglSwapBuffers then kept returning TRUE
+    // (nothing crashes) while GL_FRONT and GL_BACK are the same buffer, so real,
+    // correctly-rendered frames (confirmed present via glReadPixels) never reached the window's
+    // visible surface: a solid black window for the stream's entire duration.
+    //
+    // The FIRST fix for that (now superseded) unconditionally forced PFD_DOUBLEBUFFER on here,
+    // for every captured request - which broke the opposite, equally real case: a genuinely
+    // single-buffered application that relies on its initial draw buffer being GL_FRONT and
+    // never calls SwapBuffers at all. Forcing PFD_DOUBLEBUFFER made its initial draw buffer
+    // GL_BACK instead, so ITS real output silently became invisible on replay - and, separately,
+    // forcing PFD_DOUBLEBUFFER on top of a captured PFD_SUPPORT_GDI bit requests an outright
+    // invalid combination (the two are mutually exclusive in Windows' generic implementation).
+    //
+    // The actual, durable fix lives on the RECORDER side instead (recorder/
+    // pixelFormatCaptureLayer.cpp's PixelFormatCaptureLayer::Post(wglSetPixelFormatCommand&)):
+    // rather than trusting the app's own (possibly sparse) `ppfd` argument, it reads back the
+    // driver's own resolution of the format that was ACTUALLY set - via GetPixelFormat()+
+    // DescribePixelFormat() on the real capture-time HDC, right after a successful
+    // SetPixelFormat - and captures THAT instead. That descriptor is self-consistent by
+    // construction (Windows itself produced it: real single- vs. double-buffering, no
+    // PFD_SUPPORT_GDI/PFD_DOUBLEBUFFER conflict, valid iPixelType), so `requestedPfd` here no
+    // longer needs its dwFlags/iPixelType "corrected" - only PFD_DRAW_TO_WINDOW/
+    // PFD_SUPPORT_OPENGL still need forcing on, since this player is always driving one
+    // player-owned, actually-visible window (see this method's own Resolve() and Decision 1's
+    // single-window scope) regardless of what the app's own window/format looked like - a
+    // genuine replay-time requirement no captured descriptor can be trusted to already satisfy
+    // (e.g. an older stream recorded before this fix, whose captured descriptor is still the
+    // app's own, possibly-sparse one; or nullptr's own genericPfd fallback above, which chooses
+    // PFD_DOUBLEBUFFER deliberately, having no real captured request to preserve at all).
     PIXELFORMATDESCRIPTOR sanitizedPfd = *pfd;
-    sanitizedPfd.dwFlags |= kPfdDrawToWindow | kPfdSupportOpenGL | kPfdDoubleBuffer;
+    sanitizedPfd.dwFlags |= kPfdDrawToWindow | kPfdSupportOpenGL;
     if (sanitizedPfd.iPixelType != kPfdTypeRgba && sanitizedPfd.iPixelType != kPfdTypeColorIndex) {
       sanitizedPfd.iPixelType = kPfdTypeRgba;
     }

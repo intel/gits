@@ -22,6 +22,7 @@ add_library(OpenGL2_recorder STATIC
   include/clientMemoryCapture.h
   include/handleArgumentUpdaters.h
   include/mapTrackingWrappers.h
+  include/pixelFormatCaptureLayer.h
   include/realDriver.h
   include/recorderInterface.h
   include/recursionGuard.h
@@ -32,6 +33,7 @@ add_library(OpenGL2_recorder STATIC
   captureManager.cpp
   clientMemoryCapture.cpp
   mapTrackingWrappers.cpp
+  pixelFormatCaptureLayer.cpp
   realDriver.cpp
   recorder.cpp
   recursionGuard.cpp
@@ -49,7 +51,15 @@ target_include_directories(OpenGL2_recorder
 
 target_link_libraries(OpenGL2_recorder
   PUBLIC OpenGL2_layer_interface
-  PRIVATE OpenGL2_services log tbb
+  # gdi32: PixelFormatCaptureLayer calls the real GetPixelFormat()/DescribePixelFormat() GDI
+  # exports directly (see pixelFormatCaptureLayer.cpp) - mirrors OpenGL2_player's identical
+  # gdi32 dependency for HdcVirtualizationService's own ChoosePixelFormat/SetPixelFormat/
+  # GetPixelFormat calls (player/CMakeLists.txt).
+  # user32: windowGeometryTrackingService.cpp calls the real WindowFromDC()/GetClientRect()/
+  # GetWindowRect()/IsWindowVisible() User32 exports directly - declared explicitly rather
+  # than relying on some other dependency injecting it implicitly, mirroring
+  # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
+  PRIVATE OpenGL2_services log tbb gdi32 user32
 )
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)
