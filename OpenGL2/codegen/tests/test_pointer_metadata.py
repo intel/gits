@@ -950,16 +950,15 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
 
-    def test_debug_commands_stay_disabled(self) -> None:
+    def test_debug_callback_stays_disabled(self) -> None:
         # glDebugMessageCallback takes an application callback function pointer - structurally
-        # uncapturable, never a "just add an override" gap. glDebugMessageControl is left
-        # disabled alongside it deliberately (a debug-message filter has no bearing on replay
-        # pixel fidelity), even though its `ids` array parameter is structurally no different
-        # from glDeleteTextures' own IN SIBLING_PARAM shape - see the "Reduce replay warning
-        # noise" decision.
-        for name in ('glDebugMessageCallback', 'glDebugMessageControl'):
+        # uncapturable, never a "just add an override" gap.
+        self.assertFalse(self._get_command(Api.GL, 'glDebugMessageCallback').enabled)
+
+    def test_debug_filter_and_labels_are_enabled(self) -> None:
+        for name in ('glDebugMessageControl', 'glObjectLabel'):
             with self.subTest(command=name):
-                self.assertFalse(self._get_command(Api.GL, name).enabled)
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
 
     def test_wgl_pixel_format_commands_are_enabled(self) -> None:
         for name in (

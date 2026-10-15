@@ -99,6 +99,14 @@ enum class GLObjectKind : uint8_t {
 // a renderbuffer, any other target a texture.
 GLObjectKind ImageObjectKind(GLenum target);
 
+// The namespace of a name passed with an object identifier (glObjectLabel): GL_BUFFER names a
+// buffer, GL_TEXTURE a texture, and so on. An invalid identifier is a GL error at capture; it maps
+// to the texture namespace, where the name is then looked up like any other.
+GLObjectKind ObjectIdentifierKind(GLenum identifier);
+// Whether names passed with `identifier` are mapped. Display list names (GL_DISPLAY_LIST) are
+// replayed as recorded, so the stream stores the name itself as its key.
+bool ObjectIdentifierMapsNames(GLenum identifier);
+
 // Key recorded for a non-zero object name the recorder has no key for (its creation was never
 // observed). Only the key crosses the wire, so key 0 alone cannot tell such a name from name 0
 // (an unbind); the player skips a call referencing this key instead. Never minted:

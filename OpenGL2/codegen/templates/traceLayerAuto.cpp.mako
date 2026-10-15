@@ -44,6 +44,15 @@ void TraceLayer::Pre(${cmd.name}Command& command) {
   } else {
     printer.Add(command.m_${param.name});
   }
+% elif pointer is not None and pointer.length_source_kind == LengthSourceKind.LENGTH_OR_NULL_TERMINATED and param.type_facts.base_type == 'GLchar':
+  if (command.m_${param.name}.HasValue) {
+    const auto& text = command.m_${param.name}.Data;
+    // A negative length captured the null terminator too, which is not part of the displayed text.
+    const size_t terminator = command.m_${pointer.length_source_value}.Value < 0 ? 1 : 0;
+    printer.AddText(std::string_view(text.data(), text.size() - terminator));
+  } else {
+    printer.Add(command.m_${param.name});
+  }
 % elif param.type_facts.base_type in ('GLenum', 'GLbitfield') and pointer is None:
   printer.AddEnum(command.m_${param.name}.Value, GLenumApi::${cmd.api},
                   GLenumGroup::${param.group if param.group in enum_groups else 'Unknown'});

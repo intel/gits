@@ -76,6 +76,9 @@ class LengthSourceKind(StrEnum):
                                  # getters like glGetShaderiv always return exactly one GLint).
     NULL_TERMINATED = 'null_terminated'  # scan forward for a T{} sentinel; length_source_value
                                          # is unused (None).
+    LENGTH_OR_NULL_TERMINATED = 'length_or_null_terminated'  # length_source_value = the
+        # sibling length param's name; a negative length means NULL_TERMINATED instead
+        # (glObjectLabel's COMPSIZE(label,length)).
     KEY_VALUE_LIST = 'key_value_list'  # scan forward in (key, value) PAIRS, terminating only
         # when a pair's KEY element is zero - length_source_value is unused (None). Distinct
         # from NULL_TERMINATED: a WGL-style attribute list (wglCreateContextAttribsARB's
@@ -736,6 +739,10 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     ('glGetUniformBlockIndex', 'uniformBlockName'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
+    ('glObjectLabel', 'label'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.LENGTH_OR_NULL_TERMINATED,
+        length_source_value='length'),
 
     # glGenQueries/glDeleteQueries: same SIBLING_PARAM('n') array-output-creation/array-input-
     # destruction shape as glGenTextures/glDeleteTextures and glGenVertexArrays/

@@ -317,7 +317,7 @@ void ${cmd.name}Runner::Run() {
 % for p in resolve_object_name_params:
 <%
     resolve_override = object_name_override_for(cmd.name, p.name, p.class_)
-    kind = resolve_override.kind.value
+    kind = resolve_override.kind.value if resolve_override.kind is not None else None
     # Structural (kind/role-driven, not command-name-driven) rule: any command that DELETEs a
     # PROGRAM name must purge UniformLocationMapService's own stale per-program location
     # entries for that same program identity before it can be reused by a later, unrelated
@@ -326,8 +326,12 @@ void ${cmd.name}Runner::Run() {
     # sharing this same (kind, role) pair is automatically covered too.
     purges_uniform_locations = (resolve_override.kind == GLObjectKind.PROGRAM and
                                 resolve_override.role == ObjectNameRole.DELETE)
-    kind_expr = (f'ImageObjectKind(command.m_{resolve_override.target_param}.Value)'
-                 if resolve_override.target_param else f'GLObjectKind::{kind}')
+    if resolve_override.target_param:
+        kind_expr = f'ImageObjectKind(command.m_{resolve_override.target_param}.Value)'
+    elif resolve_override.identifier_param:
+        kind_expr = f'ObjectIdentifierKind(command.m_{resolve_override.identifier_param}.Value)'
+    else:
+        kind_expr = f'GLObjectKind::{kind}'
 %>\
 % if p.type_facts.is_array_element_eligible:
   if (!UpdateHandleArray(command.m_${p.name}, GLObjectKind::${kind})) {
@@ -341,6 +345,12 @@ void ${cmd.name}Runner::Run() {
   if (!UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
                             player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire),
                             player::g_DispatchTable.${resolve_override.is_command}.load(std::memory_order_acquire))) {
+    SkipUnmappedObjectNameCall(command, "${cmd.name}");
+  }
+% elif resolve_override.identifier_param:
+  if (!ObjectIdentifierMapsNames(command.m_${resolve_override.identifier_param}.Value)) {
+    command.m_${p.name}.Value = static_cast<GLuint>(command.m_${p.name}.Key);
+  } else if (!UpdateHandle(command.m_${p.name}, ${kind_expr})) {
     SkipUnmappedObjectNameCall(command, "${cmd.name}");
   }
 % else:

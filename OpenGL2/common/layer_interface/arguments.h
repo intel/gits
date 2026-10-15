@@ -116,6 +116,11 @@ inline constexpr NullTerminatedTag NullTerminated{};
 struct KeyValueListTag {};
 inline constexpr KeyValueListTag KeyValueList{};
 
+// Tag type selecting the constructor overload below for an array whose sibling length is a
+// negative value when the array is null-terminated instead (glObjectLabel's `label`).
+struct LengthOrNullTerminatedTag {};
+inline constexpr LengthOrNullTerminatedTag LengthOrNullTerminated{};
+
 // A single-indirection pointer to a fixed-size element type (TypeFacts.is_array_element_eligible
 // - see intermediates.py), captured as an owned copy. Deliberately does NOT keep a raw pointer
 // member the way Vulkan's ArrayArgument/PointerArgument do: OpenGL2's generated wrapper
@@ -176,6 +181,10 @@ struct ArrayArgument {
       Data.assign(v, end + 1);
     }
   }
+
+  template <typename SizeT>
+  ArrayArgument(const T* v, SizeT length, LengthOrNullTerminatedTag)
+      : ArrayArgument(length < 0 ? ArrayArgument(v, NullTerminated) : ArrayArgument(v, length)) {}
 
   // Scans forward from v in (key, value) PAIRS for a pair whose KEY (the even-indexed
   // element - v[0], v[2], v[4], ...) is a default-constructed T{} sentinel, and captures

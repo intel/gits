@@ -151,7 +151,8 @@ class ObjectNameRole(StrEnum):
 
 @dataclass(frozen=True, kw_only=True)
 class ObjectNameOverride:
-    kind: GLObjectKind
+    # None only together with identifier_param below.
+    kind: GLObjectKind | None
     role: ObjectNameRole
     # LOOKUP_OR_CREATE only, both required: the same entry-point family's Gen command, which the
     # player uses to create the replay-time name (an APPLE vertex array name is not valid for
@@ -164,8 +165,18 @@ class ObjectNameOverride:
     # names a renderbuffer, any other target a texture (see ImageObjectKind in
     # objectNameMapService.h). `kind` is then TEXTURE.
     target_param: str | None = None
+    # The sibling GLenum identifier parameter (group="ObjectIdentifier": GL_BUFFER, GL_TEXTURE,
+    # ...) that decides the namespace at runtime (see ObjectIdentifierKind in
+    # objectNameMapService.h). `kind` is then None. GL_DISPLAY_LIST names are not mapped (see
+    # ObjectIdentifierMapsNames).
+    identifier_param: str | None = None
 
     def __post_init__(self) -> None:
+        if (self.identifier_param is not None) != (self.kind is None):
+            raise ValueError(
+                f'{self.kind}: kind must be None exactly when identifier_param is set')
+        if self.identifier_param is not None and self.role != ObjectNameRole.LOOKUP:
+            raise ValueError('identifier_param is only defined for an ObjectNameRole.LOOKUP')
         implicit_create = self.role == ObjectNameRole.LOOKUP_OR_CREATE
         if implicit_create != (self.gen_command is not None and self.is_command is not None):
             raise ValueError(
@@ -435,6 +446,11 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
        for command in ('glCopyImageSubData', 'glCopyImageSubDataEXT', 'glCopyImageSubDataNV',
                        'glCopyImageSubDataOES')
        for side in ('src', 'dst')},
+
+    # gl.xml leaves glObjectLabel's name untagged, as its identifier decides the namespace.
+    **{(command, 'name'): ObjectNameOverride(
+        kind=None, role=ObjectNameRole.LOOKUP, identifier_param='identifier')
+       for command in ('glObjectLabel', 'glObjectLabelKHR')},
 }
 
 

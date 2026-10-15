@@ -258,12 +258,26 @@ class ResolveObjectNameOverrideTests(unittest.TestCase):
     tested above."""
 
     def test_no_class_is_none(self) -> None:
-        self.assertIsNone(resolve_object_name_override('glObjectLabel', 'name', None))
+        self.assertIsNone(resolve_object_name_override('glBindBufferBase', 'index', None))
 
     def test_copy_image_names_take_their_kind_from_the_target(self) -> None:
         override = resolve_object_name_override('glCopyImageSubData', 'dstName', None)
         self.assertEqual(override, ObjectNameOverride(
             kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP, target_param='dstTarget'))
+
+    def test_object_label_name_takes_its_kind_from_the_identifier(self) -> None:
+        for cmd_name in ('glObjectLabel', 'glObjectLabelKHR'):
+            with self.subTest(command=cmd_name):
+                override = resolve_object_name_override(cmd_name, 'name', None)
+                self.assertEqual(override, ObjectNameOverride(
+                    kind=None, role=ObjectNameRole.LOOKUP, identifier_param='identifier'))
+
+    def test_identifier_param_requires_no_kind(self) -> None:
+        with self.assertRaises(ValueError):
+            ObjectNameOverride(kind=GLObjectKind.BUFFER, role=ObjectNameRole.LOOKUP,
+                               identifier_param='identifier')
+        with self.assertRaises(ValueError):
+            ObjectNameOverride(kind=None, role=ObjectNameRole.LOOKUP)
 
     def test_unsupported_kind_is_none(self) -> None:
         # 'sync' is a real gl.xml class= value this backend has no GLObjectKind/

@@ -647,6 +647,18 @@ def _validate_pointer_override(
                     f"{command_name}.{param.name}: BITMAP_BYTE_SIZE's {field_name} must name a "
                     f"plain scalar sibling (got {sibling_name!r})"
                 )
+    elif override.length_source_kind is LengthSourceKind.LENGTH_OR_NULL_TERMINATED:
+        if override.direction is not PointerDirection.IN:
+            raise ValueError(
+                f"{command_name}.{param.name}: LENGTH_OR_NULL_TERMINATED override must be IN "
+                f"direction - the Mako templates have no OUT-direction branch for it"
+            )
+        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
+        if sibling is None or not sibling.type_facts.is_scalar:
+            raise ValueError(
+                f"{command_name}.{param.name}: LENGTH_OR_NULL_TERMINATED's length_source_value "
+                f"must name a plain scalar sibling (got {override.length_source_value!r})"
+            )
     # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
     # cross-check.
 

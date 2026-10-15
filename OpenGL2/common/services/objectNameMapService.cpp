@@ -57,6 +57,38 @@ GLObjectKind ImageObjectKind(GLenum target) {
   return target == GL_RENDERBUFFER ? GLObjectKind::Renderbuffer : GLObjectKind::Texture;
 }
 
+GLObjectKind ObjectIdentifierKind(GLenum identifier) {
+  switch (identifier) {
+  case GL_BUFFER:
+    return GLObjectKind::Buffer;
+  case GL_SHADER:
+    return GLObjectKind::Shader;
+  case GL_PROGRAM:
+    return GLObjectKind::Program;
+  case GL_VERTEX_ARRAY:
+    return GLObjectKind::VertexArray;
+  case GL_QUERY:
+    return GLObjectKind::Query;
+  case GL_PROGRAM_PIPELINE:
+    return GLObjectKind::ProgramPipeline;
+  case GL_TRANSFORM_FEEDBACK:
+    return GLObjectKind::TransformFeedback;
+  case GL_SAMPLER:
+    return GLObjectKind::Sampler;
+  case GL_RENDERBUFFER:
+    return GLObjectKind::Renderbuffer;
+  case GL_FRAMEBUFFER:
+    return GLObjectKind::Framebuffer;
+  case GL_TEXTURE:
+  default:
+    return GLObjectKind::Texture;
+  }
+}
+
+bool ObjectIdentifierMapsNames(GLenum identifier) {
+  return identifier != GL_DISPLAY_LIST;
+}
+
 ObjectNameMapService& ObjectNameMapService::Get() {
   // Meyer's singleton - same reasoning as ContextHandleMapService::Get(): neither the recorder
   // nor the player side of this service has any static-destruction-order hazard of its own.

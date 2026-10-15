@@ -296,10 +296,6 @@ _GENERIC_DERIVATION_DENYLIST: frozenset[str] = frozenset({
     'glUniformHandleui64vIMG', 'glProgramUniformHandleui64vIMG',
     'glUniformHandleui64vNV', 'glProgramUniformHandleui64vNV',
     'glUniformui64vNV', 'glProgramUniformui64vNV',
-    # Debug-message filter: deliberately not captured, see the architecture page's "Reduce
-    # replay warning noise" decision.
-    'glDebugMessageControl', 'glDebugMessageControlARB', 'glDebugMessageControlKHR',
-    'glDebugMessageEnableAMD',
     # Multi-draws through the APPLE_element_array pointer, whose client-memory vertex arrays
     # ClientArraysLayer cannot bound (client_array_draws.py).
     'glMultiDrawElementArrayAPPLE', 'glMultiDrawRangeElementArrayAPPLE',

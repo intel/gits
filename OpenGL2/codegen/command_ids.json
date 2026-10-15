@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 2834,
+        "GL": 2839,
         "WGL": 69,
         "EGL": 0,
         "GLX": 0
@@ -2840,7 +2840,12 @@
             "ID_GLSHADERSOURCEARB": 987150,
             "ID_GLUSEPROGRAMOBJECTARB": 987151,
             "ID_GLVALIDATEPROGRAMARB": 987152,
-            "ID_GLINTERLEAVEDARRAYS": 987153
+            "ID_GLINTERLEAVEDARRAYS": 987153,
+            "ID_GLDEBUGMESSAGECONTROL": 987154,
+            "ID_GLDEBUGMESSAGECONTROLARB": 987155,
+            "ID_GLDEBUGMESSAGEENABLEAMD": 987156,
+            "ID_GLOBJECTLABEL": 987157,
+            "ID_GLOBJECTLABELKHR": 987158
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,
