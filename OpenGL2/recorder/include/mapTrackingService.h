@@ -64,23 +64,24 @@ public:
   // resolvable buffer bound - see Decision 4.
   void OnMapBuffer(GLenum target, GLenum access, void* mappedPointer);
 
+  // Core and EXT DSA maps provide the buffer name directly. Whole-buffer maps query
+  // GL_BUFFER_SIZE; range maps already provide their offset, length, and access flags.
+  void OnMapNamedBuffer(GLuint buffer, GLenum access, void* mappedPointer);
+  void OnMapNamedBufferRange(
+      GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
+
   // Registers a just-succeeded glMapNamedBufferEXT (DSA, implicit whole-buffer range) - like
   // OnMapBuffer above, but the buffer name is already given directly by the caller, so no
   // target-to-bound-buffer resolution is needed at all (Decision 4 sidestepped entirely, exactly
   // as that decision's own text anticipated).
   void OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer);
 
-  // Registers a just-succeeded glMapNamedBufferRangeEXT (DSA, explicit offset/length/access) -
-  // like OnMapBufferRange above, but DSA-addressed like OnMapNamedBufferEXT immediately above.
-  void OnMapNamedBufferRangeEXT(
-      GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
-
-  // Performs the application-visible glUnmapBufferARB and returns its result unchanged - same
-  // Decision-5 snapshot behavior as UnmapBufferAndCapture above. A separate entry point (not a
-  // second registration of that one) because it must call its own, specific real
+  // Performs the application-visible glUnmapBufferARB and returns its result unchanged.
+  // A separate entry point must call its own, specific real
   // dispatch-table entry: glUnmapBuffer and glUnmapBufferARB are functionally identical but
   // distinct driver exports, and a driver is not guaranteed to resolve both.
   GLboolean UnmapBufferARBAndCapture(GLenum target);
+  GLboolean UnmapNamedBufferAndCapture(GLuint buffer);
 
   // Performs the application-visible glUnmapNamedBufferEXT and returns its result unchanged -
   // same Decision-5 snapshot behavior as UnmapBufferAndCapture above, but DSA-addressed like
@@ -164,14 +165,16 @@ private:
   // app's own call would. `realReadOnlyRemap` performs the write-only fallback's temporary
   // read-only re-map of [offset, offset+length) and returns the mapped pointer, or nullptr on
   // failure; `realInternalUnmap` performs the second, purely-internal unmap that follows a
-  // successful remap - its result is never propagated to the app.
+  // successful remap. Its result is checked, but never propagated to the app. `realReadSubData`
+  // reads the same range after a failed remap, returning false if the getter is unavailable.
   GLboolean SnapshotBufferAndUnmap(
       const char* callerName,
       GLuint buffer,
       uint64_t shareGroup,
       const std::function<GLboolean()>& realUnmap,
       const std::function<void*(GLintptr, GLsizeiptr)>& realReadOnlyRemap,
-      const std::function<void()>& realInternalUnmap);
+      const std::function<GLboolean()>& realInternalUnmap,
+      const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData);
 
   std::mutex m_MappedBuffersMutex;
   std::unordered_map<Key, MappedRange, KeyHash> m_MappedBuffers;

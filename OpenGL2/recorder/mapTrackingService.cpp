@@ -89,20 +89,47 @@ void RecordMappedDataMetaCommand(uint64_t key,
 }
 
 // Read-only remap of [offset, offset + length) of the buffer bound to `target`, for capture only.
-// Buffer objects predate glMapBufferRange (GL 3.0 / ARB_map_buffer_range), so without it the
-// whole buffer is mapped read-only through glMapBuffer or glMapBufferARB instead. nullptr if no
-// map entry point resolved or the map failed; the matching unmap is the caller's.
+// If the range entry point is unavailable, map the whole buffer through glMapBuffer or its ARB
+// variant. A supported range map that fails must instead use subdata readback; another map would
+// also fail when immutable storage disallows reading. The matching unmap is the caller's.
 void* MapRangeForCaptureRead(GLenum target, GLintptr offset, GLsizeiptr length) {
-  if (auto mapRange = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire)) {
-    return mapRange(target, offset, length, GL_MAP_READ_BIT);
+  auto mapRange = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
+  if (mapRange != nullptr) {
+    void* pointer = mapRange(target, offset, length, GL_MAP_READ_BIT);
+    if (pointer != nullptr || g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire) !=
+                                  &ResolveAndCall_glMapBufferRange) {
+      return pointer;
+    }
   }
-  void* whole = nullptr;
-  if (auto map = g_DispatchTable.glMapBuffer.load(std::memory_order_acquire)) {
-    whole = map(target, GL_READ_ONLY);
-  } else if (auto mapARB = g_DispatchTable.glMapBufferARB.load(std::memory_order_acquire)) {
-    whole = mapARB(target, GL_READ_ONLY);
+  auto map = g_DispatchTable.glMapBuffer.load(std::memory_order_acquire);
+  void* whole = map != nullptr ? map(target, GL_READ_ONLY) : nullptr;
+  if (whole == nullptr &&
+      g_DispatchTable.glMapBuffer.load(std::memory_order_acquire) == &ResolveAndCall_glMapBuffer) {
+    auto mapARB = g_DispatchTable.glMapBufferARB.load(std::memory_order_acquire);
+    whole = mapARB != nullptr ? mapARB(target, GL_READ_ONLY) : nullptr;
   }
   return whole != nullptr ? static_cast<uint8_t*>(whole) + offset : nullptr;
+}
+
+// Void dispatch thunks return without writing data if their real getter cannot be resolved.
+bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* data) {
+  g_DispatchTable.glGetBufferSubData.load(std::memory_order_acquire)(target, offset, length, data);
+  return g_DispatchTable.glGetBufferSubData.load(std::memory_order_acquire) !=
+         &ResolveAndCall_glGetBufferSubData;
+}
+
+bool ReadNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizeiptr length, void* data) {
+  g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire)(buffer, offset, length,
+                                                                          data);
+  return g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire) !=
+         &ResolveAndCall_glGetNamedBufferSubData;
+}
+
+bool ReadNamedBufferSubDataEXT(GLuint buffer, GLintptr offset, GLsizeiptr length, void* data) {
+  g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire)(buffer, offset, length,
+                                                                             data);
+  return g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire) !=
+         &ResolveAndCall_glGetNamedBufferSubDataEXT;
 }
 
 } // namespace
@@ -133,70 +160,18 @@ void MapTrackingService::OnMapBufferRange(
 GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
   auto realUnmapBuffer = g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
   const GLuint buffer = ResolveBoundBuffer(target);
-  const uint64_t shareGroup = CurrentShareGroup();
-  std::optional<MappedRange> range =
-      buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
-  // Nothing tracked (the mapping did not come through glMapBufferRange, the buffer did not
-  // resolve, ...), or a genuinely read-only mapping - see Decision 5's third bullet. There is
-  // nothing to snapshot, so no ordering key is reserved for this call at all.
-  if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
-    return realUnmapBuffer(target);
-  }
-  // Reserved before the real unmap dispatch below, for both branches, for the same reason every
-  // generated wrapper reserves its own key before dispatch (see recorderWrappersAuto.cpp.mako's
-  // header comment): a concurrent top-level call on another thread must not be able to race this
-  // one's key assignment based on which driver call happens to return first. Every path from
-  // here must either record a command under this key or release it via
-  // CaptureManager::SkipCommandKey - silently dropping it would stall
-  // OrderingRecorder::CheckPendingSerializers() forever, waiting for a key that never arrives.
-  const uint64_t key = CaptureManager::Get().CreateCommandKey();
-  std::vector<uint8_t> bytes(static_cast<size_t>(range->Length));
-  if (range->Access & GL_MAP_READ_BIT) {
-    // Safe to read directly through the still-live original pointer, right before the real
-    // unmap invalidates it - see Decision 5's first bullet.
-    std::memcpy(bytes.data(), range->Pointer, bytes.size());
-    const GLboolean result = realUnmapBuffer(target);
-    if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
-    } else {
-      // GL_FALSE means the data store became corrupted and its contents are undefined for an
-      // implementation-specific reason. `bytes` was copied while the pointer was still valid,
-      // but it no longer represents defined buffer contents after the failed unmap. Since this
-      // data is invalid, we should not record it.
-      LOG_WARNING << "MapTrackingService: real unmap of buffer " << buffer
-                  << " returned GL_FALSE (data store contents corrupted per spec) - no "
-                     "MappedDataMetaCommand recorded for this unmap";
-      CaptureManager::Get().SkipCommandKey(key);
-    }
-    return result;
-  }
-  // Write-only (or write-plus-invalidate): the original pointer is not guaranteed readable per
-  // spec - see Decision 5's second bullet. Real unmap first (the one, app-visible unmap - its
-  // result is what the app's own call returns), then a temporary read-only remap/memcpy/unmap
-  // purely for capture, mirroring CgitsUnmapBuffer's own fallback.
-  const GLboolean result = realUnmapBuffer(target);
-  // TODO: Phase 1 storage tracking should avoid a knowingly invalid read remap for immutable
-  // storage without GL_MAP_READ_BIT and use glGetBufferSubData as the correctness fallback.
-  void* readPointer = MapRangeForCaptureRead(target, range->Offset, range->Length);
-  if (readPointer != nullptr) {
-    std::memcpy(bytes.data(), readPointer, bytes.size());
-    realUnmapBuffer(target); // Second, purely internal unmap - its result is not the app's.
-    if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
-    } else {
-      // GL_FALSE means the data store became corrupted and its contents are undefined for an
-      // implementation-specific reason. Do not read or record those undefined contents.
-      LOG_WARNING << "MapTrackingService: real unmap of buffer " << buffer
-                  << " returned GL_FALSE (data store contents corrupted per spec) - no "
-                     "MappedDataMetaCommand recorded for this unmap";
-      CaptureManager::Get().SkipCommandKey(key);
-    }
-  } else {
-    LOG_WARNING << "MapTrackingService: read-only re-map of buffer " << buffer
-                << " failed - no MappedDataMetaCommand recorded for this unmap";
-    CaptureManager::Get().SkipCommandKey(key);
-  }
-  return result;
+  return SnapshotBufferAndUnmap(
+      "glUnmapBuffer", buffer, CurrentShareGroup(),
+      /*realUnmap=*/[realUnmapBuffer, target] { return realUnmapBuffer(target); },
+      /*realReadOnlyRemap=*/
+      [target](GLintptr offset, GLsizeiptr length) {
+        return MapRangeForCaptureRead(target, offset, length);
+      },
+      /*realInternalUnmap=*/[realUnmapBuffer, target] { return realUnmapBuffer(target); },
+      /*realReadSubData=*/
+      [target](GLintptr offset, GLsizeiptr length, void* data) {
+        return ReadBufferSubData(target, offset, length, data);
+      });
 }
 
 // --- Extensions beyond the original glMapBufferRange/glUnmapBuffer pair ---------------------
@@ -250,6 +225,22 @@ void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedP
                       static_cast<GLsizeiptr>(size));
 }
 
+void MapTrackingService::OnMapNamedBuffer(GLuint buffer, GLenum access, void* mappedPointer) {
+  if (mappedPointer == nullptr || buffer == 0) {
+    return;
+  }
+  GLint64 size = 0;
+  g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire)(
+      buffer, GL_BUFFER_SIZE, &size);
+  if (size <= 0) {
+    LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
+                << " could not be queried - buffer-map tracking skipped for this map";
+    return;
+  }
+  StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer,
+                      static_cast<GLsizeiptr>(size));
+}
+
 void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer) {
   if (mappedPointer == nullptr || buffer == 0) {
     return;
@@ -282,7 +273,7 @@ void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void*
                       static_cast<GLsizeiptr>(size));
 }
 
-void MapTrackingService::OnMapNamedBufferRangeEXT(
+void MapTrackingService::OnMapNamedBufferRange(
     GLuint buffer, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer) {
   if (mappedPointer == nullptr || buffer == 0) {
     return;
@@ -301,7 +292,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     uint64_t shareGroup,
     const std::function<GLboolean()>& realUnmap,
     const std::function<void*(GLintptr, GLsizeiptr)>& realReadOnlyRemap,
-    const std::function<void()>& realInternalUnmap) {
+    const std::function<GLboolean()>& realInternalUnmap,
+    const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData) {
   std::optional<MappedRange> range =
       buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
   // Nothing tracked (map wasn't via one of this service's enabled map functions, buffer
@@ -310,8 +302,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
   }
-  // Reserved before the real unmap dispatch below (both branches) - see
-  // UnmapBufferAndCapture's own identical comment above on why.
+  // Reserve before the real unmap, then record or release on every path; otherwise another
+  // thread can claim a later key and stall the ordering recorder on this one.
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
   std::vector<uint8_t> bytes(static_cast<size_t>(range->Length));
   if (range->Access & GL_MAP_READ_BIT) {
@@ -334,23 +326,31 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   // result is what the app's own call returns), then a temporary read-only remap/memcpy/unmap
   // purely for capture.
   const GLboolean result = realUnmap();
+  if (result != GL_TRUE) {
+    LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
+                << " returned GL_FALSE (data store contents corrupted per spec) - no "
+                   "MappedDataMetaCommand recorded for this unmap";
+    CaptureManager::Get().SkipCommandKey(key);
+    return result;
+  }
+  // TODO: Track immutable storage permissions to skip a read remap forbidden by its flags;
+  // the failed probe may leave an application-visible GL error before subdata readback.
   void* readPointer = realReadOnlyRemap(range->Offset, range->Length);
   if (readPointer != nullptr) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
-    realInternalUnmap(); // Second, purely internal unmap - its result is not the app's.
-    if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
-    } else {
-      LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
-                  << " returned GL_FALSE (data store contents corrupted per spec) - no "
-                     "MappedDataMetaCommand recorded for this unmap";
+    if (realInternalUnmap() != GL_TRUE) {
+      LOG_WARNING << "MapTrackingService (" << callerName << "): internal unmap of buffer "
+                  << buffer << " returned GL_FALSE - no MappedDataMetaCommand recorded";
       CaptureManager::Get().SkipCommandKey(key);
+      return result;
     }
-  } else {
-    LOG_WARNING << "MapTrackingService (" << callerName << "): read-only re-map of buffer "
-                << buffer << " failed - no MappedDataMetaCommand recorded for this unmap";
+  } else if (!realReadSubData(range->Offset, range->Length, bytes.data())) {
+    LOG_WARNING << "MapTrackingService (" << callerName << "): no readback function for buffer "
+                << buffer << " - no MappedDataMetaCommand recorded for this unmap";
     CaptureManager::Get().SkipCommandKey(key);
+    return result;
   }
+  RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
   return result;
 }
 
@@ -364,7 +364,28 @@ GLboolean MapTrackingService::UnmapBufferARBAndCapture(GLenum target) {
       [target](GLintptr offset, GLsizeiptr length) {
         return MapRangeForCaptureRead(target, offset, length);
       },
-      /*realInternalUnmap=*/[realUnmapBufferARB, target] { realUnmapBufferARB(target); });
+      /*realInternalUnmap=*/[realUnmapBufferARB, target] { return realUnmapBufferARB(target); },
+      /*realReadSubData=*/
+      [target](GLintptr offset, GLsizeiptr length, void* data) {
+        return ReadBufferSubData(target, offset, length, data);
+      });
+}
+
+GLboolean MapTrackingService::UnmapNamedBufferAndCapture(GLuint buffer) {
+  auto realUnmapNamedBuffer = g_DispatchTable.glUnmapNamedBuffer.load(std::memory_order_acquire);
+  return SnapshotBufferAndUnmap(
+      "glUnmapNamedBuffer", buffer, CurrentShareGroup(),
+      /*realUnmap=*/[realUnmapNamedBuffer, buffer] { return realUnmapNamedBuffer(buffer); },
+      /*realReadOnlyRemap=*/
+      [buffer](GLintptr offset, GLsizeiptr length) {
+        return g_DispatchTable.glMapNamedBufferRange.load(std::memory_order_acquire)(
+            buffer, offset, length, GL_MAP_READ_BIT);
+      },
+      /*realInternalUnmap=*/[realUnmapNamedBuffer, buffer] { return realUnmapNamedBuffer(buffer); },
+      /*realReadSubData=*/
+      [buffer](GLintptr offset, GLsizeiptr length, void* data) {
+        return ReadNamedBufferSubData(buffer, offset, length, data);
+      });
 }
 
 GLboolean MapTrackingService::UnmapNamedBufferEXTAndCapture(GLuint buffer) {
@@ -375,22 +396,28 @@ GLboolean MapTrackingService::UnmapNamedBufferEXTAndCapture(GLuint buffer) {
       /*realUnmap=*/[realUnmapNamedBufferEXT, buffer] { return realUnmapNamedBufferEXT(buffer); },
       /*realReadOnlyRemap=*/
       [buffer](GLintptr offset, GLsizeiptr length) {
-        // Re-maps via glMapNamedBufferRangeEXT, not core glMapNamedBufferRange - consistent
-        // with this backend only having been observed capturing the EXT-suffixed DSA family
-        // (see OnMapNamedBufferEXT's own identical choice above); purely an internal,
-        // never-app-visible re-map, not a replay of anything the app itself called. The range
-        // entry point exists only with GL 3.0 / ARB_map_buffer_range; see
-        // MapRangeForCaptureRead for the whole-buffer fallback.
-        if (auto mapRange =
-                g_DispatchTable.glMapNamedBufferRangeEXT.load(std::memory_order_acquire)) {
-          return mapRange(buffer, offset, length, GL_MAP_READ_BIT);
+        // Use the EXT family for this EXT-addressed buffer. If its range entry point is
+        // unavailable, read-map the whole buffer through its whole-buffer entry point.
+        auto mapRange = g_DispatchTable.glMapNamedBufferRangeEXT.load(std::memory_order_acquire);
+        if (mapRange != nullptr) {
+          void* pointer = mapRange(buffer, offset, length, GL_MAP_READ_BIT);
+          if (pointer != nullptr ||
+              g_DispatchTable.glMapNamedBufferRangeEXT.load(std::memory_order_acquire) !=
+                  &ResolveAndCall_glMapNamedBufferRangeEXT) {
+            return pointer;
+          }
         }
         auto map = g_DispatchTable.glMapNamedBufferEXT.load(std::memory_order_acquire);
         void* whole = map != nullptr ? map(buffer, GL_READ_ONLY) : nullptr;
         return whole != nullptr ? static_cast<void*>(static_cast<uint8_t*>(whole) + offset)
                                 : nullptr;
       },
-      /*realInternalUnmap=*/[realUnmapNamedBufferEXT, buffer] { realUnmapNamedBufferEXT(buffer); });
+      /*realInternalUnmap=*/
+      [realUnmapNamedBufferEXT, buffer] { return realUnmapNamedBufferEXT(buffer); },
+      /*realReadSubData=*/
+      [buffer](GLintptr offset, GLsizeiptr length, void* data) {
+        return ReadNamedBufferSubDataEXT(buffer, offset, length, data);
+      });
 }
 
 GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
