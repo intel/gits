@@ -290,6 +290,7 @@ def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) ->
 
             commands.append(Command(
                 name=command_attribs['name'],
+                api=api,
                 enabled=False,
                 command_type=CmdType.NONE,
                 comment=command_attribs.get('comment'),

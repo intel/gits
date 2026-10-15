@@ -174,6 +174,7 @@ class Command:
     """API call (or an internal GITS action)."""
 
     name: str
+    api: Api
     enabled: bool
     command_type: CmdType
     comment: str | None = None

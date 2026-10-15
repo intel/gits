@@ -62,6 +62,7 @@ def _make_wgl_swap_multiple_buffers() -> Command:
     """
     return Command(
         name='wglSwapMultipleBuffers',
+        api=Api.WGL,
         enabled=False,
         command_type=CmdType.NONE,
         comment='Absent from wgl.xml, but exported by OpenGL32.dll.',
@@ -91,7 +92,7 @@ def _get_synthetic_wgl_commands(wgl_commands: list[Command]) -> list[Command]:
             raise KeyError(
                 f'Expected to find "{source_name}" among parsed WGL commands to clone as '
                 f'"{new_name}", but it was not found. Did wgl.xml change?')
-        synthetic.append(replace(source, name=new_name))
+        synthetic.append(replace(source, name=new_name, api=Api.WGL))
 
     # Completely synthetic commands.
     synthetic.append(_make_wgl_swap_multiple_buffers())
