@@ -568,9 +568,13 @@ void StateRestorer::RestoreClientArrays() {
     return;
   }
   const GLint clientActiveTexture = GetInteger(GL_CLIENT_ACTIVE_TEXTURE);
+  // Texture coordinate state queries fail while the active texture unit has no texture
+  // coordinates (from GL_MAX_TEXTURE_COORDS on), so each unit is read with itself active.
+  const GLint activeTexture = GetInteger(GL_ACTIVE_TEXTURE);
   const GLint units = ClientTextureUnits(m_Version.AtLeast(2, 0));
   for (GLint unit = 0; unit < units; ++unit) {
     const GLenum texture = GL_TEXTURE0 + static_cast<GLenum>(unit);
+    GL_FN(glActiveTexture)(texture);
     GL_FN(glClientActiveTexture)(texture);
     const bool enabled = GL_FN(glIsEnabled)(GL_TEXTURE_COORD_ARRAY) != GL_FALSE;
     const GLuint buffer = GetName(GL_TEXTURE_COORD_ARRAY_BUFFER_BINDING);
@@ -600,6 +604,7 @@ void StateRestorer::RestoreClientArrays() {
       Emit<glTexCoordPointerCommandSerializer>(command);
     }
   }
+  GL_FN(glActiveTexture)(static_cast<GLenum>(activeTexture));
   GL_FN(glClientActiveTexture)(static_cast<GLenum>(clientActiveTexture));
   glClientActiveTextureCommand active;
   active.m_texture.Value = static_cast<GLenum>(clientActiveTexture);
