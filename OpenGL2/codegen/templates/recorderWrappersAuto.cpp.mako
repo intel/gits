@@ -109,7 +109,31 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // disabled/unsupported-command path (passed straight to ReportUnsupportedCommand). Named
   // `orderingKey`, not `key`, to avoid colliding with the handful of real GL/WGL parameters
   // literally named `key`/`key0`/`key1` (e.g. glAcquireKeyedMutexWin32EXT).
+% if cmd.name in pre_hook_key_pair_commands:
+  // This command is one of generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS - see that
+  // table's own header comment and CaptureManager::CreateCommandKeyPair()'s own header
+  // comment (captureManager.h) for the full rationale. Reserves BOTH this command's own
+  // orderingKey and a second, spare key for WindowGeometryTrackingLayer's own Pre() override
+  // (the sole consumer, via TakePendingPreHookKey() below) as ONE atomic pair, right here -
+  // the same point a lone CreateCommandKey() call would otherwise occupy - rather than
+  // reserving the spare key separately, later, inside that Pre() override itself: reserving
+  // them together, before either is ever exposed to another thread, is what actually
+  // guarantees no OTHER thread's own key can land between them, and that this command's own
+  // orderingKey ends up in the exact same position relative to every OTHER, independently-
+  // recording thread that a lone CreateCommandKey() call would have given it.
+  const auto preHookKeyPair =
+      record ? CaptureManager::Get().CreateCommandKeyPair() : std::pair<uint64_t, uint64_t>{0, 0};
+  const uint64_t orderingKey = preHookKeyPair.second;
+  if (record) {
+    // Handed off to WindowGeometryTrackingLayer::Pre() (the sole consumer) via
+    // CaptureManager::TakePendingPreHookKey() - see SetPendingPreHookKey()'s own header
+    // comment for why this thread-local handoff is safe: the Pre layer loop a few lines below
+    // runs on this very thread, before this thread does anything else.
+    CaptureManager::Get().SetPendingPreHookKey(preHookKeyPair.first);
+  }
+% else:
   const uint64_t orderingKey = record ? CaptureManager::Get().CreateCommandKey() : 0;
+% endif
 % if cmd.enabled:
   // Constructed before the real call so IN-direction array/string members are eager-copied
   // out of application memory immediately before the call (see arguments.h's ArrayArgument<T>
@@ -171,8 +195,18 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
         f'QueryUnpackAlignment(), '
         f'{raw_offset_in_override.pixel_depth_param if raw_offset_in_override.pixel_depth_param else "1"}, '
         + ('QueryUnpackImageHeight(), QueryUnpackSkipImages(), '
-           if raw_offset_in_override.pixel_depth_param else '0, 0, ') +
-        f'QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "{cmd.name}"'
+           if raw_offset_in_override.pixel_depth_param else '0, 0, ')
+        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
+        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
+        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
+        # dimensionality, so it is always queried live. Exactly ONE `+` joins this ternary to
+        # the previous one: a second, redundant `+` here (from
+        # a comment sitting between two supposedly-adjacent `+`-joined expressions) parses as
+        # Python's unary `+` applied to a str and raises TypeError at codegen time, not at
+        # template-authoring time, so this is easy to reintroduce by accident.
+        + ('QueryUnpackRowLength(), QueryUnpackSkipRows(), '
+           if raw_offset_in_override.pixel_height_param else '0, 0, ') +
+        f'QueryUnpackSkipPixels(), "{cmd.name}"'
     )
 %>\
     // See pointer_needs_pixel_transfer_unknown_flag()'s
@@ -285,8 +319,21 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
         f'QueryPackAlignment(), '
         f'{override.pixel_depth_param if override.pixel_depth_param else "1"}, '
         + ('QueryPackImageHeight(), QueryPackSkipImages(), '
-           if override.pixel_depth_param else '0, 0, ') +
-        f'QueryPackRowLength(), QueryPackSkipRows(), QueryPackSkipPixels(), "{cmd.name}"'
+           if override.pixel_depth_param else '0, 0, ')
+        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
+        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
+        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
+        # dimensionality, so it is always queried live. No enabled OUT-direction command is
+        # ever 1D in practice (glReadPixels is the only OUT-direction match, always 2D - see
+        # pixel_transfer_metadata.py's own audit), so this branch never actually fires today;
+        # kept for symmetry with the IN-direction case above and to fail safe rather than
+        # silently regress if a 1D OUT-direction command is ever added later. Exactly ONE `+`
+        # joins this ternary to the previous one - see the IN-direction branch's own identical
+        # comment above for why a second, redundant `+` here is easy to reintroduce
+        # by accident and fails only at codegen time, not at template-authoring time.
+        + ('QueryPackRowLength(), QueryPackSkipRows(), '
+           if override.pixel_height_param else '0, 0, ') +
+        f'QueryPackSkipPixels(), "{cmd.name}"'
     )
 %>\
     command->m_${p.name}.Capture(${capture_arg_expr}, ComputePixelTransferByteSize(${pixel_transfer_args_out}));

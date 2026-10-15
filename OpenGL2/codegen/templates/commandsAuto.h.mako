@@ -132,7 +132,23 @@ QueryUnpackImageHeight(), QueryUnpackSkipImages(), \
 % else:
 0, 0, \
 % endif
+## GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect at all on a 1D transfer (no `height` sibling,
+## i.e. pixel_height_param is None - see pointer_metadata.py's own PIXEL_TRANSFER_SIZE comment
+## and pixelTransferSize.h's own header comment on why ROW_LENGTH/SKIP_ROWS matter for every
+## OTHER (2D/3D) transfer): unlike those, GL_(UN)PACK_SKIP_PIXELS still applies to a 1D transfer
+## (it shifts where in the buffer the single row's own pixel data starts), so it is always
+## queried live regardless of dimensionality. Passing 0 literals here (rather than querying a
+## real, possibly-nonzero global GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS state that is legitimately
+## live for some OTHER, unrelated 2D/3D transfer elsewhere in the same app) avoids
+## ComputePixelTransferByteSize() spuriously inflating a 1D capture's byte count by
+## skipRows * rowStride bytes the driver never actually reads - an out-of-bounds host read past
+## the application's real allocation, since ArrayArgument<T>'s eager copy walks that many bytes
+## regardless of whether GL itself would ever look at them.
+% if override.pixel_height_param:
 QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "${cmd.name}"\
+% else:
+0, 0, QueryUnpackSkipPixels(), "${cmd.name}"\
+% endif
 ))\
 % elif override.length_source_kind == LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
 ## COMPSIZE(buffer) depends on the sibling enum's *value*, not just its presence - see that

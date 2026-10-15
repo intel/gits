@@ -121,14 +121,27 @@ namespace gits::opengl2 {
 // transfer, their GL_PACK_* counterparts) - see QueryUnpackRowLength()/QueryUnpackSkipRows()/
 // QueryUnpackSkipPixels()/QueryPackRowLength()/QueryPackSkipRows()/QueryPackSkipPixels()
 // below. Unlike IMAGE_HEIGHT/SKIP_IMAGES above (which GL ignores entirely for
-// a transfer with no third dimension), these three affect EVERY pixel transfer - 1D, 2D, and
-// 3D alike (GL_UNPACK_ROW_LENGTH overrides the row stride used to advance between rows for a
-// transfer with more than one row; GL_UNPACK_SKIP_ROWS/SKIP_PIXELS shift where in the supplied
-// buffer the driver starts reading, for a transfer with any width/height at all) - so this
-// function queries and applies all three UNCONDITIONALLY at every Mako call site (see
-// commandsAuto.h.mako/recorderWrappersAuto.cpp.mako), regardless of whether the specific
-// command has a `depth`/`height` param at all. The concrete motivating case: a 1x2
-// RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
+// a transfer with no third dimension), ROW_LENGTH/SKIP_ROWS affect every transfer with more
+// than one real row to advance between/skip (2D and 3D alike) - but, per the GL pixel-store
+// spec, NEITHER has any effect on a genuine 1D transfer (glTexImage1D/glTexSubImage1D: no
+// `height` sibling at all - there is only ever one row, so there is no second row to stride
+// to and no row to skip over). SKIP_PIXELS is the one exception that still applies
+// unconditionally, 1D included (it shifts where within that single row's own client buffer the
+// real pixel data starts). This function itself stays dimension-agnostic and trusts whatever
+// `rowLength`/`skipRows` it is handed - it is each Mako call site's own responsibility
+// (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) to pass literal 0s for both, rather than
+// the live-queried GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS state, whenever the command being sized has
+// no `height` param (see those templates' own conditionals, keyed on the same
+// `pixel_height_param` presence/absence PIXEL_TRANSFER_SIZE already uses to gate
+// IMAGE_HEIGHT/SKIP_IMAGES above) - otherwise a legitimate, nonzero GL_(UN)PACK_SKIP_ROWS the
+// application set for some OTHER, unrelated 2D/3D transfer elsewhere would still be live at a
+// 1D call, and this function would spuriously add skipRows * rowStride bytes to the computed
+// size that the driver itself never reads for that 1D call - an out-of-bounds host read past
+// the application's real allocation, since the caller's eager buffer copy walks exactly that
+// many bytes regardless of whether GL would ever look at them.
+//
+// For every transfer where ROW_LENGTH/SKIP_ROWS genuinely do apply (2D and 3D), the concrete
+// motivating case is: a 1x2 RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
 // actually touches 4,100 bytes of real client memory (1024 bytes for the row ROW_LENGTH
 // describes, plus 4 bytes for the second row's own real pixel data), which is exactly what
 // this function computes: the GL pixel-store spec's own addressing formula for the memory
