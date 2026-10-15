@@ -46,8 +46,8 @@
 namespace gits::opengl2 {
 
 // The share group of whichever HGLRC is current on this thread right now, per the real
-// driver - see common/services/shareGroupService.h's own header comment for why GL object
-// names must be bucketed by this instead of by GLObjectKind alone. Queried directly from the
+// driver - see shareGroupService.h's own header comment for why GL object names must be
+// bucketed by this instead of by GLObjectKind alone. Queried directly from the
 // real driver rather than tracked separately here, mirroring recorder/clientMemoryCapture.cpp's
 // precedent of calling real GL/WGL functions directly from recorder helpers to introspect state
 // that isn't itself a captured command parameter (see that file's QueryBoundBufferQuiet).

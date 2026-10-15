@@ -8,6 +8,15 @@
 
 #pragma once
 
+// Lives under player/ rather than common/services/, mirroring MapTrackingService's own
+// recorder/ placement (see recorder/include/mapTrackingService.h's header comment) for the
+// same reason in the opposite direction: every method below is only ever called from player-
+// side code (commandRunnersCustom.cpp/commandRunnersAuto.cpp.mako - see this class's own
+// method comments for each call site) and only ever needs player-side identity
+// (CurrentContext()'s live, replay-time HGLRC - player/include/handleArgumentUpdaters.h). The
+// recorder has no counterpart: a captured stream already records whichever location the
+// recording-time driver returned, so there is nothing for the recorder itself to remap.
+
 #include "arguments.h" // GITSKey
 #include "glTypes.h"
 

@@ -65,7 +65,7 @@ namespace gits::opengl2 {
 // see object_name_lifecycle.py's matching GLObjectKind comment.
 //
 // Share-group identity (see modern-opengl-backend-architecture.md's share-group decision
-// record and common/services/shareGroupService.h): a GLuint object name is unique only within
+// record and recorder/include/shareGroupService.h): a GLuint object name is unique only within
 // a share group, not process-globally - two independent, non-sharing contexts can each have a
 // buffer named 1. Only the recorder-direction (name -> key) methods below take a `shareGroup`
 // parameter; the player-direction (key -> name) methods do not need one, because a GITSKey is

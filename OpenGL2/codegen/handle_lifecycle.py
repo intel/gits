@@ -171,7 +171,7 @@ MAPPED_HANDLE_SERVICE_NAMES: dict[str, str] = {
 # future mapped-handle type) - a GLsync is never part of any "share group", so these stay their
 # own, explicitly HGLRC-scoped tables rather than being forced into MappedHandleLifecycle's
 # shared shape (which every entry would then have to answer "None"/"{}" for) just for the sake
-# of uniformity. See ShareGroupService's own header comment (common/services/
+# of uniformity. See ShareGroupService's own header comment (recorder/include/
 # shareGroupService.h) for the GL spec rule this exists to satisfy.
 
 # Every key here must also be a key of HGLRC_LIFECYCLE.creating_commands above - name of the
@@ -180,7 +180,7 @@ MAPPED_HANDLE_SERVICE_NAMES: dict[str, str] = {
 # (wglCreateContext has no such parameter). Consulted by recorderWrappersAuto.cpp.mako/
 # commandRunnersCustom.cpp to tell ShareGroupService::RegisterNewContext() which existing
 # context (if any) the newly-created one should join - see
-# common/services/shareGroupService.h and modern-opengl-backend-architecture.md's share-group
+# recorder/include/shareGroupService.h and modern-opengl-backend-architecture.md's share-group
 # decision record for why GL object names need this at all (they are unique only within a
 # share group, not process-globally).
 CONTEXT_SHARE_PARAM: dict[str, str | None] = {

@@ -8,6 +8,17 @@
 
 #pragma once
 
+// Lives under recorder/ rather than common/services/, mirroring MapTrackingService's own
+// recorder/ placement (see recorder/include/mapTrackingService.h's header comment): every
+// caller (ObjectNameMapService's/MapTrackingService's recorder-direction name->key lookups,
+// via recorder/include/handleArgumentUpdaters.h's CurrentShareGroup()/GroupIdentityFor(), and
+// recorderWrappersAuto.cpp.mako's wglCreateContextAttribsARB/wglShareLists handling) is
+// recorder-only. The player has no counterpart, and by design never will: ObjectNameMapService's
+// player-direction (GITSKey -> live GLuint, see that header's SetHandle()/GetHandle()) is
+// already globally unique by construction and takes no share-group parameter at all - only the
+// recorder-direction (name -> key) lookups this service exists to disambiguate are ever
+// share-group-scoped.
+
 #include "glTypes.h"
 
 #include <cstdint>
@@ -27,13 +38,11 @@ namespace gits::opengl2 {
 // context's name 1 silently overwrite the first context's mapping.
 //
 // Process-local, real-HGLRC-keyed bookkeeping - deliberately NOT stream-serialized, unlike
-// ContextHandleMapService's GITSKey. The recorder and player each maintain their own,
-// independent ShareGroupService instance over their own process-local HGLRC values (real,
-// captured-process contexts on the recorder side; real, replay-process contexts on the player
-// side) - nothing here needs to match numerically between the two sides, only to be
-// self-consistent within one side's own lifetime: the GL objects' actual cross-process identity
+// ContextHandleMapService's GITSKey. Scoped to the recorder's own process-local HGLRC values
+// (real, captured-process contexts) - nothing here needs to match numerically against the
+// player's own, separate replay-process contexts: the GL objects' actual cross-process identity
 // already flows through GITSKey via ObjectNameMapService/MapTrackingService's existing
-// Register/GetKey/SetHandle/GetHandle calls. This service only partitions each side's own
+// Register/GetKey/SetHandle/GetHandle calls. This service only partitions the recorder's own
 // name->key (or name->data) maps so two same-process, non-sharing contexts' identically-named
 // objects don't collide - it plays no role in matching a recorded name to its replayed one.
 //

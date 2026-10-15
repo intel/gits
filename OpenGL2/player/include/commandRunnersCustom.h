@@ -97,7 +97,7 @@ private:
 };
 
 // glGetUniformLocation's Run() - see docs/development/modern-opengl-backend-architecture.md's
-// uniform-location decision record and common/services/uniformLocationMapService.h: registers
+// uniform-location decision record and uniformLocationMapService.h: registers
 // the real, replay-time location the driver just returned under the captured (recorder-time)
 // location this call's Command originally decoded, so any later glUniform*(location, ...)
 // command can resolve through UniformLocationMapService::Resolve() instead of replaying the
@@ -115,7 +115,7 @@ private:
   glGetUniformLocationCommand command;
 };
 
-// glUseProgram's Run() - see common/services/uniformLocationMapService.h's header comment:
+// glUseProgram's Run() - see uniformLocationMapService.h's header comment:
 // classic (non-DSA) glUniform*() calls carry no program parameter of their own, so
 // UniformLocationMapService must track "current program" itself, per-context, updated at the
 // one call that changes it - CurrentContext() (handleArgumentUpdaters.h) is only well-defined

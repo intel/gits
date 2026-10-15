@@ -62,8 +62,8 @@ private:
   // A GLuint buffer name is unique only within a share group, not process-globally: two
   // independent, non-sharing contexts can each have a buffer named 1, and without the share
   // group here one context's unmap could consume the other's tracked range. Reuses the same
-  // ShareGroupService identity as ObjectNameMapService (see common/services/shareGroupService.h
-  // and modern-opengl-backend-architecture.md's share-group decision record).
+  // ShareGroupService identity as ObjectNameMapService (see shareGroupService.h and
+  // modern-opengl-backend-architecture.md's share-group decision record).
   struct Key {
     uint64_t ShareGroup;
     GLuint Buffer;

@@ -25,12 +25,14 @@ add_library(OpenGL2_player STATIC
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
   include/unsupportedCommandRunner.h
+  include/uniformLocationMapService.h
   include/windowGeometryMetaRunner.h
   include/commandRunnersCustom.h
   realDriver.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   unsupportedCommandRunner.cpp
+  uniformLocationMapService.cpp
   windowGeometryMetaRunner.cpp
   commandRunnersCustom.cpp
 )
