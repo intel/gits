@@ -18,6 +18,7 @@ set(SCRIPTS_SRC
   intermediates.py
   intermediates_creator.py
   generator_helpers.py
+  generator_enums.py
   generator.py
   generator_interceptor.py
   generator_layer_interface.py
@@ -58,6 +59,8 @@ set(OPENGL2_GENERATED_LAYER_INTERFACE_FILES
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandCodersAuto.h
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandCodersAuto.cpp
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandSerializersAuto.h
+  ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.h
+  ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.cpp
 )
 set(OPENGL2_INTERCEPTOR_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../interceptor)
 set(OPENGL2_GENERATED_INTERCEPTOR_FILES

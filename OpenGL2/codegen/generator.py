@@ -16,6 +16,7 @@
 from pathlib import Path
 
 from command_ids import build_command_ids
+from generator_enums import generate_enum_files
 from generator_interceptor import build_interceptor_command_list, generate_interceptor_files
 from generator_layer_interface import generate_layer_interface_files
 from generator_player import generate_player_files
@@ -76,7 +77,8 @@ def main() -> None:
     enum_name_map = build_enum_name_map(enums)
     bitmask_groups = get_bitmask_groups(enums)
     print(f'Built enum name map with {len(enum_name_map)} (api, value, group) entries '
-          f'and {len(bitmask_groups)} bitmask groups.') # TODO: for use later.
+          f'and {len(bitmask_groups)} bitmask groups.')
+    generate_enum_files(enums, enum_name_map, bitmask_groups)
 
     if inspect_data:
         # Inspect enum data per API.

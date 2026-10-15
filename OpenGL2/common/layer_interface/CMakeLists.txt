@@ -17,6 +17,8 @@ set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
 source_group("Generated Files" FILES ${GENERATED_SRC})
@@ -45,6 +47,10 @@ target_include_directories(OpenGL2_layer_interface PUBLIC
 target_link_libraries(OpenGL2_layer_interface PUBLIC
   stream
   log
+)
+target_link_libraries(OpenGL2_layer_interface PRIVATE
+  # Ensures "platform.h" resolves to the GITS header, not MurmurHash's Platform.h on Windows.
+  common_interface
 )
 
 # Groups this target under an "OpenGL2_common" virtual folder in the IDE, matching how

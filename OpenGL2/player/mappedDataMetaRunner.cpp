@@ -8,6 +8,7 @@
 
 #include "mappedDataMetaRunner.h"
 
+#include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"
 #include "objectNameMapService.h"
@@ -16,20 +17,6 @@
 #include <cstring>
 
 namespace gits::opengl2 {
-
-namespace {
-
-// See mapTrackingWrappers.cpp's identical constants (recorder side) - kept as a separate,
-// smaller copy here rather than shared, since the player only ever needs one target (see
-// below), not the full binding-point table Decision 4's recorder-side resolution needs.
-// Values confirmed against third_party/OpenGL-Registry/xml/gl.xml.
-constexpr GLenum kCopyWriteBuffer = 0x8F37;
-constexpr GLenum kCopyWriteBufferBinding = 0x8F37; // Same value as the target itself - a real
-                                                   // gl.xml quirk, not a typo (see
-                                                   // mapTrackingWrappers.cpp's identical note).
-constexpr GLbitfield kMapWriteBit = 0x0002;
-
-} // namespace
 
 void MappedDataMetaRunner::Run() {
   // Fills command.m_Buffer.Value from the decoded .Key via the pre-existing key->live-GLuint
@@ -50,26 +37,26 @@ void MappedDataMetaRunner::Run() {
   // Decision 6's Consequences. Save/restore whatever was previously bound there.
   GLint previousBinding = 0;
   auto realGetIntegerv = player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kCopyWriteBufferBinding, &previousBinding);
+  realGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &previousBinding);
 
   auto realBindBuffer = player::g_DispatchTable.glBindBuffer.load(std::memory_order_acquire);
-  realBindBuffer(kCopyWriteBuffer, buffer);
+  realBindBuffer(GL_COPY_WRITE_BUFFER, buffer);
 
   auto realMapBufferRange =
       player::g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* pointer =
-      realMapBufferRange(kCopyWriteBuffer, static_cast<GLintptr>(command.m_Offset.Value),
-                         static_cast<GLsizeiptr>(command.m_Length.Value), kMapWriteBit);
+      realMapBufferRange(GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(command.m_Offset.Value),
+                         static_cast<GLsizeiptr>(command.m_Length.Value), GL_MAP_WRITE_BIT);
   if (pointer != nullptr) {
     std::memcpy(pointer, command.m_Data.Data.data(), command.m_Data.Data.size());
     auto realUnmapBuffer = player::g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
-    realUnmapBuffer(kCopyWriteBuffer);
+    realUnmapBuffer(GL_COPY_WRITE_BUFFER);
   } else {
     LOG_WARNING << "MappedDataMetaRunner: glMapBufferRange failed for buffer " << buffer
                 << " - skipping this buffer-map update";
   }
 
-  realBindBuffer(kCopyWriteBuffer, static_cast<GLuint>(previousBinding));
+  realBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(previousBinding));
 }
 
 } // namespace gits::opengl2

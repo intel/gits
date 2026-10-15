@@ -25,6 +25,7 @@
 // Vulkan/DirectX first.
 
 #include "commandRunnersCustom.h"
+#include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -170,10 +171,9 @@ void GlUseProgramRunner::Run() {
   // real, driver-reported current program and comparing it to what was requested - rather than
   // trusting the call's success/failure return value alone - also self-corrects if some other,
   // as-yet-unmodeled path changed the binding independently.
-  constexpr GLenum kCurrentProgram = 0x8B8D;
   GLint actualProgram = 0;
   auto realGetIntegerv = player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kCurrentProgram, &actualProgram);
+  realGetIntegerv(GL_CURRENT_PROGRAM, &actualProgram);
   if (static_cast<GLuint>(actualProgram) == command.m_program.Value) {
     UniformLocationMapService::Get().SetCurrentProgram(CurrentContext(), command.m_program.Key);
   }

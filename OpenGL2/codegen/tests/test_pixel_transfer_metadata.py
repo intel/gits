@@ -503,7 +503,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(unpack_match, 'UnpackPixelsPointerIsBufferOffset() not found')
         assert unpack_match is not None
-        self.assertIn('PixelBufferObjectIsBound(kPixelUnpackBufferBinding)',
+        self.assertIn('PixelBufferObjectIsBound(GL_PIXEL_UNPACK_BUFFER_BINDING)',
                       unpack_match.group(1))
 
         pack_match = re.search(
@@ -511,7 +511,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(pack_match, 'PackPixelsPointerIsBufferOffset() not found')
         assert pack_match is not None
-        self.assertIn('PixelBufferObjectIsBound(kPixelPackBufferBinding)',
+        self.assertIn('PixelBufferObjectIsBound(GL_PIXEL_PACK_BUFFER_BINDING)',
                       pack_match.group(1))
 
     def test_predicate_does_not_gate_on_pixels_nullness(self) -> None:
@@ -545,7 +545,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(unpack_match)
         assert unpack_match is not None
-        self.assertIn('PixelBufferObjectIsBound(kPixelUnpackBufferBinding)',
+        self.assertIn('PixelBufferObjectIsBound(GL_PIXEL_UNPACK_BUFFER_BINDING)',
                       unpack_match.group(1))
 
         pack_match = re.search(
@@ -553,7 +553,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(pack_match)
         assert pack_match is not None
-        self.assertIn('PixelBufferObjectIsBound(kPixelPackBufferBinding)',
+        self.assertIn('PixelBufferObjectIsBound(GL_PIXEL_PACK_BUFFER_BINDING)',
                       pack_match.group(1))
 
     def test_commands_auto_h_mako_declares_is_buffer_offset_member(self) -> None:

@@ -9,6 +9,7 @@
 #include "clientMemoryCapture.h"
 
 #include "contextHandleMapService.h"
+#include "glEnumsAuto.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
@@ -23,46 +24,6 @@
 namespace gits::opengl2 {
 
 namespace {
-
-constexpr GLenum kPixelPackBufferBinding = 0x88ED;
-constexpr GLenum kPixelUnpackBufferBinding = 0x88EF;
-constexpr GLenum kQueryBufferBinding = 0x9193;
-
-// For ContextSupportsGLFeature() below. Every one of these four is chosen specifically because
-// it is unconditionally legal to query on ANY GL context/version/profile this function might
-// be probing from - see that function's own header comment for the full rationale of why
-// nothing riskier (GL_MAJOR_VERSION, GL_NUM_EXTENSIONS itself on a <3.0 context, GL_EXTENSIONS
-// itself on a 3.2+ core-profile context) is used unconditionally the same way.
-constexpr GLenum kVersionEnum = 0x1F02;       // GL_VERSION - legal on every GL version/profile.
-constexpr GLenum kExtensionsEnum = 0x1F03;    // GL_EXTENSIONS (legacy single string) - legal on
-                                              // any pre-3.2 context, and on any compatibility-
-                                              // profile context regardless of version; a 3.2+
-                                              // core-profile context rejects it.
-constexpr GLenum kNumExtensionsEnum = 0x821D; // GL_NUM_EXTENSIONS - legal GL 3.0+ only.
-
-// For QueryUnpackAlignment()/QueryPackAlignment() below - see pixelTransferSize.h's own
-// comment on why the real, current value (not a hardcoded default) is queried here.
-constexpr GLenum kUnpackAlignment = 0x0CF5;
-constexpr GLenum kPackAlignment = 0x0D05;
-
-// For QueryUnpackImageHeight()/QueryUnpackSkipImages()/QueryPackImageHeight()/
-// QueryPackSkipImages() below - see pixelTransferSize.h's own comment on why these are queried
-// live rather than assumed to be 0 (GL's own default for all four).
-constexpr GLenum kPackSkipImages = 0x806B;
-constexpr GLenum kPackImageHeight = 0x806C;
-constexpr GLenum kUnpackSkipImages = 0x806D;
-constexpr GLenum kUnpackImageHeight = 0x806E;
-
-// For QueryUnpackRowLength()/QueryUnpackSkipRows()/QueryUnpackSkipPixels()/
-// QueryPackRowLength()/QueryPackSkipRows()/QueryPackSkipPixels() below - see
-// pixelTransferSize.h's own comment on why these six are queried live too (GL's own default
-// for all six is 0).
-constexpr GLenum kUnpackRowLength = 0x0CF2;
-constexpr GLenum kUnpackSkipRows = 0x0CF3;
-constexpr GLenum kUnpackSkipPixels = 0x0CF4;
-constexpr GLenum kPackRowLength = 0x0D02;
-constexpr GLenum kPackSkipRows = 0x0D03;
-constexpr GLenum kPackSkipPixels = 0x0D04;
 
 // Quiet counterpart of ResolveBoundBuffer() in mapTrackingWrappers.cpp, for
 // GuardUnpackPixelsPointer/GuardPackPixelsPointer below: "nothing bound" is the expected,
@@ -195,6 +156,14 @@ bool ExtensionsStringContainsWholeWord(const char* extensions, const char* exten
 // context re-parses GL_VERSION/re-enumerates extensions), but those are inherently rare (a
 // context must be current across a whole wglMakeCurrent-to-app-exit span without this recorder
 // ever having seen its creation) and correctness matters far more here than that micro-cost.
+//
+// The feature probes below deliberately use GL_VERSION, GL_EXTENSIONS, and GL_NUM_EXTENSIONS
+// only where each enum is legal for the current context/version/profile. GL_VERSION is legal on
+// every GL context. GL_NUM_EXTENSIONS and glGetStringi are queried only after establishing GL
+// 3.0 or newer, while the legacy GL_EXTENSIONS string is queried only before GL 3.0, where no
+// core-profile restriction exists. In particular, do not replace the unconditional GL_VERSION
+// query with GL_MAJOR_VERSION, or query either extension form before its corresponding version
+// check.
 bool ContextSupportsGLFeature(std::mutex& cacheMutex,
                               std::unordered_map<GITSKey, bool>& cache,
                               const char* extensionName,
@@ -213,7 +182,7 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
     }
   }
   auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
-  const char* versionString = reinterpret_cast<const char*>(realGetString(kVersionEnum));
+  const char* versionString = reinterpret_cast<const char*>(realGetString(GL_VERSION));
   const auto [major, minor] = ParseGlVersionMajorMinor(versionString);
   bool supported = false;
   if (major > coreSinceMajor || (major == coreSinceMajor && minor >= coreSinceMinor)) {
@@ -224,11 +193,11 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
     // because of the version check just performed.
     GLint numExtensions = 0;
     auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-    realGetIntegerv(kNumExtensionsEnum, &numExtensions);
+    realGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
     auto realGetStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
     for (GLint i = 0; i < numExtensions && !supported; ++i) {
       const char* extension =
-          reinterpret_cast<const char*>(realGetStringi(kExtensionsEnum, static_cast<GLuint>(i)));
+          reinterpret_cast<const char*>(realGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
       if (extension == nullptr) {
         continue;
       }
@@ -243,7 +212,7 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
     // Pre-3.0: no profile concept exists yet (core/compatibility profiles start at 3.2), so
     // the legacy single-string form is always legal here - and it is the only enumeration
     // strategy that even exists pre-3.0.
-    const char* extensions = reinterpret_cast<const char*>(realGetString(kExtensionsEnum));
+    const char* extensions = reinterpret_cast<const char*>(realGetString(GL_EXTENSIONS));
     supported = ExtensionsStringContainsWholeWord(extensions, extensionName) ||
                 (extensionNameAlias != nullptr &&
                  ExtensionsStringContainsWholeWord(extensions, extensionNameAlias));
@@ -263,20 +232,18 @@ std::unordered_map<GITSKey, bool> g_PixelBufferFeatureByContext;
 // largely theoretical counterpart of the GL_QUERY_BUFFER_BINDING hazard below, kept for
 // consistency rather than assumed safe).
 //
-// Also accepts the older GL_EXT_pixel_buffer_object as sufficient, not
-// only GL_ARB_pixel_buffer_object. Confirmed via third_party/OpenGL-Registry/xml/gl.xml: EXT's
-// own <require> block defines GL_PIXEL_PACK_BUFFER_EXT/GL_PIXEL_UNPACK_BUFFER_EXT/
+// Also accepts the older GL_EXT_pixel_buffer_object as sufficient, not only
+// GL_ARB_pixel_buffer_object. Confirmed via third_party/OpenGL-Registry/xml/gl.xml: EXT's own
+// <require> block defines GL_PIXEL_PACK_BUFFER_EXT/GL_PIXEL_UNPACK_BUFFER_EXT/
 // GL_PIXEL_PACK_BUFFER_BINDING_EXT/GL_PIXEL_UNPACK_BUFFER_BINDING_EXT at the exact same numeric
-// values (0x88EB/0x88EC/0x88ED/0x88EF) the kPixelPackBuffer/kPixelUnpackBuffer constants in
-// mapTrackingWrappers.cpp and this file's kPixelPackBufferBinding/kPixelUnpackBufferBinding
-// constants already use for the ARB/core enums - EXT_pixel_buffer_object is not merely
-// similarly-named, it is bit-for-bit the same binding-point enum surface
-// ARB_pixel_buffer_object (and later core 2.1) reused verbatim. A pre-2.1 context exposing only
-// the EXT form (no ARB string) would previously fail this check outright, making
+// values (0x88EB/0x88EC/0x88ED/0x88EF) that the GL_PIXEL_* ARB/core enums use.
+// EXT_pixel_buffer_object is not merely similarly-named, it is bit-for-bit the same binding-point
+// enum surface ARB_pixel_buffer_object (and later core 2.1) reused verbatim. A pre-2.1 context
+// exposing only the EXT form (no ARB string) would previously fail this check outright, making
 // ContextSupportsPixelBufferObject() return false and GuardPixelsPointer skip its bound-buffer
-// check entirely on such a context - exactly the "dereference a buffer-relative byte offset as
-// a real client pointer" hazard this guard exists to prevent, on a context that in fact has a
-// pixel buffer bound via the EXT path.
+// check entirely on such a context - exactly the "dereference a buffer-relative byte offset as a
+// real client pointer" hazard this guard exists to prevent, on a context that in fact has a pixel
+// buffer bound via the EXT path.
 bool ContextSupportsPixelBufferObject() {
   return ContextSupportsGLFeature(g_PixelBufferFeatureMutex, g_PixelBufferFeatureByContext,
                                   "GL_ARB_pixel_buffer_object", 2, 1, "GL_EXT_pixel_buffer_object");
@@ -336,11 +303,11 @@ bool ContextSupportsQueryBufferObject() {
 } // namespace
 
 const void* GuardUnpackPixelsPointer(const char* commandName, const void* pixels) {
-  return GuardPixelsPointer(commandName, pixels, kPixelUnpackBufferBinding);
+  return GuardPixelsPointer(commandName, pixels, GL_PIXEL_UNPACK_BUFFER_BINDING);
 }
 
 const void* GuardPackPixelsPointer(const char* commandName, const void* pixels) {
-  return GuardPixelsPointer(commandName, pixels, kPixelPackBufferBinding);
+  return GuardPixelsPointer(commandName, pixels, GL_PIXEL_PACK_BUFFER_BINDING);
 }
 
 // See these two functions' own header comment
@@ -358,11 +325,11 @@ const void* GuardPackPixelsPointer(const char* commandName, const void* pixels) 
 // comment for why buffer-offset mode never depends on the pointer's own value, including
 // nullptr (a legal offset-0 encoding whenever a PBO is actually bound).
 bool UnpackPixelsPointerIsBufferOffset(const void* /*pixels*/) {
-  return PixelBufferObjectIsBound(kPixelUnpackBufferBinding);
+  return PixelBufferObjectIsBound(GL_PIXEL_UNPACK_BUFFER_BINDING);
 }
 
 bool PackPixelsPointerIsBufferOffset(const void* /*pixels*/) {
-  return PixelBufferObjectIsBound(kPixelPackBufferBinding);
+  return PixelBufferObjectIsBound(GL_PIXEL_PACK_BUFFER_BINDING);
 }
 
 // See this function's own header comment (clientMemoryCapture.h) for the
@@ -374,11 +341,11 @@ bool PackPixelsPointerIsBufferOffset(const void* /*pixels*/) {
 // today. Uses g_QueryBufferGuardMutex/g_WarnedQueryBufferGuardCommands (declared above, inside
 // the anonymous namespace above - visible here via the unnamed namespace's implicit
 // using-directive into this translation unit, same as GuardPixelsPointer's own use of
-// QueryBoundBufferQuiet()/kPixelUnpackBufferBinding/kPixelPackBufferBinding from that same
+// QueryBoundBufferQuiet() and the pixel buffer binding enums from that same
 // scope).
 const void* GuardQueryBufferPointer(const char* commandName, const void* params) {
   if (params == nullptr || !ContextSupportsQueryBufferObject() ||
-      QueryBoundBufferQuiet(kQueryBufferBinding) == 0) {
+      QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) == 0) {
     return params;
   }
   std::lock_guard<std::mutex> lock(g_QueryBufferGuardMutex);
@@ -397,42 +364,42 @@ const void* GuardQueryBufferPointer(const char* commandName, const void* params)
 GLint QueryUnpackAlignment() {
   GLint value = 4;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackAlignment, &value);
+  realGetIntegerv(GL_UNPACK_ALIGNMENT, &value);
   return value;
 }
 
 GLint QueryPackAlignment() {
   GLint value = 4;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackAlignment, &value);
+  realGetIntegerv(GL_PACK_ALIGNMENT, &value);
   return value;
 }
 
 GLint QueryUnpackImageHeight() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackImageHeight, &value);
+  realGetIntegerv(GL_UNPACK_IMAGE_HEIGHT, &value);
   return value;
 }
 
 GLint QueryUnpackSkipImages() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackSkipImages, &value);
+  realGetIntegerv(GL_UNPACK_SKIP_IMAGES, &value);
   return value;
 }
 
 GLint QueryPackImageHeight() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackImageHeight, &value);
+  realGetIntegerv(GL_PACK_IMAGE_HEIGHT, &value);
   return value;
 }
 
 GLint QueryPackSkipImages() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackSkipImages, &value);
+  realGetIntegerv(GL_PACK_SKIP_IMAGES, &value);
   return value;
 }
 
@@ -442,42 +409,42 @@ GLint QueryPackSkipImages() {
 GLint QueryUnpackRowLength() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackRowLength, &value);
+  realGetIntegerv(GL_UNPACK_ROW_LENGTH, &value);
   return value;
 }
 
 GLint QueryUnpackSkipRows() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackSkipRows, &value);
+  realGetIntegerv(GL_UNPACK_SKIP_ROWS, &value);
   return value;
 }
 
 GLint QueryUnpackSkipPixels() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kUnpackSkipPixels, &value);
+  realGetIntegerv(GL_UNPACK_SKIP_PIXELS, &value);
   return value;
 }
 
 GLint QueryPackRowLength() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackRowLength, &value);
+  realGetIntegerv(GL_PACK_ROW_LENGTH, &value);
   return value;
 }
 
 GLint QueryPackSkipRows() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackSkipRows, &value);
+  realGetIntegerv(GL_PACK_SKIP_ROWS, &value);
   return value;
 }
 
 GLint QueryPackSkipPixels() {
   GLint value = 0;
   auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-  realGetIntegerv(kPackSkipPixels, &value);
+  realGetIntegerv(GL_PACK_SKIP_PIXELS, &value);
   return value;
 }
 

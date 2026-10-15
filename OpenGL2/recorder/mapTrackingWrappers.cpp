@@ -9,6 +9,7 @@
 #include "mapTrackingWrappers.h"
 
 #include "captureManager.h"
+#include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"
 #include "mappedDataMetaTypes.h"
@@ -31,83 +32,38 @@ namespace gits::opengl2 {
 
 namespace {
 
-// GL enum values used by this file, hand-inlined rather than including <GL/gl.h> - same
-// convention as hdcVirtualizationService.cpp's PFD_*/<wingdi.h> constants, values confirmed
-// against third_party/OpenGL-Registry/xml/gl.xml (see the plan doc's "Sources consulted").
-// Only the buffer targets this backend's rendering-pipeline scope plausibly maps are covered -
-// see docs/development/opengl2-buffer-map-tracking-plan.md's Decision 4.
-constexpr GLenum kArrayBuffer = 0x8892;
-constexpr GLenum kArrayBufferBinding = 0x8894;
-constexpr GLenum kElementArrayBuffer = 0x8893;
-constexpr GLenum kElementArrayBufferBinding = 0x8895;
-constexpr GLenum kPixelPackBuffer = 0x88EB;
-constexpr GLenum kPixelPackBufferBinding = 0x88ED;
-constexpr GLenum kPixelUnpackBuffer = 0x88EC;
-constexpr GLenum kPixelUnpackBufferBinding = 0x88EF;
-constexpr GLenum kUniformBuffer = 0x8A11;
-constexpr GLenum kUniformBufferBinding = 0x8A28;
-constexpr GLenum kTransformFeedbackBuffer = 0x8C8E;
-constexpr GLenum kTransformFeedbackBufferBinding = 0x8C8F;
-constexpr GLenum kCopyReadBuffer = 0x8F36;
-constexpr GLenum kCopyReadBufferBinding = 0x8F36; // Same value as the target itself - a
-                                                  // real gl.xml quirk, not a typo.
-constexpr GLenum kCopyWriteBuffer = 0x8F37;
-constexpr GLenum kCopyWriteBufferBinding = 0x8F37; // Same quirk as GL_COPY_READ_BUFFER above.
-constexpr GLenum kDrawIndirectBuffer = 0x8F3F;
-constexpr GLenum kDrawIndirectBufferBinding = 0x8F43;
-constexpr GLenum kAtomicCounterBuffer = 0x92C0;
-constexpr GLenum kAtomicCounterBufferBinding = 0x92C1;
-constexpr GLenum kDispatchIndirectBuffer = 0x90EE;
-constexpr GLenum kDispatchIndirectBufferBinding = 0x90EF;
-constexpr GLenum kShaderStorageBuffer = 0x90D2;
-constexpr GLenum kShaderStorageBufferBinding = 0x90D3;
-constexpr GLenum kQueryBuffer = 0x9192;
-constexpr GLenum kQueryBufferBinding = 0x9193;
-
-constexpr GLbitfield kMapReadBit = 0x0001;
-constexpr GLbitfield kMapWriteBit = 0x0002;
-
-// glUnmapBuffer's own GL_TRUE/GL_FALSE return value: GL_FALSE means the data store's contents
-// became corrupted/undefined for implementation-specific reasons (e.g. a screen-mode change on
-// some platforms) - the spec does not require
-// this to reflect what the application itself actually wrote, so a real driver reading back
-// through a temporary re-map still succeeds (no crash, no invalid memory), but the bytes read
-// back are meaningless. CustomWrapper_glUnmapBuffer must not record those as a valid
-// MappedDataMetaCommand snapshot.
-constexpr GLboolean kGlTrue = 1;
-
 // See Decision 4: the driver, not a hand-rolled binding tracker, is the source of truth for
 // which buffer is currently bound to `target`. Returns 0 for a target this plan does not track
 // (see Decision 1's scope) - the caller treats that identically to "recognized target, nothing
 // bound".
 GLenum BindingPnameForTarget(GLenum target) {
   switch (target) {
-  case kArrayBuffer:
-    return kArrayBufferBinding;
-  case kElementArrayBuffer:
-    return kElementArrayBufferBinding;
-  case kPixelPackBuffer:
-    return kPixelPackBufferBinding;
-  case kPixelUnpackBuffer:
-    return kPixelUnpackBufferBinding;
-  case kUniformBuffer:
-    return kUniformBufferBinding;
-  case kTransformFeedbackBuffer:
-    return kTransformFeedbackBufferBinding;
-  case kCopyReadBuffer:
-    return kCopyReadBufferBinding;
-  case kCopyWriteBuffer:
-    return kCopyWriteBufferBinding;
-  case kDrawIndirectBuffer:
-    return kDrawIndirectBufferBinding;
-  case kAtomicCounterBuffer:
-    return kAtomicCounterBufferBinding;
-  case kDispatchIndirectBuffer:
-    return kDispatchIndirectBufferBinding;
-  case kShaderStorageBuffer:
-    return kShaderStorageBufferBinding;
-  case kQueryBuffer:
-    return kQueryBufferBinding;
+  case GL_ARRAY_BUFFER:
+    return GL_ARRAY_BUFFER_BINDING;
+  case GL_ELEMENT_ARRAY_BUFFER:
+    return GL_ELEMENT_ARRAY_BUFFER_BINDING;
+  case GL_PIXEL_PACK_BUFFER:
+    return GL_PIXEL_PACK_BUFFER_BINDING;
+  case GL_PIXEL_UNPACK_BUFFER:
+    return GL_PIXEL_UNPACK_BUFFER_BINDING;
+  case GL_UNIFORM_BUFFER:
+    return GL_UNIFORM_BUFFER_BINDING;
+  case GL_TRANSFORM_FEEDBACK_BUFFER:
+    return GL_TRANSFORM_FEEDBACK_BUFFER_BINDING;
+  case GL_COPY_READ_BUFFER:
+    return GL_COPY_READ_BUFFER_BINDING;
+  case GL_COPY_WRITE_BUFFER:
+    return GL_COPY_WRITE_BUFFER_BINDING;
+  case GL_DRAW_INDIRECT_BUFFER:
+    return GL_DRAW_INDIRECT_BUFFER_BINDING;
+  case GL_ATOMIC_COUNTER_BUFFER:
+    return GL_ATOMIC_COUNTER_BUFFER_BINDING;
+  case GL_DISPATCH_INDIRECT_BUFFER:
+    return GL_DISPATCH_INDIRECT_BUFFER_BINDING;
+  case GL_SHADER_STORAGE_BUFFER:
+    return GL_SHADER_STORAGE_BUFFER_BINDING;
+  case GL_QUERY_BUFFER:
+    return GL_QUERY_BUFFER_BINDING;
   default:
     return 0;
   }
@@ -206,7 +162,7 @@ GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
   // Nothing tracked (map wasn't via glMapBufferRange, buffer unresolved, ...), or a
   // genuinely read-only mapping - see Decision 5's third bullet. Skip straight to the real
   // unmap; no MappedDataMetaCommand, so no ordering key is reserved for this call at all.
-  if (!range || (range->Access & kMapWriteBit) == 0) {
+  if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realFunction(target);
   }
   // Reserved here - before the real unmap dispatch below, for both the read-mapping and
@@ -221,19 +177,18 @@ GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
   // waiting for a key that will never arrive.
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
   std::vector<uint8_t> bytes(static_cast<size_t>(range->Length));
-  if (range->Access & kMapReadBit) {
+  if (range->Access & GL_MAP_READ_BIT) {
     // Safe to read directly through the still-live original pointer, right before the real
     // unmap invalidates it - see Decision 5's first bullet.
     std::memcpy(bytes.data(), range->Pointer, bytes.size());
     const GLboolean result = realFunction(target);
-    if (result == kGlTrue) {
+    if (result == GL_TRUE) {
       RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
     } else {
-      // GL_FALSE: the data store's contents are corrupted/undefined per spec (see kGlTrue's
-      // own comment) - `bytes` was captured from the pointer that was live a moment ago, but
-      // that snapshot no longer reflects anything meaningful now that the real unmap reports
-      // failure. Recording it anyway would have replay inject bytes capture itself never
-      // validly established.
+      // GL_FALSE means the data store became corrupted and its contents are undefined for an
+      // implementation-specific reason. `bytes` was copied while the pointer was still valid,
+      // but it no longer represents defined buffer contents after the failed unmap. Since this
+      // data is invalid, we should not record it.
       LOG_WARNING << "CustomWrapper_glUnmapBuffer: real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
                      "MappedDataMetaCommand recorded for this unmap";
@@ -250,18 +205,15 @@ GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
   // purely for capture, mirroring CgitsUnmapBuffer's own fallback.
   const GLboolean result = realFunction(target);
   auto realMapBufferRange = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
-  void* readPointer = realMapBufferRange(target, range->Offset, range->Length, kMapReadBit);
+  void* readPointer = realMapBufferRange(target, range->Offset, range->Length, GL_MAP_READ_BIT);
   if (readPointer != nullptr) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
     realFunction(target); // Second, purely internal unmap - its result is not the app's.
-    if (result == kGlTrue) {
+    if (result == GL_TRUE) {
       RecordMappedDataMetaCommand(key, buffer, range->Offset, range->Length, bytes);
     } else {
-      // GL_FALSE from the app's own (first) unmap above: the data store's contents are
-      // corrupted/undefined per spec, even though this temporary re-map/memcpy itself
-      // succeeded (reading back through valid, driver-owned memory whose *contents* are
-      // simply meaningless now, not invalid memory - see kGlTrue's own comment). Recording it
-      // anyway would have replay inject bytes capture never validly established.
+      // GL_FALSE means the data store became corrupted and its contents are undefined for an
+      // implementation-specific reason. Do not read or record those undefined contents.
       LOG_WARNING << "CustomWrapper_glUnmapBuffer: real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
                      "MappedDataMetaCommand recorded for this unmap";
