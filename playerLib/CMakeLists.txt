@@ -91,6 +91,10 @@ if(WITH_VULKAN)
   )
 endif()
 
+if(WITH_OPENGL2)
+  target_link_libraries(gits_player_lib PRIVATE OpenGL2_player)
+endif()
+
 if(WITH_OCLOC)
   target_link_libraries(gits_player_lib PRIVATE ocloc_common)
 endif(WITH_OCLOC)

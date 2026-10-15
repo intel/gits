@@ -35,6 +35,9 @@
 #if defined WITH_VULKAN
 #include "vulkanCommandFactory.h"
 #endif
+#if defined WITH_OPENGL2
+#include "openGL2CommandFactory.h"
+#endif
 #include "windowManager.h"
 
 namespace gits {
@@ -255,6 +258,12 @@ void PlayStream(const std::filesystem::path& streamPath) {
     commandFactories.push_back(&vulkanCommandFactory);
   }
 #endif
+#if defined WITH_OPENGL2
+  opengl2::OpenGL2CommandFactory openGL2CommandFactory;
+  if (header.GetApi() == stream::StreamHeader::Api::API_OPENGL2) {
+    commandFactories.push_back(&openGL2CommandFactory);
+  }
+#endif
 
   Configurator::Instance().LogUnspportedConfigUsage(header.GetApiBool());
 
@@ -342,8 +351,40 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
     stream::ApiId apiId = apiExtractor.GetApi();
     return apiId != stream::ApiId::ID_DIRECTX;
   } else {
+    // Streams from APIs with a new-architecture (per-command CommandFactory) player path must
+    // be excluded here, or they get misrouted into the legacy CFile/CBinIStream player.Load()
+    // path, which reinterprets the Api field using the unrelated ApisIface::TApi enum and
+    // throws ENotImplemented from ApisIface::ToApiBool() on the mismatched value.
+    //
+    // The API_OPENGL2 term is only correct to exclude when this binary was actually built with
+    // an OpenGL2CommandFactory to route to - see the identical "WITH_OPENGL2" guard around
+    // PlayStream()'s own OpenGL2CommandFactory registration above. WITH_OPENGL2 is a normal,
+    // independently togglable CMake option (see the root CMakeLists.txt) - a build with
+    // WITH_OPENGL2=OFF compiles out that factory entirely. Without this guard, such a binary
+    // would still take THIS function's "not legacy" branch for an OpenGL2 stream, route it into
+    // PlayStream()'s modern StreamReader path anyway, and have StreamReader::DecodeBlock()
+    // silently skip every unrecognized OpenGL2 command ID (no factory claims them) - completing
+    // "successfully" having replayed zero GL calls, rather than the loud ENotImplemented failure
+    // this same exclusion already produces today for a DIRECTX/VULKAN stream handed to a player
+    // binary missing that backend (see this method's own review fix - reported as a real,
+    // reachable gap specific to OpenGL2's own opt-out-capable build option, not fixed here for
+    // DIRECTX/VULKAN's pattern-identical WITH_DIRECTX/WITH_VULKAN options, which are outside
+    // this fix's OpenGL2-backend scope).
+    //
+    // Deliberately just `defined WITH_OPENGL2`, with no additional platform/architecture term:
+    // the root CMakeLists.txt already restricts WITH_OPENGL2 to Windows x64 (see commit
+    // c16c8e18a) - re-checking GITS_PLATFORM_WINDOWS_X64 here would be redundant on every build
+    // where WITH_OPENGL2 can be defined at all, and would need undoing the moment this backend
+    // gains Linux support the same way Vulkan already has (WITH_OPENGL2 becoming definable on a
+    // non-Windows-x64 build too). Let CMake own platform/architecture gating; keep this
+    // C++-level guard checking only the one thing it actually cares about - whether the
+    // OpenGL2CommandFactory this branch routes to was compiled in.
     return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX &&
-           header.GetApi() != stream::StreamHeader::Api::API_VULKAN;
+           header.GetApi() != stream::StreamHeader::Api::API_VULKAN
+#if defined WITH_OPENGL2
+           && header.GetApi() != stream::StreamHeader::Api::API_OPENGL2
+#endif
+        ;
   }
 }
 
