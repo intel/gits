@@ -14,6 +14,7 @@
 namespace gits::opengl2 {
 
 class Layer;
+class PluginService;
 class TraceLayerGroup;
 
 class PlayerLayerManager {
@@ -26,7 +27,9 @@ public:
   PlayerLayerManager& operator=(const PlayerLayerManager&) = delete;
 
   void LoadLayers();
-  // Idempotent. Clears layer views, then destroys owned layers.
+  // Idempotent. Clears layer views, then destroys owned layers. Plugins stay loaded until
+  // destruction: Shutdown() runs from a TOPIC_PROGRAM_EXIT callback, and a plugin unsubscribing
+  // there would modify the subscriber list being published.
   void Shutdown();
 
   // These two return non-owning views whose pointers remain valid until Shutdown():
@@ -40,6 +43,7 @@ public:
   }
 
 private:
+  std::unique_ptr<PluginService> m_PluginService;
   std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
   std::vector<Layer*> m_PreLayers;

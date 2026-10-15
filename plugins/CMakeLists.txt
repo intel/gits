@@ -49,3 +49,7 @@ if(BUILD_VULKAN_PLUGINS)
   add_subdirectory(Vulkan/hello_plugin)
   add_subdirectory(Vulkan/statistics)
 endif()
+
+if(BUILD_OPENGL2_PLUGINS)
+  add_subdirectory(OpenGL2/statistics)
+endif()

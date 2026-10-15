@@ -30,6 +30,7 @@ add_library(OpenGL2_player STATIC
   include/mappedTextureDataMetaRunner.h
   include/pbufferPixelFormatMetaRunner.h
   include/pbufferService.h
+  include/pluginService.h
   include/replayContextCaps.h
   include/threadContextService.h
   include/unsupportedCommandRunner.h
@@ -47,6 +48,7 @@ add_library(OpenGL2_player STATIC
   mappedTextureDataMetaRunner.cpp
   pbufferPixelFormatMetaRunner.cpp
   pbufferService.cpp
+  pluginService.cpp
   replayContextCaps.cpp
   threadContextService.cpp
   unsupportedCommandRunner.cpp
@@ -60,7 +62,7 @@ add_dependencies(OpenGL2_player OpenGL2_codegen)
 
 target_include_directories(OpenGL2_player
   PUBLIC include
-  PRIVATE ../interceptor
+  PRIVATE ../interceptor ${CMAKE_SOURCE_DIR}/plugins
 )
 
 target_link_libraries(OpenGL2_player

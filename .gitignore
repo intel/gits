@@ -92,6 +92,8 @@ OpenGL/recorder/openglRecorderWrapperAuto.cpp
 OpenGL2/**/*Auto.cpp
 OpenGL2/**/*Auto.h
 OpenGL2/**/*Auto.def
+plugins/OpenGL2/**/*Auto.cpp
+plugins/OpenGL2/**/*Auto.h
 
 # VulkanLegacy
 VulkanLegacy/common/include/vulkanArgumentsAuto.h

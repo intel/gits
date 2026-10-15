@@ -13,6 +13,7 @@
 #include "configurator.h"
 #include "layerAuto.h"
 #include "log.h"
+#include "pluginService.h"
 #include "recordingLayerAuto.h"
 #include "screenshotsLayer.h"
 #include "stateTrackingLayer.h"
@@ -90,6 +91,16 @@ void PlayerLayerManager::LoadLayers() {
     m_PostLayers.push_back(recordingLayer.get());
     m_LayersOwner.push_back(std::move(recordingLayer));
     m_LayersOwner.push_back(std::move(subcaptureLayer));
+  }
+
+  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->LoadPlugins();
+  for (const auto& plugin : m_PluginService->GetPlugins()) {
+    Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());
+    if (layer) {
+      m_PreLayers.push_back(layer);
+      m_PostLayers.push_back(layer);
+    }
   }
 }
 

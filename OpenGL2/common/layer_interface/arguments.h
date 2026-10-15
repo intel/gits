@@ -62,6 +62,9 @@ size_t TextOutputCaptureSize(const CharT* buffer, LengthT capacity, const Length
 // rather than shared, per "Keep abstractions backend-local until reuse is demonstrated".
 typedef uint64_t GITSKey;
 
+// Keys of commands and objects that state restore writes, distinct from every recorded key.
+inline constexpr GITSKey STATE_RESTORE_KEY_MASK = GITSKey{1} << 63;
+
 // Deliberately small subset of Vulkan's arguments.h: only the wrapper kinds every
 // currently-enabled command needs (TypeFacts.is_scalar / is_opaque_handle -> Argument<T>,
 // TypeFacts.is_mapped_handle -> HandleArgument<T>, is_array_element_eligible-with-an-override

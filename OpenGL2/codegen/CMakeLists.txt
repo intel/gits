@@ -25,6 +25,7 @@ set(SCRIPTS_SRC
   generator_interceptor.py
   generator_layer_interface.py
   generator_player.py
+  generator_plugins.py
   generator_recorder.py
   handle_lifecycle.py
   object_name_lifecycle.py
@@ -47,8 +48,13 @@ source_group("persistent data" FILES ${PERSISTENT_DATA_SRC})
 file(GLOB_RECURSE MAKO_TEMPLATES "templates/*.mako")
 source_group(mako FILES ${MAKO_TEMPLATES})
 
+set(OPENGL2_PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins/OpenGL2)
+file(GLOB PLUGIN_MAKO_TEMPLATES "${OPENGL2_PLUGINS_DIR}/*/codegen/templates/*.mako")
+source_group("plugin mako" FILES ${PLUGIN_MAKO_TEMPLATES})
+
 target_sources(OpenGL2_codegen PRIVATE
   ${MAKO_TEMPLATES}
+  ${PLUGIN_MAKO_TEMPLATES}
   ${PERSISTENT_DATA_SRC}
   ${SCRIPTS_SRC}
 )
@@ -95,16 +101,20 @@ set(OPENGL2_GENERATED_PLAYER_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/analyzerLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/analyzerLayerAuto.cpp
 )
+set(OPENGL2_GENERATED_PLUGIN_FILES
+  ${OPENGL2_PLUGINS_DIR}/statistics/statisticsLayerAuto.h
+  ${OPENGL2_PLUGINS_DIR}/statistics/statisticsLayerAuto.cpp
+)
 
 add_custom_command(
   OUTPUT ${STAMP_FILE} ${OPENGL2_GENERATED_LAYER_INTERFACE_FILES}
          ${OPENGL2_GENERATED_INTERCEPTOR_FILES} ${OPENGL2_GENERATED_RECORDER_FILES}
-         ${OPENGL2_GENERATED_PLAYER_FILES}
+         ${OPENGL2_GENERATED_PLAYER_FILES} ${OPENGL2_GENERATED_PLUGIN_FILES}
   COMMAND ${CMAKE_COMMAND} -E echo "Running OpenGL2 code generation script..."
   COMMAND ${Python3_EXECUTABLE} ${OPENGL2_SCRIPTS_DIR}/generator.py
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
   WORKING_DIRECTORY ${OPENGL2_SCRIPTS_DIR}
-  DEPENDS ${SCRIPTS_SRC} ${PERSISTENT_DATA_SRC} ${MAKO_TEMPLATES}
+  DEPENDS ${SCRIPTS_SRC} ${PERSISTENT_DATA_SRC} ${MAKO_TEMPLATES} ${PLUGIN_MAKO_TEMPLATES}
 )
 
 unset(OpenGL2_codegen CACHE)

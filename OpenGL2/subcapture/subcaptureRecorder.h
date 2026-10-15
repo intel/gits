@@ -17,9 +17,6 @@
 
 namespace gits::opengl2 {
 
-// Keys of commands and objects that state restore writes, distinct from every recorded key.
-inline constexpr GITSKey STATE_RESTORE_KEY_MASK = GITSKey{1} << 63;
-
 // Writes the subcapture stream to Common.Player.SubcapturePath.
 class SubcaptureRecorder {
 public:
