@@ -145,6 +145,37 @@ def ensure_flag_class_is_iterable(flag_class) -> None:
 ensure_flag_class_is_iterable(IntFlag)
 
 
+def get_base_type_from_full_type(type_text: str) -> str:
+    """Derive a base type from the limited declaration forms used by registries.
+
+    This is intentionally not a general C declarator parser. It assumes that
+    the declaration has a base-type portion followed by zero or more pointer
+    stars, and that every star belongs to a pointer declarator. The helper has
+    only been tested with the current GL/WGL/EGL/GLX registry data.
+    """
+    normalized = ' '.join(type_text.split())
+    base_tokens = normalized.split('*', maxsplit=1)[0].split()
+    return ' '.join(token for token in base_tokens if token != 'const')
+
+
+@dataclass(frozen=True, kw_only=True)
+class TypeFacts:
+    """Derived facts from a C type declaration."""
+
+    base_type: str
+    pointer_depth: int
+
+    @classmethod
+    def from_type(cls, type_text: str) -> 'TypeFacts':
+        normalized = ' '.join(type_text.split())
+        pointer_depth = normalized.count('*')
+
+        return cls(
+            base_type=get_base_type_from_full_type(type_text),
+            pointer_depth=pointer_depth,
+        )
+
+
 @dataclass(kw_only=True)
 class Parameter:
     """Argument/parameter of a Command."""
@@ -155,6 +186,10 @@ class Parameter:
     class_: str | None = None
     kinds: tuple[str, ...] = ()
     len: str | None = None
+    type_facts: TypeFacts = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.type_facts = TypeFacts.from_type(self.type)
 
 
 @dataclass(kw_only=True)
