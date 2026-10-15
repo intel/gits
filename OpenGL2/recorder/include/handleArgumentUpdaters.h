@@ -278,6 +278,17 @@ inline void UpdateHandleArray(HandleArrayArgument<GLuint>& arg, GLObjectKind kin
   }
 }
 
+// UpdateHandleArray for a DELETE-role array (glDeleteTextures, glDeleteBuffers, ...). GL silently
+// ignores unused names in every glDelete* array, so an unregistered name is not a capture gap
+// and resolves to key 0 without a warning; the player turns key 0 back into name 0, which the
+// driver ignores the same way.
+inline void UpdateDeletedHandleArray(HandleArrayArgument<GLuint>& arg, GLObjectKind kind) {
+  const uint64_t groupIdentity = GroupIdentityFor(kind);
+  for (size_t i = 0; i < arg.Value.size(); ++i) {
+    arg.Key[i] = ObjectNameMapService::Get().TryGetKey(kind, groupIdentity, arg.Value[i]);
+  }
+}
+
 // New-name create for an array of GL object names (glGenTextures'/glGenBuffers' array
 // parameter - see object_name_lifecycle.py's CREATE role on an array field). Runs after
 // Capture() has copied the driver's newly-written names into Value (see

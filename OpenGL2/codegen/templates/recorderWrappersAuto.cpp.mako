@@ -248,7 +248,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 ## delete-on-success step below has a key to delete and so the field has something to serialize
 ## (HandleArgument<T>/HandleArrayArgument<T> only ever put .Key on the wire, never .Value).
 % if obj_override is not None and obj_override.role != ObjectNameRole.CREATE:
-% if p.type_facts.is_array_element_eligible:
+% if p.type_facts.is_array_element_eligible and obj_override.role == ObjectNameRole.DELETE:
+    UpdateDeletedHandleArray(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif p.type_facts.is_array_element_eligible:
     UpdateHandleArray(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % elif obj_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
     // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a miss here may be the real driver

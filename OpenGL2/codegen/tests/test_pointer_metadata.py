@@ -650,6 +650,16 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
+    def test_fixed_function_matrix_commands_are_enabled(self) -> None:
+        for name in (
+            'glLoadMatrixf', 'glLoadMatrixd', 'glMultMatrixf', 'glMultMatrixd',
+            'glLoadTransposeMatrixf', 'glLoadTransposeMatrixfARB',
+            'glMultTransposeMatrixd', 'glMultTransposeMatrixdARB',
+            'glMatrixLoadfEXT', 'glMatrixMultTransposedEXT',
+        ):
+            with self.subTest(command=name):
+                self.assertTrue(self._get_command(Api.GL, name).enabled)
+
     def test_buffer_storage_commands_are_enabled(self) -> None:
         # Immutable-storage allocation - the EXT names alias the core names in gl.xml and are
         # enabled through the alias fallback.

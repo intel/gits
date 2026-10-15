@@ -977,6 +977,22 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT, pname_param='pname'),
 
+    # Fixed-function matrix stack: `m` is always one 4x4 matrix (len="16"). The ARB transpose
+    # names alias the core ones and are enabled through the alias fallback.
+    **{
+        (name, 'm'): PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='16')
+        for name in (
+            'glLoadMatrixf', 'glLoadMatrixd', 'glMultMatrixf', 'glMultMatrixd',
+            'glLoadTransposeMatrixf', 'glLoadTransposeMatrixd',
+            'glMultTransposeMatrixf', 'glMultTransposeMatrixd',
+            'glMatrixLoadfEXT', 'glMatrixLoaddEXT', 'glMatrixMultfEXT', 'glMatrixMultdEXT',
+            'glMatrixLoadTransposefEXT', 'glMatrixLoadTransposedEXT',
+            'glMatrixMultTransposefEXT', 'glMatrixMultTransposedEXT',
+        )
+    },
+
     # glPointParameterfv's `params`: len="COMPSIZE(pname)", genuinely pname-dependent (3 for
     # GL_POINT_DISTANCE_ATTENUATION, 1 for GL_POINT_SIZE_MIN/GL_POINT_SIZE_MAX/
     # GL_POINT_FADE_THRESHOLD_SIZE) - see LengthSourceKind.POINT_PARAMETER_VALUE_COUNT's own
