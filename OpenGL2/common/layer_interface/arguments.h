@@ -85,6 +85,13 @@ struct HandleArgument {
 struct NullTerminatedTag {};
 inline constexpr NullTerminatedTag NullTerminated{};
 
+// Tag type selecting the pairs-aware key/value-list-scan constructor overload below - same
+// disambiguation rationale as NullTerminatedTag above, just for a second, differently-shaped
+// termination rule (see pointer_metadata.py's LengthSourceKind.KEY_VALUE_LIST for why a WGL
+// attribute list needs its own scan instead of reusing NullTerminatedTag's).
+struct KeyValueListTag {};
+inline constexpr KeyValueListTag KeyValueList{};
+
 // A single-indirection pointer to a fixed-size element type (TypeFacts.is_array_element_eligible
 // - see intermediates.py), captured as an owned copy. Deliberately does NOT keep a raw pointer
 // member the way Vulkan's ArrayArgument/PointerArgument do: OpenGL2's generated wrapper
@@ -141,6 +148,29 @@ struct ArrayArgument {
       const T* end = v;
       while (!(*end == T{})) {
         ++end;
+      }
+      Data.assign(v, end + 1);
+    }
+  }
+
+  // Scans forward from v in (key, value) PAIRS for a pair whose KEY (the even-indexed
+  // element - v[0], v[2], v[4], ...) is a default-constructed T{} sentinel, and captures
+  // through and including that terminating key - see pointer_metadata.py's
+  // LengthSourceKind.KEY_VALUE_LIST for why this must check only every other element instead
+  // of every element the way the plain NullTerminatedTag constructor above does: a zero VALUE
+  // (the odd-indexed element) is legal WGL attribute-list content (e.g.
+  // WGL_CONTEXT_FLAGS_ARB's value can legitimately be 0) and must not be mistaken for the
+  // terminator. Assumes a well-formed input list (an even number of (key, value) elements
+  // before the terminating zero key) exactly as NullTerminatedTag's own scan assumes a real
+  // terminator exists at all - a malformed list is already undefined behavior for the real
+  // driver call this capture is standing in front of, not a new risk this constructor
+  // introduces.
+  ArrayArgument(const T* v, KeyValueListTag) {
+    if (v) {
+      HasValue = true;
+      const T* end = v;
+      while (!(*end == T{})) {
+        end += 2; // Skip this pair's key and value; land on the next pair's key.
       }
       Data.assign(v, end + 1);
     }
@@ -240,14 +270,21 @@ template <typename T>
 struct ArrayOfArrays {
   std::vector<std::vector<T>> Value{};
   std::vector<int32_t> Lengths{};
+  // Per-element presence flag: HasElement[i] is false iff v[i] itself was a null pointer (a
+  // null individual string, as opposed to Value[i] being a real, explicitly-zero-length
+  // string) - see this constructor's own comment below for why this cannot be inferred from
+  // Value[i] alone. Always the same length as Value/Lengths once HasValue is true; empty
+  // (like both of those) otherwise.
+  std::vector<bool> HasElement{};
   bool HasValue{false};
 
   ArrayOfArrays() {}
 
   // v: `count` pointers, each to an independently-owned buffer of element type T (one GL
-  // "string"). lengths: optional (nullptr allowed) array of `count` per-element lengths;
-  // lengths[i] < 0 (or lengths == nullptr) means "scan v[i] for a null terminator instead" -
-  // mirrors glShaderSource's own `length` parameter semantics exactly (see gl.xml).
+  // "string"), or itself nullptr for an individual null string pointer. lengths: optional
+  // (nullptr allowed) array of `count` per-element lengths; lengths[i] < 0 (or
+  // lengths == nullptr) means "scan v[i] for a null terminator instead" - mirrors
+  // glShaderSource's own `length` parameter semantics exactly (see gl.xml).
   //
   // Templated SizeT and a size_t-width Value/Lengths count, for consistency with
   // ArrayArgument<T>/HandleArrayArgument<T>'s own templated, size_t-based constructors above -
@@ -259,6 +296,17 @@ struct ArrayOfArrays {
   // own constructors, this one clamps a negative count to zero via ClampCountToSizeT() first -
   // see that function's own comment for why (a client error the recorder must not crash on)
   // independently of this width choice; the clamp and the width are orthogonal fixes.
+  //
+  // HasElement[i] is genuinely required, not redundant with Value[i].empty(): a null v[i] and
+  // a non-null v[i] pointing at a real, explicitly-zero-length string (lengths[i] == 0) both
+  // produce an empty Value[i] - the only way to tell them apart at reconstruction time (see
+  // commandRunnersAuto.cpp.mako's own `<param>Ptrs[i]` rebuild loop) is to have recorded the
+  // distinction directly, exactly like ArrayArgument<T>'s own HasValue distinguishes a null
+  // pointer from a valid, explicitly-empty array (see that type's own comment). Without this
+  // flag, reconstructing v[i] as `Value[i].data()` for an originally-null entry is undefined
+  // behavior risk: an empty std::vector's data() is not guaranteed to be nullptr, so a
+  // positive lengths[i] on some OTHER, unrelated element combined with the replay driver
+  // scanning this one's non-dereferenceable pointer could read out of bounds.
   template <typename SizeT>
   ArrayOfArrays(const T* const* v, SizeT count, const int32_t* lengths) {
     if (!v) {
@@ -268,14 +316,18 @@ struct ArrayOfArrays {
     const size_t safeCount = ClampCountToSizeT(count);
     Value.resize(safeCount);
     Lengths.resize(safeCount);
+    HasElement.assign(safeCount, false);
     for (size_t i = 0; i < safeCount; ++i) {
       const bool explicitLength = lengths != nullptr && lengths[i] >= 0;
       Lengths[i] = explicitLength ? lengths[i] : -1;
       if (v[i] == nullptr) {
-        continue; // An individual null string pointer stays an empty buffer; the real driver
-                  // call would itself reject this, but capturing it verbatim is safer than
-                  // dereferencing a null pointer here.
+        continue; // HasElement[i] stays false; Value[i] stays empty. The real driver call
+                  // would itself reject an actually-null string pointer, but capturing it
+                  // verbatim (rather than dereferencing it here) is still the safe choice -
+                  // see HasElement's own comment above for why the empty Value[i] this leaves
+                  // behind must stay distinguishable from a real, explicitly-empty string.
       }
+      HasElement[i] = true;
       if (explicitLength) {
         Value[i].assign(v[i], v[i] + lengths[i]);
       } else {

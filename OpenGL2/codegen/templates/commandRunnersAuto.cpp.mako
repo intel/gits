@@ -210,9 +210,33 @@ void ${cmd.name}Runner::Run() {
   HDC real_${p.name} = HdcVirtualizationService::Get().Resolve(command.m_${p.name}.Value);
 % endfor
 % for p in array_of_arrays_params:
+  // Single, stable dummy element shared by every present-but-empty entry below (never read
+  // through - the paired ${p.name}Ptrs[i]'s Lengths[i]/count is always 0 for such an entry, so
+  // the real driver call has no reason to dereference it) - see the loop's own comment for why
+  // Value[i].data() alone is not a sufficient substitute here.
+  static const ${p.type_facts.base_type} k${p.name}DummyElement{};
   std::vector<const ${p.type_facts.base_type}*> ${p.name}Ptrs(command.m_${p.name}.Value.size());
   for (size_t i = 0; i < command.m_${p.name}.Value.size(); ++i) {
-    ${p.name}Ptrs[i] = command.m_${p.name}.Value[i].data();
+    // command.m_${p.name}.HasElement[i] (not just an empty-vs-nonempty Value[i] check) is the
+    // correct presence test here - an originally-null string pointer and a real, explicitly
+    // zero-length string both decode to an empty Value[i] - see arguments.h's
+    // ArrayOfArrays<T>::HasElement comment. For a present (HasElement[i] == true) entry,
+    // Value[i].data() itself is ALSO not sufficient when Value[i] happens to be empty (a real,
+    // explicitly-zero-length string): std::vector::data() on an empty vector is not guaranteed
+    // to be nullptr, but is not guaranteed to be a stable/dereferenceable non-null pointer
+    // either (implementation-defined, and can even change between two empty vectors) - some
+    // drivers treat string[i] == nullptr as "null-terminated" or otherwise special-case it
+    // regardless of what length[i] says, which would silently reinterpret a genuinely
+    // present-but-empty entry as absent. Falling back to the single stable dummy element
+    // above for exactly that case guarantees a real, valid, non-null address every time,
+    // still backed by zero declared length.
+    if (!command.m_${p.name}.HasElement[i]) {
+      ${p.name}Ptrs[i] = nullptr;
+    } else if (command.m_${p.name}.Value[i].empty()) {
+      ${p.name}Ptrs[i] = &k${p.name}DummyElement;
+    } else {
+      ${p.name}Ptrs[i] = command.m_${p.name}.Value[i].data();
+    }
   }
 % endfor
   for (Layer* layer : manager.GetPreLayers()) {

@@ -48,6 +48,18 @@ class LengthSourceKind(StrEnum):
                                         # exactly one GLint).
     NULL_TERMINATED = 'null_terminated'  # scan forward for a T{} sentinel; length_source_value
                                           # is unused (None).
+    KEY_VALUE_LIST = 'key_value_list'  # scan forward in (key, value) PAIRS, terminating only
+        # when a pair's KEY element is zero - length_source_value is unused (None). Distinct
+        # from NULL_TERMINATED: a WGL-style attribute list (wglCreateContextAttribsARB's
+        # `attribList`, and the same {key, value, ..., 0} shape used by wglChoosePixelFormatARB/
+        # wglCreatePbufferARB/wglCreateAssociatedContextAttribsAMD's own attribute-list params,
+        # none of which are enabled today - see this module's own POINTER_PARAM_OVERRIDES entry
+        # comment) is terminated ONLY by a zero KEY; zero is a perfectly legal VALUE for some
+        # keys (e.g. WGL_CONTEXT_FLAGS_ARB = 0, WGL_CONTEXT_LAYER_PLANE_ARB = 0). Scanning
+        # element-by-element like NULL_TERMINATED does would stop at that legal zero VALUE
+        # instead of the real terminating zero KEY two elements later, silently truncating the
+        # list - see arguments.h's KeyValueListTag-based ArrayArgument<T> constructor for the
+        # actual pairs-aware scan this drives.
     OPAQUE_BIT_PATTERN = 'opaque_bit_pattern'  # not an array at all - capture the pointer's own
         # numeric value (as a uintptr_t) and never dereference it. See
         # docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's offset-vs-pointer
@@ -115,7 +127,10 @@ class PointerParamOverride:
 # implementation report for citations) - glGenTextures/glDeleteTextures/glGenBuffers's array
 # params carry len="n", glBufferData/glBufferSubData's `data` carries len="size", and
 # glGetUniformLocation/glBindAttribLocation's `name` and wglCreateContextAttribsARB's
-# `attribList` all carry no len attribute at all, consistent with NULL_TERMINATED below.
+# `attribList` all carry no len attribute at all, consistent with NULL_TERMINATED/
+# KEY_VALUE_LIST below (gl.xml/wgl.xml make no distinction between the two - both are simply
+# "no len=" - so which one applies is itself a manual claim about the parameter's own
+# element-vs-pair termination semantics, not something the registry states directly).
 POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('glGenTextures', 'textures'): PointerParamOverride(
         direction=PointerDirection.OUT,
@@ -136,8 +151,16 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     ('glBindAttribLocation', 'name'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
+    # A {key, value, key, value, ..., 0} attribute list, terminated only by a zero KEY - see
+    # LengthSourceKind.KEY_VALUE_LIST's own comment above for why this must not use plain
+    # NULL_TERMINATED. wglChoosePixelFormatARB/wglChoosePixelFormatEXT's own piAttribIList/
+    # pfAttribFList and wglCreatePbufferARB/EXT's piAttribList and
+    # wglCreateAssociatedContextAttribsAMD's attribList share this exact same shape but stay
+    # unsupported (no override entry) - none of the 8 currently-enabled commands' own callers
+    # need them, and adding one speculatively without a tested caller would be exactly the kind
+    # of unverified table entry this file's own header comment warns against.
     ('wglCreateContextAttribsARB', 'attribList'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
     # A single PIXELFORMATDESCRIPTOR struct, not an array - wgl.xml's `ppfd` carries no len=
     # attribute at all (see docs/development/opengl2-player-skeleton-plan.md's Decision 9).
     #

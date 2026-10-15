@@ -91,6 +91,15 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         # Should not raise, regardless of other_params.
         _validate_pointer_override('glGetUniformLocation', param, override, other_params=[])
 
+    def test_key_value_list_override_needs_no_structural_validation(self) -> None:
+        param = Parameter(name='attribList', type='const int *')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST)
+
+        # Should not raise, regardless of other_params.
+        _validate_pointer_override(
+            'wglCreateContextAttribsARB', param, override, other_params=[])
+
     def test_opaque_bit_pattern_override_must_be_in_direction(self) -> None:
         param = Parameter(name='pointer', type='const void *')
         override = PointerParamOverride(
@@ -194,6 +203,15 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         self.assertTrue(
             self._get_command(Api.WGL, 'wglCreateContextAttribsARB').enabled
         )
+
+    def test_wgl_create_context_attribs_arb_attrib_list_uses_key_value_list(self) -> None:
+        # Must scan (key, value) pairs, terminating only on a zero KEY - see
+        # LengthSourceKind.KEY_VALUE_LIST's own comment for why plain NULL_TERMINATED would
+        # silently truncate a list containing a legal zero VALUE (e.g.
+        # WGL_CONTEXT_FLAGS_ARB = 0) before the real terminator.
+        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
+        override = POINTER_PARAM_OVERRIDES[('wglCreateContextAttribsARB', 'attribList')]
+        self.assertEqual(override.length_source_kind, LengthSourceKind.KEY_VALUE_LIST)
 
     def test_opaque_bit_pattern_commands_are_enabled(self) -> None:
         # See docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's

@@ -81,6 +81,11 @@ public:
 % elif override.direction == PointerDirection.OUT:
 % elif override.length_source_kind == LengthSourceKind.NULL_TERMINATED:
 , m_${p.name}(${arg_expr}, NullTerminated)\
+% elif override.length_source_kind == LengthSourceKind.KEY_VALUE_LIST:
+## See pointer_metadata.py's LengthSourceKind.KEY_VALUE_LIST/arguments.h's KeyValueListTag -
+## a WGL {key, value, ..., 0} attribute list, terminated on a zero KEY, not just any zero
+## element.
+, m_${p.name}(${arg_expr}, KeyValueList)\
 % elif override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE:
 ## COMPSIZE(format,type,width,height) has no single sibling to read directly - see that
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. This branch is

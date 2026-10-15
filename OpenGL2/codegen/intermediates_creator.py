@@ -363,7 +363,8 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
                 f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
             )
-    # NULL_TERMINATED needs no structural validation - it has no sibling to cross-check.
+    # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
+    # cross-check.
 
 
 def _validate_array_of_arrays_override(
