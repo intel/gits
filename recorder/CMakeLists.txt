@@ -73,7 +73,10 @@ endif()
 
 set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL_recorder)
 if(WITH_OPENGL2)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL2_recorder)
+  # hud is needed here (not just transitively via `common`) because recorderUtils.cpp
+  # includes imGuiHUD.h directly, and only a target's own link libraries contribute their
+  # PUBLIC include directories to it - a PRIVATE dependency of `common` does not.
+  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL2_recorder hud)
 endif()
 set(recorderCommonLibs ${recorderCommonLibs} OpenGL_common)
 set(frameworks ${frameworks} "-framework OpenGL")

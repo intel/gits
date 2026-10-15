@@ -18,7 +18,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from intermediates import Api, CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue
+from array_of_arrays_metadata import (
+    ARRAY_OF_ARRAYS_PARAM_OVERRIDES,
+    ArrayOfArraysOverride,
+    consumed_pointer_params,
+)
+from intermediates import Api, CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue, TypeFacts
+from object_name_lifecycle import ObjectNameOverride, ObjectNameRole, resolve_object_name_override
+from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride
 from registry import Registry
 
 THIRD_PARTY_DIR = Path(__file__).resolve().parents[2] / 'third_party'
@@ -265,6 +272,361 @@ def normalize_attribs(attribs: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _validate_pointer_override(
+    command_name: str, param: Parameter, override: PointerParamOverride, other_params: list[Parameter],
+) -> None:
+    """Raise ValueError if an override table entry doesn't match this command's actual
+    signature - a broken table entry is a codegen bug, caught at generation time, not a reason
+    to silently leave the command disabled (contrast: a *missing* entry is always silent and
+    safe - see _is_param_capturable)."""
+    if override.length_multiplier < 1:
+        raise ValueError(
+            f"{command_name}.{param.name}: length_multiplier must be >= 1, got "
+            f"{override.length_multiplier}"
+        )
+    if override.length_source_kind is LengthSourceKind.SIBLING_PARAM:
+        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
+        if sibling is None:
+            raise ValueError(
+                f"{command_name}.{param.name}: POINTER_PARAM_OVERRIDES names sibling length "
+                f"parameter '{override.length_source_value}', which does not exist on this command"
+            )
+        if not sibling.type_facts.is_scalar:
+            raise ValueError(
+                f"{command_name}.{param.name}: length sibling '{sibling.name}' is not a plain "
+                f"scalar ({sibling.type})"
+            )
+    elif override.length_source_kind is LengthSourceKind.FIXED_COUNT:
+        if override.length_source_value is None or not override.length_source_value.isdigit():
+            raise ValueError(
+                f"{command_name}.{param.name}: FIXED_COUNT override needs a non-negative "
+                f"integer literal, got {override.length_source_value!r}"
+            )
+    elif override.length_source_kind is LengthSourceKind.OPAQUE_BIT_PATTERN:
+        if override.direction is not PointerDirection.IN:
+            raise ValueError(
+                f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN override must be IN "
+                f"direction - the pointer's bit pattern is a value, not a buffer the driver "
+                f"writes into"
+            )
+        if override.length_source_value is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN override must not set "
+                f"length_source_value - there is no length, only one opaque value"
+            )
+    elif override.length_source_kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
+        if override.length_source_value is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE override must not set "
+                f"length_source_value - use pixel_format_param/pixel_type_param/"
+                f"pixel_width_param/pixel_height_param instead"
+            )
+        for field_name in (
+            'pixel_format_param', 'pixel_type_param', 'pixel_width_param', 'pixel_height_param',
+        ):
+            sibling_name = getattr(override, field_name)
+            if sibling_name is None:
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE override must set "
+                    f"{field_name}"
+                )
+            sibling = next((p for p in other_params if p.name == sibling_name), None)
+            if sibling is None:
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's {field_name} names "
+                    f"'{sibling_name}', which does not exist on this command"
+                )
+            if not sibling.type_facts.is_scalar:
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's {field_name} sibling "
+                    f"'{sibling.name}' is not a plain scalar ({sibling.type})"
+                )
+    elif override.length_source_kind is LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
+        if override.length_source_value is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT override must not set "
+                f"length_source_value - use clear_buffer_param instead"
+            )
+        if override.clear_buffer_param is None:
+            raise ValueError(
+                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT override must set "
+                f"clear_buffer_param"
+            )
+        sibling = next((p for p in other_params if p.name == override.clear_buffer_param), None)
+        if sibling is None:
+            raise ValueError(
+                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
+                f"names '{override.clear_buffer_param}', which does not exist on this command"
+            )
+        if not sibling.type_facts.is_scalar:
+            raise ValueError(
+                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
+                f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
+            )
+    # NULL_TERMINATED needs no structural validation - it has no sibling to cross-check.
+
+
+def _validate_array_of_arrays_override(
+    command_name: str, param: Parameter, override: ArrayOfArraysOverride, other_params: list[Parameter],
+) -> None:
+    """Raise ValueError if an ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry doesn't match this
+    command's actual signature - mirrors _validate_pointer_override's precedent exactly, for
+    the two sibling parameters (outer_count_param/element_length_param) instead of one."""
+    outer = next((p for p in other_params if p.name == override.outer_count_param), None)
+    if outer is None:
+        raise ValueError(
+            f"{command_name}.{param.name}: ARRAY_OF_ARRAYS_PARAM_OVERRIDES names outer count "
+            f"parameter '{override.outer_count_param}', which does not exist on this command"
+        )
+    if not outer.type_facts.is_scalar:
+        raise ValueError(
+            f"{command_name}.{param.name}: outer count '{outer.name}' is not a plain scalar "
+            f"({outer.type})"
+        )
+    length_param = next((p for p in other_params if p.name == override.element_length_param), None)
+    if length_param is None:
+        raise ValueError(
+            f"{command_name}.{param.name}: ARRAY_OF_ARRAYS_PARAM_OVERRIDES names element "
+            f"length parameter '{override.element_length_param}', which does not exist on "
+            f"this command"
+        )
+    if not length_param.type_facts.is_array_element_eligible:
+        raise ValueError(
+            f"{command_name}.{param.name}: element length parameter '{length_param.name}' is "
+            f"not a single-indirection pointer to a scalar type ({length_param.type})"
+        )
+
+
+def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
+    """Whether `field` (a parameter or a ReturnValue) is semantically a GL object name and
+    therefore MUST resolve to a real object-name classification (see
+    object_name_lifecycle.py's resolve_object_name_override) to be capturable - the systemic
+    gate behind this module's own targeted, per-command fixes (see object_name_lifecycle.py's
+    header comment and modern-opengl-backend-architecture.md's "scalar-enabled-but-unmapped"
+    deferred-scope note, which this gate now enforces/produces instead of relying on manual
+    audits to find each gap one at a time).
+
+    "Semantically a GL object name" is answered by the registry itself, not by guessing from
+    the field's name or C type: gl.xml's <param class="..."> / <proto class="..."> annotation
+    (normalize_attribs' 'class' -> 'class_') is *only* ever used by the registry authors to tag
+    a field as belonging to a specific object-name namespace (texture/buffer/program/shader/
+    framebuffer/vertex array/query/renderbuffer/sampler/program pipeline/transform feedback/
+    display list/perf query handle/perf query id) or a sync-object handle (class="sync",
+    GLsync - already excluded elsewhere: a bare GLsync value is neither is_scalar nor
+    is_array_element_eligible, so it can never reach this function's is_scalar/
+    is_opaque_handle/is_mapped_handle or is_array_element_eligible branches in the first place -
+    see intermediates.py's TypeFacts). No other `class` value exists in any of the four
+    registries this generator reads (verified against gl.xml/wgl.xml/glx.xml/egl.xml - only
+    gl.xml ever sets it). So `field.class_ is not None` is a complete, data-driven test with no
+    hand-maintained keyword list to fall out of sync with the registries, exactly the kind of
+    "classify from evidence" signal object_name_lifecycle.py's own header comment calls for.
+
+    resolve_object_name_override() itself distinguishes "not an object name at all"
+    (class_ is None) from "a namespace this backend has not built ObjectNameMapService support
+    for yet" (e.g. "transform feedback", "display list", "perf query id"/"perf query handle")
+    from "a real, resolvable classification" - but this gate treats the first two identically:
+    either way, a field with no resolvable override leaves the whole command disabled until a
+    real classification exists for every one of its object-name fields (see this module's own
+    re-run against the codebase, and the deferred list this gate validates in
+    modern-opengl-backend-architecture.md).
+    """
+    return (field.class_ is not None
+            and resolve_object_name_override(command_name, field.name, field.class_) is None)
+
+
+def _is_param_capturable(command_name: str, param: Parameter, other_params: list[Parameter]) -> bool:
+    """Whether a single parameter is safe to capture: a fixed-size scalar/enum, an opaque
+    native handle, a native handle GITS gives a real GITSKey mapping (see TypeFacts.is_scalar /
+    is_opaque_handle / is_mapped_handle); a parameter absorbed into a sibling's ArrayOfArrays<T>
+    wrapper (see array_of_arrays_metadata.py's consumed_pointer_params - it gets no Command
+    member of its own, but that is not a reason to leave the *command* disabled); a doubly
+    -indirect pointer (is_array_of_arrays_eligible) with a validated
+    ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry; or a pointer to a memcpy-safe element type
+    (is_array_element_eligible) that also has an explicit, validated POINTER_PARAM_OVERRIDES
+    entry (see pointer_metadata.py and "Classify payloads from evidence" -  direction/length
+    are never inferred from the type alone). A pointer parameter with no override entry simply
+    stays uncapturable; that is always the safe outcome.
+
+    On top of all of that, ANY of the above shapes is only actually capturable if it is not a
+    GL object name missing its required OBJECT_NAME_PARAM_OVERRIDES entry - see
+    _requires_object_name_override. This is deliberately checked for every branch (scalar,
+    array-of-arrays, and array-element) rather than just the scalar case: an unmapped object
+    name passed through as a raw ArrayArgument<GLuint>/HandleArrayArgument-less array is exactly
+    as unsafe on replay as an unmapped scalar one (e.g. glDeleteBuffers' `buffers` - a plain
+    is_array_element_eligible pointer with a valid POINTER_PARAM_OVERRIDES entry, but no
+    OBJECT_NAME_PARAM_OVERRIDES entry of its own before this gate existed).
+    """
+    facts = param.type_facts
+    if facts.is_scalar or facts.is_opaque_handle or facts.is_mapped_handle:
+        return not _requires_object_name_override(command_name, param)
+    if param.name in consumed_pointer_params(command_name):
+        return True
+    if facts.is_array_of_arrays_eligible:
+        if _requires_object_name_override(command_name, param):
+            return False
+        aoa_override = ARRAY_OF_ARRAYS_PARAM_OVERRIDES.get((command_name, param.name))
+        if aoa_override is None:
+            return False
+        _validate_array_of_arrays_override(command_name, param, aoa_override, other_params)
+        return True
+    if not facts.is_array_element_eligible:
+        return False
+    if _requires_object_name_override(command_name, param):
+        return False
+    override = POINTER_PARAM_OVERRIDES.get((command_name, param.name))
+    if override is None:
+        return False
+    _validate_pointer_override(command_name, param, override, other_params)
+    return True
+
+
+# Commands that are structurally capturable - every param/return value would pass
+# _is_param_capturable's/the return-value checks below on its own - but are deliberately kept
+# disabled (routed through the generic UnsupportedCommand path, same as any other disabled
+# command) because a generically-replayed Runner would be semantically wrong, not merely
+# mechanically incomplete. This is a different kind of gap from everything else in this module:
+# every other exclusion here says "this parameter's *shape* is not yet capturable"; this table
+# says "this command's shape is perfectly capturable, but replaying it generically is actively
+# incorrect against this backend's own replay model" - see each entry's own comment.
+_FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
+    # glFlushMappedBufferRange(target, offset, length) is only valid GL usage when `target`
+    # currently has an active mapping obtained with GL_MAP_FLUSH_EXPLICIT_BIT - but this
+    # backend's buffer-map tracking (see OpenGL2/recorder/mapTrackingWrappers.cpp and
+    # docs/development/opengl2-buffer-map-tracking-plan.md) never replays a real, ongoing
+    # map/flush/unmap sequence at all: glMapBufferRange/glUnmapBuffer are bypassed by custom
+    # recorder wrappers that record one synthetic, already-complete MappedDataMetaCommand
+    # instead (mappedDataMetaRunner.cpp replays it as its own self-contained internal
+    # map+memcpy+unmap against GL_COPY_WRITE_BUFFER, never leaving `target` mapped afterwards).
+    # A generically-replayed glFlushMappedBufferRange would therefore always run against
+    # replay-time buffer state that is never actually mapped, and fail with
+    # GL_INVALID_OPERATION on every call. Properly
+    # supporting it needs the custom map-tracking lifecycle extended to record real
+    # per-command flushed sub-ranges (and, for a GL_MAP_FLUSH_EXPLICIT_BIT mapping, snapshot
+    # only those flushed sub-ranges instead of the whole mapped range on unmap) - its own
+    # dedicated round, out of scope here.
+    'glFlushMappedBufferRange',
+})
+
+
+def _is_fully_capturable_command(command_name: str, return_value: ReturnValue, params: list[Parameter]) -> bool:
+    """Whether every param and the return value can be captured (see _is_param_capturable).
+
+    Return-value pointers stay entirely out of scope this increment (see
+    modern-opengl-backend-architecture.md's scale_pointer roadmap item) - a pointer/array return
+    value (e.g. glGetString's null-terminated GLubyte*) still requires is_scalar/is_opaque_handle/
+    is_mapped_handle exactly as before. This intentionally says nothing about whether the command
+    is actually reachable yet - see _INTERCEPTED_APIS.
+
+    Also unconditionally rejects any command named in _FORCE_DISABLED_COMMANDS above, regardless
+    of how capturable its shape looks otherwise - see that table's own comment.
+    """
+    if command_name in _FORCE_DISABLED_COMMANDS:
+        return False
+    return_facts = return_value.type_facts
+    if not (return_facts.is_scalar or return_facts.is_opaque_handle or return_facts.is_mapped_handle):
+        return False
+    if _requires_object_name_override(command_name, return_value):
+        return False
+    _validate_object_name_overrides(command_name, return_value, params)
+    return all(_is_param_capturable(command_name, p, params) for p in params)
+
+
+# ObjectNameRole -> the PointerDirection an array-shaped field with that role must also carry
+# in POINTER_PARAM_OVERRIDES, so the two independently-maintained tables can never silently
+# disagree about a shared field's direction (see _validate_object_name_override).
+_EXPECTED_POINTER_DIRECTION_FOR_ROLE: dict[ObjectNameRole, PointerDirection] = {
+    ObjectNameRole.CREATE: PointerDirection.OUT,
+    ObjectNameRole.DELETE: PointerDirection.IN,
+}
+
+
+def _validate_object_name_override(
+    command_name: str, param_name: str, type_facts: TypeFacts, override: ObjectNameOverride,
+) -> None:
+    """Raise ValueError if a resolved object-name override doesn't match this field's actual
+    shape - mirrors _validate_pointer_override's precedent: a broken classification is a
+    codegen bug, caught at generation time, never a reason to silently misclassify a field.
+    Only called (see _validate_object_name_overrides below) for a field that is already known
+    to actually reach generated code, so every branch here is a genuine invariant violation,
+    not merely "this field happens to be currently uncapturable for an unrelated reason".
+    """
+    if type_facts.is_array_element_eligible:
+        if override.role is ObjectNameRole.LOOKUP:
+            raise ValueError(
+                f"{command_name}.{param_name}: ObjectNameRole.LOOKUP is only defined for "
+                f"scalar object-name fields today - no enabled command needs an "
+                f"array-of-existing-names lookup yet"
+            )
+        pointer_override = POINTER_PARAM_OVERRIDES.get((command_name, param_name))
+        if pointer_override is None:
+            raise ValueError(
+                f"{command_name}.{param_name}: object-name array field with no matching "
+                f"POINTER_PARAM_OVERRIDES entry"
+            )
+        expected_direction = _EXPECTED_POINTER_DIRECTION_FOR_ROLE[override.role]
+        if pointer_override.direction != expected_direction:
+            raise ValueError(
+                f"{command_name}.{param_name}: ObjectNameRole.{override.role} expects a "
+                f"POINTER_PARAM_OVERRIDES direction of {expected_direction}, got "
+                f"{pointer_override.direction}"
+            )
+    elif not type_facts.is_scalar:
+        raise ValueError(
+            f"{command_name}.{param_name}: object-name override on a field that is neither a "
+            f"plain GLuint scalar nor a GLuint array ({type_facts})"
+        )
+    if param_name == 'return_value' and override.role is not ObjectNameRole.CREATE:
+        raise ValueError(
+            f"{command_name}.return_value: a return value can only be ObjectNameRole.CREATE - "
+            f"a function's return value is never an existing-name lookup or a delete target"
+        )
+
+
+def _validate_object_name_overrides(
+    command_name: str, return_value: ReturnValue, params: list[Parameter],
+) -> None:
+    """Validate every resolved object-name override that actually matters for this command's
+    generated code - see _validate_object_name_override.
+
+    Restricted to a field that is either scalar (always capturable, always uses its override
+    if one resolves) or array-eligible with a matching POINTER_PARAM_OVERRIDES entry already
+    present (meaning pointer_metadata.py has independently decided this array field is genuinely
+    captured, so its object-name classification will actually reach generated code too). An
+    array-eligible field with no POINTER_PARAM_OVERRIDES entry stays uncapturable regardless of
+    what resolve_object_name_override() says about its kind/role (see _is_param_capturable's own
+    pointer-override check) - validating it here anyway would reject a perfectly fine (kind,
+    role) pair (e.g. auto-derivation's LOOKUP-role `buffers` on glBindBuffersBase) purely because
+    nobody has separately wired up a pointer_metadata.py entry for it yet, an entirely different,
+    independent gap this function has no business raising about. This distinction did not exist
+    before object-name auto-derivation: every one of the old hand-written table's ~80 entries
+    happened to already satisfy it by construction (whoever added an entry made sure it was
+    either scalar or paired with a matching pointer override), so this filter was previously
+    unnecessary - auto-derivation produces classifications for hundreds of fields with no such
+    per-entry curation, so the filter now has to be explicit.
+    """
+    for field in (return_value, *params):
+        override = resolve_object_name_override(command_name, field.name, field.class_)
+        if override is None:
+            continue
+        facts = field.type_facts
+        reaches_codegen = (facts.is_scalar or
+                            (facts.is_array_element_eligible and
+                             (command_name, field.name) in POINTER_PARAM_OVERRIDES))
+        if reaches_codegen:
+            _validate_object_name_override(command_name, field.name, facts, override)
+
+
+# APIs the Windows interceptor actually forwards today (see generator_interceptor.py's
+# build_interceptor_command_list and modern-opengl-backend-architecture.md, "Only Windows GL
+# and WGL are in the initial runtime scope. EGL and GLX remain represented in the
+# code-generator intermediate representation so future platform support does not require
+# redesigning..."). GLX (X11-only) and EGL (would need a separate libEGL.dll interceptor)
+# have no trampoline, dispatch-table slot, or .def export yet, so marking one of their
+# commands `enabled` would generate a typed Command/Serializer that nothing ever constructs.
+# Revisit alongside that doc's "Revisit when: Runtime support is added for EGL or GLX".
+_INTERCEPTED_APIS: frozenset[Api] = frozenset({Api.GL, Api.WGL})
+
+
 def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) -> dict[Api, list[Command]]:
     """Take raw command data from XML and return processed commands; both grouped by API (registry)."""
     result: dict[Api, list[Command]] = {api: [] for api in Api}
@@ -288,10 +650,14 @@ def get_commands_from_xml_data(raw_commands: dict[Api, list[dict[str, Any]]]) ->
                 **normalize_attribs(raw_return_value['attribs']),
             )
 
+            command_name = command_attribs['name']
+            enabled = (api in _INTERCEPTED_APIS
+                       and _is_fully_capturable_command(command_name, return_value, params))
+
             commands.append(Command(
-                name=command_attribs['name'],
+                name=command_name,
                 api=api,
-                enabled=False,
+                enabled=enabled,
                 command_type=CmdType.NONE,
                 comment=command_attribs.get('comment'),
                 alias=raw_command['alias_attribs'].get('name'),

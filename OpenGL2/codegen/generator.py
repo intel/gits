@@ -13,11 +13,12 @@
 # from the XML registries and will eventually drive template-based generation
 # of the new layered backend.
 
-from itertools import chain
 from pathlib import Path
 
 from command_ids import build_command_ids
 from generator_interceptor import build_interceptor_command_list, generate_interceptor_files
+from generator_layer_interface import generate_layer_interface_files
+from generator_player import generate_player_files
 from generator_recorder import generate_recorder_files
 from intermediates import Api, Command, EnumValue
 from intermediates_creator import (
@@ -43,10 +44,20 @@ def main() -> None:
     enums: dict[Api, list[EnumValue]]
     commands: dict[Api, list[Command]]
     enums, commands = load_registries_and_extract_xml_data(FILE_TO_API)
-    build_command_ids(
-        chain.from_iterable(commands.values()),  # Flatten commands into a single list.
-        Path(__file__).with_name('command_ids.json'),
-    )
+
+    # IDs/typed classes are generated from the same post-rename, filtered command list the
+    # interceptor and recorder wrappers use (GL + real WGL exports, e.g. "wglSwapBuffers" rather
+    # than wgl.xml's raw "SwapBuffers" - see _WGL_RENAMED_FROM_UNPREFIXED), not the raw
+    # per-registry lists. Using the raw lists here would let an enabled command be generated
+    # under a name (e.g. "SwapBuffers") that no wrapper ever emits, while the wrapper's own name
+    # (e.g. "wglSwapBuffers") gets no ID/class at all - a mismatch invisible until a wgl.xml
+    # command that's both enabled and renamed actually exists (as HDC/HGLRC opaque-handle
+    # support first made true for wglSwapBuffers/wglGetPixelFormat). GLX/EGL are absent from
+    # this list, but since _INTERCEPTED_APIS excludes them from ever being enabled, they would
+    # never contribute an ID or typed class either way.
+    interceptor_commands = build_interceptor_command_list(commands)
+    command_ids = build_command_ids(interceptor_commands, Path(__file__).with_name('command_ids.json'))
+    generate_layer_interface_files(interceptor_commands, command_ids)
 
     # Derived/postprocessed data (enum canonical names, bitmask groups).
     enum_name_map = build_enum_name_map(enums)
@@ -67,9 +78,9 @@ def main() -> None:
             inspect_function_params(api, api_commands)
         check_function_groups_against_enums(commands, enums)
 
-    interceptor_commands = build_interceptor_command_list(commands)
     generate_interceptor_files(interceptor_commands)
     generate_recorder_files(interceptor_commands)
+    generate_player_files(interceptor_commands)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+<%page args="commands, namespace='gits::opengl2'"/>\
 // ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2026 Intel Corporation
@@ -25,6 +26,11 @@ ${AUTO_GENERATED_HEADER}
 // (only resolvable via wglGetProcAddress, and only once a context is
 // current), so an eager one-shot pass at load time would leave most of the
 // table permanently unresolved.
+//
+// `namespace` defaults to the recorder's own gits::opengl2 - the player instantiates this
+// same template a second time under gits::opengl2::player (see
+// codegen/generator_player.py), producing an independent dispatch table/thunk set with no
+// hooking concerns of its own (see OpenGL2/player/include/realDriver.h).
 
 #pragma once
 
@@ -32,7 +38,7 @@ ${AUTO_GENERATED_HEADER}
 
 #include <atomic>
 
-namespace gits::opengl2 {
+namespace ${namespace} {
 
 % for cmd in commands:
 <%
@@ -66,4 +72,16 @@ extern OpenGLDispatchTable g_DispatchTable;
 // since (e.g. the bootstrap context was already destroyed).
 bool TryCacheRealFunction(const char* name, void* value);
 
-} // namespace gits::opengl2
+// Proactively resolves and caches every command's real function pointer that isn't cached yet
+// (best-effort - failures are silently skipped, leaving that entry's lazy resolve-thunk in
+// place for a later retry). Meant to be called right after a real wglMakeCurrent call makes
+// some context current, since that is the only reliable window in which wglGetProcAddress can
+// resolve extension functions (see openglDriversAuto.cpp's ResolveDriverFunction) - resolving
+// lazily on first *use* instead is too late once that context has since been released (e.g. the
+// common "create dummy context -> fetch ARB functions -> destroy it -> create the real
+// context" bootstrap pattern also documented on the recorder's WglGetProcAddress override in
+// interceptorCustom.cpp, which solves the identical problem the other way - by hooking the
+// app's own wglGetProcAddress calls, which the player has no equivalent of).
+void WarmUpResolvableFunctions();
+
+} // namespace ${namespace}

@@ -1,3 +1,4 @@
+<%page args="commands, namespace='gits::opengl2'"/>\
 // ===================== begin_copyright_notice ============================
 //
 // Copyright (C) 2023-2026 Intel Corporation
@@ -17,7 +18,7 @@ ${AUTO_GENERATED_HEADER}
 #include <unordered_map>
 #include <unordered_set>
 
-namespace gits::opengl2 {
+namespace ${namespace} {
 
 // Definition of the dispatch table declared in openglDriversAuto.h.
 OpenGLDispatchTable g_DispatchTable;
@@ -119,4 +120,18 @@ bool TryCacheRealFunction(const char* name, void* value) {
   return true;
 }
 
-} // namespace gits::opengl2
+void WarmUpResolvableFunctions() {
+  // Best-effort: ResolveDriverFunction itself already tolerates (and silently warns once per
+  // name on) resolution failure, so no per-name success tracking is needed here - a name that
+  // fails now simply keeps its lazy resolve-thunk in place for a later retry, exactly as if
+  // this function had never run. A name that succeeds gets cached now, while it's actually
+  // resolvable, instead of on first use (which may be too late - see this function's own
+  // declaration comment in openglDriversAuto.h).
+% for cmd in commands:
+  if (void* resolved = ResolveDriverFunction("${cmd.name}")) {
+    TryCacheRealFunction("${cmd.name}", resolved);
+  }
+% endfor
+}
+
+} // namespace ${namespace}

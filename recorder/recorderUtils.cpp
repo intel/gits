@@ -24,7 +24,8 @@
 #if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
-#if defined GITS_PLATFORM_WINDOWS && (defined(WITH_DIRECTX) || defined(WITH_VULKAN))
+#if defined GITS_PLATFORM_WINDOWS &&                                                               \
+    (defined(WITH_DIRECTX) || defined(WITH_VULKAN) || defined(WITH_OPENGL2))
 #include <windows.h>
 #endif
 
