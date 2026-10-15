@@ -30,8 +30,7 @@ namespace gits::opengl2 {
 
 namespace {
 
-// The pname reporting which buffer is bound to `target`. Returns 0 for a target this service
-// does not track - see the plan doc's Decision 1 for that scope.
+// The pname reporting which buffer is bound to `target`, or 0 for an untracked target.
 GLenum BindingPnameForTarget(GLenum target) {
   switch (target) {
   case GL_ARRAY_BUFFER:
@@ -65,7 +64,7 @@ GLenum BindingPnameForTarget(GLenum target) {
   }
 }
 
-// Builds and records the snapshot's MappedDataMetaCommand - see the plan doc's Decision 6.
+// Builds and records a MappedDataMetaCommand from the snapshot.
 // `bytes.size()` reaches ArrayArgument<uint8_t>'s own size_t-based constructor with no narrowing
 // cast: a mapped range can legitimately approach or exceed 4 GiB on this x64-only backend, and
 // narrowing here would reintroduce the exact truncation bug MappedDataMetaCommand's already
@@ -151,9 +150,8 @@ void MapTrackingService::OnMapBufferRange(
   if (access & GL_MAP_COHERENT_BIT) {
     ReportUnsupportedCoherentMapping(buffer);
   }
-  // TODO: Phase 2 should hand the application a GITS-owned shadow for write-only explicit-flush
-  // maps so each flushed range can be captured before unmap without reading a write-only
-  // pointer.
+  // TODO: Use GITS-owned shadow memory for write-only explicit-flush mappings (when they are
+  // supported) so each flushed range can be captured without reading the write-only driver pointer.
   StoreMappedRange(CurrentShareGroup(), buffer, MappedRange{mappedPointer, offset, length, access});
 }
 
@@ -176,11 +174,7 @@ GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
 
 // --- Extensions beyond the original glMapBufferRange/glUnmapBuffer pair ---------------------
 //
-// See this class's own header comment on each of the following for what real target-application
-// gap each responds to. `SnapshotBufferAndUnmap` factors out the shared, delicate "read back and
-// decide whether to keep the snapshot" logic (the same branching UnmapBufferAndCapture above
-// hand-writes for glUnmapBuffer) so that logic is written and reviewed exactly once regardless
-// of how many additional *unmap* entry points end up calling it.
+// Map and unmap variants share the same tracked-range and snapshot rules.
 
 GLbitfield MapTrackingService::TranslateWholeBufferAccessToBits(GLenum access) {
   switch (access) {
@@ -210,11 +204,7 @@ void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedP
   if (buffer == 0) {
     return;
   }
-  // Neither glMapBuffer nor glMapBufferARB takes an explicit length (both map the entire
-  // buffer), so it is not otherwise available at this call site - queried explicitly here, the
-  // same "ask the driver, don't hand-roll tracking" precedent Decision 4 already established
-  // for the bound-buffer lookup itself, applied to a second piece of state this function's own
-  // parameter list simply does not carry.
+  // Whole-buffer map calls provide no length; query the buffer instead of inferring its size.
   GLint64 size = 0;
   if (!GetBoundBufferSize(target, size) || size <= 0) {
     LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
@@ -247,10 +237,8 @@ void MapTrackingService::OnMapNamedBufferEXT(GLuint buffer, GLenum access, void*
   }
   // Like OnMapBuffer above, glMapNamedBufferEXT maps the entire buffer implicitly - its length
   // is queried the same way, but via the DSA-EXT getter (glGetNamedBufferParameterivEXT):
-  // this backend has only been observed capturing the EXT-suffixed DSA family, not core
-  // (GL 4.5) DSA, so the EXT-suffixed getter is used for consistency rather than assuming core
-  // DSA support also exists. The EXT family has no 64-bit getter, so a GL 4.5 context's core
-  // glGetNamedBufferParameteri64v is used when available, since GL_BUFFER_SIZE is a GLsizeiptr.
+  // the EXT-suffixed getter is used on older contexts. The EXT family has no 64-bit getter, so
+  // a GL 4.5 context uses the core glGetNamedBufferParameteri64v for GLsizeiptr-sized buffers.
   GLint64 size = 0;
   const auto [major, minor] = CurrentContextGLVersion();
   if (major > 4 || (major == 4 && minor >= 5)) {
@@ -296,9 +284,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData) {
   std::optional<MappedRange> range =
       buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
-  // Nothing tracked (map wasn't via one of this service's enabled map functions, buffer
-  // unresolved, ...), or a genuinely read-only mapping - see Decision 5's third bullet. Skip
-  // straight to the real unmap; no MappedDataMetaCommand, so no ordering key is reserved.
+  // Untracked or read-only maps need no snapshot and no ordering key.
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
   }
@@ -307,8 +293,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
   std::vector<uint8_t> bytes(static_cast<size_t>(range->Length));
   if (range->Access & GL_MAP_READ_BIT) {
-    // Safe to read directly through the still-live original pointer, right before the real
-    // unmap invalidates it - see Decision 5's first bullet.
+    // Readable mappings can be copied before the application-visible unmap invalidates them.
     std::memcpy(bytes.data(), range->Pointer, bytes.size());
     const GLboolean result = realUnmap();
     if (result == GL_TRUE) {
@@ -321,10 +306,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     }
     return result;
   }
-  // Write-only (or write-plus-invalidate): the original pointer is not guaranteed readable per
-  // spec - see Decision 5's second bullet. Real unmap first (the one, app-visible unmap - its
-  // result is what the app's own call returns), then a temporary read-only remap/memcpy/unmap
-  // purely for capture.
+  // Write-only pointers cannot be read safely. Unmap first, then read the resulting buffer.
   const GLboolean result = realUnmap();
   if (result != GL_TRUE) {
     LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
@@ -426,9 +408,7 @@ GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
     std::lock_guard<std::mutex> lock(m_WarnedTargetsMutex);
     if (m_WarnedUnrecognizedTargets.insert(target).second) {
       LOG_WARNING << "MapTrackingService: target " << target
-                  << " is not a buffer target this service resolves (see "
-                     "opengl2-buffer-map-tracking-plan.md's Decision 4) - buffer-map "
-                     "tracking skipped for this target";
+                  << " is not a tracked buffer target - buffer-map tracking skipped";
     }
     return 0;
   }

@@ -8,11 +8,9 @@
 
 #pragma once
 
-// Recorder-side buffer-map tracking: remembers every currently-mapped buffer range and, at
-// unmap, captures the bytes the application wrote through the mapped pointer as a
-// MappedDataMetaCommand - see docs/development/opengl2-buffer-map-tracking-plan.md's
-// Decisions 1-6. Deliberately NOT built: Vulkan's continuous dirty-page tracking, external
-// memory, persistent mapping, or SnapshotAllMapped - see the plan doc's Non-goals.
+// Recorder-side buffer-map tracking: remembers mapped ranges and captures written bytes at
+// unmap as MappedDataMetaCommands. It does not track writes continuously, explicit flushes,
+// or persistent mappings.
 //
 // Lives under recorder/ rather than common/services/, mirroring Vulkan and DirectX: capturing a
 // mapped range needs the recorder's own real-driver dispatch table and CaptureManager, neither of
@@ -36,23 +34,18 @@ public:
   static MapTrackingService& Get();
 
   // Registers a just-succeeded glMapBufferRange so the matching unmap can capture whatever the
-  // application writes through `mappedPointer`. Does nothing when the mapped target has no
-  // resolvable buffer bound - see the plan doc's Decision 4.
+  // application writes through `mappedPointer`. Does nothing if no buffer is bound.
   void OnMapBufferRange(
       GLenum target, GLintptr offset, GLsizeiptr length, GLbitfield access, void* mappedPointer);
 
   // Performs the application-visible glUnmapBuffer and returns its result unchanged, snapshotting
   // the tracked range before or after that call as the mapping's access flags require. Emits a
-  // MappedDataMetaCommand only for a write-capable mapping whose unmap succeeded - see the plan
-  // doc's Decision 5.
+  // MappedDataMetaCommand only for a write-capable mapping whose unmap succeeded.
   GLboolean UnmapBufferAndCapture(GLenum target);
 
   // --- Extensions beyond the original glMapBufferRange/glUnmapBuffer pair -------------------
   //
-  // Everything below extends the same mechanism (Decisions 1-6 above) to additional map/unmap
-  // entry points a real target application was found to call instead of (or alongside)
-  // glMapBufferRange/glUnmapBuffer - see the plan doc's Decision 1 "Revisit when" clause, which
-  // calls exactly this out as an additive extension, not a rework.
+  // Additional map/unmap entry points use the same range and snapshot bookkeeping.
 
   // Registers a just-succeeded glMapBuffer/glMapBufferARB (target-addressed, implicit
   // whole-buffer range - neither function takes an explicit offset/length or a GL_MAP_*_BIT
@@ -61,7 +54,7 @@ public:
   // (GL_READ_ONLY/GL_WRITE_ONLY/GL_READ_WRITE), not glMapBufferRange's GL_MAP_*_BIT bitfield -
   // translated internally (see TranslateWholeBufferAccessToBits) into the same MappedRange
   // representation OnMapBufferRange above uses. Does nothing when the mapped target has no
-  // resolvable buffer bound - see Decision 4.
+  // resolvable buffer bound.
   void OnMapBuffer(GLenum target, GLenum access, void* mappedPointer);
 
   // Core and EXT DSA maps provide the buffer name directly. Whole-buffer maps query
@@ -72,8 +65,7 @@ public:
 
   // Registers a just-succeeded glMapNamedBufferEXT (DSA, implicit whole-buffer range) - like
   // OnMapBuffer above, but the buffer name is already given directly by the caller, so no
-  // target-to-bound-buffer resolution is needed at all (Decision 4 sidestepped entirely, exactly
-  // as that decision's own text anticipated).
+  // target-to-bound-buffer resolution is needed.
   void OnMapNamedBufferEXT(GLuint buffer, GLenum access, void* mappedPointer);
 
   // Performs the application-visible glUnmapBufferARB and returns its result unchanged.
@@ -83,9 +75,8 @@ public:
   GLboolean UnmapBufferARBAndCapture(GLenum target);
   GLboolean UnmapNamedBufferAndCapture(GLuint buffer);
 
-  // Performs the application-visible glUnmapNamedBufferEXT and returns its result unchanged -
-  // same Decision-5 snapshot behavior as UnmapBufferAndCapture above, but DSA-addressed like
-  // OnMapNamedBufferEXT above (no target resolution needed).
+  // Performs the application-visible glUnmapNamedBufferEXT and returns its result unchanged;
+  // the buffer name needs no target resolution.
   GLboolean UnmapNamedBufferEXTAndCapture(GLuint buffer);
 
 private:
@@ -118,10 +109,8 @@ private:
     }
   };
 
-  // Asks the real driver which buffer is bound to `target`, the only binding state that can
-  // never drift from what the application actually did - see the plan doc's Decision 4. Returns
-  // 0, warning once per target, for a target this service does not track or one with nothing
-  // bound.
+  // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
+  // target, for an untracked target or one with nothing bound.
   GLuint ResolveBoundBuffer(GLenum target);
 
   void ReportUnsupportedCoherentMapping(GLuint buffer);
@@ -140,23 +129,20 @@ private:
   // unlike glMapBufferRange's GL_MAP_*_BIT `access`) - into the GL_MAP_READ_BIT/GL_MAP_WRITE_BIT
   // bitfield convention MappedRange::Access already uses. An access value outside the three
   // legal enumerants (an application bug gl.xml itself cannot rule out) maps to 0 (neither
-  // bit) - UnmapBufferAndCapture's own branching already treats "neither bit set" as "nothing
+  // bit) - snapshot handling already treats "neither bit set" as "nothing
   // to snapshot", the same fallback every other unrecognized-input path in this service uses.
   static GLbitfield TranslateWholeBufferAccessToBits(GLenum access);
 
-  // Shared tail of OnMapBuffer/OnMapNamedBufferEXT: both map the entire buffer implicitly (no
+  // Shared tail of whole-buffer map calls: they map the entire buffer implicitly (no
   // explicit length), so each separately queries it (via its own target/DSA-appropriate
   // GL_BUFFER_SIZE getter) before reaching this common StoreMappedRange call. Unlike
-  // OnMapBufferRange/OnMapNamedBufferRangeEXT, this never checks GL_MAP_COHERENT_BIT: `access`
+  // OnMapBufferRange/OnMapNamedBufferRange, this never checks GL_MAP_COHERENT_BIT: `access`
   // here is the BufferAccessARB enum group, not MapBufferAccessMask, so the whole-buffer map
   // family has no coherent-mapping concept of its own at all.
   void StoreWholeBufferMap(
       uint64_t shareGroup, GLuint buffer, GLenum access, void* mappedPointer, GLsizeiptr length);
 
-  // Shared Decision-5 branching, used by every *new* unmap entry point below
-  // UnmapBufferAndCapture (which predates this helper and is left as its own, separately
-  // -reviewed implementation rather than retrofitted onto it, to avoid any behavior change to
-  // that already-shipped, already-tested path).
+  // Shared snapshot and readback policy for every unmap entry point.
   //
   // `callerName` is used only for this function's own LOG_WARNING messages, so a warning always
   // names the specific entry point (e.g. "glUnmapBufferARB") that actually observed the
@@ -179,9 +165,8 @@ private:
   std::mutex m_MappedBuffersMutex;
   std::unordered_map<Key, MappedRange, KeyHash> m_MappedBuffers;
 
-  // Warn-once state for the gaps Decision 4 names (unrecognized target, nothing bound) and the
-  // unsupported coherent mapping Phase 0 diagnoses. Map/unmap is a low-frequency path, so a
-  // plain mutex is fine, mirroring ObjectNameMapService's own warn-once convention.
+  // Warn-once state for unrecognized targets, missing bindings, and unsupported coherent maps.
+  // Map/unmap is a low-frequency path, so a plain mutex is sufficient.
   std::mutex m_WarnedTargetsMutex;
   std::unordered_set<GLenum> m_WarnedUnrecognizedTargets;
   std::unordered_set<GLenum> m_WarnedNoBufferBound;

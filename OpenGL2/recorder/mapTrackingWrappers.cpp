@@ -45,16 +45,8 @@ GLboolean APIENTRY CustomWrapper_glUnmapBuffer(GLenum target) {
 
 // --- Extensions beyond the original glMapBufferRange/glUnmapBuffer pair ---------------------
 //
-// Everything below extends the same mechanism to additional map/unmap entry points a real
-// target application was found to call instead of (or alongside) glMapBufferRange/glUnmapBuffer
-// - see docs/development/opengl2-buffer-map-tracking-plan.md's Decision 1 "Revisit when"
-// clause, which calls exactly this out as an additive extension, not a rework. Each wrapper
-// below is deliberately kept to "dispatch to the real driver, then hand the result to
-// MapTrackingService" - the same shape as CustomWrapper_glMapBufferRange/glUnmapBuffer above -
-// with no tracking/capture policy (buffer resolution, coherent-mapping detection, the
-// read-before/after-unmap decision, MappedDataMetaCommand recording) living in this file. See
-// mapTrackingService.h's own header comment for why that policy lives in the service instead of
-// here.
+// Each variant calls its own real driver entry point; tracking and capture policy stays in
+// MapTrackingService.
 
 void* APIENTRY CustomWrapper_glMapBuffer(GLenum target, GLenum access) {
   const RecursionGuard guard;
