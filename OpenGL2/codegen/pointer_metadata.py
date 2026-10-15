@@ -56,7 +56,7 @@ class PointerDirection(StrEnum):
 
 class LengthSourceKind(StrEnum):
     """How many elements this pointer refers to, and how that count is discovered."""
-    SIBLING_PARAM = 'sibling_param'    # length_source_value = another param's name (by-value int)
+    SIBLING_PARAM = 'sibling_param'  # length_source_value = another param's name (by-value int)
         # value). Most entries of this kind are hand-authored directly below, but the whole
         # glUniform*v/glProgramUniform*v/glUniformMatrix*v/glProgramUniformMatrix*v family is
         # now auto-derived instead - see uniform_setter_metadata.py's
@@ -67,12 +67,11 @@ class LengthSourceKind(StrEnum):
         # counterpart of PIXEL_TRANSFER_SIZE's own COMPSIZE(format,type,...) auto-derivation
         # below - see that module's header comment for why this one IS safe despite this
         # class's own "direction/category never derivable from gl.xml alone" rule).
-    FIXED_COUNT = 'fixed_count'        # length_source_value = a literal, e.g. '1' (unused by the
-                                        # 8 commands below; kept for the next easy win - single-
-                                        # value `iv` getters like glGetShaderiv always return
-                                        # exactly one GLint).
+    FIXED_COUNT = 'fixed_count'  # length_source_value = a literal, e.g. '1' (unused by the 8
+                                 # commands below; kept for the next easy win - single-value `iv`
+                                 # getters like glGetShaderiv always return exactly one GLint).
     NULL_TERMINATED = 'null_terminated'  # scan forward for a T{} sentinel; length_source_value
-                                          # is unused (None).
+                                         # is unused (None).
     KEY_VALUE_LIST = 'key_value_list'  # scan forward in (key, value) PAIRS, terminating only
         # when a pair's KEY element is zero - length_source_value is unused (None). Distinct
         # from NULL_TERMINATED: a WGL-style attribute list (wglCreateContextAttribsARB's

@@ -19,7 +19,6 @@ import mako.exceptions
 import mako.template
 
 from array_of_arrays_metadata import (
-    ARRAY_OF_ARRAYS_PARAM_OVERRIDES,
     ArrayOfArraysOverride,
     array_of_arrays_override_for,
     consumed_param_owner,

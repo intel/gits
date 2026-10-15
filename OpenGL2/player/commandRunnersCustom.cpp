@@ -177,7 +177,7 @@ void GlUseProgramRunner::Run() {
 
 void WglSetPixelFormatRunner::Run() {
   auto& manager = PlayerManager::Get();
-  HDC real_hdc = HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
+  HdcVirtualizationService::Get().Resolve(command.m_hdc.Value);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }

@@ -6,6 +6,10 @@
 #
 # ===================== end_copyright_notice ==============================
 
+if(MSVC)
+  add_compile_options(/W4)
+endif()
+
 add_subdirectory(codegen)
 add_subdirectory(common/layer_interface)
 add_subdirectory(common/services)

@@ -23,6 +23,7 @@ from intermediates_creator import (
     get_commands_from_xml_data,
 )
 from pointer_metadata import (
+    POINTER_PARAM_OVERRIDES,
     LengthSourceKind,
     PointerDirection,
     PointerParamOverride,
@@ -504,7 +505,6 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         # LengthSourceKind.KEY_VALUE_LIST's own comment for why plain NULL_TERMINATED would
         # silently truncate a list containing a legal zero VALUE (e.g.
         # WGL_CONTEXT_FLAGS_ARB = 0) before the real terminator.
-        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
         override = POINTER_PARAM_OVERRIDES[('wglCreateContextAttribsARB', 'attribList')]
         self.assertEqual(override.length_source_kind, LengthSourceKind.KEY_VALUE_LIST)
 
@@ -524,7 +524,6 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             self._get_command(Api.GL, 'glMultiDrawElementsBaseVertex').enabled)
 
     def test_multi_draw_elements_base_vertex_indices_uses_opaque_bit_pattern_array(self) -> None:
-        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
         override = POINTER_PARAM_OVERRIDES[('glMultiDrawElementsBaseVertex', 'indices')]
         self.assertEqual(override.length_source_kind, LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
         self.assertEqual(override.length_source_value, 'drawcount')
@@ -612,7 +611,6 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         # glGenSamplers/glDeleteSamplers name their element-count sibling param `count`, not
         # `n` like every other Gen*/Delete* pair this backend enables - a real, easy-to-miss
         # divergence a hardcoded 'n' assumption would silently get wrong.
-        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
         for cmd_name, param_name in (
             ('glGenSamplers', 'samplers'), ('glDeleteSamplers', 'samplers'),
         ):

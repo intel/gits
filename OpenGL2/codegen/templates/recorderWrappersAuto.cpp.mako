@@ -247,8 +247,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endif
 % endfor
-    for (Layer* layer : CaptureManager::Get().GetPreLayers()) {
-      layer->Pre(*command);
+    for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
+      preLayer->Pre(*command);
     }
   }
 % endif
@@ -492,8 +492,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // CaptureManager::RecordCommand() for encoding onto the wire (and, for a
     // FRAME_END_COMMANDS entry like this one might be, additionally emit the FrameEndCommand
     // marker afterward - see encoderLayerAuto.cpp.mako's EncoderLayer::Post).
-    for (Layer* layer : CaptureManager::Get().GetPostLayers()) {
-      layer->Post(*command);
+    for (Layer* postLayer : CaptureManager::Get().GetPostLayers()) {
+      postLayer->Post(*command);
     }
 % else:
     ReportUnsupportedCommand("${cmd.name}", orderingKey);
