@@ -453,4 +453,17 @@ private:
   glEndListCommand command;
 };
 
+class GlClientWaitSyncRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glClientWaitSyncCommand command;
+};
+
 } // namespace gits::opengl2

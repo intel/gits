@@ -688,4 +688,32 @@ void GlEndListRunner::Run() {
   }
 }
 
+void GlClientWaitSyncRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_sync);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    // The application went on as if the GPU had reached the sync object, so its next commands
+    // may overwrite data the GPU is still reading; a slower replay GPU must catch up first. The
+    // retries flush, so they cannot wait on commands the driver has not submitted.
+    constexpr GLuint64 retryTimeoutNs = 1000000000;
+    const GLenum recorded = command.m_Return.Value;
+    auto clientWaitSync = player::g_DispatchTable.glClientWaitSync.load(std::memory_order_acquire);
+    GLenum result =
+        clientWaitSync(command.m_sync.Value, command.m_flags.Value, command.m_timeout.Value);
+    if (recorded == GL_ALREADY_SIGNALED || recorded == GL_CONDITION_SATISFIED) {
+      while (result == GL_TIMEOUT_EXPIRED) {
+        result = clientWaitSync(command.m_sync.Value, GL_SYNC_FLUSH_COMMANDS_BIT, retryTimeoutNs);
+      }
+    }
+    command.m_Return.Value = result;
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 } // namespace gits::opengl2

@@ -106,4 +106,7 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # execution gets the same fixup - see MipmapCompletionService::NewListMode().
     'glNewList': 'GlNewListRunner',
     'glEndList': 'GlEndListRunner',
+    # Waits again when replay times out on a sync object the recording did not - see
+    # GlClientWaitSyncRunner::Run().
+    'glClientWaitSync': 'GlClientWaitSyncRunner',
 }
