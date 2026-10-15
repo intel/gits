@@ -38,7 +38,10 @@ from pointer_metadata import (
     LengthSourceKind,
     PointerDirection,
     PointerParamOverride,
+    TexOrSamplerParameterFamily,
 )
+from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
+from uniform_setter_metadata import derive_uniform_setter_override
 
 AUTO_GENERATED_HEADER = f"""
 //
@@ -221,19 +224,24 @@ def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | N
 def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride | None:
     """Resolve a (command, param) pointer classification, for use directly from Mako templates
     (see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako/commandRunnersAuto.cpp.mako). An
-    explicit POINTER_PARAM_OVERRIDES entry always wins; if none exists, falls back to
+    explicit POINTER_PARAM_OVERRIDES entry always wins; if none exists, falls back first to
     pixel_transfer_metadata.py's derive_pixel_transfer_override() for the one narrow,
-    exhaustively-audited COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes (see
-    that module's own header comment for exactly what it requires before returning non-None).
-    This mirrors intermediates_creator.py's _is_param_capturable, which gates the `enabled`
-    flag with the exact same precedence (explicit table, then the pixel-transfer fallback) - a
-    command's generated code and its enabled-ness must never disagree about which override
-    applies, or a Mako template would either silently drop a real override or try to use one
-    _is_param_capturable never validated.
+    exhaustively-audited COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes, then
+    to uniform_setter_metadata.py's derive_uniform_setter_override() for the glUniform*v/
+    glProgramUniform*v/glUniformMatrix*v/glProgramUniformMatrix*v sibling-family shape it
+    recognizes, then to tex_sampler_parameter_metadata.py's
+    derive_tex_sampler_parameter_override() for the glTexParameter*v/glSamplerParameter*v
+    sibling-family shape it recognizes (see each module's own header comment for exactly what
+    it requires before returning non-None). This mirrors intermediates_creator.py's
+    _is_param_capturable, which gates the `enabled` flag with the exact same precedence
+    (explicit table, then each fallback in the same order) - a command's generated code and
+    its enabled-ness must never disagree about which override applies, or a Mako template
+    would either silently drop a real override or try to use one _is_param_capturable never
+    validated.
 
-    `cmd` is the full Command object, not just its name - unlike a plain table lookup, the
-    fallback needs every sibling parameter (to resolve and validate the format/type/dimension
-    names a COMPSIZE(...) expression references), which only the full param list provides.
+    `cmd` is the full Command object, not just its name - unlike a plain table lookup, every
+    fallback needs every sibling parameter (to resolve and validate the sibling names their own
+    shape references), which only the full param list provides.
     """
     override = POINTER_PARAM_OVERRIDES.get((cmd.name, param_name))
     if override is not None:
@@ -242,7 +250,13 @@ def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride 
     if param is None:
         return None
     other_params = [p for p in cmd.params if p.name != param_name]
-    return derive_pixel_transfer_override(param, other_params)
+    override = derive_pixel_transfer_override(param, other_params)
+    if override is not None:
+        return override
+    override = derive_uniform_setter_override(cmd.name, param, other_params)
+    if override is not None:
+        return override
+    return derive_tex_sampler_parameter_override(cmd.name, param, other_params)
 
 
 def mako_render(inpath: str, **kwargs) -> str | None:
@@ -264,6 +278,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'pointer_needs_pixel_transfer_unknown_flag': pointer_needs_pixel_transfer_unknown_flag,
         'PointerDirection': PointerDirection,
         'LengthSourceKind': LengthSourceKind,
+        'TexOrSamplerParameterFamily': TexOrSamplerParameterFamily,
         'object_name_override_for': object_name_override_for,
         'GLObjectKind': GLObjectKind,
         'ObjectNameRole': ObjectNameRole,

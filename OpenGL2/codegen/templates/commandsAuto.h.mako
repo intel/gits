@@ -139,10 +139,13 @@ QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "${cmd.n
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h.
 , m_${p.name}(${arg_expr}, ComputeClearBufferValueCount(${override.clear_buffer_param}))\
 % elif override.length_source_kind == LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
-## only - see _validate_pointer_override's own direction check for this kind.
-, m_${p.name}(${arg_expr}, ComputeTexOrSamplerParameterValueCount(${override.pname_param}))\
+## COMPSIZE(pname) depends on the sibling enum's *value* AND on which command family is
+## calling (GL_TEXTURE_SWIZZLE_RGBA is legal only for the Tex- family - see that
+## LengthSourceKind's own comment (pointer_metadata.py), TexOrSamplerParameterCommand's own
+## comment, and pixelTransferSize.h's own comment). IN direction only - see
+## _validate_pointer_override's own direction check for this kind.
+, m_${p.name}(${arg_expr}, ComputeTexOrSamplerParameterValueCount(${override.pname_param}, \
+TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family == TexOrSamplerParameterFamily.TEX_PARAMETER else 'kSamplerParameter'}))\
 % elif override.length_source_kind == LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT:
 ## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
 ## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction

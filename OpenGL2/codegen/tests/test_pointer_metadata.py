@@ -22,7 +22,12 @@ from intermediates_creator import (
     extract_commands_from_registry,
     get_commands_from_xml_data,
 )
-from pointer_metadata import LengthSourceKind, PointerDirection, PointerParamOverride
+from pointer_metadata import (
+    LengthSourceKind,
+    PointerDirection,
+    PointerParamOverride,
+    TexOrSamplerParameterFamily,
+)
 from registry import Registry
 
 REGISTRY_PATHS: dict[Api, Path] = {
@@ -198,9 +203,9 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         _validate_pointer_override('glUniform1fv', param, override, other_params=[sibling])
 
     def test_vertex_attrib_parameter_value_count_accepts_out_direction(self) -> None:
-        # glGetVertexAttribiv's `params` is written by the driver, so this
-        # kind must be OUT-direction, unlike TEX_SAMPLER_PARAMETER_VALUE_COUNT/
-        # PATCH_PARAMETER_VALUE_COUNT above (both IN-only setters).
+        # glGetVertexAttribiv's `params` is written by the driver, so this kind must be
+        # OUT-direction, unlike TEX_SAMPLER_PARAMETER_VALUE_COUNT/PATCH_PARAMETER_VALUE_COUNT
+        # above (both IN-only setters).
         param = Parameter(name='params', type='GLint *')
         pname = Parameter(name='pname', type='GLenum')
         override = PointerParamOverride(
@@ -232,9 +237,22 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
 
+    def test_vertex_attrib_parameter_value_count_rejects_tex_sampler_family(self) -> None:
+        # glGetVertexAttribiv has no family discriminator at all (only one command in its own
+        # shape - see LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT's own comment).
+        param = Parameter(name='params', type='GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.OUT,
+            length_source_kind=LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT,
+            pname_param='pname', tex_sampler_family=TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glGetVertexAttribiv', param, override, other_params=[pname])
+
     def test_unpack_pbo_guard_requires_in_direction(self) -> None:
-        # GL_PIXEL_UNPACK_BUFFER only ever redirects an IN-direction parameter -
-        # an OUT-direction user would leave the flag silently inert (nothing checks it there).
+        # GL_PIXEL_UNPACK_BUFFER only ever redirects an IN-direction parameter - an
+        # OUT-direction user would leave the flag silently inert (nothing checks it there).
         param = Parameter(name='data', type='const void *')
         image_size = Parameter(name='imageSize', type='GLsizei')
         override = PointerParamOverride(
@@ -274,8 +292,8 @@ class ValidatePointerOverrideTests(unittest.TestCase):
                 'glTexImage2D', param, override, other_params=[fmt, typ, width, height])
 
     def test_query_buffer_guard_requires_out_direction(self) -> None:
-        # GL_QUERY_BUFFER only ever redirects an OUT-direction (driver-written)
-        # result - an IN-direction user would leave the flag silently inert.
+        # GL_QUERY_BUFFER only ever redirects an OUT-direction (driver-written) result - an
+        # IN-direction user would leave the flag silently inert.
         param = Parameter(name='params', type='GLint64 *')
         override = PointerParamOverride(
             direction=PointerDirection.IN, length_source_kind=LengthSourceKind.FIXED_COUNT,
@@ -293,9 +311,73 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         # Should not raise.
         _validate_pointer_override('glGetQueryObjecti64v', param, override, other_params=[])
 
+    def test_tex_sampler_parameter_value_count_requires_tex_sampler_family(self) -> None:
+        # A TEX_SAMPLER_PARAMETER_VALUE_COUNT override that omits tex_sampler_family would
+        # leave ComputeTexOrSamplerParameterValueCount() with no way
+        # to know whether GL_TEXTURE_SWIZZLE_RGBA is legal for this call's own command family -
+        # exactly the ambiguity that risked an out-of-bounds read before this field existed.
+        # Fail loud at generation time rather than silently falling through.
+        param = Parameter(name='params', type='const GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glTexParameterIiv', param, override, other_params=[pname])
+
+    def test_tex_sampler_parameter_value_count_accepts_tex_parameter_family(self) -> None:
+        param = Parameter(name='params', type='const GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT,
+            pname_param='pname', tex_sampler_family=TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+        # Should not raise.
+        _validate_pointer_override('glTexParameterIiv', param, override, other_params=[pname])
+
+    def test_tex_sampler_parameter_value_count_accepts_sampler_parameter_family(self) -> None:
+        param = Parameter(name='param', type='const GLint *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT,
+            pname_param='pname',
+            tex_sampler_family=TexOrSamplerParameterFamily.SAMPLER_PARAMETER)
+
+        # Should not raise.
+        _validate_pointer_override('glSamplerParameterIiv', param, override, other_params=[pname])
+
+    def test_patch_parameter_value_count_rejects_tex_sampler_family(self) -> None:
+        # glPatchParameterfv has no sibling family at all (see
+        # tex_sampler_parameter_metadata.py's own header comment) - a PATCH_PARAMETER_VALUE_COUNT
+        # override must never set tex_sampler_family.
+        param = Parameter(name='values', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT,
+            pname_param='pname', tex_sampler_family=TexOrSamplerParameterFamily.TEX_PARAMETER)
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override('glPatchParameterfv', param, override, other_params=[pname])
+
+    def test_patch_parameter_value_count_accepts_no_tex_sampler_family(self) -> None:
+        param = Parameter(name='values', type='const GLfloat *')
+        pname = Parameter(name='pname', type='GLenum')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT,
+            pname_param='pname')
+
+        # Should not raise.
+        _validate_pointer_override('glPatchParameterfv', param, override, other_params=[pname])
+
 
 class PointerNeedsRawOffsetCaptureTests(unittest.TestCase):
-    """pointer_needs_raw_offset_capture() (generator_helpers.py) - which
+    """Unit tests for pointer_needs_raw_offset_capture() (generator_helpers.py) - which
     pointer-shaped parameters get a companion m_<param>RawPointer field so the player can
     reconstruct the app's original bit pattern even when a buffer-object guard suppressed the
     normal client-memory capture. See that predicate's own header comment for the full
@@ -482,11 +564,11 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
 
-    def test_ogl_samples_sweep_round_commands_are_enabled(self) -> None:
-        # Regression coverage for the ogl-samples sweep round: every command that round added
-        # a POINTER_PARAM_OVERRIDES entry for (directly, or via consumed_pointer_params()'s own
-        # array-of-arrays absorption - see array_of_arrays_metadata.py) now enables. Each
-        # individual entry's own comment in pointer_metadata.py documents exactly why it is
+    def test_newly_covered_pointer_param_commands_are_enabled(self) -> None:
+        # Regression coverage: every command with a newly added POINTER_PARAM_OVERRIDES entry
+        # (directly, or via consumed_pointer_params()'s own array-of-arrays absorption - see
+        # array_of_arrays_metadata.py) now enables. Each individual entry's own comment in
+        # pointer_metadata.py documents exactly why it is
         # safe; this test only pins down the end result across the whole round at once, rather
         # than one assertion per command scattered across many small test methods.
         for name in (

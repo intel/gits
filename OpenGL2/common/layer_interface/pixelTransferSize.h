@@ -40,28 +40,20 @@ namespace gits::opengl2 {
 // that set (which should never happen from a real driver query) falls back to GL's own default
 // of 4 rather than risk a division-adjacent computation on a nonsensical value.
 //
-// GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are now
+// GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are
 // GATED, exactly like GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES below - see
 // `rowLength`/`skipRows`/`skipPixels`'s own comment further down for the full rationale and
-// why this now applies uniformly to every pixel-transfer call (1D, 2D, AND 3D alike), not just
-// a 3D-shaped one. This paragraph used to document a real, then-out-of-scope "a few bytes
-// short/long" gap here instead (see docs/development/opengl2-player-skeleton-plan.md's
-// Decision 10) - it was NOT a regression introduced by this backend's 3D pixel-transfer
-// extension (commit c59605a2e): the exact same gap already existed for the plain 2D/1D path
-// from the very first version of this function, well before any `depth`/`imageHeight`/
-// `skipImages` parameter existed at all, because the original formula never queried or
-// accounted for any of these three pixel-store parameters in the first place - only
-// `alignment` was ever read from real GL state. c59605a2e's own 3D extension left this
-// pre-existing 2D/1D gap exactly as it found it (it only added a NEW, separate gate for the
-// 3D-specific IMAGE_HEIGHT/SKIP_IMAGES state, and did not touch the row/skip-pixel state at
-// all) - so the concrete review example (a 1x2 RGBA transfer with ROW_LENGTH=1024 computing
-// only 8 bytes instead of the real 4,100) would have misfired identically on this function's
-// very first, 2D-only revision, not merely on today's 3D-capable one.
+// why this applies uniformly to every pixel-transfer call (1D, 2D, AND 3D alike), not just
+// a 3D-shaped one: without this gate, an app that sets a non-default GL_(UN)PACK_ROW_LENGTH
+// before a 2D transfer (e.g. a 1x2 RGBA transfer with ROW_LENGTH=1024) would have this function
+// compute only 8 bytes instead of the real 4,100, because the plain width*height*bytesPerPixel
+// formula never queried or accounted for any of these three pixel-store parameters at all -
+// only `alignment` was ever read from real GL state.
 //
 // Returns 0 for a non-positive `width`/`height`/`depth` (a genuine, real zero-byte transfer -
-// see below), an unrecognized `format`/`type`
-// combination, non-default/untracked pixel-store state, or
-// an intermediate/final size computation that would overflow uint64_t - rather than
+// see this function's own comment below), an unrecognized `format`/`type`
+// combination, non-default/untracked pixel-store state, or an intermediate/final size
+// computation that would overflow uint64_t - rather than
 // guessing, or silently returning a wrapped-around value that no longer reflects the real
 // transfer size.
 //
@@ -105,8 +97,8 @@ namespace gits::opengl2 {
 // occupies in client memory) or a non-zero GL_UNPACK_SKIP_IMAGES (which shifts every captured
 // layer's real offset later by that many full layers) before a 3D transfer would make the
 // plain `depth * height` formula UNDER-count by a multiple of a full image's worth of rows -
-// not a few bytes, but potentially the entire remainder of the buffer.
-// Rather than guess at incorporating these into the byte-range arithmetic
+// not a few bytes, but potentially the entire remainder of the buffer. Rather than guess at
+// incorporating these into the byte-range arithmetic
 // without a way to verify the result against a real driver, this function takes the safe,
 // conservative option instead - if either is non-default for a call that actually has a third
 // dimension (i.e. a real caller passed a non-zero `imageHeight`/`skipImages` argument; see
@@ -131,8 +123,8 @@ namespace gits::opengl2 {
 // buffer the driver starts reading, for a transfer with any width/height at all) - so unlike
 // that gate, this one is queried and applied UNCONDITIONALLY by every Mako call site (see
 // commandsAuto.h.mako/recorderWrappersAuto.cpp.mako), regardless of whether the specific
-// command has a `depth`/`height` param at all. The concrete motivating case:
-// a 1x2 RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
+// command has a `depth`/`height` param at all. The concrete motivating case: a 1x2
+// RGBA/UNSIGNED_BYTE transfer with ROW_LENGTH=1024
 // actually touches 4,100 bytes of real client memory (1024 bytes for the row ROW_LENGTH
 // describes, plus 4 bytes for the second row's own real pixel data), but the plain width*height
 // formula below computes only 8 bytes (2 rows x 4 bytes/pixel x 1 pixel/row) - captured too
@@ -254,16 +246,47 @@ GLint QueryPackSkipPixels();
 // case in practice - `buffer` only ever takes one of these three values for a well-formed call.
 uint32_t ComputeClearBufferValueCount(GLenum buffer);
 
+// Distinguishes the two command families that share ComputeTexOrSamplerParameterValueCount()
+// below - see that function's own comment for why this matters.
+// GL_TEXTURE_SWIZZLE_RGBA (and its single-channel GL_TEXTURE_SWIZZLE_R/G/B/A siblings) is a
+// TextureParameterName-only pname: verified directly against
+// third_party/OpenGL-Registry/xml/gl.xml, glTexParameterfv/iv/Iiv/Iuiv's own `pname` parameter
+// all carry group="TextureParameterName" (identical across all four Tex- forms, "I" integer
+// forms included), while glSamplerParameterfv/iv/Iiv/Iuiv's own `pname` carries
+// group="SamplerParameterF" (fv only) or group="SamplerParameterI" (iv/Iiv/Iuiv) - neither
+// Sampler group's own enum membership in gl.xml includes GL_TEXTURE_SWIZZLE_RGBA/R/G/B/A
+// anywhere in the registry (texture swizzle is per-texture-OBJECT state; a sampler object has
+// no swizzle state at all to set). GL_TEXTURE_BORDER_COLOR is unaffected by this distinction -
+// it is a legal 4-element pname for every one of the 8 commands in both families (its own
+// gl.xml <enum> tag carries "TextureParameterName" among its groups, and the real GL/GLES
+// reference pages document it as valid for every glSamplerParameter{,I}{f,i,ui}v form too,
+// despite gl.xml's own "SamplerParameterI" group tag not listing it explicitly - a known gap
+// in that particular group's tagging, not evidence border color is actually illegal there).
+enum class TexOrSamplerParameterCommand {
+  kTexParameter,     // glTexParameter{f,i,Ii,Iui}v - GL_TEXTURE_SWIZZLE_RGBA is a legal,
+                     // 4-element pname for every one of these four forms.
+  kSamplerParameter, // glSamplerParameter{f,i,Ii,Iui}v - GL_TEXTURE_SWIZZLE_RGBA is not a
+                     // legal pname for any of these four forms at all (see this enum's own
+                     // comment above) - a real app call using it here is itself a
+                     // GL_INVALID_ENUM client error the driver must reject, but this helper is
+                     // invoked BEFORE that real driver call happens (to size the eager
+                     // capture-time read of the caller-supplied `param` array), so it must
+                     // still answer 1, never 4, for this family/pname combination rather than
+                     // relying on the driver to catch the malformed call first - avoids
+                     // the out-of-bounds read this would otherwise risk for this
+                     // family/pname combination.
+};
+
 // Computes the element count of glTexParameterfv/glTexParameteriv/glSamplerParameterfv's
 // `params`/`param` array (gl.xml's COMPSIZE(pname) pseudo-length) - see pointer_metadata.py's
-// LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT. 4 for GL_TEXTURE_BORDER_COLOR (a
-// SamplerParameterF-group pname, legal for both the Tex- and Sampler- variants) and
-// GL_TEXTURE_SWIZZLE_RGBA (a TextureParameterName-only pname, legal only for the Tex-
-// variants - passing it to glSamplerParameterfv is itself a GL_INVALID_ENUM client error the
-// real driver call must reject, not something this helper needs to special-case), 1 for every
-// other legal pname. Returns 1 (a safe, non-zero default matching
-// ComputeClearBufferValueCount()'s own fallback) for any other `pname` value rather than 0.
-uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname);
+// LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT. 4 for GL_TEXTURE_BORDER_COLOR (legal for
+// every Tex-/Sampler- form - see TexOrSamplerParameterCommand's own comment) regardless of
+// `command`; 4 for GL_TEXTURE_SWIZZLE_RGBA and GL_TEXTURE_CROP_RECT_OES only when `command` is
+// kTexParameter (1 when it is kSamplerParameter - see TexOrSamplerParameterCommand's own
+// comment, and this function's own case comments, for why); 1 for every other legal pname.
+// Returns 1 (a safe, non-zero default matching ComputeClearBufferValueCount()'s own fallback)
+// for any other `pname` value rather than 0.
+uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname, TexOrSamplerParameterCommand command);
 
 // Computes the element count of glPatchParameterfv's `values` array (gl.xml's
 // COMPSIZE(pname) pseudo-length) - see pointer_metadata.py's

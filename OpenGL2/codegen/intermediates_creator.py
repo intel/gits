@@ -28,6 +28,8 @@ from object_name_lifecycle import ObjectNameOverride, ObjectNameRole, resolve_ob
 from pixel_transfer_metadata import derive_pixel_transfer_override
 from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride
 from registry import Registry
+from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
+from uniform_setter_metadata import derive_uniform_setter_override
 
 THIRD_PARTY_DIR = Path(__file__).resolve().parents[2] / 'third_party'
 # TODO: Take dirs as arguments, like Vulkan's new generator.py does.
@@ -440,6 +442,25 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: {override.length_source_kind}'s pname_param "
                 f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
             )
+        # tex_sampler_family is TEX_SAMPLER_PARAMETER_VALUE_COUNT-only - it
+        # disambiguates GL_TEXTURE_SWIZZLE_RGBA's family-dependent legality (see
+        # pointer_metadata.py's TexOrSamplerParameterFamily comment), which
+        # PATCH_PARAMETER_VALUE_COUNT has no equivalent of at all (glPatchParameterfv is the
+        # only command in that family - see tex_sampler_parameter_metadata.py's own header
+        # comment). Enforce both halves explicitly rather than silently ignoring a
+        # mismatched/missing field on either kind - a broken table/derivation entry is a bug,
+        # matching every other check in this function.
+        if override.length_source_kind is LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
+            if override.tex_sampler_family is None:
+                raise ValueError(
+                    f"{command_name}.{param.name}: TEX_SAMPLER_PARAMETER_VALUE_COUNT override "
+                    f"must set tex_sampler_family"
+                )
+        elif override.tex_sampler_family is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: PATCH_PARAMETER_VALUE_COUNT override must not "
+                f"set tex_sampler_family - only TEX_SAMPLER_PARAMETER_VALUE_COUNT uses it"
+            )
     elif override.length_source_kind is LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT:
         # See that LengthSourceKind's own comment (pointer_metadata.py).
         # Mirrors the TEX_SAMPLER_PARAMETER_VALUE_COUNT/PATCH_PARAMETER_VALUE_COUNT block
@@ -473,6 +494,12 @@ def _validate_pointer_override(
             raise ValueError(
                 f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT's "
                 f"pname_param sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
+            )
+        if override.tex_sampler_family is not None:
+            raise ValueError(
+                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
+                f"must not set tex_sampler_family - only TEX_SAMPLER_PARAMETER_VALUE_COUNT "
+                f"uses it"
             )
     elif override.length_source_kind is LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
         if override.length_source_value is not None:
@@ -632,6 +659,17 @@ def _is_param_capturable(command_name: str, param: Parameter, other_params: list
         # header comment for exactly what evidence it requires before returning non-None.
         override = derive_pixel_transfer_override(param, other_params)
     if override is None:
+        # Second fallback: the glUniform*v/glProgramUniform*v/glUniformMatrix*v/
+        # glProgramUniformMatrix*v sibling-family auto-derivation - see
+        # uniform_setter_metadata.py's own header comment for exactly what evidence it
+        # requires before returning non-None.
+        override = derive_uniform_setter_override(command_name, param, other_params)
+    if override is None:
+        # Third fallback: the glTexParameter*v/glSamplerParameter*v sibling-family
+        # auto-derivation - see tex_sampler_parameter_metadata.py's own header comment for
+        # exactly what evidence it requires before returning non-None.
+        override = derive_tex_sampler_parameter_override(command_name, param, other_params)
+    if override is None:
         return False
     _validate_pointer_override(command_name, param, override, other_params)
     return True
@@ -659,8 +697,8 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # GL_INVALID_OPERATION on every call. Properly
     # supporting it needs the custom map-tracking lifecycle extended to record real
     # per-command flushed sub-ranges (and, for a GL_MAP_FLUSH_EXPLICIT_BIT mapping, snapshot
-    # only those flushed sub-ranges instead of the whole mapped range on unmap) - its own
-    # dedicated round, out of scope here.
+    # only those flushed sub-ranges instead of the whole mapped range on unmap) - out of scope
+    # here.
     'glFlushMappedBufferRange',
 })
 

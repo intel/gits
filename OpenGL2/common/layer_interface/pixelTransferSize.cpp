@@ -261,7 +261,7 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   // for (see MultiplyOverflows' own comment). Every multiplication below is therefore checked
   // explicitly; on overflow this returns 0, the same sentinel value already used above for an
   // unrecognized format/type combination and non-default pixel-store state - but, per this
-  // function's own header comment and unlike THOSE cases, NOT the same
+  // function's own header comment, unlike THOSE cases, NOT the same
   // sentinel used for width/height/depth <= 0 further up: that one specific 0 is a genuine,
   // real zero-byte transfer, not "size could not be determined". See
   // PixelTransferSizeIsUnknown() immediately below for the single, correct way callers tell
@@ -362,11 +362,36 @@ uint32_t ComputeClearBufferValueCount(GLenum buffer) {
   }
 }
 
-uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname) {
+uint32_t ComputeTexOrSamplerParameterValueCount(GLenum pname,
+                                                TexOrSamplerParameterCommand command) {
   switch (pname) {
-  case 0x1004: // GL_TEXTURE_BORDER_COLOR
-  case 0x8E46: // GL_TEXTURE_SWIZZLE_RGBA
+  case 0x1004: // GL_TEXTURE_BORDER_COLOR - legal, 4-element, for every Tex-/Sampler- form (see
+               // TexOrSamplerParameterCommand's own comment) - unconditional on `command`.
     return 4;
+  case 0x8E46: // GL_TEXTURE_SWIZZLE_RGBA - legal only for the Tex- family (see
+               // TexOrSamplerParameterCommand's own comment and this function's own header
+               // comment) - never 4 for a Sampler- family call, which would be
+               // an out-of-bounds read of a caller-supplied `param` array the real driver call
+               // is about to reject as GL_INVALID_ENUM anyway.
+    return command == TexOrSamplerParameterCommand::kTexParameter ? 4 : 1;
+  case 0x8B9D: // GL_TEXTURE_CROP_RECT_OES - a 4-element {x, y, width, height} integer crop
+               // rectangle, per-texture-OBJECT state exactly like GL_TEXTURE_SWIZZLE_RGBA above
+               // (never a Sampler- family concept: GLES1, the only API that ever defines this
+               // pname (GL_OES_draw_texture, gl.xml "supported=gles1"), has no sampler objects
+               // at all) - treated identically to GL_TEXTURE_SWIZZLE_RGBA's own Tex-vs-Sampler
+               // split for that reason, matching this function's only existing family-scoped
+               // precedent rather than inventing a finer one. This enum carries no `group=`
+               // attribute at all in gl.xml (verified directly - unlike GL_TEXTURE_SWIZZLE_RGBA,
+               // which IS tagged group="TextureParameterName") - so this case rests on the
+               // pre-existing, already-shipping legacy (non-OpenGL2) backend's own precedent
+               // (OpenGL/common/include/openglArguments.h's CArgumentParamArray, which already
+               // builds a 4-element array for this exact pname) rather than on a gl.xml group
+               // tag. Without this case, a real app's
+               // glTexParameteriv(target, GL_TEXTURE_CROP_RECT_OES, fourInts) - reachable
+               // through the tex/sampler-parameter sibling-family auto-derivation -
+               // would fall through to the `default: return 1` below and silently capture only
+               // 1 of the 4 ints, corrupting the crop rectangle on replay.
+    return command == TexOrSamplerParameterCommand::kTexParameter ? 4 : 1;
   default:
     return 1; // See this function's own header comment.
   }

@@ -28,6 +28,8 @@ set(SCRIPTS_SRC
   pixel_transfer_metadata.py
   pointer_length_derivation.py
   pointer_metadata.py
+  tex_sampler_parameter_metadata.py
+  uniform_setter_metadata.py
   xml_data_exploration.py
   registry.py
 )

@@ -46,6 +46,16 @@ class PointerDirection(StrEnum):
 class LengthSourceKind(StrEnum):
     """How many elements this pointer refers to, and how that count is discovered."""
     SIBLING_PARAM = 'sibling_param'    # length_source_value = another param's name (by-value int)
+        # value). Most entries of this kind are hand-authored directly below, but the whole
+        # glUniform*v/glProgramUniform*v/glUniformMatrix*v/glProgramUniformMatrix*v family is
+        # now auto-derived instead - see uniform_setter_metadata.py's
+        # derive_uniform_setter_override(), consulted as a fallback by
+        # intermediates_creator.py's _is_param_capturable / generator_helpers.py's
+        # pointer_override_for() whenever this table has no explicit entry for a `value` param
+        # matching that module's own closed family regexes (a narrower, sibling-family
+        # counterpart of PIXEL_TRANSFER_SIZE's own COMPSIZE(format,type,...) auto-derivation
+        # below - see that module's header comment for why this one IS safe despite this
+        # class's own "direction/category never derivable from gl.xml alone" rule).
     FIXED_COUNT = 'fixed_count'        # length_source_value = a literal, e.g. '1' (unused by the
                                         # 8 commands below; kept for the next easy win - single-
                                         # value `iv` getters like glGetShaderiv always return
@@ -127,14 +137,26 @@ class LengthSourceKind(StrEnum):
         # instead of a SIBLING_PARAM direct by-value read.
     TEX_SAMPLER_PARAMETER_VALUE_COUNT = 'tex_sampler_parameter_value_count'  # length_source_value
         # is unused (None); instead the extra `pname_param` field names the sibling `pname` enum
-        # param glTexParameterfv/glTexParameteriv/glSamplerParameterfv's
-        # len="COMPSIZE(pname)" value count actually depends on: 4 for GL_TEXTURE_BORDER_COLOR
-        # (and, for the Tex- but not Sampler- variants, GL_TEXTURE_SWIZZLE_RGBA), 1 for every
-        # other legal pname. Same "sibling's value, not just its presence, determines the
-        # count" shape as CLEAR_BUFFER_VALUE_COUNT above - see
-        # gits::opengl2::ComputeTexOrSamplerParameterValueCount() (pixelTransferSize.h). IN
-        # direction only today (every enabled user is a setter) - see
-        # _validate_pointer_override's own direction check for this kind.
+        # param whose len="COMPSIZE(pname)" value count actually depends on, and the extra
+        # `tex_sampler_family` field (a TexOrSamplerParameterFamily - see this module's own
+        # comment on that class below) names which of the two command families is calling: 4
+        # for GL_TEXTURE_BORDER_COLOR regardless of family, 4 for GL_TEXTURE_SWIZZLE_RGBA only
+        # when `tex_sampler_family` is TEX_PARAMETER (1 - not 4 - when it is
+        # SAMPLER_PARAMETER, since GL_TEXTURE_SWIZZLE_RGBA is not a legal pname for any
+        # glSamplerParameter*v form at all - verified against gl.xml; see
+        # tex_sampler_parameter_metadata.py's own header comment), 1 for every other legal
+        # pname. Same "sibling's value, not just its presence,
+        # determines the count" shape as CLEAR_BUFFER_VALUE_COUNT above - see gits::opengl2::
+        # ComputeTexOrSamplerParameterValueCount()/TexOrSamplerParameterCommand
+        # (pixelTransferSize.h). IN direction only today (every enabled user is a setter, and
+        # the Mako templates have no OUT-direction branch for this kind) - see
+        # _validate_pointer_override's own direction check. Every
+        # glTexParameter{,I}{i,ui}v/glTexParameterfv/glSamplerParameter{,I}{i,ui}v/
+        # glSamplerParameterfv sibling is now auto-derived rather than hand-entered here - see
+        # tex_sampler_parameter_metadata.py's derive_tex_sampler_parameter_override(), consulted
+        # as a third fallback by intermediates_creator.py's _is_param_capturable/
+        # generator_helpers.py's pointer_override_for() whenever this table has no explicit
+        # entry for the (command, param) pair.
     PATCH_PARAMETER_VALUE_COUNT = 'patch_parameter_value_count'  # length_source_value is unused
         # (None); instead the extra `pname_param` field names the sibling `pname` enum param
         # glPatchParameterfv's len="COMPSIZE(pname)" value count actually depends on: 4 for
@@ -144,10 +166,8 @@ class LengthSourceKind(StrEnum):
     VERTEX_ATTRIB_PARAMETER_VALUE_COUNT = 'vertex_attrib_parameter_value_count'  # length_source_
         # value is unused (None); instead the extra `pname_param` field names the sibling
         # `pname` enum param glGetVertexAttribiv's own gl.xml len="4" annotation mis-describes
-        # as a FIXED count (this override USED TO be a plain FIXED_COUNT('4')
-        # entry, exactly like this file's other single-value getters, until an out-of-bounds-
-        # read analysis showed that gl.xml's len="4" is wrong for the overwhelming
-        # majority of this command's own legal pnames). Verified exhaustively against every
+        # as a FIXED count: gl.xml's len="4" is wrong for the overwhelming
+        # majority of this command's own legal pnames. Verified exhaustively against every
         # third_party/OpenGL-Registry/xml/gl.xml <enum> tag carrying group="VertexAttribPropertyARB"
         # (the exact group glGetVertexAttribiv's own `pname` <param> carries) - GL_CURRENT_
         # VERTEX_ATTRIB (0x8626) is the ONLY member that returns 4 values (the generic vertex
@@ -166,6 +186,21 @@ class LengthSourceKind(StrEnum):
         # is the only command in this shape's own family (no glGetVertexAttribfv/dv sibling is
         # enabled today, and even if one were, GL_CURRENT_VERTEX_ATTRIB's 4-element arity is the
         # same regardless of the destination's own scalar type).
+
+
+class TexOrSamplerParameterFamily(StrEnum):
+    """Which of the two glTexParameter*v/glSamplerParameter*v command families a
+    TEX_SAMPLER_PARAMETER_VALUE_COUNT override belongs to - the Python-side mirror of
+    pixelTransferSize.h's gits::opengl2::TexOrSamplerParameterCommand enum. Read that C++
+    enum's own comment for the full gl.xml evidence: in short,
+    GL_TEXTURE_SWIZZLE_RGBA is a legal 4-element pname for every TEX_PARAMETER form
+    (glTexParameterfv/iv/Iiv/Iuiv - all four share gl.xml's group="TextureParameterName" on
+    their own `pname`), but not for any SAMPLER_PARAMETER form (glSamplerParameterfv/iv/Iiv/
+    Iuiv - group="SamplerParameterF"/"SamplerParameterI", neither of which includes
+    GL_TEXTURE_SWIZZLE_RGBA anywhere in the registry - samplers have no swizzle state at all).
+    """
+    TEX_PARAMETER = 'tex_parameter'
+    SAMPLER_PARAMETER = 'sampler_parameter'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -199,7 +234,7 @@ class PointerParamOverride:
     # for every other kind.
     pname_param: str | None = None
 
-    # Compressed-texture-upload/PBO hazard: True when this IN-direction
+    # True when this IN-direction
     # parameter's "pointer" is real client memory ONLY when no GL_PIXEL_UNPACK_BUFFER is
     # bound - when one is, GL semantics repurpose the same parameter as a buffer-relative BYTE
     # OFFSET instead (see gits::opengl2::GuardUnpackPixelsPointer(),
@@ -221,7 +256,7 @@ class PointerParamOverride:
     # _validate_pointer_override's own check forbidding the combination.
     unpack_pbo_guard: bool = False
 
-    # Query-buffer-object hazard: True when this OUT-direction parameter is
+    # True when this OUT-direction parameter is
     # real, driver-writable client memory ONLY when no GL_QUERY_BUFFER is bound (per
     # ARB_query_buffer_object) - when one is, the driver redirects its result write to that
     # buffer at a byte offset given by this same parameter, instead of writing through it as a
@@ -237,6 +272,16 @@ class PointerParamOverride:
     # query buffer can only ever be the TARGET of one of these calls, never a source the
     # driver reads existing client memory from.
     query_buffer_guard: bool = False
+
+    # Only meaningful when length_source_kind is TEX_SAMPLER_PARAMETER_VALUE_COUNT - which of
+    # the two command families this override's own command belongs to (see
+    # TexOrSamplerParameterFamily's own comment above).
+    # Required (never None) for that kind - PATCH_PARAMETER_VALUE_COUNT has no family
+    # distinction at all (glPatchParameterfv is the only command in that family, no sibling
+    # exists to distinguish it from) and must leave this None; see
+    # intermediates_creator.py's _validate_pointer_override for the check that enforces both
+    # halves of that rule.
+    tex_sampler_family: TexOrSamplerParameterFamily | None = None
 
 # (command_name, param_name) -> classification. Every entry here is a manual claim about GL/WGL
 # semantics gl.xml/wgl.xml cannot fully express (see modern-opengl-backend-architecture.md,
@@ -332,54 +377,19 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='drawcount'),
 
-    # Vector/matrix uniform setters: `count` counts *vectors*/*matrices*, not raw elements -
-    # gl.xml's own len="count*N" annotation gives each one's multiplier directly (see
-    # docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's Decision 3).
-    ('glUniform1fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='count'),
-    ('glUniform2fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=2),
-    ('glUniform3fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=3),
-    ('glUniform4fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glUniform1iv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='count'),
-    ('glUniform2iv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=2),
-    ('glUniform3iv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=3),
-    ('glUniform4iv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glUniform1uiv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='count'),
-    ('glUniform2uiv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=2),
-    ('glUniform3uiv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=3),
-    ('glUniform4uiv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glUniformMatrix2fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glUniformMatrix3fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=9),
-    ('glUniformMatrix4fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=16),
+    # Vector/matrix uniform setters (glUniform1fv..4fv/1iv..4iv/1uiv..4uiv,
+    # glUniformMatrix2fv/3fv/4fv) USED TO have manual entries here. They are now auto-derived
+    # instead, along with every other same-family sibling (glUniform*dv,
+    # glProgramUniform*{f,i,ui,d}v, glUniformMatrix*dv, non-square glUniformMatrix{2,3,4}x{2,3,4}
+    # {f,d}v, and the glProgramUniformMatrix* counterparts of all of those) - see
+    # uniform_setter_metadata.py's derive_uniform_setter_override(), consulted as a fallback by
+    # intermediates_creator.py's _is_param_capturable/generator_helpers.py's
+    # pointer_override_for() whenever this table has no explicit entry for a `value` param on a
+    # command matching that module's own closed family regexes. Removed rather than left in
+    # place, both to prove the auto path actually replaces (not just supplements) these 15
+    # entries, and per this file's own header comment against speculative/redundant entries -
+    # see test_uniform_setter_metadata.py / test_pointer_metadata.py for the regression coverage
+    # pinning this down.
 
     # VAO/FBO array-output creation and array-input destruction - same SIBLING_PARAM('n') shape
     # as glGenTextures/glDeleteTextures above (see
@@ -466,8 +476,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # glGenRenderbuffers/glDeleteRenderbuffers, glGenSamplers/glDeleteSamplers,
     # glGenProgramPipelines/glDeleteProgramPipelines: same SIBLING_PARAM array-output-creation/
     # array-input-destruction shape as glGenQueries/glGenVertexArrays/glGenFramebuffers above -
-    # added (see object_name_lifecycle.py's matching
-    # OBJECT_NAME_PARAM_OVERRIDES entries) to close a real, previously-silent replay-corruption
+    # (see object_name_lifecycle.py's matching
+    # OBJECT_NAME_PARAM_OVERRIDES entries) closing a real, previously-silent replay-corruption
     # gap: all three Bind commands (glBindRenderbuffer/glBindSampler/glBindProgramPipeline)
     # were already `enabled=True` (scalar-only) with no lifecycle tracking of any kind for
     # their object namespace, so their GLuint name was passed straight through to the replay
@@ -523,9 +533,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='nAttributes'),
 
-    # ogl-samples sweep round: commands
-    # found unsupported by an actual sample run, enabled by following this file's own existing
-    # patterns exactly - see each group's own comment for the specific gl.xml evidence.
+    # Commands found unsupported by an actual sample run, enabled by following this file's own
+    # existing patterns exactly - see each group's own comment for the specific gl.xml evidence.
 
     # glDeleteBuffers' `buffers`: same SIBLING_PARAM('n') array-input-destruction shape as
     # glDeleteTextures/glDeleteVertexArrays/glDeleteFramebuffers above - glGenBuffers already
@@ -537,10 +546,10 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # glCompressedTex(Sub)Image{1,2,3}D's `data`: len="imageSize" is a PLAIN sibling reference
     # (verified against gl.xml - NOT a COMPSIZE(...) expression at all, unlike the uncompressed
     # Tex(Sub)Image family), so this is an ordinary SIBLING_PARAM entry, structurally identical
-    # to glBufferData's `data` above - no new mechanism, and no relationship to Part A's
-    # pixel_transfer_metadata.py fallback (that fallback only ever fires for a COMPSIZE(format,
-    # type,...) shape, which this is not). All six 1D/2D/3D Image/SubImage variants share this
-    # exact shape; enabled together rather than only the two the sweep happened to name.
+    # to glBufferData's `data` above - no new mechanism, and no relationship to
+    # pixel_transfer_metadata.py's own fallback (that fallback only ever fires for a
+    # COMPSIZE(format, type,...) shape, which this is not). All six 1D/2D/3D Image/SubImage
+    # variants share this exact shape, so all six are enabled together.
     #
     # unpack_pbo_guard=True: exactly like glTexImage2D's own `pixels`, `data`
     # is a buffer-relative byte offset rather than real client memory whenever
@@ -684,8 +693,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
 
     # glGetVertexAttribiv's `params`: gl.xml's own len="4" is a registry-wide "generic vertex
-    # attribute query, max 4 components" annotation, not real per-pname evidence -
-    # it mis-describes the overwhelming majority of this command's own legal
+    # attribute query, max 4 components" annotation, not real per-pname evidence - it
+    # mis-describes the overwhelming majority of this command's own legal
     # pnames, each of which writes exactly ONE GLint (GL_CURRENT_VERTEX_ATTRIB is the sole
     # 4-element exception). A fixed FIXED_COUNT('4') entry (this override's own prior shape)
     # read 3 elements past a caller's valid one-element destination for every other pname - an
@@ -704,21 +713,20 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='4'),
 
-    # glTexParameterfv/glTexParameteriv/glSamplerParameterfv's `params`/`param`:
-    # len="COMPSIZE(pname)" - unlike glGetShaderiv's misleading COMPSIZE(pname), this one
-    # really is pname-dependent (4 values for GL_TEXTURE_BORDER_COLOR, and for the Tex- but not
-    # Sampler- variants GL_TEXTURE_SWIZZLE_RGBA; 1 for every other legal pname) - see
-    # LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT's own comment and
-    # gits::opengl2::ComputeTexOrSamplerParameterValueCount() (pixelTransferSize.h).
-    ('glTexParameterfv', 'params'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, pname_param='pname'),
-    ('glTexParameteriv', 'params'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, pname_param='pname'),
-    ('glSamplerParameterfv', 'param'): PointerParamOverride(
-        direction=PointerDirection.IN,
-        length_source_kind=LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, pname_param='pname'),
+    # glTexParameterfv/glTexParameteriv/glSamplerParameterfv's `params`/`param` USED TO have
+    # manual entries here (len="COMPSIZE(pname)" - unlike glGetShaderiv's misleading
+    # COMPSIZE(pname), this one really is pname-dependent: 4 values for
+    # GL_TEXTURE_BORDER_COLOR, and for the Tex- but not Sampler- variants
+    # GL_TEXTURE_SWIZZLE_RGBA; 1 for every other legal pname). They are now auto-derived
+    # instead, along with every other same-family sibling (glTexParameterIiv/Iuiv,
+    # glSamplerParameteriv/Iiv/Iuiv) - see tex_sampler_parameter_metadata.py's
+    # derive_tex_sampler_parameter_override(), consulted as a fallback by
+    # intermediates_creator.py's _is_param_capturable/generator_helpers.py's
+    # pointer_override_for() whenever this table has no explicit entry for the (command, param)
+    # pair. Removed rather than left in place, both to prove the auto path actually replaces
+    # (not just supplements) these 3 entries, and per this file's own header comment against
+    # speculative/redundant entries - see test_tex_sampler_parameter_metadata.py for the
+    # regression coverage pinning this down.
 
     # glPatchParameterfv's `values`: len="COMPSIZE(pname)", genuinely pname-dependent (4 for
     # GL_PATCH_DEFAULT_OUTER_LEVEL, 2 for GL_PATCH_DEFAULT_INNER_LEVEL - the only two legal
@@ -729,25 +737,10 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         length_source_kind=LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT, pname_param='pname'),
 
     # glUniform4dv/glUniformMatrix4dv/glProgramUniform4dv/glProgramUniformMatrix4dv/
-    # glProgramUniformMatrix4fv's `value`: gl.xml's own len="count*4"/len="count*16" gives the
-    # multiplier directly, exactly like glUniform4fv/glUniformMatrix4fv above - just the
-    # GLdouble-typed classic-uniform and DSA (`glProgramUniform*`) variants, missing table
-    # entries only, no new shape.
-    ('glUniform4dv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glUniformMatrix4dv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=16),
-    ('glProgramUniform4dv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=4),
-    ('glProgramUniformMatrix4dv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=16),
-    ('glProgramUniformMatrix4fv', 'value'): PointerParamOverride(
-        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.SIBLING_PARAM,
-        length_source_value='count', length_multiplier=16),
+    # glProgramUniformMatrix4fv's `value` USED TO have manual entries here too (the
+    # GLdouble-typed classic-uniform and DSA (`glProgramUniform*`) variants). Also now covered
+    # by uniform_setter_metadata.py's derive_uniform_setter_override() - see this file's own
+    # comment above the removed glUniform1fv..glUniformMatrix4fv entries for why.
 
     # glUniformSubroutinesuiv's `indices`: len="count" - plain SIBLING_PARAM, same shape as
     # glGenTextures' `textures` etc., just missing a table entry.
