@@ -213,6 +213,7 @@ StreamHeader::Api StreamHeader::GetApi() const {
 ApiBool StreamHeader::GetApiBool() const {
   switch (m_Api) {
   case Api::API_OPENGL:
+  case Api::API_OPENGL2:
     return ApiBool::OGL;
   case Api::API_VULKAN_LEGACY:
   case Api::API_VULKAN:
