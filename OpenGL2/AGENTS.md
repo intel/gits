@@ -8,11 +8,17 @@
 (only after user decides so). Do not put `OpenGL2` into new code comments, log messages, or
 long-lived architecture names.
 
-## Generated files
+## Stream compatibility
 
-Never edit files ending in `Auto`. Change the generator or Mako template under `codegen/` and
-regenerate. Hand-written exceptions belong in a `Custom` companion or another clearly non-generated
-file.
+This backend is still WIP and there is no promise of stream compatibility yet. We are free to alter
+the on-disk format. For now, adding any backwards compatibility logic makes no sense.
+
+## Priorities
+
+Make applications work with GITS recording and replay. Preserving the application's exact OpenGL
+state and synchronization behavior is nice to have, not a requirement. When preserving it would
+substantially complicate the code and a small change still lets the application run and replay
+correctly, prefer simpler implementation over meticulously preserving the state.
 
 ## Behavioral contracts
 
