@@ -45,11 +45,15 @@ from intermediates import Command
 # via TakePendingPreHookKey() - and the second (larger) key becomes this wrapper's own
 # `orderingKey`, used exactly like every other command's single reserved key from here on.
 #
+# wglCreatePbufferARB/EXT are the other entries: PixelFormatCaptureLayer::Pre() records their
+# PbufferPixelFormatMetaCommand (pbufferPixelFormatMetaTypes.h) under the spare key.
+#
 # A plain Python set, not a dict, unlike CONTEXT_SHARE_PARAM/SHARE_LISTS_COMMANDS above:
 # membership alone is everything the template needs here (there is no per-command payload to
 # carry - every entry is handled completely uniformly).
 PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
     'wglSetPixelFormat', 'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
+    'wglCreatePbufferARB', 'wglCreatePbufferEXT',
 })
 
 

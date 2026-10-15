@@ -24,9 +24,9 @@ namespace gits::opengl2 {
 // HDC from a replay-time window the same way the legacy backend's UpdateHDC() does, rather
 // than by remapping the raw value directly."
 //
-// Deliberately does not key off the recorded value at all: every distinct recorded HDC maps
-// to the same one live HDC (see the plan's Decision 1 - single player-owned window for the
-// skeleton). Generalizing this into a real per-recorded-value window pool is the named
+// Deliberately does not key off the recorded value (pbuffer DCs aside - see Resolve()): every
+// distinct recorded HDC maps to the same one live HDC (see the plan's Decision 1 - single
+// player-owned window for the skeleton). Generalizing this into a real per-recorded-value window pool is the named
 // follow-on once a real scenario needs a second simultaneous window - Resolve(HDC)'s
 // signature is already shaped for that backward-compatible extension.
 class HdcVirtualizationService {
@@ -36,7 +36,10 @@ public:
   // Returns the one player-owned, real HDC for any recorded (opaque, process-foreign) HDC
   // value - creating the player's window and deriving its HDC on first call, then returning
   // the same HDC for every subsequent call regardless of which recorded value is passed. The
-  // recorded value itself is never dereferenced or compared against a live handle.
+  // recorded value itself is never dereferenced or compared against a live handle. The one
+  // exception is a recorded pbuffer DC (wglGetPbufferDCARB/EXT), which resolves to the real DC of
+  // its replayed pbuffer - see PbufferService (pbufferService.h) - or to nullptr if replay failed
+  // to get that DC, so the calls using it fail as they would on any invalid DC.
   HDC Resolve(HDC recordedValue);
 
   // Sets a real pixel format on the player-owned HDC, retrying on a later call if an earlier

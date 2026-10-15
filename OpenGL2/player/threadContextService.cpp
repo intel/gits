@@ -13,6 +13,21 @@
 
 namespace gits::opengl2 {
 
+namespace {
+// wglMakeCurrent makes the draw DC the read DC too.
+HDC CurrentReadDc(ThreadContextService::MakeCurrentEntryPoint entryPoint, HDC drawDc) {
+  auto& table = player::g_DispatchTable;
+  switch (entryPoint) {
+  case ThreadContextService::MakeCurrentEntryPoint::ARB:
+    return table.wglGetCurrentReadDCARB.load(std::memory_order_acquire)();
+  case ThreadContextService::MakeCurrentEntryPoint::EXT:
+    return table.wglGetCurrentReadDCEXT.load(std::memory_order_acquire)();
+  default:
+    return drawDc;
+  }
+}
+} // namespace
+
 ThreadContextService& ThreadContextService::Get() {
   static ThreadContextService instance;
   return instance;
@@ -31,27 +46,43 @@ void ThreadContextService::SwitchTo(uint32_t threadId) {
   auto& table = player::g_DispatchTable;
   if (table.wglGetCurrentContext.load(std::memory_order_acquire)() == current.Context &&
       (current.Context == nullptr ||
-       table.wglGetCurrentDC.load(std::memory_order_acquire)() == current.Dc)) {
+       (table.wglGetCurrentDC.load(std::memory_order_acquire)() == current.Dc &&
+        CurrentReadDc(current.EntryPoint, current.Dc) == current.ReadDc))) {
     return;
   }
-  if (!table.wglMakeCurrent.load(std::memory_order_acquire)(current.Dc, current.Context)) {
+  bool switched = false;
+  switch (current.EntryPoint) {
+  case MakeCurrentEntryPoint::Core:
+    switched = table.wglMakeCurrent.load(std::memory_order_acquire)(current.Dc, current.Context);
+    break;
+  case MakeCurrentEntryPoint::ARB:
+    switched = table.wglMakeContextCurrentARB.load(std::memory_order_acquire)(
+        current.Dc, current.ReadDc, current.Context);
+    break;
+  case MakeCurrentEntryPoint::EXT:
+    switched = table.wglMakeContextCurrentEXT.load(std::memory_order_acquire)(
+        current.Dc, current.ReadDc, current.Context);
+    break;
+  }
+  if (!switched) {
     m_ThreadId.reset();
     static bool warned = false;
     if (!warned) {
       warned = true;
-      LOG_WARNING << "ThreadContextService: wglMakeCurrent failed switching to the context of "
-                     "recorded thread "
-                  << threadId << " - its commands run without that context";
+      LOG_WARNING << "ThreadContextService: making current the context of recorded thread "
+                  << threadId << " failed - its commands run without that context";
     }
   }
 }
 
-void ThreadContextService::NoteCurrent(uint32_t threadId) {
+void ThreadContextService::NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint) {
   auto& table = player::g_DispatchTable;
   Current& current = m_Current[threadId];
   current.Context = table.wglGetCurrentContext.load(std::memory_order_acquire)();
   current.Dc = current.Context != nullptr ? table.wglGetCurrentDC.load(std::memory_order_acquire)()
                                           : nullptr;
+  current.ReadDc = current.Context != nullptr ? CurrentReadDc(entryPoint, current.Dc) : nullptr;
+  current.EntryPoint = entryPoint;
 }
 
 void ThreadContextService::Forget(HGLRC context) {
@@ -63,22 +94,26 @@ void ThreadContextService::Forget(HGLRC context) {
 }
 
 void ThreadContextLayer::Post(wglMakeCurrentCommand& command) {
-  ThreadContextService::Get().NoteCurrent(command.m_ThreadId);
+  ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
+                                          ThreadContextService::MakeCurrentEntryPoint::Core);
 }
 
 void ThreadContextLayer::Post(wglMakeContextCurrentARBCommand& command) {
-  ThreadContextService::Get().NoteCurrent(command.m_ThreadId);
+  ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
+                                          ThreadContextService::MakeCurrentEntryPoint::ARB);
 }
 
 void ThreadContextLayer::Post(wglMakeContextCurrentEXTCommand& command) {
-  ThreadContextService::Get().NoteCurrent(command.m_ThreadId);
+  ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
+                                          ThreadContextService::MakeCurrentEntryPoint::EXT);
 }
 
 void ThreadContextLayer::Post(wglDeleteContextCommand& command) {
+  // Deleting a context leaves the current one unchanged, unless it was the one deleted, which
+  // Forget() detaches.
   if (command.m_Return.Value) {
     ThreadContextService::Get().Forget(command.m_oldContext.Value);
   }
-  ThreadContextService::Get().NoteCurrent(command.m_ThreadId);
 }
 
 } // namespace gits::opengl2

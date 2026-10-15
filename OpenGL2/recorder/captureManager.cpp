@@ -77,10 +77,14 @@ void CaptureManager::LoadLayers() {
   m_PreLayers.push_back(new ClientArraysLayer());
   // Captures still-mapped GL_INTEL_map_texture textures at swaps - see mappedTextureLayer.h.
   m_PreLayers.push_back(new MappedTextureLayer());
+  // One stateless instance in both lists: Pre() for wglCreatePbufferARB/EXT, Post() for
+  // wglSetPixelFormat.
+  auto* pixelFormatCaptureLayer = new PixelFormatCaptureLayer();
+  m_PreLayers.push_back(pixelFormatCaptureLayer);
   // PixelFormatCaptureLayer must run BEFORE EncoderLayer (see that layer's own header comment
   // for why) - pushed first, since m_PostLayers runs in push_back order and EncoderLayer must
   // stay the LAST entry (see this class's own header comment on that invariant).
-  m_PostLayers.push_back(new PixelFormatCaptureLayer());
+  m_PostLayers.push_back(pixelFormatCaptureLayer);
   m_PostLayers.push_back(new UniformArrayCaptureLayer());
   m_PostLayers.push_back(new EncoderLayer());
 }

@@ -203,6 +203,18 @@ struct HandleTypeInfo<GLsync> {
   static constexpr const char* kTypeName = "GLsync";
 };
 
+template <>
+struct HandleTypeInfo<HPBUFFERARB> {
+  static constexpr const char* kServiceName = "PbufferHandleMapService";
+  static constexpr const char* kTypeName = "HPBUFFERARB";
+};
+
+template <>
+struct HandleTypeInfo<HPBUFFEREXT> {
+  static constexpr const char* kServiceName = "PbufferEXTHandleMapService";
+  static constexpr const char* kTypeName = "HPBUFFEREXT";
+};
+
 // Readable, backward-compatible names for the two mapped-handle types today - every existing
 // hand-written call site (handleArgumentUpdaters.h, recorder/mapTrackingWrappers.cpp,
 // recorderWrappersAuto.cpp.mako's erase_service lookup, ...) keeps referring to these exact
@@ -210,6 +222,8 @@ struct HandleTypeInfo<GLsync> {
 // gets a third alias here, matching whatever name its own call sites read most naturally as.
 using ContextHandleMapService = HandleMapService<HGLRC>;
 using SyncHandleMapService = HandleMapService<GLsync>;
+using PbufferHandleMapService = HandleMapService<HPBUFFERARB>;
+using PbufferEXTHandleMapService = HandleMapService<HPBUFFEREXT>;
 
 // Method bodies live in handleMapService.cpp, explicitly instantiated there for exactly these
 // two types - this extern template declaration suppresses any *implicit* instantiation from
@@ -219,5 +233,7 @@ using SyncHandleMapService = HandleMapService<GLsync>;
 // `template class HandleMapService<NewHandleT>;` in handleMapService.cpp.
 extern template class HandleMapService<HGLRC>;
 extern template class HandleMapService<GLsync>;
+extern template class HandleMapService<HPBUFFERARB>;
+extern template class HandleMapService<HPBUFFEREXT>;
 
 } // namespace gits::opengl2

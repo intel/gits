@@ -8,6 +8,7 @@
 
 #include "hdcVirtualizationService.h"
 
+#include "pbufferService.h"
 #include "windowManager.h"
 
 #include <algorithm>
@@ -38,7 +39,10 @@ HdcVirtualizationService& HdcVirtualizationService::Get() {
   return instance;
 }
 
-HDC HdcVirtualizationService::Resolve(HDC /*recordedValue*/) {
+HDC HdcVirtualizationService::Resolve(HDC recordedValue) {
+  if (const std::optional<HDC> pbufferDc = PbufferService::Get().FindDc(recordedValue)) {
+    return *pbufferDc;
+  }
   std::call_once(m_Init, [this] {
     // Position/size default to an arbitrary (10, 10)/640x480 for this single-window skeleton -
     // see Decision 1's scope - but are overwritten by SetGeometry() (m_WindowX/Y/Width/Height)

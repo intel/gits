@@ -29,6 +29,8 @@ add_library(OpenGL2_player STATIC
   include/mappedDataMetaRunner.h
   include/mappedTextureDataMetaRunner.h
   include/mipmapCompletionService.h
+  include/pbufferPixelFormatMetaRunner.h
+  include/pbufferService.h
   include/replayContextCaps.h
   include/threadContextService.h
   include/unsupportedCommandRunner.h
@@ -45,6 +47,8 @@ add_library(OpenGL2_player STATIC
   mappedDataMetaRunner.cpp
   mappedTextureDataMetaRunner.cpp
   mipmapCompletionService.cpp
+  pbufferPixelFormatMetaRunner.cpp
+  pbufferService.cpp
   replayContextCaps.cpp
   threadContextService.cpp
   unsupportedCommandRunner.cpp

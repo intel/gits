@@ -11,16 +11,52 @@
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
+#include "log.h"
 #include "mipmapCompletionService.h"
 #include "openglDriversAuto.h"
+#include "pbufferService.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
 #include "threadContextService.h"
 #include "uniformLocationMapService.h"
 
+#include <atomic>
+#include <optional>
+#include <vector>
+
 namespace gits::opengl2 {
 
 namespace {
+// Zero-valued attributes are left out: wglChoosePixelFormatARB matches booleans exactly, so
+// requiring e.g. WGL_BIND_TO_TEXTURE_RGB_ARB to be FALSE would reject formats that merely support
+// more. WGL_DOUBLE_BUFFER_ARB and WGL_SAMPLE_BUFFERS_ARB are kept either way: the first decides
+// the default draw buffer, the second whether the pbuffer is multisampled.
+int ChoosePbufferPixelFormat(HDC hdc, const std::vector<int32_t>& captured, int recordedFormat) {
+  std::vector<int> attributes;
+  for (size_t i = 0; i + 1 < captured.size(); i += 2) {
+    if (captured[i + 1] != 0 || captured[i] == WGL_DOUBLE_BUFFER_ARB ||
+        captured[i] == WGL_SAMPLE_BUFFERS_ARB) {
+      attributes.push_back(captured[i]);
+      attributes.push_back(captured[i + 1]);
+    }
+  }
+  if (!attributes.empty()) {
+    attributes.push_back(0);
+    int format = 0;
+    UINT count = 0;
+    auto choose = player::g_DispatchTable.wglChoosePixelFormatARB.load(std::memory_order_acquire);
+    if (choose(hdc, attributes.data(), nullptr, 1, &format, &count) && count > 0) {
+      return format;
+    }
+  }
+  static std::atomic<bool> warned{false};
+  if (!warned.exchange(true)) {
+    LOG_WARNING << "wglCreatePbufferARB/EXT: no replay pixel format matches the captured one - "
+                   "using the captured format index";
+  }
+  return recordedFormat;
+}
+
 void NoteActiveTextureUnit() {
   GLint activeUnit = GL_TEXTURE0;
   if (CurrentReplayContextCaps().MultiTexture) {
@@ -28,6 +64,95 @@ void NoteActiveTextureUnit() {
                                                                           &activeUnit);
   }
   MipmapCompletionService::Get().NoteUnit(static_cast<GLuint>(activeUnit - GL_TEXTURE0));
+}
+
+// WGL_ARB_pbuffer and WGL_EXT_pbuffer differ only in their handle type and entry points.
+template <typename CommandT, typename RealFunctionT>
+void RunCreatePbuffer(CommandT& command, const std::atomic<RealFunctionT>& realFunction) {
+  auto& manager = PlayerManager::Get();
+  HDC real_hDC = HdcVirtualizationService::Get().Resolve(command.m_hDC.Value);
+  const std::vector<int32_t> pixelFormat =
+      PbufferService::Get().TakePendingPixelFormat(command.m_ThreadId);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    command.m_Return.Value = realFunction.load(std::memory_order_acquire)(
+        real_hDC, ChoosePbufferPixelFormat(real_hDC, pixelFormat, command.m_iPixelFormat.Value),
+        command.m_iWidth.Value, command.m_iHeight.Value,
+        command.m_piAttribList.HasValue ? command.m_piAttribList.Data.data() : nullptr);
+    UpdateOutputHandle(command.m_Return);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+template <typename CommandT, typename RealFunctionT>
+void RunGetPbufferDC(CommandT& command, const std::atomic<RealFunctionT>& realFunction) {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_hPbuffer);
+  const HDC recordedDc = command.m_Return.Value;
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    command.m_Return.Value = realFunction.load(std::memory_order_acquire)(command.m_hPbuffer.Value);
+    if (recordedDc != nullptr) {
+      PbufferService::Get().AcquireDc(recordedDc, command.m_hPbuffer.Key, command.m_Return.Value);
+      static std::atomic<bool> warned{false};
+      if (command.m_Return.Value == nullptr && !warned.exchange(true)) {
+        LOG_WARNING << "wglGetPbufferDCARB/EXT: replay failed to get a pbuffer DC capture got - "
+                       "calls using it fail";
+      }
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+template <typename CommandT, typename RealFunctionT>
+void RunReleasePbufferDC(CommandT& command, const std::atomic<RealFunctionT>& realFunction) {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_hPbuffer);
+  const HDC recordedDc = command.m_hDC.Value;
+  const std::optional<HDC> real_hDC = PbufferService::Get().FindDc(recordedDc);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip && real_hDC.has_value()) {
+    // A DC replay failed to get has nothing to release; the call fails like a release of an
+    // invalid DC. A failed release of a real DC leaves it acquired.
+    command.m_Return.Value =
+        *real_hDC == nullptr
+            ? 0
+            : realFunction.load(std::memory_order_acquire)(command.m_hPbuffer.Value, *real_hDC);
+    if (*real_hDC == nullptr || command.m_Return.Value != 0) {
+      PbufferService::Get().ReleaseDc(recordedDc);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+template <typename CommandT, typename RealFunctionT>
+void RunDestroyPbuffer(CommandT& command, const std::atomic<RealFunctionT>& realFunction) {
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_hPbuffer);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    command.m_Return.Value = realFunction.load(std::memory_order_acquire)(command.m_hPbuffer.Value);
+    if (command.m_Return.Value) {
+      PbufferService::Get().ErasePbuffer(command.m_hPbuffer.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
 }
 } // namespace
 
@@ -328,6 +453,46 @@ void WglSwapLayerBuffersRunner::Run() {
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
   }
+}
+
+void WglCreatePbufferARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunCreatePbuffer(command, player::g_DispatchTable.wglCreatePbufferARB);
+}
+
+void WglGetPbufferDCARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunGetPbufferDC(command, player::g_DispatchTable.wglGetPbufferDCARB);
+}
+
+void WglReleasePbufferDCARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunReleasePbufferDC(command, player::g_DispatchTable.wglReleasePbufferDCARB);
+}
+
+void WglDestroyPbufferARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunDestroyPbuffer(command, player::g_DispatchTable.wglDestroyPbufferARB);
+}
+
+void WglCreatePbufferEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunCreatePbuffer(command, player::g_DispatchTable.wglCreatePbufferEXT);
+}
+
+void WglGetPbufferDCEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunGetPbufferDC(command, player::g_DispatchTable.wglGetPbufferDCEXT);
+}
+
+void WglReleasePbufferDCEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunReleasePbufferDC(command, player::g_DispatchTable.wglReleasePbufferDCEXT);
+}
+
+void WglDestroyPbufferEXTRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  RunDestroyPbuffer(command, player::g_DispatchTable.wglDestroyPbufferEXT);
 }
 
 void GlBindTextureRunner::Run() {

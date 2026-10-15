@@ -27,6 +27,8 @@ from handle_lifecycle import (
     HANDLE_CREATING_COMMANDS,
     HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
     HGLRC_LIFECYCLE,
+    HPBUFFERARB_LIFECYCLE,
+    HPBUFFEREXT_LIFECYCLE,
     MAPPED_HANDLE_LIFECYCLES,
     MAPPED_HANDLE_SERVICE_NAMES,
     SHARE_LISTS_COMMANDS,
@@ -141,6 +143,34 @@ class GlsyncLifecycleTests(unittest.TestCase):
         self.assertEqual(
             GLSYNC_LIFECYCLE.param_to_erase_on_success,
             {'glDeleteSync': 'sync', 'glDeleteSyncAPPLE': 'sync'})
+
+
+class HpbufferarbLifecycleTests(unittest.TestCase):
+    def test_cpp_type_and_service_name(self) -> None:
+        self.assertEqual(HPBUFFERARB_LIFECYCLE.cpp_type, 'HPBUFFERARB')
+        self.assertEqual(HPBUFFERARB_LIFECYCLE.service_name, 'PbufferHandleMapService')
+
+    def test_creating_commands(self) -> None:
+        self.assertEqual(HPBUFFERARB_LIFECYCLE.creating_commands,
+                         frozenset({'wglCreatePbufferARB'}))
+
+    def test_param_to_erase_on_success(self) -> None:
+        self.assertEqual(HPBUFFERARB_LIFECYCLE.param_to_erase_on_success,
+                         {'wglDestroyPbufferARB': 'hPbuffer'})
+
+
+class HpbufferextLifecycleTests(unittest.TestCase):
+    def test_cpp_type_and_service_name(self) -> None:
+        self.assertEqual(HPBUFFEREXT_LIFECYCLE.cpp_type, 'HPBUFFEREXT')
+        self.assertEqual(HPBUFFEREXT_LIFECYCLE.service_name, 'PbufferEXTHandleMapService')
+
+    def test_creating_commands(self) -> None:
+        self.assertEqual(HPBUFFEREXT_LIFECYCLE.creating_commands,
+                         frozenset({'wglCreatePbufferEXT'}))
+
+    def test_param_to_erase_on_success(self) -> None:
+        self.assertEqual(HPBUFFEREXT_LIFECYCLE.param_to_erase_on_success,
+                         {'wglDestroyPbufferEXT': 'hPbuffer'})
 
 
 class ContextShareTablesTests(unittest.TestCase):

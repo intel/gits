@@ -90,6 +90,12 @@ void TraceLayer::Pre(MappedTextureDataMetaCommand& command) {
   printer.Finish(m_Flush);
 }
 
+void TraceLayer::Pre(PbufferPixelFormatMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "PbufferPixelFormatMeta");
+  printer.Add(command.m_Attributes);
+  printer.Finish(m_Flush);
+}
+
 void TraceLayer::Pre(UnsupportedCommand& command) {
   CommandPrinter printer(m_Stream, m_Mutex, command, "UnsupportedCommand");
   printer.AddText(command.GetName());

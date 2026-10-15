@@ -12,8 +12,9 @@
 # pointer typedef (see intermediates.py's _MAPPED_HANDLE_BASE_TYPES/TypeFacts.is_mapped_handle)
 # that is NOT a GLuint-named object (so object_name_lifecycle.py's class=-based derivation does
 # not apply to it - see intermediates_creator.py's _requires_object_name_override, which exempts
-# every is_mapped_handle field up front for exactly this reason). `HGLRC` and `GLsync` are the
-# two entries today; see MAPPED_HANDLE_LIFECYCLES below for how a third such type joins them.
+# every is_mapped_handle field up front for exactly this reason). `HGLRC`, `GLsync`,
+# `HPBUFFERARB` and `HPBUFFEREXT` are the entries today; see MAPPED_HANDLE_LIFECYCLES below for
+# how another such type joins them.
 #
 # HISTORY: HGLRC (this module, then just "handle_lifecycle.py") and GLsync (originally a
 # separate "sync_lifecycle.py", written as a structural copy of this module's own HGLRC tables
@@ -137,12 +138,35 @@ GLSYNC_LIFECYCLE = MappedHandleLifecycle(
     },
 )
 
+# WGL_ARB_pbuffer. The pbuffer's own HDC (wglGetPbufferDCARB) is not a mapped handle: the player
+# maps recorded pbuffer DCs onto real ones itself - see player/include/pbufferService.h.
+HPBUFFERARB_LIFECYCLE = MappedHandleLifecycle(
+    cpp_type='HPBUFFERARB',
+    service_name='PbufferHandleMapService',
+    creating_commands=frozenset({'wglCreatePbufferARB'}),
+    param_to_erase_on_success={
+        'wglDestroyPbufferARB': 'hPbuffer',
+    },
+)
+
+# WGL_EXT_pbuffer: the same lifecycle, under its own handle type.
+HPBUFFEREXT_LIFECYCLE = MappedHandleLifecycle(
+    cpp_type='HPBUFFEREXT',
+    service_name='PbufferEXTHandleMapService',
+    creating_commands=frozenset({'wglCreatePbufferEXT'}),
+    param_to_erase_on_success={
+        'wglDestroyPbufferEXT': 'hPbuffer',
+    },
+)
+
 # Every mapped-handle type's lifecycle entry - the ONE table a new mapped-handle type joins
 # (see MappedHandleLifecycle's own docstring for the full checklist). Order does not matter to
 # any consumer below; listed in the order each type was added.
 MAPPED_HANDLE_LIFECYCLES: tuple[MappedHandleLifecycle, ...] = (
     HGLRC_LIFECYCLE,
     GLSYNC_LIFECYCLE,
+    HPBUFFERARB_LIFECYCLE,
+    HPBUFFEREXT_LIFECYCLE,
 )
 
 # Derived, pre-unioned views for generator_recorder.py/generator_player.py, so neither consumer

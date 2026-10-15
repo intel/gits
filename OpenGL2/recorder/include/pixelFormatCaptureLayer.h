@@ -20,6 +20,10 @@
 // command onto the wire, since EncoderLayer is always the LAST-registered Post layer
 // (CaptureManager::LoadLayers()) - so mutating `command.m_ppfd` here still changes what
 // actually gets encoded.
+//
+// Also a Pre layer for wglCreatePbufferARB/EXT, whose pixel format attributes it records in a
+// PbufferPixelFormatMetaCommand (pbufferPixelFormatMetaTypes.h) under the command's pre-hook key
+// (generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS).
 #include "commandsAuto.h"
 #include "layerAuto.h"
 
@@ -36,6 +40,8 @@ public:
   using Layer::Post;
   using Layer::Pre;
 
+  void Pre(wglCreatePbufferARBCommand& command) override;
+  void Pre(wglCreatePbufferEXTCommand& command) override;
   void Post(wglSetPixelFormatCommand& command) override;
 };
 

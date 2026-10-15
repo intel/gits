@@ -252,9 +252,13 @@ _OPAQUE_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
 # with no second user yet; GLsync becoming that second user is exactly the "reuse demonstrated"
 # trigger that decision record was waiting for, so the two were merged into one template - see
 # handle_lifecycle.py's own MappedHandleLifecycle for the matching Python-side generalization.
+# HPBUFFERARB (wglCreatePbufferARB/wglDestroyPbufferARB) and HPBUFFEREXT (their EXT twins) have
+# the same shape.
 _MAPPED_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     'HGLRC',
     'GLsync',
+    'HPBUFFERARB',
+    'HPBUFFEREXT',
 })
 
 # Fixed-size POD structs (not scalars - pointer_depth == 0 never applies to a whole-struct

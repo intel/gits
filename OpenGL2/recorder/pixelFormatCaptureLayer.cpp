@@ -8,7 +8,13 @@
 
 #include "pixelFormatCaptureLayer.h"
 
+#include "captureManager.h"
+#include "glEnumsAuto.h"
 #include "log.h"
+#include "openglDriversAuto.h"
+#include "pbufferPixelFormatMetaTypes.h"
+
+#include <atomic>
 
 // Hand-declared instead of including <windows.h>, which would redeclare HDC/PIXELFORMATDESCRIPTOR
 // etc. against glTypes.h's own self-contained declarations of those same names (pulled in here
@@ -23,8 +29,61 @@ extern "C" __declspec(dllimport) int __stdcall DescribePixelFormat(HDC hdc,
                                                                    int format,
                                                                    UINT nBytes,
                                                                    PIXELFORMATDESCRIPTOR* ppfd);
+extern "C" __declspec(dllimport) DWORD __stdcall GetLastError();
+extern "C" __declspec(dllimport) void __stdcall SetLastError(DWORD dwErrCode);
 
 namespace gits::opengl2 {
+
+namespace {
+// The legacy backend's GetPixelFormatParams() set (OpenGL/common/wglFunctions.cpp) minus the
+// window/bitmap/swap-method attributes a pbuffer does not need, plus render-to-texture binding.
+constexpr int kPbufferPixelFormatAttributes[] = {
+    WGL_DRAW_TO_PBUFFER_ARB,     WGL_SUPPORT_OPENGL_ARB, WGL_ACCELERATION_ARB,
+    WGL_PIXEL_TYPE_ARB,          WGL_DOUBLE_BUFFER_ARB,  WGL_RED_BITS_ARB,
+    WGL_GREEN_BITS_ARB,          WGL_BLUE_BITS_ARB,      WGL_ALPHA_BITS_ARB,
+    WGL_ACCUM_BITS_ARB,          WGL_DEPTH_BITS_ARB,     WGL_STENCIL_BITS_ARB,
+    WGL_SAMPLE_BUFFERS_ARB,      WGL_SAMPLES_ARB,        WGL_BIND_TO_TEXTURE_RGB_ARB,
+    WGL_BIND_TO_TEXTURE_RGBA_ARB};
+
+// Records the meta command even when nothing could be queried: the pre-hook key must be used.
+void RecordPbufferPixelFormat(uint32_t threadId, HDC hdc, int pixelFormat) {
+  // The queries, logging and recording below may set the thread's last error, which the
+  // application may read after its own call.
+  const DWORD lastError = GetLastError();
+  PbufferPixelFormatMetaCommand meta(threadId);
+  meta.m_Key = CaptureManager::Get().TakePendingPreHookKey();
+  meta.m_Attributes.HasValue = true;
+  auto getAttributes = g_DispatchTable.wglGetPixelFormatAttribivARB.load(std::memory_order_acquire);
+  // One attribute per query: the whole query fails if any attribute belongs to an extension the
+  // driver lacks (WGL_ARB_multisample, WGL_ARB_render_texture).
+  for (int attribute : kPbufferPixelFormatAttributes) {
+    int value = 0;
+    if (getAttributes(hdc, pixelFormat, 0, 1, &attribute, &value)) {
+      meta.m_Attributes.Data.push_back(attribute);
+      meta.m_Attributes.Data.push_back(value);
+    }
+  }
+  if (meta.m_Attributes.Data.empty()) {
+    static std::atomic<bool> warned{false};
+    if (!warned.exchange(true)) {
+      LOG_WARNING << "PixelFormatCaptureLayer: wglGetPixelFormatAttribivARB failed for a "
+                     "pbuffer pixel format - replay will reuse its format index";
+    }
+  }
+  CaptureManager::Get().RecordCommand(meta, new PbufferPixelFormatMetaSerializer(meta));
+  SetLastError(lastError);
+}
+} // namespace
+
+void PixelFormatCaptureLayer::Pre(wglCreatePbufferARBCommand& command) {
+  RecordPbufferPixelFormat(command.m_ThreadId, command.m_hDC.Value, command.m_iPixelFormat.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(wglCreatePbufferEXTCommand& command) {
+  RecordPbufferPixelFormat(command.m_ThreadId, command.m_hDC.Value, command.m_iPixelFormat.Value);
+  Pre(static_cast<Command&>(command));
+}
 
 // Background (see HdcVirtualizationService::EnsurePixelFormatSet's own header comment for
 // the original "black-screen investigation" this responds to): that method used to sanitize a

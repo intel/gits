@@ -476,11 +476,24 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.NULL_TERMINATED),
     # A {key, value, key, value, ..., 0} attribute list, terminated only by a zero KEY - see
     # LengthSourceKind.KEY_VALUE_LIST's own comment above for why this must not use plain
-    # NULL_TERMINATED. wglCreatePbufferARB/EXT's piAttribList and
-    # wglCreateAssociatedContextAttribsAMD's attribList share this exact same shape but stay
-    # unsupported (no override entry) until a caller needs them.
+    # NULL_TERMINATED. wglCreateAssociatedContextAttribsAMD's attribList shares this exact same
+    # shape but stays unsupported (no override entry) until a caller needs it.
     ('wglCreateContextAttribsARB', 'attribList'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    # May be null.
+    ('wglCreatePbufferARB', 'piAttribList'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('wglCreatePbufferEXT', 'piAttribList'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('wglSetPbufferAttribARB', 'piAttribList'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    # wgl.xml gives the queried value no len=; every pbuffer attribute is a single int.
+    ('wglQueryPbufferARB', 'piValue'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('wglQueryPbufferEXT', 'piValue'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
     # wglChoosePixelFormatARB/EXT: wgl.xml gives none of these a len=. Both attribute lists may
     # be null. The chosen formats are a pure query result: WglSetPixelFormatRunner renegotiates
     # the format from the captured descriptor, so nothing on replay reads them.

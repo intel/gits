@@ -32,6 +32,7 @@ public:
   void Pre(ClientArraysMetaCommand& command) override;
   void Pre(UniformArrayMetaCommand& command) override;
   void Pre(MappedTextureDataMetaCommand& command) override;
+  void Pre(PbufferPixelFormatMetaCommand& command) override;
   void Pre(UnsupportedCommand& command) override;
 
 private:

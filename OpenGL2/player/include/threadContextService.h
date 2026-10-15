@@ -33,8 +33,16 @@ public:
   // context.
   void SwitchTo(uint32_t threadId);
 
-  // Records the context current now as `threadId`'s.
-  void NoteCurrent(uint32_t threadId);
+  // The entry point that made a context current, and so the one that restores it: the
+  // make-context-current ones keep a separate read DC, such as a pbuffer's.
+  enum class MakeCurrentEntryPoint {
+    Core,
+    ARB,
+    EXT
+  };
+
+  // Records the context current now, and its draw and read DCs, as `threadId`'s.
+  void NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint);
 
   // Detaches deleted `context` from every thread, so a later context reusing its handle is never
   // made current in its place.
@@ -45,7 +53,9 @@ private:
 
   struct Current {
     HDC Dc{};
+    HDC ReadDc{};
     HGLRC Context{};
+    MakeCurrentEntryPoint EntryPoint{MakeCurrentEntryPoint::Core};
   };
   std::unordered_map<uint32_t, Current> m_Current;
   std::optional<uint32_t> m_ThreadId;

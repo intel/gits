@@ -198,6 +198,118 @@ private:
   wglSwapLayerBuffersCommand command;
 };
 
+// wglCreatePbufferARB's Run() - chooses the pixel format from the attributes of the
+// PbufferPixelFormatMetaCommand replayed right before it (PbufferService) rather than reusing
+// the capture driver's format index.
+class WglCreatePbufferARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglCreatePbufferARBCommand command;
+};
+
+// wglGetPbufferDCARB's Run() - registers the real DC under the recorded one (PbufferService).
+class WglGetPbufferDCARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglGetPbufferDCARBCommand command;
+};
+
+// wglReleasePbufferDCARB's Run() - releases and forgets the real DC registered for the recorded
+// one. Skipped for a DC replay never got, which would otherwise resolve to the window's DC.
+class WglReleasePbufferDCARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglReleasePbufferDCARBCommand command;
+};
+
+// wglDestroyPbufferARB's Run() - also forgets the pbuffer's DCs the application never released.
+class WglDestroyPbufferARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglDestroyPbufferARBCommand command;
+};
+
+// The WGL_EXT_pbuffer twins of the four WGL_ARB_pbuffer runners above, with the same replay.
+class WglCreatePbufferEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglCreatePbufferEXTCommand command;
+};
+
+class WglGetPbufferDCEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglGetPbufferDCEXTCommand command;
+};
+
+class WglReleasePbufferDCEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglReleasePbufferDCEXTCommand command;
+};
+
+class WglDestroyPbufferEXTRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  wglDestroyPbufferEXTCommand command;
+};
+
 // glBindTexture's Run() - beyond the generic resolve/dispatch forward, also notes the currently
 // active unit with MipmapCompletionService::NoteUnit(), for its draw-time completeness fixup -
 // see that service's own header comment (mipmapCompletionService.h) for the full rationale.

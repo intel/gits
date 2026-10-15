@@ -248,7 +248,7 @@ class TypeFactsTests(unittest.TestCase):
         self.assertFalse(TypeFacts(base_type='HGLRC', pointer_depth=0).is_opaque_handle)
         # Only HDC is covered for now - other Win32 handle types stay excluded until a
         # specific command needs them (see _OPAQUE_HANDLE_BASE_TYPES).
-        for base_type in ('HANDLE', 'PROC', 'HPBUFFERARB', 'GLXContext', 'EGLDisplay'):
+        for base_type in ('HANDLE', 'PROC', 'HPVIDEODEV', 'GLXContext', 'EGLDisplay'):
             with self.subTest(base_type=base_type):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_opaque_handle)
         # A plain scalar is not an opaque handle either - the classifications don't overlap.
@@ -270,10 +270,18 @@ class TypeFactsTests(unittest.TestCase):
         self.assertFalse(facts.is_scalar)
         self.assertFalse(facts.is_opaque_handle)
 
+    def test_is_mapped_handle_accepts_hpbuffers(self) -> None:
+        for base_type in ('HPBUFFERARB', 'HPBUFFEREXT'):
+            with self.subTest(base_type=base_type):
+                facts = TypeFacts(base_type=base_type, pointer_depth=0)
+                self.assertTrue(facts.is_mapped_handle)
+                self.assertFalse(facts.is_scalar)
+                self.assertFalse(facts.is_opaque_handle)
+
     def test_is_mapped_handle_rejects_pointers_and_other_types(self) -> None:
         self.assertFalse(TypeFacts(base_type='HGLRC', pointer_depth=1).is_mapped_handle)
         self.assertFalse(TypeFacts(base_type='GLsync', pointer_depth=1).is_mapped_handle)
-        for base_type in ('HDC', 'HANDLE', 'GLenum', 'GLXContext', 'EGLContext'):
+        for base_type in ('HDC', 'HANDLE', 'HPVIDEODEV', 'GLenum', 'GLXContext', 'EGLContext'):
             with self.subTest(base_type=base_type):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_mapped_handle)
 

@@ -99,5 +99,7 @@ HandleT HandleMapService<HandleT>::GetHandle(GITSKey key) {
 // handleMapService.h. A third mapped-handle type needs a third line here.
 template class HandleMapService<HGLRC>;
 template class HandleMapService<GLsync>;
+template class HandleMapService<HPBUFFERARB>;
+template class HandleMapService<HPBUFFEREXT>;
 
 } // namespace gits::opengl2

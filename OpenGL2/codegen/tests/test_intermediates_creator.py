@@ -319,6 +319,20 @@ class EndToEndSystemicGateTests(unittest.TestCase):
             self.assertIsNone(param.class_)
             self.assertTrue(param.type_facts.is_scalar)
 
+    def test_pbuffer_commands(self) -> None:
+        for cmd_name in (
+            'wglCreatePbufferARB', 'wglGetPbufferDCARB', 'wglReleasePbufferDCARB',
+            'wglDestroyPbufferARB', 'wglBindTexImageARB', 'wglReleaseTexImageARB',
+            'wglQueryPbufferARB', 'wglSetPbufferAttribARB', 'wglCreatePbufferEXT',
+            'wglGetPbufferDCEXT', 'wglReleasePbufferDCEXT', 'wglDestroyPbufferEXT',
+            'wglQueryPbufferEXT',
+        ):
+            with self.subTest(command=cmd_name):
+                self.assertTrue(get_command(Api.WGL, cmd_name).enabled)
+        # Its HPBUFFERARB is mapped too, but the wglBindVideoImageNV it undoes is not enabled.
+        self.assertFalse(get_command(Api.WGL, 'wglReleaseVideoImageNV').enabled)
+        self.assertFalse(get_command(Api.WGL, 'wglBindVideoImageNV').enabled)
+
     def test_return_value_object_name_gate(self) -> None:
         # glCreateShaderProgramv's return value (class="program", CREATE-shaped name) auto-
         # derives fine on its own - the object-name gate is satisfied. The command USED TO stay

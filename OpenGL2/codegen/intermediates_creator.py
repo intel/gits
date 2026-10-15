@@ -908,6 +908,11 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # requested sync command (glIsSync/glClientWaitSync/glWaitSync/glDeleteSync take an
     # EXISTING GLsync, never mint one from external state, so none of them share this problem.
     'glImportSyncEXT',
+
+    # wglReleaseVideoImageNV(hPbuffer, iVideoBuffer) releases what wglBindVideoImageNV bound,
+    # but that bind stays unsupported (its HPVIDEODEV is no mapped handle), so the release
+    # alone has nothing to undo on replay.
+    'wglReleaseVideoImageNV',
 })
 
 

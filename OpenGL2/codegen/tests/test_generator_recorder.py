@@ -83,7 +83,8 @@ def extract_wrapper_body(rendered: str, name: str) -> str:
 
 class PreHookKeyPairCommandsTableTests(unittest.TestCase):
     """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's four hooked WGL
-    commands (see that layer's own header comment) - any other membership silently breaks the
+    commands (see that layer's own header comment) plus PixelFormatCaptureLayer's
+    wglCreatePbufferARB/EXT - any other membership silently breaks the
     SetPendingPreHookKey()/TakePendingPreHookKey() 1:1 contract at runtime, not at compile time,
     so this table's exact contents must be pinned rather than merely smoke-tested."""
 
@@ -91,7 +92,7 @@ class PreHookKeyPairCommandsTableTests(unittest.TestCase):
         self.assertEqual(
             PRE_HOOK_KEY_PAIR_COMMANDS,
             frozenset({'wglSetPixelFormat', 'wglMakeCurrent', 'wglSwapBuffers',
-                       'wglSwapLayerBuffers'}))
+                       'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT'}))
 
 
 class PreHookKeyPairWrapperShapeTests(unittest.TestCase):

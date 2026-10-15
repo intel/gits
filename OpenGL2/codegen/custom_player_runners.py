@@ -81,6 +81,16 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # overwrite the main window's just-rendered frame on every other swap.
     'wglSwapBuffers': 'WglSwapBuffersRunner',
     'wglSwapLayerBuffers': 'WglSwapLayerBuffersRunner',
+    # Re-chooses the captured pixel format on the replay driver, and maps recorded pbuffer DCs
+    # onto the real ones - see player/include/pbufferService.h.
+    'wglCreatePbufferARB': 'WglCreatePbufferARBRunner',
+    'wglGetPbufferDCARB': 'WglGetPbufferDCARBRunner',
+    'wglReleasePbufferDCARB': 'WglReleasePbufferDCARBRunner',
+    'wglDestroyPbufferARB': 'WglDestroyPbufferARBRunner',
+    'wglCreatePbufferEXT': 'WglCreatePbufferEXTRunner',
+    'wglGetPbufferDCEXT': 'WglGetPbufferDCEXTRunner',
+    'wglReleasePbufferDCEXT': 'WglReleasePbufferDCEXTRunner',
+    'wglDestroyPbufferEXT': 'WglDestroyPbufferEXTRunner',
     # Beyond the generic resolve/dispatch forward, also notes the unit this bind call affected
     # with MipmapCompletionService::NoteUnit(), so the draw-time BeforeSampling() checks
     # it - a defensive fixup for a real driver completeness quirk found investigating a

@@ -42,6 +42,9 @@ enum class CommandId {
   // Contents of a glMapTexture2DINTEL mapping - see MappedTextureDataMetaCommand
   // (common/layer_interface/mappedTextureDataMetaTypes.h).
   ID_META_MAPPED_TEXTURE_DATA = 0xF0006,
+  // Capture-time pixel format attributes for a wglCreatePbufferARB - see
+  // PbufferPixelFormatMetaCommand (common/layer_interface/pbufferPixelFormatMetaTypes.h).
+  ID_META_PBUFFER_PIXEL_FORMAT = 0xF0007,
 
   // ID_META_BEGIN + 0x500
   ID_GL_BEGIN = 0xF0500,
