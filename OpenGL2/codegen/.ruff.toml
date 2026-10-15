@@ -11,3 +11,13 @@ line-length = 100
 
 # Minimum supported Python version.
 target-version = "py310"
+
+[lint]
+extend-select = [
+	"B",
+	"C4",
+	"PERF",
+	"PIE",
+	"RUF",
+	"UP",
+]

@@ -423,8 +423,10 @@ def check_function_groups_against_enums(
 
         unknown: list[tuple[str, str, str]] = []  # (function, param, group)
         for command in commands:
-            for annotated in [command.return_value, *command.params]:
+            for annotated in (command.return_value, *command.params):
                 if annotated.group is not None and annotated.group not in enum_groups:
+                    # Perf doesn't matter here, this is an exceptional case.
+                    # ruff: ignore[PERF401]
                     unknown.append((command.name, annotated.name, annotated.group))
 
         if unknown:
