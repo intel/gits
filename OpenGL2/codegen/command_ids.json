@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 2833,
+        "GL": 2834,
         "WGL": 69,
         "EGL": 0,
         "GLX": 0
@@ -2839,7 +2839,8 @@
             "ID_GLLINKPROGRAMARB": 987149,
             "ID_GLSHADERSOURCEARB": 987150,
             "ID_GLUSEPROGRAMOBJECTARB": 987151,
-            "ID_GLVALIDATEPROGRAMARB": 987152
+            "ID_GLVALIDATEPROGRAMARB": 987152,
+            "ID_GLINTERLEAVEDARRAYS": 987153
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,

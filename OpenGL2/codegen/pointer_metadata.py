@@ -594,6 +594,12 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
     ('glSecondaryColorPointer', 'pointer'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    # glInterleavedArrays(format, stride, pointer) sets the vertex, normal, color and client
+    # active texture coordinate arrays from one pointer and enables or disables them per
+    # `format`. Replay keeps that array state, and the draws re-specify the arrays like those
+    # of the setters above.
+    ('glInterleavedArrays', 'pointer'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
 
     # glMultiDrawElementsBaseVertex(mode, count, type, indices, drawcount, basevertex): all
     # three array params share the same `len="drawcount"` sibling (gl.xml). `count`/

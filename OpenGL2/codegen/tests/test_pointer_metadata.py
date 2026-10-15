@@ -677,6 +677,7 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glNormalPointer',
             'glTexCoordPointer',
             'glSecondaryColorPointer',
+            'glInterleavedArrays',
         ):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
