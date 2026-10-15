@@ -49,8 +49,8 @@ if(WITH_OPENCL)
 endif()
 
 # Experimental, work-in-progress new OpenGL backend (see OpenGL2/). Opt-in and
-# Windows-only for now, since only Windows can currently be tested.
-if(WIN32)
+# Windows x64-only for now, since only Windows x64 can currently be tested.
+if(WIN64)
   option(WITH_OPENGL2 "Build the experimental OpenGL2 backend" ON)
 else()
   option(WITH_OPENGL2 "Build the experimental OpenGL2 backend" OFF)
@@ -291,8 +291,8 @@ endif()
 
 add_subdirectory(OpenGL)
 if(WITH_OPENGL2)
-  if(NOT WIN32)
-    message(FATAL_ERROR "WITH_OPENGL2 is currently Windows-only.")
+  if(NOT WIN64)
+    message(FATAL_ERROR "WITH_OPENGL2 is currently Windows x64-only.")
   endif()
   add_subdirectory(OpenGL2)
 endif()
