@@ -258,7 +258,12 @@ class ResolveObjectNameOverrideTests(unittest.TestCase):
     tested above."""
 
     def test_no_class_is_none(self) -> None:
-        self.assertIsNone(resolve_object_name_override('glCopyImageSubData', 'srcName', None))
+        self.assertIsNone(resolve_object_name_override('glObjectLabel', 'name', None))
+
+    def test_copy_image_names_take_their_kind_from_the_target(self) -> None:
+        override = resolve_object_name_override('glCopyImageSubData', 'dstName', None)
+        self.assertEqual(override, ObjectNameOverride(
+            kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP, target_param='dstTarget'))
 
     def test_unsupported_kind_is_none(self) -> None:
         # 'sync' is a real gl.xml class= value this backend has no GLObjectKind/

@@ -8,6 +8,7 @@
 
 #include "objectNameMapService.h"
 
+#include "glEnumsAuto.h"
 #include "log.h"
 
 namespace gits::opengl2 {
@@ -51,6 +52,10 @@ const char* KindName(GLObjectKind kind) {
   return "Unknown";
 }
 } // namespace
+
+GLObjectKind ImageObjectKind(GLenum target) {
+  return target == GL_RENDERBUFFER ? GLObjectKind::Renderbuffer : GLObjectKind::Texture;
+}
 
 ObjectNameMapService& ObjectNameMapService::Get() {
   // Meyer's singleton - same reasoning as ContextHandleMapService::Get(): neither the recorder

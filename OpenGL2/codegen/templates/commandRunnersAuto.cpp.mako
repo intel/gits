@@ -323,6 +323,8 @@ void ${cmd.name}Runner::Run() {
     # sharing this same (kind, role) pair is automatically covered too.
     purges_uniform_locations = (resolve_override.kind == GLObjectKind.PROGRAM and
                                 resolve_override.role == ObjectNameRole.DELETE)
+    kind_expr = (f'ImageObjectKind(command.m_{resolve_override.target_param}.Value)'
+                 if resolve_override.target_param else f'GLObjectKind::{kind}')
 %>\
 % if p.type_facts.is_array_element_eligible:
   if (!UpdateHandleArray(command.m_${p.name}, GLObjectKind::${kind})) {
@@ -339,7 +341,7 @@ void ${cmd.name}Runner::Run() {
     SkipUnmappedObjectNameCall(command, "${cmd.name}");
   }
 % else:
-  if (!UpdateHandle(command.m_${p.name}, GLObjectKind::${kind})) {
+  if (!UpdateHandle(command.m_${p.name}, ${kind_expr})) {
     SkipUnmappedObjectNameCall(command, "${cmd.name}");
   }
 % if purges_uniform_locations:

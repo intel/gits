@@ -95,6 +95,10 @@ enum class GLObjectKind : uint8_t {
   kCount, // Not a real bucket - array size sentinel only.
 };
 
+// The namespace of a name passed with an image target (glCopyImageSubData): GL_RENDERBUFFER names
+// a renderbuffer, any other target a texture.
+GLObjectKind ImageObjectKind(GLenum target);
+
 // Key recorded for a non-zero object name the recorder has no key for (its creation was never
 // observed). Only the key crosses the wire, so key 0 alone cannot tell such a name from name 0
 // (an unbind); the player skips a call referencing this key instead. Never minted:

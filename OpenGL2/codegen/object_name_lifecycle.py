@@ -160,6 +160,10 @@ class ObjectNameOverride:
     # texture or buffer name instead).
     gen_command: str | None = None
     is_command: str | None = None
+    # The sibling GLenum target parameter that decides the namespace at runtime: GL_RENDERBUFFER
+    # names a renderbuffer, any other target a texture (see ImageObjectKind in
+    # objectNameMapService.h). `kind` is then TEXTURE.
+    target_param: str | None = None
 
     def __post_init__(self) -> None:
         implicit_create = self.role == ObjectNameRole.LOOKUP_OR_CREATE
@@ -167,6 +171,11 @@ class ObjectNameOverride:
             raise ValueError(
                 f'{self.kind}: gen_command and is_command are required for, and only for, '
                 f'ObjectNameRole.LOOKUP_OR_CREATE')
+        if self.target_param is not None and (self.kind != GLObjectKind.TEXTURE or
+                                              self.role != ObjectNameRole.LOOKUP):
+            raise ValueError(
+                f'{self.kind}: target_param is only defined for a TEXTURE-kind '
+                f'ObjectNameRole.LOOKUP')
 
 
 # gl.xml's own `class="..."` string -> GLObjectKind, or None for a namespace gl.xml itself
@@ -417,6 +426,15 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     ('glQueryCounter', 'id'): ObjectNameOverride(
         kind=GLObjectKind.QUERY, role=ObjectNameRole.LOOKUP_OR_CREATE,
         gen_command='glGenQueries', is_command='glIsQuery'),
+
+    # gl.xml leaves glCopyImageSubData's names untagged, as their target decides whether they
+    # name a texture or a renderbuffer. Replayed verbatim, they would copy between other objects
+    # whenever replay names differ from the recorded ones, as they do in a subcapture.
+    **{(command, f'{side}Name'): ObjectNameOverride(
+        kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP, target_param=f'{side}Target')
+       for command in ('glCopyImageSubData', 'glCopyImageSubDataEXT', 'glCopyImageSubDataNV',
+                       'glCopyImageSubDataOES')
+       for side in ('src', 'dst')},
 }
 
 
@@ -430,23 +448,24 @@ def resolve_object_name_override(
 
     `class_` is the field's own Parameter.class_/ReturnValue.class_ (gl.xml's `class="..."`
     annotation, or None if gl.xml never tagged this field at all - a plain, non-object-name
-    GLuint like a texture unit index or an enum-typed identifier, see e.g. glCopyImageSubData's
-    srcName/glObjectLabel's name, which the registry itself deliberately leaves untagged
-    because their real namespace is only known at runtime from a sibling GLenum). Returns None
-    for exactly the same two cases _requires_object_name_override's caller needs to distinguish
-    from a real classification: `class_ is None` (not an object name at all) and `class_` names
-    a namespace with no backend support yet (_CLASS_TO_KIND maps it to None).
+    GLuint like a texture unit index or an enum-typed identifier, see e.g. glObjectLabel's
+    name, which the registry itself deliberately leaves untagged because its real namespace is
+    only known at runtime from a sibling GLenum). An _EXPLICIT_OVERRIDES entry wins even then
+    (glCopyImageSubData's srcName). Otherwise returns None for exactly the same two cases
+    _requires_object_name_override's caller needs to distinguish from a real classification:
+    `class_ is None` (not an object name at all) and `class_` names a namespace with no backend
+    support yet (_CLASS_TO_KIND maps it to None).
 
     Raises KeyError if `class_` is a non-None string this function has never seen - see
     _CLASS_TO_KIND's own comment for why that is the deliberately loud failure mode instead of
     silently returning None (which would look identical to "not an object name" or "known but
     unsupported namespace" and hide a real registry change).
     """
-    if class_ is None:
-        return None
     explicit = _EXPLICIT_OVERRIDES.get((command_name, field_name))
     if explicit is not None:
         return explicit
+    if class_ is None:
+        return None
     if class_ not in _CLASS_TO_KIND:
         raise KeyError(
             f"{command_name}.{field_name}: unrecognized gl.xml class=\"{class_}\" - add it to "

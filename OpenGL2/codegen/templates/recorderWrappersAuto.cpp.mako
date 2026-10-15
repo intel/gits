@@ -296,6 +296,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
         g_DispatchTable.${obj_override.is_command}.load(std::memory_order_acquire));
 % elif is_existence_query(cmd.name, cmd.return_value.type, obj_override):
     UpdateHandleIfRegistered(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif obj_override.target_param is not None:
+    UpdateHandle(command->m_${p.name}, ImageObjectKind(${obj_override.target_param}));
 % else:
     UpdateHandle(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % endif
