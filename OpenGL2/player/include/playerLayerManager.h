@@ -14,6 +14,7 @@
 namespace gits::opengl2 {
 
 class Layer;
+class TraceLayerGroup;
 
 class PlayerLayerManager {
 public:
@@ -39,6 +40,7 @@ public:
   }
 
 private:
+  std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;

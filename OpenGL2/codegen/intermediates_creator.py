@@ -1099,9 +1099,11 @@ def is_real_glenum(enum: EnumValue) -> bool:
     # group="SpecialNumbers" on <enums> tags, but reg.py provided by Khronos
     # doesn't provide any data from <enums> XML elements. This is why we use
     # this heuristic.
+    # We allow enums marked with more groups than just 'SpecialNumbers', as
+    # commands can be annotated with these other groups.
 
     # Known non-GLenum values.
-    if 'SpecialNumbers' in enum.groups:
+    if enum.groups == ('SpecialNumbers',):
         return False  # Works for GL. For WGL/EGL/GLX, we need below heuristics.
     elif enum.value.startswith('EGL_CAST'):
         return False  # They are explicitly cast to a type different from GLenum.

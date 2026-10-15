@@ -82,6 +82,8 @@ set(OPENGL2_GENERATED_PLAYER_FILES
   ${OPENGL2_PLAYER_DIR}/include/commandRunnersAuto.h
   ${OPENGL2_PLAYER_DIR}/commandRunnersAuto.cpp
   ${OPENGL2_PLAYER_DIR}/openGL2CommandFactoryAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.cpp
 )
 
 add_custom_command(

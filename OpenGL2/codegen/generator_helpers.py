@@ -35,6 +35,7 @@ from object_name_lifecycle import (
 from pixel_transfer_metadata import derive_pixel_transfer_override
 from pointer_metadata import (
     POINTER_PARAM_OVERRIDES,
+    TEXT_OUTPUT_BUFFERS,
     LengthSourceKind,
     PointerDirection,
     PointerParamOverride,
@@ -274,6 +275,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'array_element_cpp_type': array_element_cpp_type,
         'member_cpp_type': member_cpp_type,
         'pointer_override_for': pointer_override_for,
+        'TEXT_OUTPUT_BUFFERS': TEXT_OUTPUT_BUFFERS,
         'pointer_needs_raw_offset_capture': pointer_needs_raw_offset_capture,
         'pointer_needs_pixel_transfer_unknown_flag': pointer_needs_pixel_transfer_unknown_flag,
         'PointerDirection': PointerDirection,

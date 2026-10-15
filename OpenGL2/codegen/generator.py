@@ -95,7 +95,8 @@ def main() -> None:
 
     generate_interceptor_files(interceptor_commands)
     generate_recorder_files(interceptor_commands)
-    generate_player_files(interceptor_commands)
+    generate_player_files(interceptor_commands,
+                          {key.group for key in enum_name_map if key.group})
 
 
 if __name__ == '__main__':

@@ -1,0 +1,55 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "traceLayerAuto.h"
+
+#include "log.h"
+
+#include <stdexcept>
+
+namespace gits::opengl2 {
+
+void TraceLayer::Pre(Command& command) {
+  {
+    CommandPrinter printer(m_Stream, m_Mutex, command, "Command");
+    printer.AddOpaque(static_cast<uintptr_t>(command.GetId()));
+    printer.Finish(true, " [error: no trace formatter]");
+  }
+  LOG_ERROR << "Missing OpenGL trace formatter for command ID "
+            << static_cast<uint32_t>(command.GetId());
+  throw std::logic_error("Missing OpenGL trace formatter");
+}
+
+// TODO: Decide whether FrameEndCommand belongs in layers or needs trace-local counters.
+
+void TraceLayer::Pre(MappedDataMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "MappedDataMeta");
+  printer.Add(command.m_Buffer);
+  printer.Add(command.m_Offset);
+  printer.Add(command.m_Length);
+  printer.Add(command.m_Data);
+  printer.Finish(m_Flush);
+}
+
+void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "WindowGeometryMeta");
+  printer.Add(command.m_X);
+  printer.Add(command.m_Y);
+  printer.Add(command.m_Width);
+  printer.Add(command.m_Height);
+  printer.Add(command.m_Visible);
+  printer.Finish(m_Flush);
+}
+
+void TraceLayer::Pre(UnsupportedCommand& command) {
+  CommandPrinter printer(m_Stream, m_Mutex, command, "UnsupportedCommand");
+  printer.AddText(command.GetName());
+  printer.Finish(m_Flush);
+}
+
+} // namespace gits::opengl2

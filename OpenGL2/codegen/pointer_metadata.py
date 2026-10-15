@@ -19,6 +19,17 @@
 
 from dataclasses import dataclass
 
+TEXT_OUTPUT_BUFFERS: dict[tuple[str, str], str] = {
+    ('glGetActiveAttrib', 'name'): 'length',
+    ('glGetActiveUniform', 'name'): 'length',
+    ('glGetTransformFeedbackVarying', 'name'): 'length',
+    ('glGetProgramInfoLog', 'infoLog'): 'length',
+    ('glGetProgramPipelineInfoLog', 'infoLog'): 'length',
+    ('glGetShaderInfoLog', 'infoLog'): 'length',
+    ('glGetActiveUniformBlockName', 'uniformBlockName'): 'length',
+    ('glGetActiveUniformName', 'uniformName'): 'length',
+}
+
 try:
     from enum import StrEnum
 except ImportError:
@@ -609,12 +620,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # len="1" (a real registry annotation here, not an inferred fact like glGetShaderiv's
     # COMPSIZE(pname) override above) and `name` a plain len="bufSize" sibling reference (not
     # COMPSIZE(...) either) - so both halves are exactly what gl.xml already says, with no
-    # judgment call needed: `name` is captured up to the caller-supplied buffer CAPACITY
-    # (bufSize), matching every other OUT string getter's own len="bufSize" shape
-    # (glGetProgramInfoLog's `infoLog` below) rather than the shorter, pname/index-dependent
-    # actual-written-length `length` reports - the same "capture the whole allocated
-    # destination buffer, not just the driver-reported prefix" choice already implicit in every
-    # bufSize-sized OUT array getter in this file, never a new convention.
+    # judgment call needed for the pointer shape. TEXT_OUTPUT_BUFFERS narrows the post-call
+    # capture to the reported text plus terminator; bufSize remains the replay capacity.
     ('glGetActiveUniform', 'length'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
@@ -654,9 +661,7 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
 
     # glGetProgramInfoLog/glGetProgramPipelineInfoLog/glGetShaderInfoLog(<object>, bufSize,
     # length, infoLog): same len="1" `length` / len="bufSize" `infoLog` shape as
-    # glGetActiveUniform's own `length`/`name` above - see that group's comment for why
-    # `infoLog` is captured up to `bufSize`, not the (unavailable at capture-classification
-    # time) actual written length.
+    # glGetActiveUniform's own `length`/`name` above.
     ('glGetProgramInfoLog', 'length'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
@@ -831,10 +836,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # `uniformName` a plain len="bufSize" sibling reference (neither is a COMPSIZE(...)
     # expression) - the exact same shape as glGetActiveUniform/glGetActiveAttrib/
     # glGetProgramInfoLog's own `length`/name-buffer pair above, just two more OUT string
-    # getters missing table entries. `uniformBlockName`/`uniformName` are captured up to the
-    # caller-supplied buffer capacity (bufSize), same "whole allocated destination buffer, not
-    # just the driver-reported prefix" choice as every other bufSize-sized OUT array getter in
-    # this file - see that group's own comment for why.
+    # getters missing table entries. TEXT_OUTPUT_BUFFERS uses their reported length after
+    # dispatch while preserving bufSize for replay.
     ('glGetActiveUniformBlockName', 'length'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),

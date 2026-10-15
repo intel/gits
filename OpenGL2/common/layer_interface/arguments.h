@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -32,6 +33,26 @@ namespace gits::opengl2 {
 template <typename SizeT>
 size_t ClampCountToSizeT(SizeT count) {
   return count > 0 ? static_cast<size_t>(count) : size_t{0};
+}
+
+template <typename CharT, typename LengthT>
+size_t TextOutputLength(const CharT* buffer, size_t available, const LengthT* reportedLength) {
+  if (!buffer || !available) {
+    return 0;
+  }
+  const size_t limit =
+      reportedLength ? std::min(available, ClampCountToSizeT(*reportedLength)) : available;
+  return static_cast<size_t>(std::find(buffer, buffer + limit, CharT{}) - buffer);
+}
+
+template <typename CharT, typename LengthT>
+size_t TextOutputCaptureSize(const CharT* buffer, LengthT capacity, const LengthT* reportedLength) {
+  const size_t available = buffer ? ClampCountToSizeT(capacity) : 0;
+  const size_t length = TextOutputLength(buffer, available, reportedLength);
+  if (length < available && buffer[length] == CharT{}) {
+    return length + 1;
+  }
+  return length;
 }
 
 // Stream-stable object id, minted by CaptureManager::CreateHandleKey() and looked up via

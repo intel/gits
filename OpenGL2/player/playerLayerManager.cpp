@@ -9,6 +9,8 @@
 #include "playerLayerManager.h"
 
 #include "layerAuto.h"
+#include "traceLayerAuto.h"
+#include "traceLayerGroup.h"
 
 namespace gits::opengl2 {
 
@@ -17,7 +19,12 @@ PlayerLayerManager::PlayerLayerManager() = default;
 PlayerLayerManager::~PlayerLayerManager() = default;
 
 void PlayerLayerManager::LoadLayers() {
-  // Concrete player layers are constructed and ordered here as their features are enabled.
+  m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
+  if (m_TraceLayerGroup->IsEnabled()) {
+    auto layer = m_TraceLayerGroup->CreateLayer();
+    m_PreLayers.push_back(layer.get());
+    m_LayersOwner.push_back(std::move(layer));
+  }
 }
 
 void PlayerLayerManager::Shutdown() {
@@ -25,6 +32,7 @@ void PlayerLayerManager::Shutdown() {
   m_PreLayers.clear();
   m_PostLayers.clear();
   m_LayersOwner.clear();
+  m_TraceLayerGroup.reset();
 }
 
 } // namespace gits::opengl2

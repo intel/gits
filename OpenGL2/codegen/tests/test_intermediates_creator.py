@@ -24,12 +24,14 @@ CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
 from generator_helpers import object_name_override_for
-from intermediates import Api, Parameter, ReturnValue
+from intermediates import Api, EnumType, EnumValue, Parameter, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
+    EnumKey,
     _is_fully_capturable_command,  # pyright: ignore[reportPrivateUsage]
     _is_param_capturable,  # pyright: ignore[reportPrivateUsage]
     _requires_object_name_override,  # pyright: ignore[reportPrivateUsage]
+    build_enum_name_map,
     extract_commands_from_registry,
     get_commands_from_xml_data,
 )
@@ -50,6 +52,29 @@ def get_command(api: Api, name: str):
     raw_commands = extract_commands_from_registry(registry)
     raw = next(c for c in raw_commands if c['command_attribs']['name'] == name)
     return get_commands_from_xml_data({api: [raw]})[api][0]
+
+
+class SpecialNumbersTests(unittest.TestCase):
+    def test_tokens_with_other_groups_are_available_for_lookup(self) -> None:
+        # If an enum has multiple groups, ignore the 'SpecialNumbers' group if present.
+        # If an enum has only the `SpecialNumbers` group, ignore it entirely.
+        names = build_enum_name_map({Api.GL: [
+            EnumValue(name='GL_NO_ERROR', value='0',
+                      groups=('SpecialNumbers', 'GraphicsResetStatus', 'ErrorCode')),
+            EnumValue(name='GL_ZERO', value='0',
+                      groups=('SpecialNumbers', 'BlendingFactor')),
+            EnumValue(name='GL_ONE', value='1',
+                      groups=('SpecialNumbers', 'BlendingFactor')),
+            EnumValue(name='GL_UUID_SIZE_EXT', value='16', groups=('SpecialNumbers',)),
+            EnumValue(name='GL_INVALID_INDEX', value='0xFFFFFFFF', type=EnumType.UINT,
+                      groups=('SpecialNumbers',)),
+        ]})
+
+        self.assertEqual(names[EnumKey(Api.GL, 0, 'ErrorCode')], 'GL_NO_ERROR')
+        self.assertEqual(names[EnumKey(Api.GL, 0, 'BlendingFactor')], 'GL_ZERO')
+        self.assertEqual(names[EnumKey(Api.GL, 1, 'BlendingFactor')], 'GL_ONE')
+        self.assertFalse(any(key.group == 'SpecialNumbers' for key in names))
+        self.assertNotIn(EnumKey(Api.GL, 16, ''), names)
 
 
 class RequiresObjectNameOverrideTests(unittest.TestCase):

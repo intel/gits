@@ -33,15 +33,12 @@ ${AUTO_GENERATED_HEADER}
 // Mirrors Vulkan's commandRunnersAuto.cpp.mako shape. Pre/Post layers ARE wired via the exact same
 // inline `for (Layer* layer : manager.GetPreLayers()) { layer->Pre(command); }` loop shape Vulkan/
 // DX12 use (and, on the OpenGL2 side, the same shape every hand-written runner in
-// commandRunnersCustom.cpp also repeats inline at the equivalent point in its own Run() - see that
-// file's own header comment): PlayerManager::GetPreLayers() runs immediately before the real
+// commandRunnersCustom.cpp also repeats inline at the equivalent point in its own Run()):
+// PlayerManager::GetPreLayers() runs immediately before the real
 // driver call, once every LOOKUP/DELETE-role handle/object-name field has been resolved to its
 // live, replay-time value (matching Vulkan's commandRunnersAuto.cpp.mako's own Pre-layer
 // placement); PlayerManager::GetPostLayers() runs at the very end of Run(), once every CREATE-role
-// field has been registered. Both vectors are permanently empty today - no concrete Layer subclass
-// registers into either one on the player side (see playerManager.h's own header comment on why
-// the player has no EncoderLayer-equivalent) - so the gate has no current behavior change, exactly
-// like the recorder side's own Pre/Post loop.
+// field has been registered. The trace layer registers for Pre when enabled; Post remains empty.
 //
 // Two shapes added for the rendering-pipeline round 2 (see
 // docs/development/opengl2-rendering-pipeline-pointer-support-plan.md), on top of the treatments
@@ -80,6 +77,7 @@ ${AUTO_GENERATED_HEADER}
 #include "playerManager.h"
 #include "uniformLocationMapService.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -277,6 +275,13 @@ void ${cmd.name}Runner::Run() {
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
+% for p in cmd.params:
+% if (cmd.name, p.name) in TEXT_OUTPUT_BUFFERS:
+  if (command.m_${p.name}.HasValue) {
+    command.m_${p.name}.Data.resize(std::max<size_t>(1, ClampCountToSizeT(command.m_bufSize.Value)));
+  }
+% endif
+% endfor
 % for p in array_of_arrays_params:
   // Built AFTER the Pre-layer loop above, not before: a Pre layer that edits Value or resizes
   // the outer array must be reflected in ${p.name}Ptrs, and editing a std::vector element
@@ -346,9 +351,7 @@ void ${cmd.name}Runner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if pixel_transfer_size_params:
-    // See pixel_transfer_size_params' own comment above and
-    // PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h). An
-    // empty-but-HasValue-true captured Data buffer here does not mean this call safely
+    // An empty-but-HasValue-true captured Data buffer here does not mean this call safely
     // transfers zero real bytes - only m_<param>SizeUnknown.Value == false means that. Skip the
     // real driver call entirely (never partially - there is no way to safely call with only
     // SOME of a multi-parameter command's pointers replaced by a correctly-sized buffer) rather

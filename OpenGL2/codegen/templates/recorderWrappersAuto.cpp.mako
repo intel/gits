@@ -352,6 +352,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // returned, so this always reflects the real guard decision for this exact call
     // regardless of what the Capture() call above ended up storing.
     command->m_${p.name}IsBufferOffset.Value = PackPixelsPointerIsBufferOffset(${p.name});
+% elif (cmd.name, p.name) in TEXT_OUTPUT_BUFFERS:
+<% length_param = TEXT_OUTPUT_BUFFERS[(cmd.name, p.name)] %>\
+    command->m_${p.name}.Capture(${capture_arg_expr}, TextOutputCaptureSize(${p.name}, bufSize, ${length_param}));
 % elif override.length_source_kind == LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
 ## COMPSIZE(buffer) depends on the sibling enum's *value* - mirrors commandsAuto.h.mako's own
 ## IN-direction CLEAR_BUFFER_VALUE_COUNT branch; no enabled command needs this combination yet,

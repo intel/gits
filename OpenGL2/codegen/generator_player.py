@@ -52,7 +52,7 @@ _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
 })
 
 
-def generate_player_files(commands: list[Command]) -> None:
+def generate_player_files(commands: list[Command], enum_groups: set[str]) -> None:
     """Generate the player's own real-driver dispatch and per-command CommandRunners.
 
     Mirrors generator_recorder.py's shape. The player gets its own, independent copy of
@@ -95,3 +95,7 @@ def generate_player_files(commands: list[Command]) -> None:
     mako_write('templates/openGL2CommandFactoryAuto.cpp.mako',
                'player/openGL2CommandFactoryAuto.cpp', commands=commands,
                custom_player_runners=CUSTOM_PLAYER_RUNNERS)
+    mako_write('templates/traceLayerAuto.h.mako',
+               'layers/trace/traceLayerAuto.h', commands=commands)
+    mako_write('templates/traceLayerAuto.cpp.mako',
+               'layers/trace/traceLayerAuto.cpp', commands=commands, enum_groups=enum_groups)
