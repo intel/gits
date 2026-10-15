@@ -314,6 +314,21 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN override must not set "
                 f"length_source_value - there is no length, only one opaque value"
             )
+    elif override.length_source_kind is LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+        # Same sibling-length shape/validation as SIBLING_PARAM above - see that
+        # LengthSourceKind's own comment (pointer_metadata.py) for why the element treatment
+        # differs even though the length-discovery mechanism does not.
+        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
+        if sibling is None:
+            raise ValueError(
+                f"{command_name}.{param.name}: POINTER_PARAM_OVERRIDES names sibling length "
+                f"parameter '{override.length_source_value}', which does not exist on this command"
+            )
+        if not sibling.type_facts.is_scalar:
+            raise ValueError(
+                f"{command_name}.{param.name}: length sibling '{sibling.name}' is not a plain "
+                f"scalar ({sibling.type})"
+            )
     elif override.length_source_kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
         if override.length_source_value is not None:
             raise ValueError(
@@ -461,6 +476,18 @@ def _is_param_capturable(command_name: str, param: Parameter, other_params: list
     if facts.is_scalar or facts.is_opaque_handle or facts.is_mapped_handle:
         return not _requires_object_name_override(command_name, param)
     if param.name in consumed_pointer_params(command_name):
+        return True
+    override = POINTER_PARAM_OVERRIDES.get((command_name, param.name))
+    if override is not None and override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+        # Checked before is_array_of_arrays_eligible below on purpose: structurally this is a
+        # pointer_depth == 2 `const void* const*` field exactly like glShaderSource's `string`
+        # (is_array_of_arrays_eligible is true for it too), but its elements are opaque bit
+        # patterns, never real byte arrays to copy - ArrayOfArrays<T>/
+        # ARRAY_OF_ARRAYS_PARAM_OVERRIDES would be actively wrong here, not just an unrelated
+        # alternative path. See that LengthSourceKind's own comment (pointer_metadata.py).
+        if _requires_object_name_override(command_name, param):
+            return False
+        _validate_pointer_override(command_name, param, override, other_params)
         return True
     if facts.is_array_of_arrays_eligible:
         if _requires_object_name_override(command_name, param):

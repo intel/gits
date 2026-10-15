@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 1558,
+        "GL": 1559,
         "WGL": 52,
         "EGL": 0,
         "GLX": 0
@@ -1564,7 +1564,8 @@
             "ID_GLDELETESAMPLERS": 985874,
             "ID_GLGENPROGRAMPIPELINES": 985875,
             "ID_GLGENRENDERBUFFERS": 985876,
-            "ID_GLGENSAMPLERS": 985877
+            "ID_GLGENSAMPLERS": 985877,
+            "ID_GLMULTIDRAWELEMENTSBASEVERTEX": 985878
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,

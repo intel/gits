@@ -48,7 +48,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <limits>
 
 namespace gits::opengl2 {
 
@@ -228,39 +227,19 @@ void Decode(const char* src, uint64_t& offset, HandleArrayArgument<T>& arg) {
 // followed by, per element, an int32_t Lengths[i] (gl.xml's own length semantic - see
 // arguments.h's comment, always a plain GL parameter value in its own right, never itself a
 // wire-format array length that needs 64-bit range) and a uint64_t/raw-bytes pair for that
-// element's Value[i], exactly like a nested ArrayArgument<T> per element - byte-for-byte the
-// same per-element layout ID_GLSHADERSOURCE (the only enabled ArrayOfArrays<T> user today) has
-// always used on the wire. Both the outer and each per-element count are uint64_t, not
-// uint32_t - see this header's own top-of-file comment.
-//
-// HasElement[i] (see arguments.h's own comment on why an empty Value[i] alone cannot
-// distinguish an originally-null string pointer from a real, explicitly-zero-length one) is
-// deliberately NOT an extra wire field: modern-opengl-backend-architecture.md's "Use a new
-// stream namespace and final schemas only" decision treats a stream command ID's payload
-// schema as fixed once assigned, and ID_GLSHADERSOURCE was already assigned (and captured by
-// real streams) with this exact per-element layout before HasElement existed - prepending a
-// new per-element presence byte would silently shift every byte after it, corrupting any
-// stream recorded before this fix. Instead, HasElement[i] == false is encoded via the
-// existing per-element uint64_t count field alone: it is written as
-// std::numeric_limits<uint64_t>::max() (kNullElementSentinel below) instead of a real byte
-// count, and 0 payload bytes follow - a value no real element count can ever legitimately
-// reach (that would require sizeof(T) * 2^64 bytes of source text). A stream recorded before
-// this fix never emits that sentinel (every element was HasElement[i] == true implicitly, with
-// a real, possibly-zero count), so it decodes identically under this scheme to how it always
-// did - old streams need no re-recording. Only NEW captures can express HasElement[i] ==
-// false; an old stream's null-string distinction was never captured to begin with, so decoding
-// it as "present, empty" (this scheme's fallback for any non-sentinel count, exactly like
-// before) is the correct, non-corrupting best effort for that pre-existing data.
+// element's Value[i], exactly like a nested ArrayArgument<T> per element. No per-element
+// presence flag: a null individual string pointer (see arguments.h's constructor) already
+// collapses to an empty Value[i], which round-trips correctly as a zero-length element
+// without needing its own flag - see that constructor's own comment for why the null/empty
+// distinction is deliberately not tracked any more precisely than that on either side of the
+// wire. Both the outer and each per-element count are uint64_t, not uint32_t - see this
+// header's own top-of-file comment.
 template <typename T>
 uint64_t GetSize(const ArrayOfArrays<T>& arg) {
   uint64_t size = sizeof(uint8_t);
   if (arg.HasValue) {
     size += sizeof(uint64_t);
     for (const auto& element : arg.Value) {
-      // element.size() is already 0 for a HasElement[i] == false entry (arguments.h's
-      // constructor never populates Value[i] for a null v[i]), so this formula is identical
-      // to the pre-HasElement, pre-this-fix formula in every case - no size change, sentinel
-      // or not.
       size +=
           sizeof(int32_t) + sizeof(uint64_t) + static_cast<uint64_t>(element.size()) * sizeof(T);
     }
@@ -276,18 +255,16 @@ void Encode(char* dest, uint64_t& offset, const ArrayOfArrays<T>& arg) {
   if (!arg.HasValue) {
     return;
   }
-  constexpr uint64_t kNullElementSentinel = std::numeric_limits<uint64_t>::max();
   const uint64_t outerCount = static_cast<uint64_t>(arg.Value.size());
   std::memcpy(dest + offset, &outerCount, sizeof(outerCount));
   offset += sizeof(outerCount);
   for (uint64_t i = 0; i < outerCount; ++i) {
     std::memcpy(dest + offset, &arg.Lengths[i], sizeof(int32_t));
     offset += sizeof(int32_t);
-    const uint64_t elementCount =
-        arg.HasElement[i] ? static_cast<uint64_t>(arg.Value[i].size()) : kNullElementSentinel;
+    const uint64_t elementCount = static_cast<uint64_t>(arg.Value[i].size());
     std::memcpy(dest + offset, &elementCount, sizeof(elementCount));
     offset += sizeof(elementCount);
-    if (arg.HasElement[i] && elementCount > 0) {
+    if (elementCount > 0) {
       std::memcpy(dest + offset, arg.Value[i].data(),
                   static_cast<size_t>(elementCount) * sizeof(T));
       offset += elementCount * sizeof(T);
@@ -304,31 +281,19 @@ void Decode(const char* src, uint64_t& offset, ArrayOfArrays<T>& arg) {
   if (!arg.HasValue) {
     arg.Value.clear();
     arg.Lengths.clear();
-    arg.HasElement.clear();
     return;
   }
-  constexpr uint64_t kNullElementSentinel = std::numeric_limits<uint64_t>::max();
   uint64_t outerCount{};
   std::memcpy(&outerCount, src + offset, sizeof(outerCount));
   offset += sizeof(outerCount);
   arg.Value.resize(static_cast<size_t>(outerCount));
   arg.Lengths.resize(static_cast<size_t>(outerCount));
-  arg.HasElement.resize(static_cast<size_t>(outerCount));
   for (uint64_t i = 0; i < outerCount; ++i) {
     std::memcpy(&arg.Lengths[i], src + offset, sizeof(int32_t));
     offset += sizeof(int32_t);
     uint64_t elementCount{};
     std::memcpy(&elementCount, src + offset, sizeof(elementCount));
     offset += sizeof(elementCount);
-    if (elementCount == kNullElementSentinel) {
-      // See this header's own top-of-ArrayOfArrays comment: a pre-this-fix stream never wrote
-      // this sentinel, so this branch only ever triggers for a genuinely new capture's
-      // originally-null string pointer.
-      arg.HasElement[i] = false;
-      arg.Value[i].clear();
-      continue;
-    }
-    arg.HasElement[i] = true;
     arg.Value[i].resize(static_cast<size_t>(elementCount));
     if (elementCount > 0) {
       std::memcpy(arg.Value[i].data(), src + offset, static_cast<size_t>(elementCount) * sizeof(T));

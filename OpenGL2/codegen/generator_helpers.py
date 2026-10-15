@@ -107,6 +107,13 @@ def wrapper_for(
         return 'HandleArrayArgument' if type_facts.is_array_element_eligible else 'HandleArgument'
     if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
         return 'Argument'
+    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+        # A doubly-indirect (`const void* const*`) field whose own elements are opaque bit
+        # patterns, not real byte arrays - overrides is_array_of_arrays_eligible's default
+        # ArrayOfArrays<T> choice (which would try to dereference/copy each element's pointee)
+        # to plain ArrayArgument<T>, the same wrapper is_array_element_eligible fields already
+        # use - see that LengthSourceKind's own comment (pointer_metadata.py).
+        return 'ArrayArgument'
     if type_facts.is_mapped_handle:
         return 'HandleArgument'
     if type_facts.is_array_element_eligible:
@@ -137,6 +144,8 @@ def member_cpp_type(
     if array_of_arrays_override is not None:
         return param.type_facts.base_type
     if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
+        return 'uintptr_t'
+    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
         return 'uintptr_t'
     if param.type_facts.is_array_element_eligible:
         return array_element_cpp_type(param.type_facts.base_type)

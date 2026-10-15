@@ -77,6 +77,15 @@ public:
 ## LengthSourceKind's own comment (pointer_metadata.py) and
 ## docs/development/opengl2-rendering-pipeline-pointer-support-plan.md.
 , m_${p.name}(reinterpret_cast<uintptr_t>(${p.name}))\
+% elif override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+## Doubly-indirect pointer whose own elements are opaque bit patterns, never dereferenced
+## (e.g. glMultiDrawElementsBaseVertex's `indices`) - see that LengthSourceKind's own comment
+## (pointer_metadata.py). Reinterpret the incoming `const void* const*` as `const uintptr_t*`
+## (both are arrays of pointer-sized elements) and reuse ArrayArgument<uintptr_t>'s existing
+## SizeT-templated constructor directly, exactly like every plain SIBLING_PARAM array above -
+## no new capture mechanism needed, just a different element type than this pointer's own
+## declared one.
+, m_${p.name}(reinterpret_cast<const uintptr_t*>(${p.name}), ${override.length_source_value})\
 ## OUT-direction: default-constructed, no eager read of not-yet-written app memory.
 % elif override.direction == PointerDirection.OUT:
 % elif override.length_source_kind == LengthSourceKind.NULL_TERMINATED:

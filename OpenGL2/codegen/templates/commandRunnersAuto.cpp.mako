@@ -58,6 +58,12 @@ ${AUTO_GENERATED_HEADER}
 //   - OPAQUE_BIT_PATTERN (glVertexAttribPointer's `pointer`, glDrawElements' `indices`): the
 //     captured uintptr_t is reinterpret_cast back to its original pointer type, never
 //     dereferenced.
+//   - OPAQUE_BIT_PATTERN_ARRAY (glMultiDrawElementsBaseVertex's `indices`): the multi-draw
+//     counterpart of OPAQUE_BIT_PATTERN above - a doubly-indirect `const void* const*` whose
+//     own elements are opaque bit patterns, rebuilt into a temporary
+//     std::vector<const void*> ("<param>Ptrs") just before the call, same as ArrayOfArrays<T>
+//     above but one level shallower (each element is reinterpret_cast directly, never copied
+//     byte-by-byte through a per-element length).
 
 #include "commandRunnersAuto.h"
 #include "handleArgumentUpdaters.h"
@@ -108,6 +114,20 @@ namespace gits::opengl2 {
       p for p in cmd.params if array_of_arrays_override_for(cmd.name, p.name) is not None
   ]
 
+  # glMultiDrawElementsBaseVertex-shaped doubly-indirect params whose ELEMENTS are opaque bit
+  # patterns, never dereferenced (see pointer_metadata.py's
+  # LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY): the real driver call needs a live
+  # `const void* const*`, but ArrayArgument<uintptr_t> only stores a std::vector<uintptr_t> of
+  # raw values - so a temporary pointer array is rebuilt just before the call, named
+  # "<param>Ptrs" below, exactly like array_of_arrays_params above but one level shallower
+  # (each element is reinterpreted directly, never copied byte-by-byte).
+  opaque_bit_pattern_array_params = [
+      p for p in cmd.params
+      if (pointer_override_for(cmd.name, p.name) is not None and
+          pointer_override_for(cmd.name, p.name).length_source_kind ==
+              LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
+  ]
+
   # Any command with a GLint parameter literally named 'location' is one of the
   # glUniform*(location, ...) family (glUniform1f/.../4fv, glUniformMatrix*fv, ...) - a
   # structural rule rather than a per-command-name table, so it automatically covers every
@@ -151,6 +171,11 @@ namespace gits::opengl2 {
           # be forwarded to the driver unconditionally.
           return f'(command.m_{p.name}.HasValue ? {p.name}Ptrs.data() : nullptr)'
       ptr_override = pointer_override_for(cmd.name, p.name)
+      if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+          # Same HasValue guard as the ArrayArgument branch below, same rationale - see that
+          # branch's own comment. ${p.name}Ptrs is rebuilt from the captured bit patterns just
+          # above this function's own call site - see opaque_bit_pattern_array_params.
+          return f'(command.m_{p.name}.HasValue ? {p.name}Ptrs.data() : nullptr)'
       if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
           # Cast the captured bit pattern back to its original pointer type - see
           # docs/development/opengl2-rendering-pipeline-pointer-support-plan.md; never
@@ -209,39 +234,75 @@ void ${cmd.name}Runner::Run() {
 % for p in hdc_params:
   HDC real_${p.name} = HdcVirtualizationService::Get().Resolve(command.m_${p.name}.Value);
 % endfor
-% for p in array_of_arrays_params:
-  // Single, stable dummy element shared by every present-but-empty entry below (never read
-  // through - the paired ${p.name}Ptrs[i]'s Lengths[i]/count is always 0 for such an entry, so
-  // the real driver call has no reason to dereference it) - see the loop's own comment for why
-  // Value[i].data() alone is not a sufficient substitute here.
-  static const ${p.type_facts.base_type} k${p.name}DummyElement{};
-  std::vector<const ${p.type_facts.base_type}*> ${p.name}Ptrs(command.m_${p.name}.Value.size());
-  for (size_t i = 0; i < command.m_${p.name}.Value.size(); ++i) {
-    // command.m_${p.name}.HasElement[i] (not just an empty-vs-nonempty Value[i] check) is the
-    // correct presence test here - an originally-null string pointer and a real, explicitly
-    // zero-length string both decode to an empty Value[i] - see arguments.h's
-    // ArrayOfArrays<T>::HasElement comment. For a present (HasElement[i] == true) entry,
-    // Value[i].data() itself is ALSO not sufficient when Value[i] happens to be empty (a real,
-    // explicitly-zero-length string): std::vector::data() on an empty vector is not guaranteed
-    // to be nullptr, but is not guaranteed to be a stable/dereferenceable non-null pointer
-    // either (implementation-defined, and can even change between two empty vectors) - some
-    // drivers treat string[i] == nullptr as "null-terminated" or otherwise special-case it
-    // regardless of what length[i] says, which would silently reinterpret a genuinely
-    // present-but-empty entry as absent. Falling back to the single stable dummy element
-    // above for exactly that case guarantees a real, valid, non-null address every time,
-    // still backed by zero declared length.
-    if (!command.m_${p.name}.HasElement[i]) {
-      ${p.name}Ptrs[i] = nullptr;
-    } else if (command.m_${p.name}.Value[i].empty()) {
-      ${p.name}Ptrs[i] = &k${p.name}DummyElement;
-    } else {
-      ${p.name}Ptrs[i] = command.m_${p.name}.Value[i].data();
-    }
-  }
-% endfor
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
+% for p in array_of_arrays_params:
+  // Built AFTER the Pre-layer loop above, not before: a Pre layer that edits Value or resizes
+  // the outer array must be reflected in ${p.name}Ptrs, and editing a std::vector element
+  // in-place can reallocate its backing storage - building this array any earlier risks
+  // handing the real driver call a stale or dangling pointer.
+  //
+  // Single, stable dummy element shared by every empty-AND-zero-length entry below (never read
+  // through - see the Lengths[i] == 0 gate just below for why that combination, specifically,
+  // can never be dereferenced by the real driver call). Value[i].empty() alone is NOT a safe
+  // substitution trigger on its own: ArrayOfArrays<T>'s own constructor
+  // (arguments.h) preserves Lengths[i] as whatever explicit length (or -1, "null-terminated")
+  // the app actually passed for element i even when v[i] itself was nullptr (Value[i] stays
+  // empty in that case purely because there was nothing to copy FROM, not because element i's
+  // declared length was itself zero) - so an empty Value[i] can legitimately pair with a
+  // positive Lengths[i], or with -1, not just with 0. Substituting the one-element dummy
+  // unconditionally for every empty Value[i] regardless of Lengths[i] would, for either of
+  // those two non-zero cases, hand the real driver call a genuinely non-null-but-only-
+  // 1-element-long address paired with a length that tells it to read far more than that one
+  // element - an out-of-bounds read.
+  //
+  // Lengths[i] == 0 is therefore the correct and only safe trigger for the dummy substitution:
+  // it is the one case where Value[i].empty() is guaranteed to mean "zero bytes will ever be
+  // read through this pointer" (whether element i was really a null pointer or a genuine,
+  // explicitly-zero-length string - GL draws no behavioral line between those two, see
+  // ArrayOfArrays<T>'s own constructor comment) - std::vector::data() on an empty vector is
+  // not guaranteed to be nullptr, but is also not guaranteed to be a stable/dereferenceable
+  // non-null pointer either (implementation-defined, can even change between two empty
+  // vectors), and some drivers treat string[i] == nullptr as "null-terminated" or otherwise
+  // special-case it regardless of what length[i] says - so falling back to the single stable
+  // dummy element above (backed by a real, valid, non-null address, and itself zero-
+  // initialized, so a driver that scans it for a null terminator anyway immediately finds one
+  // right there) resolves that one specific hazard, for that one specific case, with no need
+  // to distinguish why Value[i] is empty.
+  //
+  // Every other empty-Value[i] case (Lengths[i] > 0, or Lengths[i] == -1) preserves a real
+  // nullptr instead - exactly reproducing the original call's own semantics for a source
+  // pointer that really was null (the only way Value[i] can end up empty with a non-zero
+  // Lengths[i] - see ArrayOfArrays<T>'s own constructor comment above), rather than
+  // substituting a synthetic non-null address the paired non-zero/sentinel length would then
+  // over-read from.
+  static const ${p.type_facts.base_type} k${p.name}DummyElement{};
+  std::vector<const ${p.type_facts.base_type}*> ${p.name}Ptrs(command.m_${p.name}.Value.size());
+  for (size_t i = 0; i < command.m_${p.name}.Value.size(); ++i) {
+    if (!command.m_${p.name}.Value[i].empty()) {
+      ${p.name}Ptrs[i] = command.m_${p.name}.Value[i].data();
+    } else if (command.m_${p.name}.Lengths[i] == 0) {
+      ${p.name}Ptrs[i] = &k${p.name}DummyElement;
+    } else {
+      ${p.name}Ptrs[i] = nullptr;
+    }
+  }
+% endfor
+% for p in opaque_bit_pattern_array_params:
+  // Built AFTER the Pre-layer loop above, same rationale as array_of_arrays_params above.
+  //
+  // Rebuild a live pointer array from the captured bit patterns - see
+  // pointer_metadata.py's LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY. Each element is
+  // reinterpreted back to its original pointer type, exactly like the single-pointer
+  // OPAQUE_BIT_PATTERN case below, never dereferenced - it may be a genuine client-memory
+  // address or (the only form any real 3.2+ core-profile caller uses) a buffer-relative byte
+  // offset.
+  std::vector<const void*> ${p.name}Ptrs(command.m_${p.name}.Data.size());
+  for (size_t i = 0; i < command.m_${p.name}.Data.size(); ++i) {
+    ${p.name}Ptrs[i] = reinterpret_cast<const void*>(command.m_${p.name}.Data[i]);
+  }
+% endfor
   auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if is_void:
   realFunction(${call_args});

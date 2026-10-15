@@ -270,21 +270,17 @@ template <typename T>
 struct ArrayOfArrays {
   std::vector<std::vector<T>> Value{};
   std::vector<int32_t> Lengths{};
-  // Per-element presence flag: HasElement[i] is false iff v[i] itself was a null pointer (a
-  // null individual string, as opposed to Value[i] being a real, explicitly-zero-length
-  // string) - see this constructor's own comment below for why this cannot be inferred from
-  // Value[i] alone. Always the same length as Value/Lengths once HasValue is true; empty
-  // (like both of those) otherwise.
-  std::vector<bool> HasElement{};
   bool HasValue{false};
 
   ArrayOfArrays() {}
 
   // v: `count` pointers, each to an independently-owned buffer of element type T (one GL
-  // "string"), or itself nullptr for an individual null string pointer. lengths: optional
-  // (nullptr allowed) array of `count` per-element lengths; lengths[i] < 0 (or
-  // lengths == nullptr) means "scan v[i] for a null terminator instead" - mirrors
-  // glShaderSource's own `length` parameter semantics exactly (see gl.xml).
+  // "string"), or itself nullptr for an individual null string pointer (which stays an empty
+  // Value[i] - see this constructor's own comment below for why the null/empty distinction is
+  // deliberately not tracked any more precisely than that). lengths: optional (nullptr
+  // allowed) array of `count` per-element lengths; lengths[i] < 0 (or lengths == nullptr)
+  // means "scan v[i] for a null terminator instead" - mirrors glShaderSource's own `length`
+  // parameter semantics exactly (see gl.xml).
   //
   // Templated SizeT and a size_t-width Value/Lengths count, for consistency with
   // ArrayArgument<T>/HandleArrayArgument<T>'s own templated, size_t-based constructors above -
@@ -297,16 +293,21 @@ struct ArrayOfArrays {
   // see that function's own comment for why (a client error the recorder must not crash on)
   // independently of this width choice; the clamp and the width are orthogonal fixes.
   //
-  // HasElement[i] is genuinely required, not redundant with Value[i].empty(): a null v[i] and
-  // a non-null v[i] pointing at a real, explicitly-zero-length string (lengths[i] == 0) both
-  // produce an empty Value[i] - the only way to tell them apart at reconstruction time (see
-  // commandRunnersAuto.cpp.mako's own `<param>Ptrs[i]` rebuild loop) is to have recorded the
-  // distinction directly, exactly like ArrayArgument<T>'s own HasValue distinguishes a null
-  // pointer from a valid, explicitly-empty array (see that type's own comment). Without this
-  // flag, reconstructing v[i] as `Value[i].data()` for an originally-null entry is undefined
-  // behavior risk: an empty std::vector's data() is not guaranteed to be nullptr, so a
-  // positive lengths[i] on some OTHER, unrelated element combined with the replay driver
-  // scanning this one's non-dereferenceable pointer could read out of bounds.
+  // A null v[i] and a non-null v[i] pointing at a real, explicitly-zero-length string
+  // (lengths[i] == 0) both produce an empty Value[i], and that distinction is intentionally
+  // NOT recorded anywhere (no per-element presence flag): GL itself draws no behavioral line
+  // between "no string was ever supplied here" and "an unused, explicitly zero-length string
+  // was supplied here" - a replayed call cannot observe which one actually happened, only that
+  // element i contributed zero bytes either way. The one real hazard - reconstructing v[i] as
+  // Value[i].data() when Value[i] happens to be empty is not guaranteed to yield a
+  // dereferenceable non-null pointer - is a player-side pointer-safety concern with a
+  // player-side fix (a stable dummy element substituted for an empty Value[i] ONLY when
+  // Lengths[i] == 0 - the one case where zero bytes are guaranteed to ever be read through
+  // that pointer; every other empty-Value[i] case, i.e. Lengths[i] > 0 or the -1
+  // null-terminated sentinel, gets a real nullptr instead, reproducing the original call's own
+  // null-source-pointer semantics rather than risking an over-read through a synthetic
+  // address - see commandRunnersAuto.cpp.mako's own `<param>Ptrs[i]` rebuild loop for the exact
+  // three-way split), not something that needs its own wire-visible bit here.
   template <typename SizeT>
   ArrayOfArrays(const T* const* v, SizeT count, const int32_t* lengths) {
     if (!v) {
@@ -316,18 +317,14 @@ struct ArrayOfArrays {
     const size_t safeCount = ClampCountToSizeT(count);
     Value.resize(safeCount);
     Lengths.resize(safeCount);
-    HasElement.assign(safeCount, false);
     for (size_t i = 0; i < safeCount; ++i) {
       const bool explicitLength = lengths != nullptr && lengths[i] >= 0;
       Lengths[i] = explicitLength ? lengths[i] : -1;
       if (v[i] == nullptr) {
-        continue; // HasElement[i] stays false; Value[i] stays empty. The real driver call
-                  // would itself reject an actually-null string pointer, but capturing it
-                  // verbatim (rather than dereferencing it here) is still the safe choice -
-                  // see HasElement's own comment above for why the empty Value[i] this leaves
-                  // behind must stay distinguishable from a real, explicitly-empty string.
+        continue; // An individual null string pointer stays an empty buffer; the real driver
+                  // call would itself reject this, but capturing it verbatim is safer than
+                  // dereferencing a null pointer here.
       }
-      HasElement[i] = true;
       if (explicitLength) {
         Value[i].assign(v[i], v[i] + lengths[i]);
       } else {

@@ -125,6 +125,41 @@ class ValidatePointerOverrideTests(unittest.TestCase):
         # Should not raise.
         _validate_pointer_override('glDrawElements', param, override, other_params=[])
 
+    def test_opaque_bit_pattern_array_override_requires_existing_sibling(self) -> None:
+        param = Parameter(name='indices', type='const void * const *')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY,
+            length_source_value='drawcount')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override(
+                'glMultiDrawElementsBaseVertex', param, override, other_params=[])
+
+    def test_opaque_bit_pattern_array_override_requires_scalar_sibling(self) -> None:
+        param = Parameter(name='indices', type='const void * const *')
+        sibling = Parameter(name='drawcount', type='GLsizei *')  # not scalar: itself a pointer
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY,
+            length_source_value='drawcount')
+
+        with self.assertRaises(ValueError):
+            _validate_pointer_override(
+                'glMultiDrawElementsBaseVertex', param, override, other_params=[sibling])
+
+    def test_opaque_bit_pattern_array_override_accepts_valid_sibling(self) -> None:
+        param = Parameter(name='indices', type='const void * const *')
+        sibling = Parameter(name='drawcount', type='GLsizei')
+        override = PointerParamOverride(
+            direction=PointerDirection.IN,
+            length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY,
+            length_source_value='drawcount')
+
+        # Should not raise.
+        _validate_pointer_override(
+            'glMultiDrawElementsBaseVertex', param, override, other_params=[sibling])
+
     def test_length_multiplier_must_be_at_least_one(self) -> None:
         param = Parameter(name='value', type='const GLfloat *')
         sibling = Parameter(name='count', type='GLsizei')
@@ -165,6 +200,21 @@ class IsParamCapturableTests(unittest.TestCase):
         param = Parameter(name='textures', type='GLuint *')
         sibling = Parameter(name='n', type='GLsizei')
         self.assertTrue(_is_param_capturable('glGenTextures', param, other_params=[sibling]))
+
+    def test_opaque_bit_pattern_array_param_is_capturable_without_an_array_of_arrays_entry(
+        self,
+    ) -> None:
+        # `indices` is structurally is_array_of_arrays_eligible (pointer_depth == 2, base type
+        # 'void' - same shape as glShaderSource's `string`), but has no
+        # ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry at all - it must still be capturable via its
+        # OPAQUE_BIT_PATTERN_ARRAY POINTER_PARAM_OVERRIDES entry instead, checked first - see
+        # that LengthSourceKind's own comment (pointer_metadata.py) for why ArrayOfArrays<T>
+        # would be actively wrong here.
+        param = Parameter(name='indices', type='const void * const *')
+        sibling = Parameter(name='drawcount', type='GLsizei')
+        self.assertTrue(
+            _is_param_capturable(
+                'glMultiDrawElementsBaseVertex', param, other_params=[sibling]))
 
     def test_array_param_with_broken_override_raises(self) -> None:
         # glGenTextures's real override names sibling 'n'; a command reusing the same param
@@ -220,6 +270,19 @@ class EndToEndEnabledGateTests(unittest.TestCase):
         for name in ('glVertexAttribPointer', 'glDrawElements'):
             with self.subTest(command=name):
                 self.assertTrue(self._get_command(Api.GL, name).enabled)
+
+    def test_multi_draw_elements_base_vertex_is_enabled(self) -> None:
+        # See pointer_metadata.py's LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY - `indices` must
+        # not be silently routed through ARRAY_OF_ARRAYS_PARAM_OVERRIDES/ArrayOfArrays<T>
+        # despite matching its structural `const void* const*` shape.
+        self.assertTrue(
+            self._get_command(Api.GL, 'glMultiDrawElementsBaseVertex').enabled)
+
+    def test_multi_draw_elements_base_vertex_indices_uses_opaque_bit_pattern_array(self) -> None:
+        from pointer_metadata import LengthSourceKind, POINTER_PARAM_OVERRIDES
+        override = POINTER_PARAM_OVERRIDES[('glMultiDrawElementsBaseVertex', 'indices')]
+        self.assertEqual(override.length_source_kind, LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
+        self.assertEqual(override.length_source_value, 'drawcount')
 
     def test_vector_uniform_setters_are_enabled(self) -> None:
         for name in (

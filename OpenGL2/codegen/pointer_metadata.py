@@ -72,6 +72,25 @@ class LengthSourceKind(StrEnum):
         # non-goal - see that decision's Consequences). direction is always IN (there is exactly
         # one already-known value; nothing is written back) and length_source_value is unused
         # (None) - there is no length, just one opaque value.
+    OPAQUE_BIT_PATTERN_ARRAY = 'opaque_bit_pattern_array'  # a doubly-indirect pointer
+        # (`const void* const*`) whose own ELEMENTS are opaque bit patterns (never dereferenced),
+        # not an array of arrays of real bytes - the multi-draw counterpart of
+        # OPAQUE_BIT_PATTERN above. E.g. glMultiDrawElementsBaseVertex's `indices`: gl.xml gives
+        # it the exact same `const void* const*` shape as glShaderSource's `string`
+        # (TypeFacts.is_array_of_arrays_eligible is true for both - pointer_depth == 2, base
+        # type 'void'), but the *meaning* is completely different. glShaderSource's `string[i]`
+        # is a real pointer to source-code bytes this backend must copy and later hand back a
+        # live pointer to (ArrayOfArrays<T> - see that type's own comment). glMultiDraw*'s
+        # `indices[i]` is exactly like glDrawElements' single `indices` (OPAQUE_BIT_PATTERN
+        # above) repeated `drawcount` times: each element is itself either a
+        # GL_ELEMENT_ARRAY_BUFFER-relative byte offset or a genuine client-memory pointer, and
+        # must never be dereferenced - only its bit pattern round-trips. Using ArrayOfArrays<T>
+        # here would be actively wrong (it would try to copy each indices[i]'s *pointee* bytes,
+        # which for the offset form is not even a valid address). length_source_value names the
+        # sibling drawcount-style param, exactly like SIBLING_PARAM - see arguments.h's
+        # ArrayArgument<T>, which this reuses directly (each "element" is just a pointer-sized
+        # uintptr_t, memcpy-safe like any other scalar) rather than adding a second array-of-
+        # opaque-values type.
     PIXEL_TRANSFER_SIZE = 'pixel_transfer_size'  # length_source_value is unused (None); instead
         # four extra PointerParamOverride fields (pixel_format_param/pixel_type_param/
         # pixel_width_param/pixel_height_param) name the sibling params gl.xml's
@@ -190,6 +209,23 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
     ('glDrawElementsInstancedBaseVertex', 'indices'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+
+    # glMultiDrawElementsBaseVertex(mode, count, type, indices, drawcount, basevertex): all
+    # three array params share the same `len="drawcount"` sibling (gl.xml). `count`/
+    # `basevertex` are ordinary GLsizei/GLint arrays - same plain SIBLING_PARAM shape as
+    # glGenTextures' `textures` etc. above, nothing new. `indices` is the array-of-opaque-
+    # bit-patterns shape - see LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY's own comment above for
+    # why this must not go through ARRAY_OF_ARRAYS_PARAM_OVERRIDES/ArrayOfArrays<T> despite
+    # matching its `const void* const*` structural shape.
+    ('glMultiDrawElementsBaseVertex', 'count'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='drawcount'),
+    ('glMultiDrawElementsBaseVertex', 'indices'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY, length_source_value='drawcount'),
+    ('glMultiDrawElementsBaseVertex', 'basevertex'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='drawcount'),
 
     # Vector/matrix uniform setters: `count` counts *vectors*/*matrices*, not raw elements -
     # gl.xml's own len="count*N" annotation gives each one's multiplier directly (see
