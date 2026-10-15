@@ -26,6 +26,7 @@ enum class ApiId {
   ID_OCLOC = 12,
   ID_DIRECTX = 13,
   ID_VULKAN = 14,
+  ID_OPENGL2 = 15,
 };
 
 inline ApiId ExtractApiIdentifier(unsigned commandId) {

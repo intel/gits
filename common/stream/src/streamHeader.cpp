@@ -188,6 +188,8 @@ StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
   case ApiId::ID_GLX:
   case ApiId::ID_EGL:
     return Api::API_OPENGL;
+  case ApiId::ID_OPENGL2:
+    return Api::API_OPENGL2;
   case ApiId::ID_OPENCL:
     return Api::API_OPENCL;
   case ApiId::ID_VULKAN_LEGACY:

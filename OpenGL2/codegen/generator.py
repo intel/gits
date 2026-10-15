@@ -13,6 +13,10 @@
 # from the XML registries and will eventually drive template-based generation
 # of the new layered backend.
 
+from itertools import chain
+from pathlib import Path
+
+from command_ids import build_command_ids
 from generator_interceptor import generate_interceptor_files
 from intermediates import Api, Command, EnumValue
 from intermediates_creator import (
@@ -38,6 +42,10 @@ def main() -> None:
     enums: dict[Api, list[EnumValue]]
     commands: dict[Api, list[Command]]
     enums, commands = load_registries_and_extract_xml_data(FILE_TO_API)
+    build_command_ids(
+        chain.from_iterable(commands.values()),  # Flatten commands into a single list.
+        Path(__file__).with_name('command_ids.json'),
+    )
 
     # Derived/postprocessed data (enum canonical names, bitmask groups).
     enum_name_map = build_enum_name_map(enums)

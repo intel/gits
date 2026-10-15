@@ -12,6 +12,7 @@ add_custom_target(OpenGL2_codegen DEPENDS ${STAMP_FILE})
 set_target_properties(OpenGL2_codegen PROPERTIES FOLDER OpenGL2)
 
 set(SCRIPTS_SRC
+  command_ids.py
   intermediates.py
   intermediates_creator.py
   generator_helpers.py
@@ -22,11 +23,17 @@ set(SCRIPTS_SRC
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 
+set(PERSISTENT_DATA_SRC
+  command_ids.json
+)
+source_group("persistent data" FILES ${PERSISTENT_DATA_SRC})
+
 file(GLOB_RECURSE MAKO_TEMPLATES "templates/*.mako")
 source_group(mako FILES ${MAKO_TEMPLATES})
 
 target_sources(OpenGL2_codegen PRIVATE
   ${MAKO_TEMPLATES}
+  ${PERSISTENT_DATA_SRC}
   ${SCRIPTS_SRC}
 )
 
@@ -45,7 +52,7 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${OPENGL2_SCRIPTS_DIR}/generator.py
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
   WORKING_DIRECTORY ${OPENGL2_SCRIPTS_DIR}
-  DEPENDS ${SCRIPTS_SRC} ${MAKO_TEMPLATES}
+  DEPENDS ${SCRIPTS_SRC} ${PERSISTENT_DATA_SRC} ${MAKO_TEMPLATES}
 )
 
 unset(OpenGL2_codegen CACHE)
