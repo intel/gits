@@ -91,6 +91,10 @@ set(OPENGL2_GENERATED_PLAYER_FILES
   ${OPENGL2_PLAYER_DIR}/openGL2CommandFactoryAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/recordingLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/recordingLayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/analyzerLayerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/../subcapture/analyzerLayerAuto.cpp
 )
 
 add_custom_command(

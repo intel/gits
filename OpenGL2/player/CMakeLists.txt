@@ -67,7 +67,8 @@ target_include_directories(OpenGL2_player
 
 target_link_libraries(OpenGL2_player
   PUBLIC OpenGL2_layer_interface
-  PRIVATE OpenGL2_trace OpenGL2_services stream windowing log common_interface gdi32
+  PRIVATE OpenGL2_trace OpenGL2_subcapture OpenGL2_services stream windowing log common_interface
+          gdi32
 )
 
 set_target_properties(OpenGL2_player PROPERTIES FOLDER OpenGL2)

@@ -218,6 +218,24 @@ void ReplayClientArrays(const ClientArraysMetaCommand& command) {
 
 } // namespace
 
+void VisitClientArrayBlocks(
+    const std::function<void(uint64_t id, const std::vector<uint8_t>& bytes)>& visit) {
+  std::lock_guard<std::mutex> lock(g_BlocksMutex);
+  for (const auto& [id, bytes] : g_Blocks) {
+    visit(id, bytes);
+  }
+}
+
+bool CopyClientArrayBlock(uint64_t id, std::vector<uint8_t>& bytes) {
+  std::lock_guard<std::mutex> lock(g_BlocksMutex);
+  const auto block = g_Blocks.find(id);
+  if (block == g_Blocks.end()) {
+    return false;
+  }
+  bytes = block->second;
+  return true;
+}
+
 void ClientArraysMetaRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();

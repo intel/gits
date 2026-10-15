@@ -1,0 +1,279 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "glTypes.h"
+#include "objectNameMapService.h"
+#include "subcaptureRecorder.h"
+#include "windowGeometryMetaTypes.h"
+
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+namespace gits::opengl2 {
+
+// A copy of a replayed command, written again under a state-restore key, on its own thread or
+// on `threadId`.
+class StoredCommand {
+public:
+  virtual ~StoredCommand() = default;
+  virtual void Record(SubcaptureRecorder& recorder,
+                      GITSKey key,
+                      std::optional<uint32_t> threadId = std::nullopt) const = 0;
+};
+
+template <typename SerializerT, typename CommandT>
+class StoredCommandOf : public StoredCommand {
+public:
+  explicit StoredCommandOf(const CommandT& command) : m_Command(command) {}
+
+  void Record(SubcaptureRecorder& recorder,
+              GITSKey key,
+              std::optional<uint32_t> threadId) const override {
+    CommandT command = m_Command;
+    command.m_Key = key;
+    if (threadId) {
+      command.m_ThreadId = *threadId;
+    }
+    recorder.Record(SerializerT(command));
+  }
+
+private:
+  CommandT m_Command;
+};
+
+template <typename SerializerT, typename CommandT>
+std::shared_ptr<StoredCommand> Store(const CommandT& command) {
+  return std::make_shared<StoredCommandOf<SerializerT, CommandT>>(command);
+}
+
+// A recorded command with the window geometry sample the recorder took for it, if any.
+struct SampledCommand {
+  std::shared_ptr<StoredCommand> Geometry;
+  std::shared_ptr<StoredCommand> Command;
+};
+
+struct MakeCurrent {
+  SampledCommand Call;
+  uint32_t ThreadId{};
+  GITSKey Context{};
+  HDC Dc{};
+  // The draw DC, except for a make-context-current call that reads another drawable.
+  HDC ReadDc{};
+};
+
+struct ContextState {
+  GITSKey ShareGroup{};
+  std::shared_ptr<MakeCurrent> LastMakeCurrent;
+};
+
+// Commands that create an object again as it was read back, and the objects they reference.
+struct ObjectSnapshot {
+  std::vector<std::shared_ptr<StoredCommand>> Commands;
+  std::vector<GITSKey> References;
+  // Level 0 of a texture, or a renderbuffer, which framebuffers it is attached to can still
+  // render to.
+  GLsizei Width{};
+  GLsizei Height{};
+  GLenum InternalFormat{};
+  GLint Samples{};
+};
+
+struct ObjectState {
+  GLObjectKind Kind{};
+  // The share group of shared objects, the context of container objects.
+  GITSKey Owner{};
+  GLenum Target{};
+  // A shader still attached or a program still in use when deleted stays live, under this name,
+  // until GL reclaims it. A deleted buffer, texture or renderbuffer stays live while a container
+  // or a buffer texture references it; it is tracked, under this name, while one does.
+  bool DeletePending{};
+  GLuint LiveName{};
+  // The deleted buffer, texture or renderbuffer as it was before its deletion, and the context
+  // that deleted it.
+  ObjectSnapshot Snapshot;
+  GITSKey DeletedIn{};
+};
+
+struct ProgramState {
+  // Shaders attached at the last link, as (type, source).
+  std::vector<std::pair<GLenum, std::string>> LinkedShaders;
+  // Commands that affect links: output locations, varyings and parameters.
+  std::vector<std::shared_ptr<StoredCommand>> LinkSetup;
+  // The number of LinkSetup commands issued before the last link.
+  size_t LinkedSetupCount{};
+  // The glCreateShaderProgramv call that created the program, until it is linked again.
+  std::shared_ptr<StoredCommand> Creation;
+  // The glProgramBinary call that loaded the program, until it is linked again.
+  std::shared_ptr<StoredCommand> Binary;
+};
+
+// An ARB assembly program. Its names are separate from those of GLSL programs.
+struct ArbProgramState {
+  GITSKey ShareGroup{};
+  GLenum Target{};
+};
+
+// Commands that set the vertex array and pixel unpack state of a context, and the buffers they
+// reference.
+struct ListCompileState {
+  std::vector<std::shared_ptr<StoredCommand>> Commands;
+  std::vector<GITSKey> Buffers;
+};
+
+// The commands from glNewList to glEndList, recorded as compiled. They are preceded by the state
+// the list was compiled with, which compiled draws and pixel commands read, and followed by the
+// commands that set that state back to its initial values.
+struct DisplayList {
+  std::vector<std::shared_ptr<StoredCommand>> Commands;
+  std::vector<GITSKey> Buffers;
+};
+
+// The display lists a wglUseFontBitmaps call created, followed by the glDeleteLists that deleted
+// some of them since.
+struct FontLists {
+  GITSKey ShareGroup{};
+  GLuint First{};
+  GLuint Count{};
+  std::vector<std::shared_ptr<StoredCommand>> Commands;
+};
+
+// Tracks what state restore needs from the commands replayed before the subcapture range.
+class StateTrackingService {
+public:
+  void SetGeometry(const WindowGeometryMetaCommand& command);
+  // Takes the geometry sample of the command being replayed.
+  SampledCommand Sample(std::shared_ptr<StoredCommand> command);
+
+  void AddTopology(SampledCommand command);
+  void CreateContext(GITSKey context, GITSKey shareContext);
+  void ShareLists(GITSKey context, GITSKey otherContext);
+  void DeleteContext(GITSKey context);
+  void SetCurrent(uint32_t threadId, GITSKey context, HDC dc, HDC readDc, SampledCommand call);
+  void CreatePbuffer(GITSKey pbuffer, GLsizei width, GLsizei height);
+  void GetPbufferDc(GITSKey pbuffer, HDC dc);
+  void ReleasePbufferDc(HDC dc);
+  void DestroyPbuffer(GITSKey pbuffer);
+  // The size of the pbuffer a recorded DC belongs to; std::nullopt for other DCs.
+  std::optional<std::pair<GLsizei, GLsizei>> PbufferSize(HDC dc) const;
+
+  void CreateObject(GLObjectKind kind, uint32_t threadId, GITSKey key);
+  // `liveName` is the name of a deleted shader or program GL keeps until it is detached or no
+  // longer in use, or of a deleted buffer, texture or renderbuffer read back into `snapshot`
+  // before `context` deleted it; 0 for an object deleted at once.
+  void DeleteObject(GLObjectKind kind,
+                    GITSKey key,
+                    GLuint liveName = 0,
+                    ObjectSnapshot snapshot = {},
+                    GITSKey context = 0);
+  // Forgets the delete-pending shader or program whose name GL gave to the shader or program just
+  // created, since GL reclaimed it first.
+  void ForgetReclaimed(uint32_t threadId, GLuint name);
+  // Forgets the deleted buffer, texture or renderbuffer no container references any more.
+  void ForgetDeleted(GITSKey key);
+  // Whether `name` is the name of a tracked deleted buffer, texture or renderbuffer of
+  // `shareGroup`.
+  bool IsDeletedName(GITSKey shareGroup, GLObjectKind kind, GLuint name) const {
+    return m_DeletedNames.contains({shareGroup, kind, name});
+  }
+  void SetTarget(GITSKey texture, GLenum target);
+  ProgramState* Program(GITSKey program);
+
+  void CreateSync(uint32_t threadId, GITSKey key);
+  void DeleteSync(GITSKey key);
+
+  void CreateArbProgram(uint32_t threadId, GITSKey key);
+  void SetArbProgramTarget(GITSKey key, GLenum target);
+  void DeleteArbProgram(GITSKey key);
+
+  // `newList` is written in place of the glNewList that starts the list.
+  void BeginList(uint32_t threadId,
+                 GLuint list,
+                 ListCompileState compileState,
+                 std::shared_ptr<StoredCommand> newList);
+  bool CompilingList(uint32_t threadId) const {
+    return m_CompilingLists.contains(threadId);
+  }
+  void AddListCommand(uint32_t threadId, std::shared_ptr<StoredCommand> command);
+  void EndList(uint32_t threadId, ListCompileState reset);
+  void CreateFontLists(uint32_t threadId,
+                       GLuint first,
+                       GLuint count,
+                       std::shared_ptr<StoredCommand> command);
+  void DeleteLists(uint32_t threadId,
+                   GLuint list,
+                   GLsizei range,
+                   std::shared_ptr<StoredCommand> command);
+  // The share group of the context current on `threadId`, and that context.
+  std::pair<GITSKey, GITSKey> CurrentShareGroup(uint32_t threadId) const;
+
+  const std::vector<SampledCommand>& Topology() const {
+    return m_Topology;
+  }
+  const std::map<GITSKey, ContextState>& Contexts() const {
+    return m_Contexts;
+  }
+  const std::map<uint32_t, std::shared_ptr<MakeCurrent>>& Threads() const {
+    return m_Threads;
+  }
+  const std::map<GITSKey, ObjectState>& Objects() const {
+    return m_Objects;
+  }
+  const ObjectState* Object(GITSKey key) const;
+  const ProgramState* FindProgram(GITSKey program) const;
+  const std::map<GITSKey, GITSKey>& Syncs() const {
+    return m_Syncs;
+  }
+  const std::map<GITSKey, ArbProgramState>& ArbPrograms() const {
+    return m_ArbPrograms;
+  }
+  // By share group and list name.
+  const std::map<std::pair<GITSKey, GLuint>, DisplayList>& DisplayLists() const {
+    return m_DisplayLists;
+  }
+  // In the order they were created.
+  const std::vector<FontLists>& Fonts() const {
+    return m_Fonts;
+  }
+
+private:
+  GITSKey CurrentContext(uint32_t threadId) const;
+  GITSKey OwnerFor(GLObjectKind kind, uint32_t threadId) const;
+
+  std::shared_ptr<StoredCommand> m_Geometry;
+  std::vector<SampledCommand> m_Topology;
+  std::map<GITSKey, ContextState> m_Contexts;
+  std::map<uint32_t, std::shared_ptr<MakeCurrent>> m_Threads;
+  std::map<GITSKey, std::pair<GLsizei, GLsizei>> m_PbufferSizes;
+  // Recorded pbuffer DC to its pbuffer.
+  std::map<HDC, GITSKey> m_PbufferDcs;
+  std::map<GITSKey, ObjectState> m_Objects;
+  // Share group, kind and name of the tracked deleted buffers, textures and renderbuffers.
+  std::multiset<std::tuple<GITSKey, GLObjectKind, GLuint>> m_DeletedNames;
+  std::unordered_map<GITSKey, ProgramState> m_Programs;
+  // Sync object key to its share group.
+  std::map<GITSKey, GITSKey> m_Syncs;
+  std::map<GITSKey, ArbProgramState> m_ArbPrograms;
+  std::map<std::pair<GITSKey, GLuint>, DisplayList> m_DisplayLists;
+  // Thread to the list it compiles and its share group.
+  std::map<uint32_t, std::pair<std::pair<GITSKey, GLuint>, DisplayList>> m_CompilingLists;
+  std::vector<FontLists> m_Fonts;
+};
+
+bool IsContainerKind(GLObjectKind kind);
+
+} // namespace gits::opengl2

@@ -10,6 +10,8 @@
 
 #include "log.h"
 
+#include <algorithm>
+
 namespace gits::opengl2 {
 
 UniformLocationMapService& UniformLocationMapService::Get() {
@@ -55,6 +57,21 @@ GLint UniformLocationMapService::ResolveForProgram(GITSKey programKey, GLint cap
                    "arithmetic) - see uniformLocationMapService.h's own scope decision.";
   }
   return capturedLocation;
+}
+
+std::unordered_map<GLint, std::vector<GLint>> UniformLocationMapService::CapturedLocations(
+    GITSKey programKey) const {
+  std::unordered_map<GLint, std::vector<GLint>> locations;
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  for (const auto& [key, replayLocation] : m_Locations) {
+    if (key.ProgramKey == programKey && replayLocation >= 0) {
+      locations[replayLocation].push_back(key.CapturedLocation);
+    }
+  }
+  for (auto& [replayLocation, captured] : locations) {
+    std::sort(captured.begin(), captured.end());
+  }
+  return locations;
 }
 
 void UniformLocationMapService::SetCurrentProgram(HGLRC context, GITSKey programKey) {

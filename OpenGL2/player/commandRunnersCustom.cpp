@@ -97,11 +97,12 @@ void RunGetPbufferDC(CommandT& command, const std::atomic<RealFunctionT>& realFu
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    command.m_Return.Value = realFunction.load(std::memory_order_acquire)(command.m_hPbuffer.Value);
+    // The return keeps the recorded DC, which later commands name and Resolve() maps.
+    const HDC realDc = realFunction.load(std::memory_order_acquire)(command.m_hPbuffer.Value);
     if (recordedDc != nullptr) {
-      PbufferService::Get().AcquireDc(recordedDc, command.m_hPbuffer.Key, command.m_Return.Value);
+      PbufferService::Get().AcquireDc(recordedDc, command.m_hPbuffer.Key, realDc);
       static std::atomic<bool> warned{false};
-      if (command.m_Return.Value == nullptr && !warned.exchange(true)) {
+      if (realDc == nullptr && !warned.exchange(true)) {
         LOG_WARNING << "wglGetPbufferDCARB/EXT: replay failed to get a pbuffer DC capture got - "
                        "calls using it fail";
       }

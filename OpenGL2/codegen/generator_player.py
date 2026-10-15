@@ -8,10 +8,13 @@
 #
 # ===================== end_copyright_notice ==============================
 
+import re
+
 from custom_player_runners import CUSTOM_PLAYER_RUNNERS
-from generator_helpers import mako_write
-from handle_lifecycle import HANDLE_CREATING_COMMANDS
+from generator_helpers import mako_write, object_name_override_for
+from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS
 from intermediates import Command
+from object_name_lifecycle import ObjectNameRole
 from texture_sampling_commands import sampling_hook_after, sampling_hook_before
 
 # HANDLE_CREATING_COMMANDS is already unioned across every mapped-handle type (HGLRC, GLsync,
@@ -54,6 +57,47 @@ _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'glMapBufferRange',
     'glMapTexture2DINTEL',
 })
+
+# Commands subcapture state restore leaves out of the display lists it writes again. GL executes
+# them instead of compiling them, and they create, delete or change objects the restore writes
+# before the lists. The context state ones GL also executes are kept: commands compiled after
+# them read that state, and the context state restore overrides it later.
+_NOT_LISTED_RE = re.compile(
+    r'^(?:wgl'
+    r'|gl(?:Gen|Create|Delete)(?:$|[A-Z])'
+    r'|glFenceSync|glGenerate\w*Mipmap'
+    r'|gl(?:Named)?Buffer(?:Sub)?Data|gl(?:Named)?BufferStorage|glCopy(?:Named)?BufferSubData'
+    r'|glClear(?:Named)?Buffer(?:Sub)?Data|glInvalidateBuffer|glUnmap|glFlushMapped'
+    r'|glReadn?Pixels'
+    r'|glShaderSource|glCompileShader|glLinkProgram|gl(?:Attach|Detach)(?:Shader|Object)'
+    r'|glBind(?:Attrib|FragData)Location|glProgramParameteri|glTransformFeedbackVaryings'
+    r'|glShaderBinary|glProgramBinary|glValidateProgram'
+    r'|gl(?:Named)?RenderbufferStorage|gl(?:Tex|Texture)Storage|gl(?:Tex|Texture|MultiTex)Buffer'
+    r'|gl(?:Named)?Framebuffer(?:Texture|Renderbuffer)|glBlit(?:Named)?Framebuffer)')
+
+
+def display_list_commands(commands: list[Command]) -> frozenset[str]:
+    """Enabled commands a display list body is recorded with before the subcapture range."""
+    return frozenset(c.name for c in commands if c.enabled and not _NOT_LISTED_RE.match(c.name))
+
+
+# Commands AnalyzerLayer handles by hand: display list compilation and frame ends.
+ANALYZER_LAYER_CUSTOM_COMMANDS: frozenset[str] = frozenset({'glNewList', 'glEndList'}) | FRAME_END_COMMANDS
+
+
+def analyzed_object_params(commands: list[Command]) -> dict[str, list[str]]:
+    """Per enabled command, the parameters naming existing objects, whose keys the subcapture
+    analysis pass collects. Objects a command creates need no restore."""
+    analyzed = {}
+    for cmd in commands:
+        if not cmd.enabled or cmd.name in ANALYZER_LAYER_CUSTOM_COMMANDS:
+            continue
+        params = [p.name for p in cmd.params
+                  if (override := object_name_override_for(cmd.name, p.name, p.class_)) is not None
+                  and override.role != ObjectNameRole.CREATE]
+        if params:
+            analyzed[cmd.name] = params
+    return analyzed
 
 
 def generate_player_files(commands: list[Command], enum_groups: set[str]) -> None:
@@ -104,3 +148,16 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
                'layers/trace/traceLayerAuto.h', commands=commands)
     mako_write('templates/traceLayerAuto.cpp.mako',
                'layers/trace/traceLayerAuto.cpp', commands=commands, enum_groups=enum_groups)
+    mako_write('templates/recordingLayerAuto.h.mako',
+               'subcapture/recordingLayerAuto.h', commands=commands,
+               frame_end_commands=sorted(FRAME_END_COMMANDS))
+    mako_write('templates/recordingLayerAuto.cpp.mako',
+               'subcapture/recordingLayerAuto.cpp', commands=commands,
+               frame_end_commands=sorted(FRAME_END_COMMANDS),
+               list_commands=display_list_commands(commands))
+    analyzed = analyzed_object_params(commands)
+    mako_write('templates/analyzerLayerAuto.h.mako',
+               'subcapture/analyzerLayerAuto.h', analyzed=analyzed,
+               frame_end_commands=sorted(FRAME_END_COMMANDS))
+    mako_write('templates/analyzerLayerAuto.cpp.mako',
+               'subcapture/analyzerLayerAuto.cpp', analyzed=analyzed)

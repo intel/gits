@@ -25,6 +25,7 @@
 #include <mutex>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -144,6 +145,10 @@ public:
   // replay time. Same fallback/warning behavior as Resolve() otherwise - both share the same
   // lookup, just keyed by a different, explicitly-supplied program identity.
   GLint ResolveForProgram(GITSKey programKey, GLint capturedLocation);
+
+  // Captured locations of `programKey` by the replay location they resolve to, for subcapture
+  // state restore. Locations queried before and after a relink can resolve to the same one.
+  std::unordered_map<GLint, std::vector<GLint>> CapturedLocations(GITSKey programKey) const;
 
   // Called by the generic per-command Run() for glUseProgram after a successful real call,
   // with the same `context` CurrentContext() would return at that point (the context
