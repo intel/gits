@@ -30,22 +30,18 @@ ${AUTO_GENERATED_HEADER}
 // an UpdateOutputHandle() call once the real call has returned. A CREATE-role array
 // parameter (glGenTextures/glGenBuffers) gets the array counterpart, UpdateOutputHandleArray().
 //
-// Mirrors Vulkan/codegen/templates/commandRunnersAuto.cpp.mako's shape, minus
-// ExecuteCommands()/m_Skip support - not wired for this backend yet, see the plan's
-// Non-goals. Pre/Post layers ARE wired (see
-// docs/development/opengl2-layer-architecture-alignment-plan.md), via the exact same inline
-// `for (Layer* layer : manager.GetPreLayers()) { layer->Pre(command); }` loop shape Vulkan's/
-// DX12's own commandRunnersAuto.cpp.mako use (and, on the OpenGL2 side, the same shape every
-// hand-written runner in commandRunnersCustom.cpp also repeats inline at the equivalent point
-// in its own Run() - see that file's own header comment): PlayerManager::GetPreLayers() runs
-// immediately before the real driver call, once every LOOKUP/DELETE-role handle/object-name
-// field has been resolved to its live, replay-time value (matching Vulkan's
-// commandRunnersAuto.cpp.mako's own Pre-layer placement); PlayerManager::GetPostLayers() runs
-// at the very end of Run(), once every CREATE-role field has been registered. Both vectors are
-// permanently empty today - no concrete Layer subclass registers into either one on the player
-// side (see playerManager.h's own header comment on why the player has no
-// EncoderLayer-equivalent) - so this is a zero-behavior-change wiring change, exactly like the
-// recorder side's own Pre/Post loop.
+// Mirrors Vulkan's commandRunnersAuto.cpp.mako shape. Pre/Post layers ARE wired via the exact same
+// inline `for (Layer* layer : manager.GetPreLayers()) { layer->Pre(command); }` loop shape Vulkan/
+// DX12 use (and, on the OpenGL2 side, the same shape every hand-written runner in
+// commandRunnersCustom.cpp also repeats inline at the equivalent point in its own Run() - see that
+// file's own header comment): PlayerManager::GetPreLayers() runs immediately before the real
+// driver call, once every LOOKUP/DELETE-role handle/object-name field has been resolved to its
+// live, replay-time value (matching Vulkan's commandRunnersAuto.cpp.mako's own Pre-layer
+// placement); PlayerManager::GetPostLayers() runs at the very end of Run(), once every CREATE-role
+// field has been registered. Both vectors are permanently empty today - no concrete Layer subclass
+// registers into either one on the player side (see playerManager.h's own header comment on why
+// the player has no EncoderLayer-equivalent) - so the gate has no current behavior change, exactly
+// like the recorder side's own Pre/Post loop.
 //
 // Two shapes added for the rendering-pipeline round 2 (see
 // docs/development/opengl2-rendering-pipeline-pointer-support-plan.md), on top of the treatments
@@ -244,6 +240,7 @@ namespace gits::opengl2 {
       return f'command.m_{p.name}.Value'
 
   call_args = ', '.join(call_arg(p) for p in cmd.params)
+  call_indent = ' ' * 6 if pixel_transfer_size_params else ' ' * 4
 %>\
 void ${cmd.name}Runner::Run() {
   auto& manager = PlayerManager::Get();
@@ -346,66 +343,68 @@ void ${cmd.name}Runner::Run() {
     ${p.name}Ptrs[i] = reinterpret_cast<const void*>(command.m_${p.name}.Data[i]);
   }
 % endfor
-  auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if pixel_transfer_size_params:
-  // See pixel_transfer_size_params' own comment above and
-  // PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h). An
-  // empty-but-HasValue-true captured Data buffer here does not mean this call safely
-  // transfers zero real bytes - only m_<param>SizeUnknown.Value == false means that. Skip the
-  // real driver call entirely (never partially - there is no way to safely call with only
-  // SOME of a multi-parameter command's pointers replaced by a correctly-sized buffer) rather
-  // than risk it against a buffer whose captured size does not match what the driver would
-  // actually read/write, mirroring UnsupportedCommandRunner::Run()'s own warn-once, degraded-
-  // fidelity wording/convention.
-  //
-  // m_<param>SizeUnknown.Value == true does NOT
-  // always mean "must skip" - m_<param>IsBufferOffset.Value == true (this exact call's pointer
-  // was actually a buffer-relative offset, per UnpackPixelsPointerIsBufferOffset()/
-  // PackPixelsPointerIsBufferOffset()'s own header comment, clientMemoryCapture.h) means the
-  // real driver call needs no captured size at all - call_arg() above already falls back to
-  // this same parameter's m_<param>RawPointer.Value (the preserved offset) whenever
-  // m_<param>.HasValue is false, so the call below is safe and correct to make. The two flags
-  // are orthogonal (SizeUnknown reasons about format/type/dimensions/pixel-store state only;
-  // IsBufferOffset reasons about buffer bindings only), so each parameter's own contribution to
-  // this skip gate is `SizeUnknown && !IsBufferOffset` - buffer-offset mode always takes
-  // priority over an otherwise-unknown size, never the other way around.
-  const bool ${cmd.name}PixelTransferSizeUnknown = \
+    // See pixel_transfer_size_params' own comment above and
+    // PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h). An
+    // empty-but-HasValue-true captured Data buffer here does not mean this call safely
+    // transfers zero real bytes - only m_<param>SizeUnknown.Value == false means that. Skip the
+    // real driver call entirely (never partially - there is no way to safely call with only
+    // SOME of a multi-parameter command's pointers replaced by a correctly-sized buffer) rather
+    // than risk it against a buffer whose captured size does not match what the driver would
+    // actually read/write, mirroring UnsupportedCommandRunner::Run()'s own warn-once, degraded-
+    // fidelity wording/convention.
+    //
+    // m_<param>SizeUnknown.Value == true does NOT
+    // always mean "must skip" - m_<param>IsBufferOffset.Value == true (this exact call's pointer
+    // was actually a buffer-relative offset, per UnpackPixelsPointerIsBufferOffset()/
+    // PackPixelsPointerIsBufferOffset()'s own header comment, clientMemoryCapture.h) means the
+    // real driver call needs no captured size at all - call_arg() above already falls back to
+    // this same parameter's m_<param>RawPointer.Value (the preserved offset) whenever
+    // m_<param>.HasValue is false, so the call below is safe and correct to make. The two flags
+    // are orthogonal (SizeUnknown reasons about format/type/dimensions/pixel-store state only;
+    // IsBufferOffset reasons about buffer bindings only), so each parameter's own contribution to
+    // this skip gate is `SizeUnknown && !IsBufferOffset` - buffer-offset mode always takes
+    // priority over an otherwise-unknown size, never the other way around.
+    const bool ${cmd.name}PixelTransferSizeUnknown = \
 % for p in pixel_transfer_size_params:
 % if not loop.first:
- || \
+  || \
 % endif
-(command.m_${p.name}SizeUnknown.Value && !command.m_${p.name}IsBufferOffset.Value)\
+    (command.m_${p.name}SizeUnknown.Value && !command.m_${p.name}IsBufferOffset.Value)\
 % endfor
 ;
-  if (${cmd.name}PixelTransferSizeUnknown) {
-    static bool alreadyWarned = false;
-    if (!alreadyWarned) {
-      alreadyWarned = true;
-      LOG_WARNING << "Replay skipped ${cmd.name} call (degraded fidelity): this call's "
-                     "pixel-transfer byte size could not be determined at record time "
-                     "(non-default pixel-store state, an unrecognized format/type "
-                     "combination, or an overflowing size computation), so no captured buffer "
-                     "can safely stand in for the real, unknown-sized transfer this call "
-                     "would otherwise perform.";
-    }
-  } else {
+    if (${cmd.name}PixelTransferSizeUnknown) {
+      static bool alreadyWarned = false;
+      if (!alreadyWarned) {
+        alreadyWarned = true;
+        LOG_WARNING << "Replay skipped ${cmd.name} call (degraded fidelity): this call's "
+                       "pixel-transfer byte size could not be determined at record time "
+                       "(non-default pixel-store state, an unrecognized format/type "
+                       "combination, or an overflowing size computation), so no captured buffer "
+                       "can safely stand in for the real, unknown-sized transfer this call "
+                       "would otherwise perform.";
+      }
+    } else {
 % endif
 % if is_void:
-  realFunction(${call_args});
+${call_indent}realFunction(${call_args});
 % else:
-  command.m_Return.Value = realFunction(${call_args});
+${call_indent}command.m_Return.Value = realFunction(${call_args});
 % endif
 % if pixel_transfer_size_params:
-  }
+    }
 % endif
 % if is_handle_creating:
-  UpdateOutputHandle(command.m_Return);
+    UpdateOutputHandle(command.m_Return);
 % elif is_object_name_creating:
-  UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
+    UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
 % endif
 % for p in register_object_name_array_params:
-  UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${object_name_override_for(cmd.name, p.name, p.class_).kind.value});
+    UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${object_name_override_for(cmd.name, p.name, p.class_).kind.value});
 % endfor
+  }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
   }
