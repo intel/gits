@@ -14,6 +14,7 @@
 #include "layerAuto.h"
 #include "log.h"
 #include "recordingLayerAuto.h"
+#include "screenshotsLayer.h"
 #include "stateTrackingLayer.h"
 #include "subcaptureLayer.h"
 #include "threadContextService.h"
@@ -60,6 +61,14 @@ void PlayerLayerManager::LoadLayers() {
   auto threadContextLayer = std::make_unique<ThreadContextLayer>();
   m_PostLayers.push_back(threadContextLayer.get());
   m_LayersOwner.push_back(std::move(threadContextLayer));
+
+  const auto& config = Configurator::Get().common;
+  if (config.shared.screenshots.enabled || !config.player.captureFrames.empty()) {
+    auto screenshotsLayer = std::make_unique<ScreenshotsLayer>();
+    m_PreLayers.push_back(screenshotsLayer.get());
+    m_PostLayers.push_back(screenshotsLayer.get());
+    m_LayersOwner.push_back(std::move(screenshotsLayer));
+  }
 
   if (analyzerLayer) {
     m_PostLayers.push_back(analyzerLayer.get());

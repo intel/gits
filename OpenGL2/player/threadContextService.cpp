@@ -13,20 +13,33 @@
 
 namespace gits::opengl2 {
 
-namespace {
 // wglMakeCurrent makes the draw DC the read DC too.
-HDC CurrentReadDc(ThreadContextService::MakeCurrentEntryPoint entryPoint, HDC drawDc) {
+HDC ThreadContextService::CurrentReadDc(MakeCurrentEntryPoint entryPoint, HDC drawDc) {
   auto& table = player::g_DispatchTable;
   switch (entryPoint) {
-  case ThreadContextService::MakeCurrentEntryPoint::ARB:
+  case MakeCurrentEntryPoint::ARB:
     return table.wglGetCurrentReadDCARB.load(std::memory_order_acquire)();
-  case ThreadContextService::MakeCurrentEntryPoint::EXT:
+  case MakeCurrentEntryPoint::EXT:
     return table.wglGetCurrentReadDCEXT.load(std::memory_order_acquire)();
   default:
     return drawDc;
   }
 }
-} // namespace
+
+bool ThreadContextService::MakeCurrent(MakeCurrentEntryPoint entryPoint,
+                                       HDC drawDc,
+                                       HDC readDc,
+                                       HGLRC context) {
+  auto& table = player::g_DispatchTable;
+  switch (entryPoint) {
+  case MakeCurrentEntryPoint::ARB:
+    return table.wglMakeContextCurrentARB.load(std::memory_order_acquire)(drawDc, readDc, context);
+  case MakeCurrentEntryPoint::EXT:
+    return table.wglMakeContextCurrentEXT.load(std::memory_order_acquire)(drawDc, readDc, context);
+  default:
+    return table.wglMakeCurrent.load(std::memory_order_acquire)(drawDc, context);
+  }
+}
 
 ThreadContextService& ThreadContextService::Get() {
   static ThreadContextService instance;
@@ -48,23 +61,12 @@ void ThreadContextService::SwitchTo(uint32_t threadId) {
       (current.Context == nullptr ||
        (table.wglGetCurrentDC.load(std::memory_order_acquire)() == current.Dc &&
         CurrentReadDc(current.EntryPoint, current.Dc) == current.ReadDc))) {
+    m_EntryPoint = current.EntryPoint;
     return;
   }
-  bool switched = false;
-  switch (current.EntryPoint) {
-  case MakeCurrentEntryPoint::Core:
-    switched = table.wglMakeCurrent.load(std::memory_order_acquire)(current.Dc, current.Context);
-    break;
-  case MakeCurrentEntryPoint::ARB:
-    switched = table.wglMakeContextCurrentARB.load(std::memory_order_acquire)(
-        current.Dc, current.ReadDc, current.Context);
-    break;
-  case MakeCurrentEntryPoint::EXT:
-    switched = table.wglMakeContextCurrentEXT.load(std::memory_order_acquire)(
-        current.Dc, current.ReadDc, current.Context);
-    break;
-  }
-  if (!switched) {
+  if (MakeCurrent(current.EntryPoint, current.Dc, current.ReadDc, current.Context)) {
+    m_EntryPoint = current.EntryPoint;
+  } else {
     m_ThreadId.reset();
     static bool warned = false;
     if (!warned) {
@@ -75,7 +77,12 @@ void ThreadContextService::SwitchTo(uint32_t threadId) {
   }
 }
 
-void ThreadContextService::NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint) {
+void ThreadContextService::NoteCurrent(uint32_t threadId,
+                                       MakeCurrentEntryPoint entryPoint,
+                                       bool succeeded) {
+  if (!succeeded) {
+    entryPoint = m_EntryPoint;
+  }
   auto& table = player::g_DispatchTable;
   Current& current = m_Current[threadId];
   current.Context = table.wglGetCurrentContext.load(std::memory_order_acquire)();
@@ -83,6 +90,7 @@ void ThreadContextService::NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint 
                                           : nullptr;
   current.ReadDc = current.Context != nullptr ? CurrentReadDc(entryPoint, current.Dc) : nullptr;
   current.EntryPoint = entryPoint;
+  m_EntryPoint = entryPoint;
 }
 
 void ThreadContextService::Forget(HGLRC context) {
@@ -95,17 +103,20 @@ void ThreadContextService::Forget(HGLRC context) {
 
 void ThreadContextLayer::Post(wglMakeCurrentCommand& command) {
   ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
-                                          ThreadContextService::MakeCurrentEntryPoint::Core);
+                                          ThreadContextService::MakeCurrentEntryPoint::Core,
+                                          command.m_Return.Value != 0);
 }
 
 void ThreadContextLayer::Post(wglMakeContextCurrentARBCommand& command) {
   ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
-                                          ThreadContextService::MakeCurrentEntryPoint::ARB);
+                                          ThreadContextService::MakeCurrentEntryPoint::ARB,
+                                          command.m_Return.Value != 0);
 }
 
 void ThreadContextLayer::Post(wglMakeContextCurrentEXTCommand& command) {
   ThreadContextService::Get().NoteCurrent(command.m_ThreadId,
-                                          ThreadContextService::MakeCurrentEntryPoint::EXT);
+                                          ThreadContextService::MakeCurrentEntryPoint::EXT,
+                                          command.m_Return.Value != 0);
 }
 
 void ThreadContextLayer::Post(wglDeleteContextCommand& command) {

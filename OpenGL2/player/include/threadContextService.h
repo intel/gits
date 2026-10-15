@@ -41,8 +41,19 @@ public:
     EXT
   };
 
-  // Records the context current now, and its draw and read DCs, as `threadId`'s.
-  void NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint);
+  // Records the context current now, and its draw and read DCs, as `threadId`'s. A make-current
+  // through `entryPoint` that failed leaves the entry point of the current context.
+  void NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint, bool succeeded);
+
+  // The entry point that made the current context current.
+  MakeCurrentEntryPoint CurrentEntryPoint() const {
+    return m_EntryPoint;
+  }
+
+  // The current read DC, through the getter matching `entryPoint`.
+  static HDC CurrentReadDc(MakeCurrentEntryPoint entryPoint, HDC drawDc);
+
+  static bool MakeCurrent(MakeCurrentEntryPoint entryPoint, HDC drawDc, HDC readDc, HGLRC context);
 
   // Detaches deleted `context` from every thread, so a later context reusing its handle is never
   // made current in its place.
@@ -59,6 +70,7 @@ private:
   };
   std::unordered_map<uint32_t, Current> m_Current;
   std::optional<uint32_t> m_ThreadId;
+  MakeCurrentEntryPoint m_EntryPoint{MakeCurrentEntryPoint::Core};
 };
 
 // Updates ThreadContextService after every replayed call that can change the current context.

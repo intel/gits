@@ -6,4 +6,5 @@
 #
 # ===================== end_copyright_notice ==============================
 
+add_subdirectory(resource_dumping)
 add_subdirectory(trace)
