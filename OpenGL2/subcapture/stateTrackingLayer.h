@@ -81,6 +81,12 @@ public:
   void Pre(glBindTextureEXTCommand& command) override;
   void Post(glBindTextureEXTCommand& command) override;
   void Post(glBindMultiTextureEXTCommand& command) override;
+  void Pre(glTextureViewCommand& command) override;
+  void Post(glTextureViewCommand& command) override;
+  void Pre(glTextureViewEXTCommand& command) override;
+  void Post(glTextureViewEXTCommand& command) override;
+  void Pre(glTextureViewOESCommand& command) override;
+  void Post(glTextureViewOESCommand& command) override;
   void Pre(glDeleteTexturesCommand& command) override;
   void Pre(glDeleteTexturesEXTCommand& command) override;
 
@@ -231,11 +237,17 @@ private:
   // Forgets the deleted objects the current context deleted which no container references any
   // more.
   void ForgetDetached(uint32_t threadId);
+  // GL creates a view only in a name that is not a texture yet, and leaves the name unused when
+  // it rejects the view, so a view is tracked only if its name became a texture.
+  template <typename SerializerT, typename CommandT>
+  void SetView(const CommandT& command);
 
   StateTrackingService& m_State;
   SubcaptureRecorder& m_Recorder;
   const AnalyzerResults& m_Analysis;
   const SubcaptureRange& m_Range;
+  // Whether the name of the view being created was not a texture before the call.
+  bool m_ViewNameUnused{};
 };
 
 } // namespace gits::opengl2

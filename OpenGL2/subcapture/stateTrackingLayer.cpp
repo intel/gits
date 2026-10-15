@@ -250,8 +250,7 @@ void StateTrackingLayer::DeleteReadBack(GLObjectKind kind,
     if (beforeRange) {
       snapshot = StateRestorer(m_State, m_Recorder, m_Analysis).CaptureDeleted(threadId, kind, key);
     }
-    const GLuint name =
-        snapshot.Commands.empty() ? 0 : ObjectNameMapService::Get().TryGetHandle(kind, key);
+    const GLuint name = snapshot.Kept() ? ObjectNameMapService::Get().TryGetHandle(kind, key) : 0;
     m_State.DeleteObject(kind, key, name, std::move(snapshot), context);
   }
 }
@@ -289,6 +288,9 @@ void StateTrackingLayer::ForgetDetached(uint32_t threadId) {
     return;
   }
   for (GITSKey key : StateRestorer(m_State, m_Recorder, m_Analysis).DetachedDeleted(threadId)) {
+    if (const GLuint storage = m_State.Object(key)->Snapshot.Storage; storage != 0) {
+      GL_FN(glDeleteTextures)(1, &storage);
+    }
     m_State.ForgetDeleted(key);
   }
 }
@@ -396,6 +398,39 @@ void StateTrackingLayer::Post(glBindTextureEXTCommand& command) {
 
 void StateTrackingLayer::Post(glBindMultiTextureEXTCommand& command) {
   m_State.SetTarget(command.m_texture.Key, command.m_target.Value);
+}
+
+template <typename SerializerT, typename CommandT>
+void StateTrackingLayer::SetView(const CommandT& command) {
+  if (!m_ViewNameUnused || !GL_FN(glIsTexture)(command.m_texture.Value)) {
+    return;
+  }
+  m_State.SetTarget(command.m_texture.Key, command.m_target.Value);
+  m_State.SetView(command.m_texture.Key, command.m_origtexture.Key, Store<SerializerT>(command));
+}
+
+void StateTrackingLayer::Pre(glTextureViewCommand& command) {
+  m_ViewNameUnused = !GL_FN(glIsTexture)(command.m_texture.Value);
+}
+
+void StateTrackingLayer::Post(glTextureViewCommand& command) {
+  SetView<glTextureViewCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Pre(glTextureViewEXTCommand& command) {
+  m_ViewNameUnused = !GL_FN(glIsTexture)(command.m_texture.Value);
+}
+
+void StateTrackingLayer::Post(glTextureViewEXTCommand& command) {
+  SetView<glTextureViewEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Pre(glTextureViewOESCommand& command) {
+  m_ViewNameUnused = !GL_FN(glIsTexture)(command.m_texture.Value);
+}
+
+void StateTrackingLayer::Post(glTextureViewOESCommand& command) {
+  SetView<glTextureViewOESCommandSerializer>(command);
 }
 
 void StateTrackingLayer::Pre(glDeleteTexturesCommand& command) {

@@ -290,14 +290,14 @@ void StateRestorer::RestoreReadDrawable(const MakeCurrent& current) {
 }
 
 // Programs deleted while in use are deleted again once the restored contexts use them. Deleted
-// objects restored for the containers that reference them, or the resident handles that keep
-// them, are deleted again once the containers and residency are restored, in the context that
-// deleted them. No container is bound to it meanwhile, as one would lose its references to them.
+// objects restored for the containers that reference them, the resident handles that keep them,
+// or the views that share their storage, are deleted again once the containers, residency and
+// views are restored, in the context that deleted them. No container is bound to it meanwhile, as one would lose its references to them.
 void StateRestorer::DeletePendingObjects(
     const std::map<GITSKey, std::shared_ptr<MakeCurrent>>& shareGroups) {
   std::map<GITSKey, std::vector<std::pair<GITSKey, GLObjectKind>>> pending;
   for (const auto& [key, object] : m_State.Objects()) {
-    const bool restored = !object.Snapshot.Commands.empty() && Required(key);
+    const bool restored = object.Snapshot.Kept() && Required(key);
     const auto group = shareGroups.find(object.Owner);
     if (!object.DeletePending || (object.Kind != GLObjectKind::Program && !restored) ||
         group == shareGroups.end()) {
@@ -711,9 +711,8 @@ GITSKey StateRestorer::KeyOf(GLObjectKind kind, GLuint name) {
 
 void StateRestorer::CollectRequired(
     const std::map<GITSKey, std::shared_ptr<MakeCurrent>>& shareGroups) {
-  const bool deleted =
-      std::any_of(m_State.Objects().begin(), m_State.Objects().end(),
-                  [](const auto& entry) { return !entry.second.Snapshot.Commands.empty(); });
+  const bool deleted = std::any_of(m_State.Objects().begin(), m_State.Objects().end(),
+                                   [](const auto& entry) { return entry.second.Snapshot.Kept(); });
   if (!m_Analysis.Optimize() && !deleted) {
     return;
   }
@@ -756,6 +755,11 @@ void StateRestorer::CollectRequired(
         continue;
       }
       m_Required.insert(object.Snapshot.References.begin(), object.Snapshot.References.end());
+      for (GITSKey original = object.ViewOf; original != 0;) {
+        m_Required.insert(original);
+        const ObjectState* next = m_State.Object(original);
+        original = next != nullptr ? next->ViewOf : 0;
+      }
       const GLuint name = NameOf(object.Kind, key);
       if (object.Kind == GLObjectKind::Program && name != 0 && GL_FN(glIsProgram)(name)) {
         for (GLuint shader : AttachedShaderNames(name)) {
@@ -917,7 +921,10 @@ void StateRestorer::EndReadback() {
 
 // Contents of the window or pbuffer the current context draws to. Color and depth-stencil are
 // blitted separately, so a depth-stencil format the drawable does not match loses only
-// depth-stencil.
+// depth-stencil. The front color of a double-buffered drawable is restored too, since a swap
+// that exchanges the buffers shows it again after the next swap. It is drawn to the back buffer
+// and swapped to the front rather than drawn to the front buffer, which applications that only
+// swap never draw to.
 void StateRestorer::RestoreDefaultFramebuffer() {
   GLsizei width = 0;
   GLsizei height = 0;
@@ -983,6 +990,13 @@ void StateRestorer::RestoreDefaultFramebuffer() {
     depth.resize(pixelCount * depthFormat.PixelSize);
     GL_FN(glReadPixels)(0, 0, width, height, depthFormat.Format, depthFormat.Type, depth.data());
   }
+  std::vector<uint8_t> frontColor;
+  if (doubleBuffered != GL_FALSE) {
+    GL_FN(glReadBuffer)(GL_FRONT);
+    frontColor.resize(pixelCount * colorFormat.PixelSize);
+    GL_FN(glReadPixels)
+    (0, 0, width, height, colorFormat.Format, colorFormat.Type, frontColor.data());
+  }
 
   GL_FN(glReadBuffer)(static_cast<GLenum>(readBuffer));
   GL_FN(glBindFramebuffer)(GL_DRAW_FRAMEBUFFER, drawBound);
@@ -1003,6 +1017,14 @@ void StateRestorer::RestoreDefaultFramebuffer() {
   glDrawBufferCommand drawBuffer;
   drawBuffer.m_buf.Value = buffer;
   Emit<glDrawBufferCommandSerializer>(drawBuffer);
+  if (!frontColor.empty()) {
+    EmitBlit(GL_COLOR_ATTACHMENT0, GL_RGBA8, width, height, colorFormat, std::move(frontColor));
+    // A swap recorded as failed does not end a frame.
+    wglSwapBuffersCommand swap;
+    swap.m_hdc.Value = m_RecordedDc;
+    swap.m_Return.Value = 0;
+    Emit<wglSwapBuffersCommandSerializer>(swap);
+  }
   EmitBlit(GL_COLOR_ATTACHMENT0, GL_RGBA8, width, height, colorFormat, std::move(color));
   if (depthAttachment != GL_NONE) {
     EmitBlit(depthAttachment, depthInternalFormat, width, height, depthFormat, std::move(depth));

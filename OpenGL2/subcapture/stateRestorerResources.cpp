@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <set>
 #include <vector>
 
 namespace gits::opengl2 {
@@ -46,6 +47,8 @@ constexpr GLenum FLOAT_PARAMETERS[] = {
     GL_TEXTURE_MAX_LOD,
     GL_TEXTURE_LOD_BIAS,
 };
+
+constexpr size_t MAX_SLAB_SIZE = size_t{256} << 20;
 
 // Pixel rows of every format here are a multiple of 4 bytes, so the default unpack alignment
 // of the subcapture contexts reads them back unchanged.
@@ -82,22 +85,30 @@ PixelFormat ReadbackFormat(GLenum imageTarget, GLint level, bool compatibility) 
       break;
     }
   }
-  if (componentType == GL_INT) {
-    return {GL_RGBA_INTEGER, GL_INT, 16};
-  }
-  if (componentType == GL_UNSIGNED_INT) {
-    return {GL_RGBA_INTEGER, GL_UNSIGNED_INT, 16};
-  }
   GLint bits = 0;
+  GLint otherBits = 0;
   for (GLenum pname : sizeQueries) {
     GLint size = 0;
     GL_FN(glGetTexLevelParameteriv)(imageTarget, level, pname, &size);
     bits = std::max(bits, size);
+    if (pname == GL_TEXTURE_GREEN_SIZE || pname == GL_TEXTURE_BLUE_SIZE ||
+        pname == GL_TEXTURE_ALPHA_SIZE) {
+      otherBits = std::max(otherBits, size);
+    }
+  }
+  // A lone red, luminance or intensity channel is read as red, a quarter of the RGBA size.
+  const bool red = otherBits == 0;
+  if (componentType == GL_INT) {
+    return red ? PixelFormat{GL_RED_INTEGER, GL_INT, 4} : PixelFormat{GL_RGBA_INTEGER, GL_INT, 16};
+  }
+  if (componentType == GL_UNSIGNED_INT) {
+    return red ? PixelFormat{GL_RED_INTEGER, GL_UNSIGNED_INT, 4}
+               : PixelFormat{GL_RGBA_INTEGER, GL_UNSIGNED_INT, 16};
   }
   if (componentType == GL_UNSIGNED_NORMALIZED && bits <= 8) {
     return {GL_RGBA, GL_UNSIGNED_BYTE, 4};
   }
-  return {GL_RGBA, GL_FLOAT, 16};
+  return red ? PixelFormat{GL_RED, GL_FLOAT, 4} : PixelFormat{GL_RGBA, GL_FLOAT, 16};
 }
 
 struct TextureLevel {
@@ -248,9 +259,24 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
     return snapshot;
   }
   const auto owner = m_State.CurrentShareGroup(threadId);
-  if (!m_State.HasResidentHandle(key) &&
+  if (!m_State.HasResidentHandle(key) && !(kind == GLObjectKind::Texture && m_State.Viewed(key)) &&
       (kind == GLObjectKind::Sampler || !Attached(owner.first, owner.second, kind, name, true))) {
     return snapshot;
+  }
+  if (const TextureTarget* binding = FindTextureTarget(object->Target);
+      kind == GLObjectKind::Texture && binding != nullptr) {
+    const GLuint bound = GetName(binding->Binding);
+    GL_FN(glBindTexture)(object->Target, name);
+    snapshot.Storage = ViewWholeStorage(name, object->Target);
+    if (snapshot.Storage != 0) {
+      m_Capture = &snapshot.Parameters;
+      RestoreTextureParameters(object->Target);
+      m_Capture = nullptr;
+    }
+    GL_FN(glBindTexture)(object->Target, bound);
+    if (snapshot.Storage != 0) {
+      return snapshot;
+    }
   }
 
   m_UnmappedNames = owner;
@@ -302,12 +328,40 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
   return snapshot;
 }
 
+GLuint StateRestorer::ViewWholeStorage(GLuint name, GLenum target) {
+  if (target == GL_TEXTURE_BUFFER ||
+      !(m_Version.AtLeast(4, 3) || HasExtension("GL_ARB_texture_view"))) {
+    return 0;
+  }
+  GLint immutable = GL_FALSE;
+  GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_IMMUTABLE_FORMAT, &immutable);
+  if (immutable == GL_FALSE) {
+    return 0;
+  }
+  // The view levels and layers of immutable storage are all of it.
+  GLint levels = 0;
+  GLint layers = 0;
+  GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_VIEW_NUM_LEVELS, &levels);
+  GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_VIEW_NUM_LAYERS, &layers);
+  const TextureLevel base =
+      QueryLevel(target == GL_TEXTURE_CUBE_MAP ? CUBE_MAP_FACES[0] : target, 0);
+  GLuint storage = 0;
+  GL_FN(glGenTextures)(1, &storage);
+  GL_FN(glTextureView)
+  (storage, target, name, static_cast<GLenum>(base.InternalFormat), 0, levels, 0, layers);
+  // A name glTextureView rejected has no texture, so the texture is read back instead.
+  if (!GL_FN(glIsTexture)(storage)) {
+    GL_FN(glDeleteTextures)(1, &storage);
+    return 0;
+  }
+  return storage;
+}
+
 std::vector<GITSKey> StateRestorer::DetachedDeleted(uint32_t threadId) {
   std::vector<GITSKey> detached;
   const auto [shareGroup, context] = m_State.CurrentShareGroup(threadId);
   for (const auto& [key, object] : m_State.Objects()) {
-    if (!object.Snapshot.Commands.empty() && object.DeletedIn == context &&
-        object.Owner == shareGroup) {
+    if (object.Snapshot.Kept() && object.DeletedIn == context && object.Owner == shareGroup) {
       detached.push_back(key);
     }
   }
@@ -317,7 +371,7 @@ std::vector<GITSKey> StateRestorer::DetachedDeleted(uint32_t threadId) {
   ReadVersion();
   std::erase_if(detached, [&](GITSKey key) {
     const ObjectState& object = *m_State.Object(key);
-    return m_State.HasResidentHandle(key) ||
+    return m_State.HasResidentHandle(key) || m_State.Viewed(key) ||
            (object.Kind != GLObjectKind::Sampler &&
             Attached(shareGroup, context, object.Kind, object.LiveName, false));
   });
@@ -340,8 +394,17 @@ void StateRestorer::RestoreSharedObjects(GITSKey shareGroup) {
   restore(GLObjectKind::Buffer,
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreBuffer(key, name); });
   restore(GLObjectKind::Texture, [this](GITSKey key, GLuint name, const ObjectState& object) {
-    RestoreTexture(key, name, object.Target);
+    if (object.View == nullptr) {
+      RestoreTexture(key, object.Snapshot.Storage != 0 ? object.Snapshot.Storage : name,
+                     object.Target);
+    }
   });
+  std::set<GITSKey> views;
+  for (const auto& [key, object] : m_State.Objects()) {
+    if (object.View != nullptr && object.Owner == shareGroup && object.Snapshot.Commands.empty()) {
+      RestoreTextureView(key, views);
+    }
+  }
   restore(GLObjectKind::Renderbuffer,
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreRenderbuffer(key, name); });
   restore(GLObjectKind::Sampler,
@@ -644,6 +707,8 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
     }
   }
 
+  const bool subImageReadback =
+      m_Version.AtLeast(4, 5) || HasExtension("GL_ARB_get_texture_sub_image");
   const GLint levels = MaxLevels(target);
   for (GLint level = 0; level < levels; ++level) {
     for (size_t face = 0; face < (cubeMap ? std::size(CUBE_MAP_FACES) : 1); ++face) {
@@ -655,6 +720,50 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
       const auto width = static_cast<size_t>(info.Width);
       const auto height = static_cast<size_t>(std::max(info.Height, 1));
       const auto depth = static_cast<size_t>(std::max(info.Depth, 1));
+      // A level of several gigabytes cannot be read or uploaded in one call, so 3D and array
+      // levels move in slabs of whole slices, or in bands of whole rows of a larger slice.
+      if (dimensions == 3 && !info.Compressed && subImageReadback) {
+        const PixelFormat pixelFormat = ReadbackFormat(imageTarget, level, m_Version.Compatibility);
+        const size_t rowSize = width * pixelFormat.PixelSize;
+        const size_t sliceSize = rowSize * height;
+        const auto slab = static_cast<GLint>(std::max<size_t>(1, MAX_SLAB_SIZE / sliceSize));
+        const auto band =
+            static_cast<GLint>(std::clamp<size_t>(MAX_SLAB_SIZE / rowSize, 1, height));
+        if (!immutable) {
+          glTexImage3DCommand command;
+          command.m_target.Value = imageTarget;
+          command.m_level.Value = level;
+          command.m_internalformat.Value = info.InternalFormat;
+          command.m_width.Value = info.Width;
+          command.m_height.Value = info.Height;
+          command.m_depth.Value = info.Depth;
+          command.m_format.Value = pixelFormat.Format;
+          command.m_type.Value = pixelFormat.Type;
+          Emit<glTexImage3DCommandSerializer>(command);
+        }
+        for (GLint z = 0; z < info.Depth; z += slab) {
+          for (GLint y = 0; y < info.Height; y += band) {
+            glTexSubImage3DCommand command;
+            command.m_target.Value = imageTarget;
+            command.m_level.Value = level;
+            command.m_yoffset.Value = y;
+            command.m_zoffset.Value = z;
+            command.m_width.Value = info.Width;
+            command.m_height.Value = std::min(band, info.Height - y);
+            command.m_depth.Value = std::min(slab, info.Depth - z);
+            command.m_format.Value = pixelFormat.Format;
+            command.m_type.Value = pixelFormat.Type;
+            command.m_pixels.Data.resize(rowSize * command.m_height.Value * command.m_depth.Value);
+            command.m_pixels.HasValue = true;
+            GL_FN(glGetTextureSubImage)
+            (name, level, 0, y, z, info.Width, command.m_height.Value, command.m_depth.Value,
+             pixelFormat.Format, pixelFormat.Type,
+             static_cast<GLsizei>(command.m_pixels.Data.size()), command.m_pixels.Data.data());
+            Emit<glTexSubImage3DCommandSerializer>(command);
+          }
+        }
+        continue;
+      }
       std::vector<uint8_t> data;
       PixelFormat pixelFormat{};
       if (info.Compressed) {
@@ -802,14 +911,75 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
     }
   }
 
-  RestoreTextureParameters(target);
+  RestoreTextureParameters(key, target);
   GL_FN(glBindTexture)(target, bound);
 }
 
+// A view shares the storage of its original texture, so it is made again by its glTextureView
+// after the original, before it is bound, and gets only its own parameters. A deleted original
+// or view stays tracked while a view, container or resident handle keeps it, so views of one
+// storage share it again. A view whose original is not tracked is restored as a texture of its
+// own.
+void StateRestorer::RestoreTextureView(GITSKey key, std::set<GITSKey>& restored) {
+  if (!restored.insert(key).second) {
+    return;
+  }
+  const ObjectState& object = *m_State.Object(key);
+  const GLuint name =
+      object.Snapshot.Storage != 0 ? object.Snapshot.Storage : NameOf(GLObjectKind::Texture, key);
+  const ObjectState* original = m_State.Object(object.ViewOf);
+  if (original == nullptr) {
+    RestoreTexture(key, name, object.Target);
+    return;
+  }
+  if (original->View != nullptr) {
+    RestoreTextureView(object.ViewOf, restored);
+  }
+
+  glGenTexturesCommand gen;
+  gen.m_n.Value = 1;
+  gen.m_textures.Key = {key};
+  gen.m_textures.Value = {0};
+  gen.m_textures.HasValue = true;
+  Emit<glGenTexturesCommandSerializer>(gen);
+  const TextureTarget* binding = FindTextureTarget(object.Target);
+  if (!Required(key) || name == 0 || !GL_FN(glIsTexture)(name) || binding == nullptr) {
+    return;
+  }
+  object.View->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+
+  const GLuint bound = GetName(binding->Binding);
+  GL_FN(glBindTexture)(object.Target, name);
+  glBindTextureCommand bind;
+  bind.m_target.Value = object.Target;
+  bind.m_texture.Key = key;
+  Emit<glBindTextureCommandSerializer>(bind);
+  RestoreTextureParameters(key, object.Target);
+  GL_FN(glBindTexture)(object.Target, bound);
+}
+
+void StateRestorer::RestoreTextureParameters(GITSKey key, GLenum target) {
+  const ObjectState* object = m_State.Object(key);
+  if (object == nullptr || object->Snapshot.Storage == 0) {
+    RestoreTextureParameters(target);
+    return;
+  }
+  for (const auto& command : object->Snapshot.Parameters) {
+    command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+  }
+}
+
 void StateRestorer::RestoreTextureParameters(GLenum target) {
+  // Multisample textures have no sampler state.
+  const bool multisample =
+      target == GL_TEXTURE_2D_MULTISAMPLE || target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
   for (GLenum pname : TEXTURE_INTEGER_PARAMETERS) {
     if (target == GL_TEXTURE_RECTANGLE &&
         (pname == GL_TEXTURE_BASE_LEVEL || pname == GL_TEXTURE_MAX_LEVEL)) {
+      continue;
+    }
+    if (multisample && std::ranges::find(SAMPLER_INTEGER_PARAMETERS, pname) !=
+                           std::end(SAMPLER_INTEGER_PARAMETERS)) {
       continue;
     }
     glTexParameteriCommand command;
@@ -823,6 +993,16 @@ void StateRestorer::RestoreTextureParameters(GLenum target) {
     command.m_target.Value = target;
     command.m_pname.Value = GL_DEPTH_STENCIL_TEXTURE_MODE;
     GL_FN(glGetTexParameteriv)(target, GL_DEPTH_STENCIL_TEXTURE_MODE, &command.m_param.Value);
+    Emit<glTexParameteriCommandSerializer>(command);
+  }
+  if (multisample) {
+    return;
+  }
+  if (HasExtension("GL_EXT_texture_sRGB_decode")) {
+    glTexParameteriCommand command;
+    command.m_target.Value = target;
+    command.m_pname.Value = GL_TEXTURE_SRGB_DECODE_EXT;
+    GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_SRGB_DECODE_EXT, &command.m_param.Value);
     Emit<glTexParameteriCommandSerializer>(command);
   }
   std::vector<GLenum> floatParameters(std::begin(FLOAT_PARAMETERS), std::end(FLOAT_PARAMETERS));
@@ -1007,6 +1187,13 @@ void StateRestorer::RestoreSampler(GITSKey key, GLuint name) {
     command.m_sampler.Key = key;
     command.m_pname.Value = pname;
     GL_FN(glGetSamplerParameteriv)(name, pname, &command.m_param.Value);
+    Emit<glSamplerParameteriCommandSerializer>(command);
+  }
+  if (HasExtension("GL_EXT_texture_sRGB_decode")) {
+    glSamplerParameteriCommand command;
+    command.m_sampler.Key = key;
+    command.m_pname.Value = GL_TEXTURE_SRGB_DECODE_EXT;
+    GL_FN(glGetSamplerParameteriv)(name, GL_TEXTURE_SRGB_DECODE_EXT, &command.m_param.Value);
     Emit<glSamplerParameteriCommandSerializer>(command);
   }
   std::vector<GLenum> floatParameters(std::begin(FLOAT_PARAMETERS), std::end(FLOAT_PARAMETERS));

@@ -91,6 +91,17 @@ struct ObjectSnapshot {
   GLsizei Height{};
   GLenum InternalFormat{};
   GLint Samples{};
+  // Instead of the commands, a texture with immutable storage keeps a view of its whole storage,
+  // through which it is read when restored, since views, framebuffers and resident image
+  // handles can still change it. The view has default parameters, so the texture's own are
+  // kept as the commands that set them.
+  GLuint Storage{};
+  std::vector<std::shared_ptr<StoredCommand>> Parameters;
+
+  // Whether the deleted object is kept to be restored.
+  bool Kept() const {
+    return !Commands.empty() || Storage != 0;
+  }
 };
 
 struct ObjectState {
@@ -98,10 +109,13 @@ struct ObjectState {
   // The share group of shared objects, the context of container objects.
   GITSKey Owner{};
   GLenum Target{};
+  // The glTextureView that made a texture a view of `ViewOf`, whose storage it shares.
+  std::shared_ptr<StoredCommand> View;
+  GITSKey ViewOf{};
   // A shader still attached or a program still in use when deleted stays live, under this name,
   // until GL reclaims it. A deleted buffer, texture or renderbuffer stays live while a container
-  // or a buffer texture references it, and a texture or sampler while one of its handles is
-  // resident; it is tracked, under this name, while one does.
+  // or a buffer texture references it, a texture or sampler while one of its handles is resident,
+  // and a texture while a view of it is tracked; it is tracked, under this name, while one does.
   bool DeletePending{};
   GLuint LiveName{};
   // The deleted buffer, texture, renderbuffer or sampler as it was before its deletion, and the
@@ -204,6 +218,11 @@ public:
     return m_DeletedNames.contains({shareGroup, kind, name});
   }
   void SetTarget(GITSKey texture, GLenum target);
+  void SetView(GITSKey texture, GITSKey original, std::shared_ptr<StoredCommand> view);
+  // Whether a tracked texture is a view of `texture`.
+  bool Viewed(GITSKey texture) const {
+    return m_ViewOriginals.contains(texture);
+  }
   ProgramState* Program(GITSKey program);
 
   void CreateSync(uint32_t threadId, GITSKey key);
@@ -289,6 +308,7 @@ private:
   GITSKey ShareGroupOf(GITSKey context) const;
   // Deletes the handles of the texture or sampler `object`.
   void DeleteHandles(GITSKey object);
+  void EraseObject(std::map<GITSKey, ObjectState>::iterator object);
 
   std::shared_ptr<StoredCommand> m_Geometry;
   std::vector<SampledCommand> m_Topology;
@@ -301,6 +321,8 @@ private:
   // Share group, kind and name of the tracked deleted buffers, textures, renderbuffers and
   // samplers.
   std::multiset<std::tuple<GITSKey, GLObjectKind, GLuint>> m_DeletedNames;
+  // The original of each tracked view.
+  std::multiset<GITSKey> m_ViewOriginals;
   std::unordered_map<GITSKey, ProgramState> m_Programs;
   // Sync object key to its share group.
   std::map<GITSKey, GITSKey> m_Syncs;

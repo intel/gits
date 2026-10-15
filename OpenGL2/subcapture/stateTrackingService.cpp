@@ -223,18 +223,26 @@ void StateTrackingService::DeleteObject(
     object->second.LiveName = liveName;
     object->second.Snapshot = std::move(snapshot);
     object->second.DeletedIn = context;
-    if (!object->second.Snapshot.Commands.empty()) {
+    if (object->second.Snapshot.Kept()) {
       m_DeletedNames.emplace(object->second.Owner, kind, liveName);
     }
     return;
   }
-  m_Objects.erase(object);
+  EraseObject(object);
   m_Programs.erase(key);
+}
+
+void StateTrackingService::EraseObject(std::map<GITSKey, ObjectState>::iterator object) {
+  if (const auto original = m_ViewOriginals.find(object->second.ViewOf);
+      original != m_ViewOriginals.end()) {
+    m_ViewOriginals.erase(original);
+  }
+  m_Objects.erase(object);
 }
 
 void StateTrackingService::ForgetDeleted(GITSKey key) {
   const auto object = m_Objects.find(key);
-  if (object == m_Objects.end() || object->second.Snapshot.Commands.empty()) {
+  if (object == m_Objects.end() || !object->second.Snapshot.Kept()) {
     return;
   }
   const auto name =
@@ -246,7 +254,7 @@ void StateTrackingService::ForgetDeleted(GITSKey key) {
       object->second.Kind == GLObjectKind::Sampler) {
     DeleteHandles(key);
   }
-  m_Objects.erase(object);
+  EraseObject(object);
 }
 
 void StateTrackingService::ForgetReclaimed(uint32_t threadId, GLuint name) {
@@ -267,6 +275,17 @@ void StateTrackingService::SetTarget(GITSKey texture, GLenum target) {
   const auto object = m_Objects.find(texture);
   if (object != m_Objects.end() && object->second.Target == 0) {
     object->second.Target = target;
+  }
+}
+
+void StateTrackingService::SetView(GITSKey texture,
+                                   GITSKey original,
+                                   std::shared_ptr<StoredCommand> view) {
+  const auto object = m_Objects.find(texture);
+  if (object != m_Objects.end() && object->second.ViewOf == 0 && original != 0) {
+    object->second.View = std::move(view);
+    object->second.ViewOf = original;
+    m_ViewOriginals.insert(original);
   }
 }
 

@@ -51,12 +51,13 @@ public:
   // context has it changed.
   ListCompileState ResetListCompileState();
   // The buffer, texture, renderbuffer or sampler `key` of the share group current on `threadId`,
-  // read back before its deletion; empty for one no container nor resident handle keeps once it
-  // is deleted, and for one GL has no object for, or cannot read.
+  // read back before its deletion, or for a texture with immutable storage kept readable; empty
+  // for one no container, resident handle nor tracked view keeps once it is deleted, and for one
+  // GL has no object for, or cannot read.
   ObjectSnapshot CaptureDeleted(uint32_t threadId, GLObjectKind kind, GITSKey key);
   // The deleted buffers, textures, renderbuffers and samplers the context current on `threadId`
   // deleted, which none of its containers, nor a buffer texture, references any more, and no
-  // resident handle keeps.
+  // resident handle nor tracked view keeps.
   std::vector<GITSKey> DetachedDeleted(uint32_t threadId);
 
 private:
@@ -95,7 +96,7 @@ private:
   // A deleted object is restored only for the restored objects and bindings that reference it.
   bool Required(GITSKey key) const {
     const ObjectState* object = m_State.Object(key);
-    if (object != nullptr && !object->Snapshot.Commands.empty()) {
+    if (object != nullptr && object->Snapshot.Kept()) {
       return m_Required.contains(key);
     }
     return !m_Analysis.Optimize() || m_Required.contains(key);
@@ -125,6 +126,14 @@ private:
   void RestoreDeleted(GITSKey key, const ObjectState& object);
   void RestoreBuffer(GITSKey key, GLuint name);
   void RestoreTexture(GITSKey key, GLuint name, GLenum target);
+  // `restored` holds the views already restored.
+  void RestoreTextureView(GITSKey key, std::set<GITSKey>& restored);
+  // A new view of the whole immutable storage of the texture `name`, bound to `target`, which
+  // keeps it readable once deleted; 0 if it has mutable storage or GL has no texture views.
+  GLuint ViewWholeStorage(GLuint name, GLenum target);
+  // The parameters of the texture `key` bound to `target`, as captured at its deletion for one
+  // read through a view of its storage.
+  void RestoreTextureParameters(GITSKey key, GLenum target);
   void RestoreTextureParameters(GLenum target);
   void RestoreRenderbuffer(GITSKey key, GLuint name);
   void RestoreRenderbufferContents(GITSKey key,
