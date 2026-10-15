@@ -391,11 +391,13 @@ set(CONFIG_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config")
 set(CONFIG_COMPUTE_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config/Compute")
 set(CONFIG_DIRECTX_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config/DirectX")
 set(CONFIG_VULKAN_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config/Vulkan")
+set(CONFIG_OPENGL2_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/Config/OpenGL2")
 
 set(CONFIG_DEFAULT_OUTPUT "${CONFIG_OUTPUT}/${GITS_CONFIG}")
 set(CONFIG_COMPUTE_DEFAULT_OUTPUT "${CONFIG_COMPUTE_OUTPUT}/${GITS_CONFIG}")
 set(CONFIG_DIRECTX_DEFAULT_OUTPUT "${CONFIG_DIRECTX_OUTPUT}/${GITS_CONFIG}")
 set(CONFIG_VULKAN_DEFAULT_OUTPUT "${CONFIG_VULKAN_OUTPUT}/${GITS_CONFIG}")
+set(CONFIG_OPENGL2_DEFAULT_OUTPUT "${CONFIG_OPENGL2_OUTPUT}/${GITS_CONFIG}")
 
 if(WIN32)
   set(PLATFORM "win32")
@@ -418,6 +420,8 @@ install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENER
   --directx  --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_DIRECTX_OUTPUT}\")")
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --platform ${PLATFORM} --installpath \"skip\" \
   --vulkan  --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_VULKAN_OUTPUT}\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --platform ${PLATFORM} --installpath \"skip\" \
+  --opengl2  --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_OPENGL2_OUTPUT}\")")
 else()
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\" \
   --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_OUTPUT}\")")
@@ -427,12 +431,14 @@ install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENER
   --directx --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_DIRECTX_OUTPUT}\")")
 install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\" \
   --vulkan --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_VULKAN_OUTPUT}\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" \"${CONFIG_GENERATOR}\" --platform ${PLATFORM} --installpath \"\${CMAKE_INSTALL_PREFIX}\" \
+  --opengl2 --step DefaultConfiguration --configYML \"${METAFILE_CONFIG}\" --enumYML \"${METAFILE_ENUM}\" --outDir \"${CONFIG_OPENGL2_OUTPUT}\")")
 endif(SKIP_INSTALL_PATH)
 
 install(FILES ${CONFIG_DEFAULT_OUTPUT} DESTINATION Recorder/${OpenGL_INSTALL_SUBDIR})
 install(FILES ${CONFIG_DEFAULT_OUTPUT} DESTINATION Recorder/${OpenGLES_INSTALL_SUBDIR})
 if(WITH_OPENGL2)
-  install(FILES ${CONFIG_DEFAULT_OUTPUT} DESTINATION Recorder/${OpenGL2_INSTALL_SUBDIR})
+  install(FILES ${CONFIG_OPENGL2_DEFAULT_OUTPUT} DESTINATION Recorder/${OpenGL2_INSTALL_SUBDIR})
 endif()
 if(WITH_OPENCL)
   install(FILES ${CONFIG_COMPUTE_DEFAULT_OUTPUT} DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR})
