@@ -60,12 +60,31 @@ class RequiresObjectNameOverrideTests(unittest.TestCase):
         self.assertFalse(_requires_object_name_override('glSomeCommand', param))
 
     def test_tagged_field_with_unsupported_kind_requires_one(self) -> None:
-        # class_="sync" is a real gl.xml value auto-derivation deliberately cannot resolve -
-        # this backend has no GLObjectKind/ObjectNameMapService support for sync objects yet
-        # (see object_name_lifecycle.py's _CLASS_TO_KIND) - unaffected by naming, since
-        # resolve_object_name_override() checks kind support before it ever computes a role.
-        param = Parameter(name='sync', type='GLsync', class_='sync')
+        # class_="perf query handle" is a real gl.xml value auto-derivation deliberately cannot
+        # resolve - this backend has no GLObjectKind/ObjectNameMapService support for perf
+        # query handles yet (see object_name_lifecycle.py's _CLASS_TO_KIND) - unaffected by
+        # naming, since resolve_object_name_override() checks kind support before it ever
+        # computes a role. (class_="sync"/GLsync used to be this test's example, before GLsync
+        # became a mapped handle - see test_mapped_handle_field_bypasses_the_gate_even_with_an_
+        # unsupported_class below for its current, opposite behavior.)
+        param = Parameter(name='queryHandle', type='GLuint', class_='perf query handle')
         self.assertTrue(_requires_object_name_override('glSomeHypotheticalCommand', param))
+
+    def test_mapped_handle_field_bypasses_the_gate_even_with_an_unsupported_class(self) -> None:
+        # GLsync fields are always tagged class_="sync" by gl.xml, and 'sync' resolves to no
+        # GLObjectKind (object_name_lifecycle.py's _CLASS_TO_KIND) - by the same logic as
+        # test_tagged_field_with_unsupported_kind_requires_one above, this would normally
+        # require an (unavailable) object-name override. is_mapped_handle fields are exempted
+        # from the gate entirely instead: GLsync gets a real mapping of its own
+        # (SyncHandleMapService), not through ObjectNameMapService - see
+        # _requires_object_name_override's own docstring and intermediates.py's
+        # _MAPPED_HANDLE_BASE_TYPES.
+        param = Parameter(name='sync', type='GLsync', class_='sync')
+        self.assertFalse(_requires_object_name_override('glSomeHypotheticalCommand', param))
+        # HGLRC has no gl.xml class_ at all (it is a WGL type, not a GL registry object name),
+        # but the same bypass applies to it unconditionally for the same reason.
+        ctx_param = Parameter(name='hglrc', type='HGLRC')
+        self.assertFalse(_requires_object_name_override('glSomeHypotheticalCommand', ctx_param))
 
     def test_tagged_field_with_supported_kind_auto_derives(self) -> None:
         # class_="texture" auto-derives (kind=TEXTURE, role=LOOKUP - see
@@ -78,9 +97,14 @@ class RequiresObjectNameOverrideTests(unittest.TestCase):
 
     def test_return_value_field_is_checked_the_same_way(self) -> None:
         # Unsupported kind: still requires an entry regardless of command name.
-        ret_unsupported_kind = ReturnValue(type='GLsync', class_='sync')
+        ret_unsupported_kind = ReturnValue(type='GLuint', class_='perf query handle')
         self.assertTrue(
             _requires_object_name_override('glSomeHypotheticalCommand', ret_unsupported_kind))
+        # Mapped-handle return value: bypassed regardless of its (otherwise-unsupported) class_
+        # - this is glFenceSync's real shape (GLsync return, class_="sync").
+        ret_mapped_handle = ReturnValue(type='GLsync', class_='sync')
+        self.assertFalse(
+            _requires_object_name_override('glFenceSync', ret_mapped_handle))
         # Supported kind, CREATE-shaped command name: auto-derives (glCreateProgram really does
         # return a newly-created PROGRAM name).
         ret_with_entry = ReturnValue(type='GLuint', class_='program')
@@ -92,11 +116,23 @@ class IsParamCapturableGateTests(unittest.TestCase):
     branch it could otherwise fall into (scalar, and array-element-eligible)."""
 
     def test_scalar_object_name_without_override_is_not_capturable(self) -> None:
-        # class_="sync" has no GLObjectKind/ObjectNameMapService support - stays unresolvable
-        # regardless of command name (see _CLASS_TO_KIND's own comment); "texture" would no
-        # longer demonstrate this, since it now auto-derives for ANY command name.
-        param = Parameter(name='sync', type='GLsync', class_='sync')
+        # class_="perf query handle" has no GLObjectKind/ObjectNameMapService support - stays
+        # unresolvable regardless of command name (see _CLASS_TO_KIND's own comment); "texture"
+        # would no longer demonstrate this, since it now auto-derives for ANY command name.
+        # (class_="sync"/GLsync used to be this test's example - see
+        # test_mapped_handle_param_is_capturable_despite_unsupported_class below for why GLsync
+        # itself is now capturable instead.)
+        param = Parameter(name='queryHandle', type='GLuint', class_='perf query handle')
         self.assertFalse(_is_param_capturable('glSomeHypotheticalCommand', param, []))
+
+    def test_mapped_handle_param_is_capturable_despite_unsupported_class(self) -> None:
+        # GLsync's real shape (glIsSync/glClientWaitSync/glWaitSync/glDeleteSync's `sync`
+        # parameter): class_="sync" resolves to no GLObjectKind, but is_mapped_handle bypasses
+        # the object-name gate entirely (see test_mapped_handle_field_bypasses_the_gate_even_
+        # with_an_unsupported_class above) - facts.is_mapped_handle alone is then enough for
+        # _is_param_capturable's own scalar/opaque-handle/mapped-handle branch to accept it.
+        param = Parameter(name='sync', type='GLsync', class_='sync')
+        self.assertTrue(_is_param_capturable('glDeleteSync', param, []))
 
     def test_scalar_object_name_with_override_is_capturable(self) -> None:
         param = Parameter(name='texture', type='GLuint', class_='texture')
@@ -167,6 +203,44 @@ class EndToEndSystemicGateTests(unittest.TestCase):
                 self.assertEqual(override.kind, kind)
                 self.assertEqual(override.role, ObjectNameRole.LOOKUP)
 
+    def test_sync_object_commands_are_enabled(self) -> None:
+        # glFenceSync/glIsSync/glClientWaitSync/glWaitSync/glDeleteSync all take/return a
+        # GLsync (class_="sync" in gl.xml) - previously disabled entirely (no GLObjectKind for
+        # 'sync', and GLsync was not yet a mapped handle), now enabled via
+        # intermediates.py's _MAPPED_HANDLE_BASE_TYPES + this module's is_mapped_handle bypass
+        # in _requires_object_name_override. Every `sync`-named field here resolves through
+        # SyncHandleMapService (a HandleMapService<GLsync> alias - see common/services/
+        # handleMapService.h), never through
+        # object_name_override_for - confirmed by asserting no override for the 'sync' field,
+        # unlike test_quick_win_lookup_commands_are_enabled's GLuint-named-object commands
+        # above.
+        for cmd_name, sync_param_name in (
+            ('glIsSync', 'sync'),
+            ('glClientWaitSync', 'sync'),
+            ('glWaitSync', 'sync'),
+            ('glDeleteSync', 'sync'),
+        ):
+            with self.subTest(command=cmd_name):
+                cmd = get_command(Api.GL, cmd_name)
+                self.assertTrue(cmd.enabled)
+                param = next(p for p in cmd.params if p.name == sync_param_name)
+                self.assertEqual(param.class_, 'sync')
+                self.assertTrue(param.type_facts.is_mapped_handle)
+                self.assertIsNone(object_name_override_for(cmd_name, sync_param_name, param.class_))
+
+        # glFenceSync's own shape: no `sync` parameter at all - its RETURN value is the new
+        # mapped handle instead (see handle_lifecycle.py's GLSYNC_LIFECYCLE.creating_commands).
+        fence_cmd = get_command(Api.GL, 'glFenceSync')
+        self.assertTrue(fence_cmd.enabled)
+        self.assertEqual(fence_cmd.return_value.class_, 'sync')
+        self.assertTrue(fence_cmd.return_value.type_facts.is_mapped_handle)
+        self.assertIsNone(
+            object_name_override_for('glFenceSync', 'return_value', fence_cmd.return_value.class_))
+        condition_param = next(p for p in fence_cmd.params if p.name == 'condition')
+        flags_param = next(p for p in fence_cmd.params if p.name == 'flags')
+        self.assertTrue(condition_param.type_facts.is_scalar)
+        self.assertTrue(flags_param.type_facts.is_scalar)
+
     def test_deferred_scope_commands_stay_disabled(self) -> None:
         # These remain disabled after the gate for two structurally different reasons - see
         # modern-opengl-backend-architecture.md's deferred-scope section for the full list.
@@ -227,10 +301,17 @@ class EndToEndSystemicGateTests(unittest.TestCase):
         self.assertTrue(cmd.enabled)
 
     def test_is_fully_capturable_command_rejects_unmapped_return_value(self) -> None:
-        # class_="sync" has no GLObjectKind/ObjectNameMapService support - stays unresolvable
-        # regardless of command name (see _CLASS_TO_KIND's own comment).
-        ret = ReturnValue(type='GLsync', class_='sync')
+        # class_="perf query handle" has no GLObjectKind/ObjectNameMapService support - stays
+        # unresolvable regardless of command name (see _CLASS_TO_KIND's own comment).
+        ret = ReturnValue(type='GLuint', class_='perf query handle')
         self.assertFalse(_is_fully_capturable_command('glSomeHypotheticalCommand', ret, []))
+
+    def test_is_fully_capturable_command_accepts_mapped_handle_return_value(self) -> None:
+        # glFenceSync's real shape: GLsync return (class_="sync", is_mapped_handle bypasses the
+        # object-name gate), two plain GLenum/GLbitfield scalar params.
+        ret = ReturnValue(type='GLsync', class_='sync')
+        params = [Parameter(name='condition', type='GLenum'), Parameter(name='flags', type='GLbitfield')]
+        self.assertTrue(_is_fully_capturable_command('glFenceSync', ret, params))
 
 
 class EndToEndAutoDerivationTests(unittest.TestCase):

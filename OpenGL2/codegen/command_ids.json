@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 1688,
+        "GL": 1698,
         "WGL": 52,
         "EGL": 0,
         "GLX": 0
@@ -1694,7 +1694,17 @@
             "ID_GLSAMPLERPARAMETERIUIV": 986004,
             "ID_GLSAMPLERPARAMETERIV": 986005,
             "ID_GLTEXPARAMETERIIV": 986006,
-            "ID_GLTEXPARAMETERIUIV": 986007
+            "ID_GLTEXPARAMETERIUIV": 986007,
+            "ID_GLCLIENTWAITSYNC": 986008,
+            "ID_GLCLIENTWAITSYNCAPPLE": 986009,
+            "ID_GLDELETESYNC": 986010,
+            "ID_GLDELETESYNCAPPLE": 986011,
+            "ID_GLFENCESYNC": 986012,
+            "ID_GLFENCESYNCAPPLE": 986013,
+            "ID_GLISSYNC": 986014,
+            "ID_GLISSYNCAPPLE": 986015,
+            "ID_GLWAITSYNC": 986016,
+            "ID_GLWAITSYNCAPPLE": 986017
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,

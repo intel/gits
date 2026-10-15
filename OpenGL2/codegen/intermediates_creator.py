@@ -578,14 +578,25 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
     a field as belonging to a specific object-name namespace (texture/buffer/program/shader/
     framebuffer/vertex array/query/renderbuffer/sampler/program pipeline/transform feedback/
     display list/perf query handle/perf query id) or a sync-object handle (class="sync",
-    GLsync - already excluded elsewhere: a bare GLsync value is neither is_scalar nor
-    is_array_element_eligible, so it can never reach this function's is_scalar/
-    is_opaque_handle/is_mapped_handle or is_array_element_eligible branches in the first place -
-    see intermediates.py's TypeFacts). No other `class` value exists in any of the four
-    registries this generator reads (verified against gl.xml/wgl.xml/glx.xml/egl.xml - only
-    gl.xml ever sets it). So `field.class_ is not None` is a complete, data-driven test with no
-    hand-maintained keyword list to fall out of sync with the registries, exactly the kind of
-    "classify from evidence" signal object_name_lifecycle.py's own header comment calls for.
+    GLsync). No other `class` value exists in any of the four registries this generator reads
+    (verified against gl.xml/wgl.xml/glx.xml/egl.xml - only gl.xml ever sets it). So
+    `field.class_ is not None` is a complete, data-driven test with no hand-maintained keyword
+    list to fall out of sync with the registries, exactly the kind of "classify from evidence"
+    signal object_name_lifecycle.py's own header comment calls for.
+
+    is_mapped_handle fields (HGLRC, GLsync) are always exempted up front, regardless of
+    `class_`: those types get a real, dedicated GITSKey mapping of their own (arguments.h's
+    HandleArgument<T> plus ContextHandleMapService/SyncHandleMapService - see
+    intermediates.py's _MAPPED_HANDLE_BASE_TYPES header comment), which is a strictly stronger
+    guarantee than anything ObjectNameMapService provides for GLuint-named objects. GLsync is
+    the case that makes this exemption load-bearing rather than vacuous: gl.xml tags every
+    GLsync field with class="sync" (the same <param class="..."> mechanism used for texture/
+    buffer/program/... names), and object_name_lifecycle.py's _CLASS_TO_KIND deliberately maps
+    'sync' to None (no GLObjectKind - GLsync objects are not part of any GLuint namespace, so
+    building one for them would be actively wrong, not just unbuilt). Without this exemption,
+    every enabled GLsync field would look identical to a real "unsupported object-name
+    namespace" gap and permanently disable glFenceSync/glIsSync/glClientWaitSync/glWaitSync/
+    glDeleteSync even though SyncHandleMapService already gives them a complete, real mapping.
 
     resolve_object_name_override() itself distinguishes "not an object name at all"
     (class_ is None) from "a namespace this backend has not built ObjectNameMapService support
@@ -596,6 +607,8 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
     re-run against the codebase, and the deferred list this gate validates in
     modern-opengl-backend-architecture.md).
     """
+    if field.type_facts.is_mapped_handle:
+        return False
     return (field.class_ is not None
             and resolve_object_name_override(command_name, field.name, field.class_) is None)
 
@@ -700,6 +713,23 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # only those flushed sub-ranges instead of the whole mapped range on unmap) - out of scope
     # here.
     'glFlushMappedBufferRange',
+
+    # glImportSyncEXT(external_sync_type, external_sync, flags) -> GLsync (GL_EXT_EGL_sync)
+    # creates a new sync object by importing an EXTERNAL fence - `external_sync` is a raw OS
+    # resource identifier (e.g. an Android/EGL sync fence FD or a native HANDLE, per the
+    # extension spec, not anything GITS owns or tracks) supplied directly by the app. Unlike
+    # glFenceSync (see handle_lifecycle.py's GLSYNC_LIFECYCLE.creating_commands), the new GLsync this
+    # command mints is not self-contained GPU-internal state: replaying the exact same
+    # `external_sync` bit pattern captured at record time would hand the replay-time driver an
+    # OS resource identifier from a completely different process (or long-closed/reused at
+    # replay time even within the same process) - at best GL_INVALID_VALUE, at worst a
+    # misdirected wait against whatever unrelated OS resource that identifier happens to
+    # currently name. Correctly supporting this needs the same kind of dedicated, cross-process
+    # external-fence-import tracking DirectX/Vulkan build for their own shared-fence import
+    # commands, not the generic mapped-handle path - out of scope here; every other 4-of-5-
+    # requested sync command (glIsSync/glClientWaitSync/glWaitSync/glDeleteSync take an
+    # EXISTING GLsync, never mint one from external state, so none of them share this problem.
+    'glImportSyncEXT',
 })
 
 

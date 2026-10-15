@@ -14,9 +14,15 @@ from handle_lifecycle import (
     FRAME_END_COMMANDS,
     HANDLE_CREATING_COMMANDS,
     HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
+    MAPPED_HANDLE_SERVICE_NAMES,
     SHARE_LISTS_COMMANDS,
 )
 from intermediates import Command
+
+# HANDLE_CREATING_COMMANDS/HANDLE_PARAM_TO_ERASE_ON_SUCCESS are already unioned across every
+# mapped-handle type (HGLRC, GLsync, ...) by handle_lifecycle.py itself - see that module's own
+# header comment for why a single generic table, not a per-consumer union of per-type modules,
+# is the right shape now that a second mapped-handle type has actually shown up.
 
 
 def generate_recorder_files(commands: list[Command]) -> None:
@@ -29,6 +35,7 @@ def generate_recorder_files(commands: list[Command]) -> None:
                'recorder/recorderWrappersAuto.cpp', commands=commands,
                handle_creating_commands=HANDLE_CREATING_COMMANDS,
                handle_param_to_erase_on_success=HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
+               mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES,
                context_share_param=CONTEXT_SHARE_PARAM,
                share_lists_commands=SHARE_LISTS_COMMANDS)
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,

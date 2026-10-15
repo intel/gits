@@ -63,8 +63,8 @@ public:
 
   // Independent counter from CreateCommandKey() above - mirrors Vulkan's CaptureManager,
   // which also keeps command ordering keys and object handle keys in separate sequences.
-  // Used by ContextHandleMapService (see contextHandleMapService.h) to mint a GITSKey for
-  // a newly-created HGLRC.
+  // Used by HandleMapService<HandleT> (see common/services/handleMapService.h) to mint a
+  // GITSKey for a newly-created mapped handle (HGLRC, GLsync, ...).
   GITSKey CreateHandleKey() {
     return m_HandleKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }

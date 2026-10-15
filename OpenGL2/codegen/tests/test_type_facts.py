@@ -260,8 +260,19 @@ class TypeFactsTests(unittest.TestCase):
         self.assertFalse(facts.is_scalar)
         self.assertFalse(facts.is_opaque_handle)
 
+    def test_is_mapped_handle_accepts_glsync(self) -> None:
+        # GLsync is the second _MAPPED_HANDLE_BASE_TYPES entry (see that set's own comment for
+        # why it earns the same real GITSKey mapping HGLRC does, via SyncHandleMapService
+        # instead of ContextHandleMapService) - structurally identical to HGLRC: an opaque,
+        # GITS-owned-lifecycle pointer typedef with zero '*' of its own in gl.xml.
+        facts = TypeFacts(base_type='GLsync', pointer_depth=0)
+        self.assertTrue(facts.is_mapped_handle)
+        self.assertFalse(facts.is_scalar)
+        self.assertFalse(facts.is_opaque_handle)
+
     def test_is_mapped_handle_rejects_pointers_and_other_types(self) -> None:
         self.assertFalse(TypeFacts(base_type='HGLRC', pointer_depth=1).is_mapped_handle)
+        self.assertFalse(TypeFacts(base_type='GLsync', pointer_depth=1).is_mapped_handle)
         for base_type in ('HDC', 'HANDLE', 'GLenum', 'GLXContext', 'EGLContext'):
             with self.subTest(base_type=base_type):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_mapped_handle)

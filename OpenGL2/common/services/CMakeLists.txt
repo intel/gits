@@ -6,13 +6,15 @@
 #
 # ===================== end_copyright_notice ==============================
 
-# Small, hand-written services shared by the recorder and the player (ContextHandleMapService,
-# ObjectNameMapService, ShareGroupService) plus recorder/player-specific ones
-# (MapTrackingService is recorder-only; UniformLocationMapService is player-only) - mirrors
-# Vulkan/common/services's precedent for exactly this kind of recorder+player-shared class.
+# Small, hand-written services shared by the recorder and the player (HandleMapService<T> - see
+# that header's own comment for why ContextHandleMapService/SyncHandleMapService are now just
+# its two type aliases, not two separate classes - ObjectNameMapService, ShareGroupService) plus
+# recorder/player-specific ones (MapTrackingService is recorder-only; UniformLocationMapService
+# is player-only) - mirrors Vulkan/common/services's precedent for exactly this kind of
+# recorder+player-shared class.
 add_library(OpenGL2_services STATIC
-  contextHandleMapService.h
-  contextHandleMapService.cpp
+  handleMapService.h
+  handleMapService.cpp
   objectNameMapService.h
   objectNameMapService.cpp
   mapTrackingService.h

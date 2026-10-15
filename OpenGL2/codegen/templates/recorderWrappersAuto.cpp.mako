@@ -35,8 +35,13 @@ ${AUTO_GENERATED_HEADER}
 // directly and inline here.
 //
 // handle_creating_commands / handle_param_to_erase_on_success come from
-// codegen/handle_lifecycle.py - see that module for why this is a small hand-maintained
-// table rather than something derived from parameter types alone. pointer_override_for()
+// codegen/handle_lifecycle.py - a single table already unioned across every mapped-handle type
+// (HGLRC, GLsync, ...; see that module's own header comment for why this is a small hand-
+// maintained table rather than something derived from parameter types alone). Which
+// HandleMapService<T> alias applies to a given mapped-handle field's erase-on-success path
+// (ContextHandleMapService vs SyncHandleMapService) is looked up here, generically, from the
+// field's own type_facts.base_type via handle_lifecycle.py's MAPPED_HANDLE_SERVICE_NAMES -
+// never hardcoded per command or per type name. pointer_override_for()
 // comes from codegen/pointer_metadata.py, same rationale for pointer direction/length.
 // object_name_override_for() comes from codegen/object_name_lifecycle.py, which classifies GL
 // object-name (GLuint) fields the same way handle_lifecycle.py does for HGLRC - see
@@ -45,8 +50,8 @@ ${AUTO_GENERATED_HEADER}
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
 #include "commandSerializersAuto.h"
-#include "contextHandleMapService.h"
 #include "handleArgumentUpdaters.h"
+#include "handleMapService.h"
 #include "layerAuto.h"
 #include "mapTrackingWrappers.h"
 #include "objectNameMapService.h"
@@ -77,6 +82,15 @@ namespace {
     param_decls = ', '.join(f'{p.type} {p.name}' for p in cmd.params)
     param_names = ', '.join(p.name for p in cmd.params)
     erase_param = handle_param_to_erase_on_success.get(cmd.name)
+    # Which map service's Erase() to call is a fact about erase_param's OWN type, not about
+    # which command this is - handle_param_to_erase_on_success is a single dict already
+    # unioned across every mapped-handle type (see handle_lifecycle.py), so this looks the
+    # parameter itself up (via MAPPED_HANDLE_SERVICE_NAMES, generic over every entry in that
+    # module's MAPPED_HANDLE_LIFECYCLES - no per-type name hardcoded here) to tell them apart.
+    erase_service = None
+    if erase_param:
+        erase_param_obj = next(p for p in cmd.params if p.name == erase_param)
+        erase_service = mapped_handle_service_names[erase_param_obj.type_facts.base_type]
 %>\
 ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   const RecursionGuard guard;
@@ -338,6 +352,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % if cmd.return_value.type_facts.is_mapped_handle:
 % if cmd.name in handle_creating_commands:
     UpdateOutputHandle(command->m_Return);
+% if cmd.return_value.type_facts.base_type == 'HGLRC':
 <%
     share_param = context_share_param.get(cmd.name)
 %>\
@@ -345,9 +360,12 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // codegen/handle_lifecycle.py's CONTEXT_SHARE_PARAM for why a newly-created context must
     // join its share context's group (if any) right away, using the real, recorder-process
     // HGLRC values (ShareGroupService is process-local, unserialized bookkeeping - see that
-    // class's header comment).
+    // class's header comment). Guarded to HGLRC only: handle_creating_commands is a combined
+    // set also covering glFenceSync's GLsync return (see handle_lifecycle.py's
+    // MAPPED_HANDLE_LIFECYCLES), and a GLsync is never part of any share group.
     ShareGroupService::Get().RegisterNewContext(
         command->m_Return.Value, ${f'command->m_{share_param}.Value' if share_param is not None else 'nullptr'});
+% endif
 % else:
     UpdateHandle(command->m_Return);
 % endif
@@ -357,11 +375,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     UpdateOutputHandle(command->m_Return, GLObjectKind::${return_obj_override.kind.value});
 % endif
 % endif
+## HandleShareGroupFor() (recorder/include/handleArgumentUpdaters.h) is overloaded per HandleT -
+## 0 (process-global) for HGLRC, the real CurrentShareGroup() for GLsync - so this one call site
+## is correct for every erase_service alike; see that function's own header comment.
 % if erase_param and is_void:
-    ContextHandleMapService::Get().Erase(command->m_${erase_param}.Value);
+    ${erase_service}::Get().Erase(command->m_${erase_param}.Value,
+                                   HandleShareGroupFor(command->m_${erase_param}.Value));
 % elif erase_param:
     if (result) {
-      ContextHandleMapService::Get().Erase(command->m_${erase_param}.Value);
+      ${erase_service}::Get().Erase(command->m_${erase_param}.Value,
+                                     HandleShareGroupFor(command->m_${erase_param}.Value));
     }
 % endif
 <%

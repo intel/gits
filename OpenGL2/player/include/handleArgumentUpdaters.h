@@ -9,12 +9,15 @@
 #pragma once
 
 // Player-side counterpart of recorder/include/handleArgumentUpdaters.h, resolving the
-// opposite direction (GITSKey -> live HGLRC, instead of HGLRC -> GITSKey) - see
+// opposite direction (GITSKey -> live handle, instead of handle -> GITSKey) - see
 // docs/development/opengl2-player-skeleton-plan.md's Decision 5 and
 // modern-opengl-backend-architecture.md's "Real key-based mapping for handles GITS creates".
-// Hand-written, not generated, for the same reason the recorder's own copy is: HGLRC is the
-// only HandleArgument<T> instantiation ContextHandleMapService needs, so there is nothing for
-// codegen to loop over there.
+// Hand-written, not generated, for the same reason the recorder's own copy is: no command's
+// param/return-value shape here needs anything commandRunnersAuto.cpp.mako couldn't already
+// express with a plain call - see that template's own header comment for the generated side's
+// `UpdateHandle(command.m_${p.name})` call sites, which resolve against
+// UpdateHandle/UpdateOutputHandle's HandleArgument<HandleT> template below via ordinary C++
+// template argument deduction, with no per-type codegen branching needed on either side.
 //
 // Named identically to the recorder-side copy's UpdateHandle/UpdateOutputHandle (see
 // docs/development/opengl2-layer-architecture-alignment-plan.md's Phase A) - mirrors Vulkan's
@@ -26,13 +29,20 @@
 // that this is the same key<->handle protocol as the recorder side, which made it unclear
 // whether OpenGL2 actually implements Vulkan's pattern at all (it does).
 //
+// UpdateHandle/UpdateOutputHandle below used to be two hand-copied, non-templated overload
+// pairs (one for HandleArgument<HGLRC>, one for HandleArgument<GLsync>) before GLsync's own
+// arrival prompted generalizing HandleMapService itself into a template (see
+// common/services/handleMapService.h's own header comment) - now a single
+// `template <typename HandleT>` pair covers every mapped-handle type uniformly, present and
+// future, with no new overload needed per type.
+//
 // The GLuint overloads below are plain, non-templated overloads taking an explicit
 // GLObjectKind parameter, for the same reason the recorder-side copy's GLuint overloads are -
 // see that file's header comment.
 
 #include "arguments.h"
-#include "contextHandleMapService.h"
 #include "glTypes.h"
+#include "handleMapService.h"
 #include "objectNameMapService.h"
 #include "openglDriversAuto.h"
 
@@ -54,25 +64,32 @@ inline HGLRC CurrentContext() {
   return realFunction ? realFunction() : nullptr;
 }
 
-// Existing-handle resolution before a real call: substitute the decoded Key's live handle
-// for Value (still whatever Decode() zero-initialized it to) - wglMakeCurrent,
-// wglDeleteContext, wglShareLists, etc. A zero key (e.g. wglMakeCurrent's hglrc when
-// detaching) is left at a null Value without a lookup or warning - it is a normal value, not
-// a missing registration.
-inline void UpdateHandle(HandleArgument<HGLRC>& arg) {
+// Existing-handle resolution before a real call: substitute the decoded Key's live handle for
+// Value (still whatever Decode() zero-initialized it to) - wglMakeCurrent, wglDeleteContext,
+// wglShareLists, glIsSync, glClientWaitSync, glWaitSync, glDeleteSync, etc. Generic over every
+// mapped-handle type (HGLRC, GLsync, ...) via HandleMapService<HandleT> - see that class's own
+// header comment (common/services/handleMapService.h) for why one template, not one hand-copied
+// overload per type, is now the right shape here. A zero key (e.g. wglMakeCurrent's hglrc when
+// detaching) is left at a null Value without a lookup or warning - it is a normal value, not a
+// missing registration.
+template <typename HandleT>
+inline void UpdateHandle(HandleArgument<HandleT>& arg) {
   if (arg.Key == 0) {
     return;
   }
-  arg.Value = ContextHandleMapService::Get().GetHandle(arg.Key);
+  arg.Value = HandleMapService<HandleT>::Get().GetHandle(arg.Key);
 }
 
-// After a real wglCreateContext(ARB) call succeeds: register the newly-created live handle
-// under the key that was already decoded onto this same field (see handle_lifecycle.py's
-// HANDLE_CREATING_COMMANDS, which recorderWrappersAuto.cpp.mako's own UpdateOutputHandle call
-// consults for the same purpose). A null Value (a failed create) is left unregistered.
-inline void UpdateOutputHandle(HandleArgument<HGLRC>& arg) {
+// After a real handle-creating call succeeds (wglCreateContext(ARB), glFenceSync, ...):
+// register the newly-created live handle under the key that was already decoded onto this same
+// field (see handle_lifecycle.py's HANDLE_CREATING_COMMANDS, which recorderWrappersAuto.cpp.
+// mako's own UpdateOutputHandle call consults for the same purpose). Generic over every
+// mapped-handle type, same rationale as UpdateHandle above. A null Value (a failed create) is
+// left unregistered.
+template <typename HandleT>
+inline void UpdateOutputHandle(HandleArgument<HandleT>& arg) {
   if (arg.Value) {
-    ContextHandleMapService::Get().SetHandle(arg.Key, arg.Value);
+    HandleMapService<HandleT>::Get().SetHandle(arg.Key, arg.Value);
   }
 }
 

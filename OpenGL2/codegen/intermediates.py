@@ -225,18 +225,36 @@ _OPAQUE_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     'HDC',
 })
 
-# Native OS handle GITS owns the full lifecycle of: created by an intercepted call
-# (wglCreateContext/wglCreateContextAttribsARB) and destroyed by one (wglDeleteContext). Unlike
-# HDC above, there is no reason to treat this as replay-inert: it gets real GITSKey-based mapping
-# (see arguments.h's HandleArgument<T> and ContextHandleMapService), the same treatment Vulkan
-# gives every handle type it creates/destroys - see modern-opengl-backend-architecture.md's "Real
-# key-based mapping for handles GITS creates" decision, which narrows (for HGLRC only) the
-# earlier "Capture native OS handles as opaque scalar values, defer remapping" decision. This is
-# intentionally still a single, backend-local, single-type map rather than a generalized
-# Vulkan-style HandleMapService - "Keep abstractions backend-local until reuse is demonstrated"
-# still applies until a second mapped-handle type actually appears.
+# Native OS/GL handles GITS owns the full lifecycle of: HGLRC is created by an intercepted call
+# (wglCreateContext/wglCreateContextAttribsARB) and destroyed by one (wglDeleteContext); GLsync
+# is created by glFenceSync and destroyed by glDeleteSync. Unlike HDC above, there is no reason
+# to treat either as replay-inert: both get real GITSKey-based mapping (see arguments.h's
+# HandleArgument<T>, ContextHandleMapService for HGLRC, and SyncHandleMapService for GLsync),
+# the same treatment Vulkan gives every handle type it creates/destroys - see
+# modern-opengl-backend-architecture.md's "Real key-based mapping for handles GITS creates"
+# decision, which narrows (for exactly these two types) the earlier "Capture native OS handles
+# as opaque scalar values, defer remapping" decision.
+#
+# GLsync is structurally the same shape as HGLRC (both are opaque pointer typedefs GITS fully
+# controls the creation/destruction of), but is NOT a GLuint-named object, despite gl.xml
+# tagging it with its own `class="sync"` annotation (the same mechanism used for texture/
+# buffer/program/... names) - see object_name_lifecycle.py's _CLASS_TO_KIND, which deliberately
+# maps 'sync' to None (no GLObjectKind), and intermediates_creator.py's
+# _requires_object_name_override, which now excludes every is_mapped_handle field from the
+# object-name gate for exactly this reason, regardless of what `class` gl.xml also attaches to
+# it.
+#
+# Every mapped-handle type shares ONE generic map service, HandleMapService<HandleT> (see
+# common/services/handleMapService.h) - ContextHandleMapService/SyncHandleMapService are just
+# its two type aliases today, not two separate classes. This used to be two hand-copied,
+# same-shaped classes (one per type), on the theory that "Keep abstractions backend-local until
+# reuse is demonstrated" favored two independently-reviewable classes over a shared template
+# with no second user yet; GLsync becoming that second user is exactly the "reuse demonstrated"
+# trigger that decision record was waiting for, so the two were merged into one template - see
+# handle_lifecycle.py's own MappedHandleLifecycle for the matching Python-side generalization.
 _MAPPED_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     'HGLRC',
+    'GLsync',
 })
 
 # Fixed-size POD structs (not scalars - pointer_depth == 0 never applies to a whole-struct

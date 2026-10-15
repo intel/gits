@@ -13,6 +13,11 @@ from generator_helpers import mako_write
 from handle_lifecycle import HANDLE_CREATING_COMMANDS
 from intermediates import Command
 
+# HANDLE_CREATING_COMMANDS is already unioned across every mapped-handle type (HGLRC, GLsync,
+# ...) by handle_lifecycle.py itself - kept in sync with the same table generator_recorder.py
+# passes to recorderWrappersAuto.cpp.mako so both the recorder and player agree on which
+# commands mint a fresh mapped-handle key from their return value.
+
 # Disabled commands the player's own hand-written code still calls directly through
 # g_DispatchTable, bypassing the generated per-command Run()/CommandFactory path entirely -
 # found by grepping every hand-written player/*.cpp,*.h file (excluding the generated

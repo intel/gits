@@ -8,8 +8,8 @@
 
 #include "clientMemoryCapture.h"
 
-#include "contextHandleMapService.h"
 #include "glEnumsAuto.h"
+#include "handleMapService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
