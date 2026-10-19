@@ -180,8 +180,8 @@ void PixelFormatCaptureLayer::Post(wglMakeContextCurrentEXTCommand& command) {
 // generated wrapper calls the real driver function unconditionally before its Post-layer loop -
 // see recorderWrappersAuto.cpp.mako's own header comment), and replace the app's own captured
 // `command.m_ppfd` with it before EncoderLayer (always the last-registered Post layer - see
-// CaptureManager::LoadLayers()) serializes the command onto the wire. This means the stream now
-// carries the format the driver ACTUALLY selected - self-consistent by construction (Windows
+// CaptureLayerManager::LoadLayers()) serializes the command onto the wire. This means the stream
+// now carries the format the driver ACTUALLY selected - self-consistent by construction (Windows
 // itself produced it), so replay-time sanitization no longer needs to guess or force
 // PFD_DOUBLEBUFFER at all; it only needs to add PFD_DRAW_TO_WINDOW/PFD_SUPPORT_OPENGL, which
 // this player's own single always-visible window genuinely requires regardless of capture (see

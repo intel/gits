@@ -28,7 +28,7 @@ ${AUTO_GENERATED_HEADER}
 // input handle/object-name field has been resolved to its GITSKey (matching Vulkan's
 // wrappersAuto.cpp.mako's own Pre-layer placement); CaptureManager::GetPostLayers() runs once
 // output handle/object-name fields have been registered and command.m_Return is set -
-// CaptureManager::LoadLayers() registers exactly one Post layer, EncoderLayer, as the last
+// CaptureLayerManager::LoadLayers() registers exactly one Post layer, EncoderLayer, as the last
 // (and, today, only) entry in that chain, so this loop is where encoding onto the wire
 // actually happens (see encoderLayerAuto.cpp.mako's EncoderLayer::Post), matching Vulkan's own
 // Post-layer-does-the-encoding architecture instead of calling CaptureManager::RecordCommand()
@@ -630,7 +630,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endfor
     // See docs/development/opengl2-layer-architecture-alignment-plan.md: EncoderLayer - the
-    // sole, last-registered Post layer (see captureManager.cpp's LoadLayers()) - does what
+    // sole, last-registered Post layer (see CaptureLayerManager::LoadLayers()) - does what
     // this loop used to do directly right here: hand the command to
     // CaptureManager::RecordCommand() for encoding onto the wire (and, for a
     // FRAME_END_COMMANDS entry like this one might be, additionally emit the FrameEndCommand

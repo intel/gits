@@ -8,15 +8,7 @@
 
 #include "captureManager.h"
 
-#include "clientArraysLayerAuto.h"
-#include "configurator.h"
-#include "encoderLayerAuto.h"
-#include "mappedTextureLayer.h"
-#include "pixelFormatCaptureLayer.h"
-#include "recorderScreenshotsLayer.h"
-#include "uniformArrayCaptureLayer.h"
 #include "unsupportedCommandTypes.h"
-#include "windowGeometryTrackingLayer.h"
 
 namespace gits::opengl2 {
 
@@ -59,41 +51,6 @@ void CaptureManager::RecordUnsupportedCommand(const char* name, uint64_t key, ui
 
 void CaptureManager::SkipCommandKey(uint64_t key) {
   GetOrderingRecorder().Skip(key);
-}
-
-void CaptureManager::LoadLayers() {
-  // See the header comment: heap-allocated and intentionally never deleted, matching this
-  // singleton's own never-destroyed pattern (Get()'s comment above) - EncoderLayer/
-  // WindowGeometryTrackingLayer/PixelFormatCaptureLayer hold no resources that need releasing
-  // (WindowGeometryTrackingLayer's actual state lives in the separately-singleton
-  // WindowGeometryTrackingService; PixelFormatCaptureLayer is fully stateless), so this
-  // introduces no static-destruction-order risk.
-  //
-  // WindowGeometryTrackingLayer is this backend's first real Pre layer (m_PreLayers was empty
-  // before it - see this class's own header comment) - see that layer's own header comment
-  // for why running in Pre(), ahead of EncoderLayer's Post-side serialization of the WGL call
-  // a given hook is attached to, matters for window-creation ordering on replay.
-  m_PreLayers.push_back(new WindowGeometryTrackingLayer());
-  // Records client-memory vertex arrays ahead of the draws that read them - see
-  // clientArraysService.h.
-  m_PreLayers.push_back(new ClientArraysLayer());
-  // Captures still-mapped GL_INTEL_map_texture textures at swaps - see mappedTextureLayer.h.
-  m_PreLayers.push_back(new MappedTextureLayer());
-  // One stateless instance in both lists: Pre() for wglCreatePbufferARB/EXT and wglSetPixelFormat,
-  // Post() for wglSetPixelFormat and wglMakeCurrent.
-  auto* pixelFormatCaptureLayer = new PixelFormatCaptureLayer();
-  m_PreLayers.push_back(pixelFormatCaptureLayer);
-  // PixelFormatCaptureLayer must run BEFORE EncoderLayer (see that layer's own header comment
-  // for why) - pushed first, since m_PostLayers runs in push_back order and EncoderLayer must
-  // stay the LAST entry (see this class's own header comment on that invariant).
-  m_PostLayers.push_back(pixelFormatCaptureLayer);
-  m_PostLayers.push_back(new UniformArrayCaptureLayer());
-  if (Configurator::Get().common.shared.screenshots.enabled) {
-    auto* screenshotsLayer = new RecorderScreenshotsLayer();
-    m_PreLayers.push_back(screenshotsLayer);
-    m_PostLayers.push_back(screenshotsLayer);
-  }
-  m_PostLayers.push_back(new EncoderLayer());
 }
 
 } // namespace gits::opengl2

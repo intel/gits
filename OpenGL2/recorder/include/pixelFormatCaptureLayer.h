@@ -18,7 +18,7 @@
 // function unconditionally before entering its Post-layer loop - see
 // recorderWrappersAuto.cpp.mako's own header comment) but before EncoderLayer serializes the
 // command onto the wire, since EncoderLayer is always the LAST-registered Post layer
-// (CaptureManager::LoadLayers()) - so mutating `command.m_ppfd` here still changes what
+// (CaptureLayerManager::LoadLayers()) - so mutating `command.m_ppfd` here still changes what
 // actually gets encoded.
 //
 // Also a Pre layer for wglCreatePbufferARB/EXT and wglSetPixelFormat, whose pixel format
