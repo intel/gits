@@ -27,6 +27,10 @@ public:
   void Post(glUseProgramCommand& command) override;
   void Post(glUseProgramObjectARBCommand& command) override;
   void Post(glUseProgramStagesCommand& command) override;
+
+  // A wait that reached the sync object in the recording waits again while replay times out.
+  void Pre(glClientWaitSyncCommand& command) override;
+  void Post(glClientWaitSyncCommand& command) override;
 };
 
 } // namespace gits::opengl2

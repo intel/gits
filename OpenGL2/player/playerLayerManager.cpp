@@ -37,6 +37,9 @@ void PlayerLayerManager::LoadLayers() {
     m_LayersOwner.push_back(std::move(layer));
   }
 
+  auto replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>();
+  m_PreLayers.push_back(replayCustomizationLayer.get());
+
   std::unique_ptr<AnalyzerLayer> analyzerLayer;
   std::unique_ptr<SubcaptureLayer> subcaptureLayer;
   std::unique_ptr<RecordingLayer> recordingLayer;
@@ -64,7 +67,6 @@ void PlayerLayerManager::LoadLayers() {
   m_PostLayers.push_back(threadContextLayer.get());
   m_LayersOwner.push_back(std::move(threadContextLayer));
 
-  auto replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>();
   m_PostLayers.push_back(replayCustomizationLayer.get());
   m_LayersOwner.push_back(std::move(replayCustomizationLayer));
 
