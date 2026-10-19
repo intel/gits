@@ -36,8 +36,14 @@ public:
   bool SetThemeByIdx(size_t idx);
   bool SetThemeByLabel(std::string label);
   bool SetThemeByID(std::string id);
+  void CycleTheme();
 
   void ApplyTheme();
+
+private:
+  void ApplyCommonThemeSettings();
+  void ApplyDarkTheme();
+  void ApplyLightTheme();
 };
 }; // namespace ImGuiHelper
 }; // namespace gits

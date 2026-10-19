@@ -117,5 +117,13 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   }
 }
 
+void CaptureLayerManager::Shutdown() {
+  m_PreLayers.clear();
+  m_PostLayers.clear();
+  m_LayersOwner.clear();
+  m_ResourceDumpingLayerGroup.reset();
+  m_TraceLayerGroup.reset();
+}
+
 } // namespace vulkan
 } // namespace gits

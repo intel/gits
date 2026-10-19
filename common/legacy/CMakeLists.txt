@@ -22,6 +22,7 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/getopt_.h
   ${COMMON_HEADER_DIR}/gits.h
   ${COMMON_HEADER_DIR}/id.h
+  ${COMMON_HEADER_DIR}/ipcPipe.h
   ${COMMON_HEADER_DIR}/InputListener.h
   ${COMMON_HEADER_DIR}/istdhash.h
   ${COMMON_HEADER_DIR}/keyEvents.h
@@ -64,6 +65,7 @@ list(APPEND common_SOURCES
   ${COMMON_SOURCE_DIR}/gits.cpp
   ${COMMON_SOURCE_DIR}/getopt.cpp
   ${COMMON_SOURCE_DIR}/id.cpp
+  ${COMMON_SOURCE_DIR}/ipcPipe.cpp
   ${COMMON_SOURCE_DIR}/library.cpp
   ${COMMON_SOURCE_DIR}/MemorySniffer.cpp
   ${COMMON_SOURCE_DIR}/message_pump.cpp
@@ -118,7 +120,7 @@ target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gi
 target_link_libraries(common PUBLIC configuration log)
 
 if(UNIX)
-  target_link_libraries(common PRIVATE rt dl lua)
+  target_link_libraries(common PRIVATE rt dl lua X11)
 endif()
 
 add_library(common_interface INTERFACE)

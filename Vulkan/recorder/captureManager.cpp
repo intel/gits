@@ -41,11 +41,28 @@ CaptureManager::CaptureManager() {
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
       m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
 
+  m_PluginService.SetDispatchTablesHolder(m_DispatchTablesHolder.get());
   m_PluginService.LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_PluginService);
+  MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                              [](Topic, const MessagePtr&) {
+                                if (m_Instance != nullptr) {
+                                  m_Instance->Shutdown();
+                                }
+                              });
 }
 
-CaptureManager::~CaptureManager() {}
+CaptureManager::~CaptureManager() {
+  Shutdown();
+}
+
+void CaptureManager::Shutdown() {
+  if (m_Shutdown.exchange(true)) {
+    return;
+  }
+  m_LayerManager.Shutdown();
+  m_PluginService.Shutdown();
+}
 
 void CaptureManager::LoadGlobalFunctions(PFN_vkGetInstanceProcAddr getProcAddr) {
   LoadGlobalLevelFunctions(getProcAddr, m_GlobalDispatchTable);

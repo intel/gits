@@ -31,6 +31,7 @@ class CGits;
 class MessageBus;
 struct Configuration;
 namespace vulkan {
+class DispatchTablesHolder;
 struct VkDeviceLevelDispatchTable;
 struct VkInstanceLevelDispatchTable;
 } // namespace vulkan
@@ -64,6 +65,7 @@ struct IPluginContext {
   // Player-only: monotonic count of driver vkQueuePresentKHR calls issued by
   // SwapchainImageSyncService during swapchain image rewind (not stream presents).
   std::uint64_t* vkDriverRewindPresentCount = nullptr;
+  gits::vulkan::DispatchTablesHolder* vkDispatchTables = nullptr;
 };
 
 class IPlugin {

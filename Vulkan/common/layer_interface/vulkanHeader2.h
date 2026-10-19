@@ -13,6 +13,7 @@
 #ifdef GITS_PLATFORM_WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
 #define GITS_GET_THREAD_ID() GetCurrentThreadId()
+#include <windows.h>
 #endif
 
 #ifdef GITS_PLATFORM_X11

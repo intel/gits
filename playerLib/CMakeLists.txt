@@ -22,6 +22,8 @@ endif()
 
 list(APPEND player_lib_SOURCES
   ${HEADER_DIR}/playerLib.h
+  ${SRC_DIR}/remotePlaybackController.h
+  ${SRC_DIR}/remotePlaybackController.cpp
   ${SRC_DIR}/playerLib.cpp
   ${SRC_DIR}/streamPlayer.h
   ${SRC_DIR}/streamPlayer.cpp

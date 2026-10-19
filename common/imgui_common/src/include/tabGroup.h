@@ -35,7 +35,7 @@ template <typename T>
 bool TabGroup<T>::Render(bool newLine) {
   size_t new_selected_tab = this->selectedIndex;
   auto btnSize = this->isHorizontal ? ImVec2(0.0f, 0.0f) : ImVec2(-1.0f, 0.0f);
-
+  bool result = false;
   size_t i = 0;
   for (auto it = this->items.begin(); it != this->items.end(); ++it, ++i) {
     auto const& item = it->second;
@@ -63,6 +63,24 @@ bool TabGroup<T>::Render(bool newLine) {
     } else if (item.type == ItemType::Label) {
       ImGui::Text("%s", this->GetLabel(item).c_str());
       this->AddTooltip(item);
+    } else if (item.type == ItemType::CheckableButton) {
+      if (!this->btnEnabled[it->first] || !item.enabled) {
+        continue;
+      }
+      if (styleButton) {
+        this->PushButtonStyle(item);
+      }
+      if (ImGui::Checkbox(("##" + item.label).c_str(), &this->btnChecked[it->first])) {
+        result = true;
+      }
+      ImGui::SameLine();
+      if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {
+        new_selected_tab = i;
+      }
+      this->AddTooltip(item);
+      if (styleButton) {
+        this->PopButtonStyle();
+      }
     }
     if (this->isHorizontal) {
       ImGui::SameLine();
@@ -71,11 +89,11 @@ bool TabGroup<T>::Render(bool newLine) {
   if (newLine) {
     ImGui::NewLine();
   }
-  if (new_selected_tab != this->selectedIndex) {
+  if ((new_selected_tab != this->selectedIndex)) {
     this->selectedIndex = new_selected_tab;
-    return true;
+    result = true;
   }
-  return false;
+  return result;
 }
 
 } // namespace ImGuiHelper

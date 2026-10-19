@@ -42,9 +42,18 @@ void PluginInfo::Free() {
 }
 
 PluginService::~PluginService() {
+  Shutdown();
+}
+
+void PluginService::Shutdown() {
   for (auto& plugin : m_Plugins) {
     plugin.Free();
   }
+  m_Plugins.clear();
+}
+
+void PluginService::SetDispatchTablesHolder(DispatchTablesHolder* holder) {
+  m_DispatchTablesHolder = holder;
 }
 
 void PluginService::SetVulkanDeviceDispatchTable(VkDeviceLevelDispatchTable* table) {
@@ -154,7 +163,7 @@ void PluginService::LoadPlugins() {
       continue;
     }
 
-    IPluginContext pluginContext;
+    IPluginContext pluginContext{};
     pluginContext.gits = &CGits::Instance();
     pluginContext.msgBus = &gits::MessageBus::get();
     pluginContext.config = &cfg;
@@ -162,6 +171,7 @@ void PluginService::LoadPlugins() {
     pluginContext.vkDeviceDispatchTable = &m_VulkanDeviceDispatchTable;
     pluginContext.vkInstanceDispatchTable = &m_VulkanInstanceDispatchTable;
     pluginContext.vkDriverRewindPresentCount = m_VkDriverRewindPresentCountPtr;
+    pluginContext.vkDispatchTables = m_DispatchTablesHolder;
 
     plugin.DestroyPlugin =
         reinterpret_cast<DestroyPluginPtr>(GetProcAddress(mainDll, "destroyPlugin"));

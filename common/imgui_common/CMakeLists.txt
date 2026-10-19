@@ -41,16 +41,19 @@ set(IMGUILIB_CPP_FILES
   ${IMGUILIB_SOURCE_DIR}/imGuiStyle.cpp
   ${IMGUILIB_SOURCE_DIR}/textEditorWidget.cpp
   ${IMGUILIB_SOURCE_DIR}/yamlTreeViewer.cpp
+  ${IMGUILIB_SOURCE_DIR}/textTreeViewer.cpp
 )
 
 set(IMGUILIB_HEADER_FILES
   ${IMGUILIB_HEADER_DIR}/imGuiStyle.h
   ${IMGUILIB_HEADER_DIR}/imGuiHelper.h
+  ${IMGUILIB_HEADER_DIR}/gitsLogFormatter.h
   ${IMGUILIB_HEADER_DIR}/textEditorWidget.h
   ${IMGUILIB_HEADER_DIR}/baseButtonGroup.h
   ${IMGUILIB_HEADER_DIR}/buttonGroup.h
   ${IMGUILIB_HEADER_DIR}/tabGroup.h
   ${IMGUILIB_HEADER_DIR}/yamlTreeViewer.h
+  ${IMGUILIB_HEADER_DIR}/textTreeViewer.h
   ${IMGUILIB_FONT_C_HEADER}
 )
 
@@ -120,4 +123,20 @@ target_compile_options(imgui_addons PRIVATE
     /wd4018  # signed/unsigned mismatch
   >
 )
+
+# ImPlot, an ImGui plotting extension used only by the RTSR module's performance
+# view. Its own target, so nothing else compiles or links it. implot_demo.cpp is
+# left out. IMPLOT_DIR comes from cmake/import_implot.cmake at root scope.
+list(APPEND IMPLOT_SOURCE
+  ${IMPLOT_DIR}/implot.cpp
+  ${IMPLOT_DIR}/implot_items.cpp
+
+  ${IMPLOT_DIR}/implot.h
+  ${IMPLOT_DIR}/implot_internal.h
+)
+add_library(implot STATIC ${IMPLOT_SOURCE})
+# PUBLIC because implot.h includes imgui.h, so consumers need ImGui's headers.
+target_link_libraries(implot PUBLIC imgui_common)
+target_include_directories(implot PUBLIC ${IMPLOT_DIR})
+set_target_properties(implot PROPERTIES FOLDER "common/imgui")
 

@@ -13,6 +13,7 @@
 #include <vector>
 #include <map>
 #include <ranges>
+#include <limits>
 
 #include <imgui.h>
 
@@ -22,25 +23,27 @@ namespace gits {
 namespace ImGuiHelper {
 
 enum class ButtonStatus {
-  Default,
-  Success,
-  Failure,
-  Warning,
+  BUTTON_STATUS_DEFAULT,
+  BUTTON_STATUS_SUCCESS,
+  BUTTON_STATUS_FAILURE,
+  BUTTON_STATUS_WARNING,
 };
 
 enum class ItemType {
   Button,
   Label,
+  CheckableButton
 };
 
 struct ButtonGroupItem {
   std::string label;
   std::string tooltip = "";
-  ButtonStatus status = ButtonStatus::Default;
+  ButtonStatus status = ButtonStatus::BUTTON_STATUS_DEFAULT;
   std::string short_label = "";
   bool enabled = true;
   bool visible = true;
   ItemType type = ItemType::Button;
+  bool checked = false;
 };
 
 template <typename T>
@@ -48,17 +51,24 @@ class BaseButtonGroup {
 public:
   BaseButtonGroup(const std::map<T, ButtonGroupItem>& items,
                   bool horizontal = true,
-                  bool regularLabel = true);
+                  bool regularLabel = true,
+                  bool allowNoSelection = false);
   virtual ~BaseButtonGroup() = default;
 
-  void SetEnabled(const T& key, bool enabled);
   void SetStatus(const T& key, ButtonStatus status);
+
+  void SetEnabled(const T& key, bool enabled);
   bool IsEnabled(const T& key) const;
 
   void SetVisible(const T& key, bool visible);
   bool IsVisible(const T& key) const;
 
+  void SetChecked(const T& key, bool checked);
+  bool IsChecked(const T& key) const;
+
   void SelectEntry(T entry);
+  void DeselectEntry();
+  bool HasSelection() const;
   T Selected() const;
   ButtonGroupItem SelectedItem() const;
   size_t SelectedIndex() const;
@@ -76,9 +86,13 @@ protected:
 
   const std::string& GetLabel(const ButtonGroupItem& item) const;
 
+  static constexpr size_t NoSelectionIndex = std::numeric_limits<size_t>::max();
+
   std::map<T, bool> btnEnabled;
   std::map<T, bool> btnVisible;
+  std::map<T, bool> btnChecked;
   size_t selectedIndex = 0;
+  bool allowNoSelection = false;
   bool isHorizontal;
   bool useRegularLabel;
   std::map<T, ButtonGroupItem> items;
@@ -87,26 +101,23 @@ protected:
 template <typename T>
 BaseButtonGroup<T>::BaseButtonGroup(const std::map<T, ButtonGroupItem>& items_,
                                     bool horizontal,
-                                    bool regularLabel) {
+                                    bool regularLabel,
+                                    bool allowNoSelection_) {
   if (items_.size() < 1) {
     throw std::runtime_error("ButtonGroup must have at least one item");
   }
   isHorizontal = horizontal;
   useRegularLabel = regularLabel;
+  allowNoSelection = allowNoSelection_;
   items = items_;
+  selectedIndex = allowNoSelection ? NoSelectionIndex : 0;
   btnEnabled = std::map<T, bool>();
   btnVisible = std::map<T, bool>();
+  btnChecked = std::map<T, bool>();
   for (const auto& p : items) {
     btnEnabled[p.first] = p.second.enabled;
     btnVisible[p.first] = p.second.visible;
-  }
-}
-
-template <typename T>
-void BaseButtonGroup<T>::SetEnabled(const T& key, bool enabled) {
-  auto it = btnEnabled.find(key);
-  if (it != btnEnabled.end()) {
-    it->second = enabled;
+    btnChecked[p.first] = p.second.checked;
   }
 }
 
@@ -115,6 +126,14 @@ void BaseButtonGroup<T>::SetStatus(const T& key, ButtonStatus status) {
   auto it = items.find(key);
   if (it != items.end()) {
     it->second.status = status;
+  }
+}
+
+template <typename T>
+void BaseButtonGroup<T>::SetEnabled(const T& key, bool enabled) {
+  auto it = btnEnabled.find(key);
+  if (it != btnEnabled.end()) {
+    it->second = enabled;
   }
 }
 
@@ -137,8 +156,25 @@ void BaseButtonGroup<T>::SetVisible(const T& key, bool visible) {
 
 template <typename T>
 bool BaseButtonGroup<T>::IsVisible(const T& key) const {
-  auto it = btnVisible.find(key);
-  if (it != btnVisible.end()) {
+  auto it = items.find(key);
+  if (it != items.end()) {
+    return it->second.visible;
+  }
+  return false;
+}
+
+template <typename T>
+void BaseButtonGroup<T>::SetChecked(const T& key, bool checked) {
+  auto it = btnChecked.find(key);
+  if (it != btnChecked.end()) {
+    it->second = checked;
+  }
+}
+
+template <typename T>
+bool BaseButtonGroup<T>::IsChecked(const T& key) const {
+  auto it = btnChecked.find(key);
+  if (it != btnChecked.end()) {
     return it->second;
   }
   return false;
@@ -158,7 +194,23 @@ void BaseButtonGroup<T>::SelectEntry(T entry) {
 }
 
 template <typename T>
+void BaseButtonGroup<T>::DeselectEntry() {
+  if (!allowNoSelection) {
+    throw std::runtime_error("ButtonGroup: no-selection mode is disabled");
+  }
+  selectedIndex = NoSelectionIndex;
+}
+
+template <typename T>
+bool BaseButtonGroup<T>::HasSelection() const {
+  return selectedIndex != NoSelectionIndex;
+}
+
+template <typename T>
 T BaseButtonGroup<T>::Selected() const {
+  if (!HasSelection()) {
+    throw std::runtime_error("ButtonGroup: no entry is selected");
+  }
   auto it = items.begin();
   std::advance(it, selectedIndex);
   return it->first;
@@ -166,6 +218,9 @@ T BaseButtonGroup<T>::Selected() const {
 
 template <typename T>
 ButtonGroupItem BaseButtonGroup<T>::SelectedItem() const {
+  if (!HasSelection()) {
+    throw std::runtime_error("ButtonGroup: no entry is selected");
+  }
   auto it = items.begin();
   std::advance(it, selectedIndex);
   return it->second;
@@ -195,6 +250,8 @@ ImVec2 BaseButtonGroup<T>::GetSize() const {
       btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
     } else if (item.type == ItemType::Label) {
       btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
+    } else if (item.type == ItemType::CheckableButton) {
+      btnSize.x = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, label);
     }
 
     if (isHorizontal) {
@@ -215,17 +272,17 @@ ImVec2 BaseButtonGroup<T>::GetSize() const {
 template <typename T>
 void BaseButtonGroup<T>::PushButtonStyle(const ButtonGroupItem& item) {
   switch (item.status) {
-  case ButtonStatus::Success:
-    ImGuiHelper::PushButtonStyle(ButtonStyle::Success);
+  case ButtonStatus::BUTTON_STATUS_SUCCESS:
+    ImGuiHelper::PushButtonStyle(ButtonStyle::BUTTON_STYLE_SUCCESS);
     break;
-  case ButtonStatus::Failure:
-    ImGuiHelper::PushButtonStyle(ButtonStyle::Failure);
+  case ButtonStatus::BUTTON_STATUS_FAILURE:
+    ImGuiHelper::PushButtonStyle(ButtonStyle::BUTTON_STYLE_FAILURE);
     break;
-  case ButtonStatus::Warning:
-    ImGuiHelper::PushButtonStyle(ButtonStyle::Warning);
+  case ButtonStatus::BUTTON_STATUS_WARNING:
+    ImGuiHelper::PushButtonStyle(ButtonStyle::BUTTON_STYLE_WARNING);
     break;
   default:
-    ImGuiHelper::PushButtonStyle(ButtonStyle::Default);
+    ImGuiHelper::PushButtonStyle(ButtonStyle::BUTTON_STYLE_DEFAULT);
     break;
   }
 }

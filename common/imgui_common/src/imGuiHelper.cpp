@@ -17,6 +17,40 @@
 #include "IntelOneMono-RegularAuto.h"
 #include "log.h"
 
+ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) {
+  return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y);
+}
+
+ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) {
+  return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y);
+}
+
+ImVec2 operator*(const ImVec2& lhs, float rhs) {
+  return ImVec2(lhs.x * rhs, lhs.y * rhs);
+}
+
+ImVec2 operator/(const ImVec2& lhs, float rhs) {
+  return ImVec2(lhs.x / rhs, lhs.y / rhs);
+}
+
+ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs) {
+  lhs.x += rhs.x;
+  lhs.y += rhs.y;
+  return lhs;
+}
+
+ImVec2& operator-=(ImVec2& lhs, const ImVec2& rhs) {
+  lhs.x -= rhs.x;
+  lhs.y -= rhs.y;
+  return lhs;
+}
+
+namespace {
+static constexpr const char* RELEASE_NOTES_WINDOW_TITLE = "Release Notes";
+static constexpr const char* RELEASE_NOTES_BUTTON = "Show Release Notes";
+static constexpr const char* RELEASE_NOTES_CLOSE_BUTTON = "Close";
+} // namespace
+
 namespace gits {
 namespace ImGuiHelper {
 
@@ -45,6 +79,9 @@ float WidthOf(Widgets widget, const std::string& label) {
     return WidthOf(Widgets::Button, "-.-");
   case Widgets::Text:
     return textWidth + padding;
+  case Widgets::InputInt:
+    return WidthOf(Widgets::Button, "+ ") + WidthOf(Widgets::Button, "- ") + padding * 2 +
+           WidthOf(Widgets::Input, label);
   case Widgets::Combo:
     // TODO: Can this be handled better?
     // Right now the size is based on a "magic string"
@@ -62,6 +99,13 @@ float LineHeight() {
   return ImGui::GetFrameHeight() + ImGui::GetStyle().ItemSpacing.y;
 }
 
+void Seperator(bool sameLine) {
+  ImGui::TextDisabled(" | ");
+  if (sameLine) {
+    ImGui::SameLine();
+  }
+}
+
 std::string ToStr(const ImVec2& v) {
   return std::to_string(static_cast<int>(v.x)) + "x" + std::to_string(static_cast<int>(v.y));
 }
@@ -70,7 +114,7 @@ ImFont* GetIntelFont(float uiScale) {
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig font_cfg;
   font_cfg.FontDataOwnedByAtlas = false;
-  return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size, 24.0f,
+  return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size, 48.0f,
                                         &font_cfg);
 }
 
@@ -84,27 +128,8 @@ bool UpdateUIScaling(float scale) {
   ImGuiIO& io = ImGui::GetIO();
 
   ImGuiStyle& style = ImGui::GetStyle();
-  ImGuiStyle styleold = style;
-
-  style = ImGuiStyle();
-  style.WindowBorderSize = 1.0f;
-  style.ChildBorderSize = 1.0f;
-  style.PopupBorderSize = 1.0f;
-  style.FrameBorderSize = 1.0f;
-  style.TabBorderSize = 1.0f;
-  style.WindowRounding = 0.0f;
-  style.ChildRounding = 2.0f;
-  style.PopupRounding = 2.0f;
-  style.FrameRounding = 2.0f;
-  style.ScrollbarRounding = 2.0f;
-  style.GrabRounding = 2.0f;
-  style.TabRounding = 2.0f;
-  style.ItemSpacing.y = 8.0f;
-
   style.ScaleAllSizes(scale);
   currentUiScale = scale;
-
-  std::copy(std::begin(styleold.Colors), std::end(styleold.Colors), std::begin(style.Colors));
 
   style.AntiAliasedLines = true;
   style.AntiAliasedLinesUseTex = true;
@@ -114,7 +139,7 @@ bool UpdateUIScaling(float scale) {
   if (newFont == nullptr) {
     return false;
   }
-  newFont->Scale = scale;
+  newFont->Scale = scale * 0.5;
   io.FontDefault = newFont;
   io.Fonts->Build();
 
@@ -156,33 +181,64 @@ void AddTableRow(const std::string& left, const std::string& right, const int& c
 
 void PushButtonStyle(const ButtonStyle style) {
   switch (style) {
-  case ButtonStyle::Success:
+  case ButtonStyle::BUTTON_STYLE_SUCCESS:
     ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::SUCCESS);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::SUCCESS_HOVERED);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::SUCCESS_ACTIVE);
+    ImGui::PushStyleColor(
+        ImGuiCol_Text, ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // dark text - green is too bright for white
     break;
-  case ButtonStyle::Warning:
+  case ButtonStyle::BUTTON_STYLE_WARNING:
     ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::WARNING);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::WARNING_HOVERED);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::WARNING_ACTIVE);
+    ImGui::PushStyleColor(
+        ImGuiCol_Text,
+        ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // dark text - yellow is too bright for white
     break;
-  case ButtonStyle::Failure:
+  case ButtonStyle::BUTTON_STYLE_CRITICAL:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::CRITICAL);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::CRITICAL_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::CRITICAL_ACTIVE);
+    ImGui::PushStyleColor(
+        ImGuiCol_Text,
+        ImVec4(0.0f, 0.0f, 0.0f, 1.0f)); // dark text - yellow is too bright for white
+    break;
+  case ButtonStyle::BUTTON_STYLE_INFO:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::INFO);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::INFO_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::INFO_ACTIVE);
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // white text - orange is dark enough
+    break;
+  case ButtonStyle::BUTTON_STYLE_FAILURE:
     ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::FAILURE);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::FAILURE_HOVERED);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::FAILURE_ACTIVE);
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // white text - red is dark enough
     break;
-  case ButtonStyle::Default:
+  case ButtonStyle::BUTTON_STYLE_DEFAULT:
     ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImGui::GetStyleColorVec4(ImGuiCol_Text)); // keep current theme text color
+    break;
+  case ButtonStyle::BUTTON_STYLE_DISABLED:
+    ImGui::PushStyleColor(ImGuiCol_Button, ImGuiHelper::Colors::DISABLED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGuiHelper::Colors::DISABLED_HOVERED);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGuiHelper::Colors::DISABLED_ACTIVE);
+    ImGui::PushStyleColor(ImGuiCol_Text,
+                          ImVec4(1.0f, 1.0f, 1.0f, 1.0f)); // white text - red is dark enough
     break;
   default:
-    break;
+    return; // no push, so no pop needed
   }
 }
 
 void PopButtonStyle() {
-  ImGui::PopStyleColor(3);
+  ImGui::PopStyleColor(4);
 }
 
 bool InputString(const char* labelID,
@@ -369,6 +425,50 @@ void HelpButton(const std::string& title,
     }
     ImGui::EndPopup();
   }
+}
+bool ShowReleaseNotesModal(const char* releaseNotes) {
+  bool showReleaseNotes = true;
+  ImGui::OpenPopup(::RELEASE_NOTES_WINDOW_TITLE);
+  ImGuiViewport* viewport = ImGui::GetMainViewport();
+  ImVec2 viewportSize = viewport->Size;
+
+  ImVec2 modalSize = ImVec2(viewportSize.x * 0.8f, viewportSize.y * 0.8f);
+
+  ImVec2 center = viewport->GetCenter();
+  ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+  ImGui::SetNextWindowSize(modalSize, ImGuiCond_Always);
+
+  if (ImGui::BeginPopupModal(::RELEASE_NOTES_WINDOW_TITLE, &showReleaseNotes,
+                             ImGuiWindowFlags_NoResize)) {
+    ImVec2 windowSize = ImGui::GetWindowSize();
+    ImVec2 contentRegion = ImGui::GetContentRegionAvail();
+
+    float buttonWidth = 120.0f;
+    float buttonHeight = ImGui::GetFrameHeight();
+    float padding = ImGui::GetStyle().WindowPadding.y;
+
+    float contentHeight = contentRegion.y - buttonHeight - padding * 2 - 1; // 1 for separator
+
+    if (ImGui::BeginChild("ReleaseNotesContent", ImVec2(0, contentHeight),
+                          true, // border
+                          ImGuiWindowFlags_AlwaysVerticalScrollbar)) {
+      ImGui::TextWrapped("%s", releaseNotes);
+    }
+    ImGui::EndChild();
+
+    ImGui::Separator();
+
+    ImGui::SetCursorPosX(windowSize.x - buttonWidth - ImGui::GetStyle().WindowPadding.x);
+    ImGui::SetCursorPosY(windowSize.y - buttonHeight - ImGui::GetStyle().WindowPadding.y);
+
+    if (ImGui::Button(::RELEASE_NOTES_CLOSE_BUTTON, ImVec2(buttonWidth, 0))) {
+      showReleaseNotes = false;
+      ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+  }
+
+  return showReleaseNotes;
 }
 
 } // namespace ImGuiHelper

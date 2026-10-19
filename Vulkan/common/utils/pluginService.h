@@ -16,6 +16,7 @@
 namespace gits {
 namespace vulkan {
 
+class DispatchTablesHolder;
 struct VkDeviceLevelDispatchTable;
 struct VkInstanceLevelDispatchTable;
 
@@ -37,6 +38,8 @@ public:
   PluginService& operator=(const PluginService&) = delete;
 
   void LoadPlugins();
+  void Shutdown();
+  void SetDispatchTablesHolder(DispatchTablesHolder* holder);
   void SetVulkanDeviceDispatchTable(VkDeviceLevelDispatchTable* table);
   void SetVulkanInstanceDispatchTable(VkInstanceLevelDispatchTable* table);
   void SetVkDriverRewindPresentCountPtr(std::uint64_t* count);
@@ -44,6 +47,7 @@ public:
 
 private:
   std::vector<PluginInfo> m_Plugins;
+  DispatchTablesHolder* m_DispatchTablesHolder = nullptr;
   VkDeviceLevelDispatchTable* m_VulkanDeviceDispatchTable = nullptr;
   VkInstanceLevelDispatchTable* m_VulkanInstanceDispatchTable = nullptr;
   std::uint64_t* m_VkDriverRewindPresentCountPtr = nullptr;

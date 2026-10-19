@@ -1,0 +1,345 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "pluginsPanel.h"
+#include "context.h"
+#include "launcherActions.h"
+#include "configOptions.h"
+#include <fstream>
+#include <iterator>
+#include <optional>
+#include "log.h"
+#include <exception>
+#include "baseEventBus.h"
+#include <functional>
+#include <imgui.h>
+
+namespace {
+// Helpers and messages / labels
+gits::gui::Api GetPluginsApi() {
+  auto& context = gits::gui::Context::GetInstance();
+  if (context.SelectedAction == gits::gui::GitsAction::CAPTURE) {
+    return context.SelectedApiForCapture;
+  }
+  return context.GetStreamAPI();
+}
+
+const std::filesystem::path GetPluginsDirectory() {
+  auto& baseContext = gits::gui::BaseContext::GetBaseInstance();
+  const auto& gitsBasePath = baseContext.GetPathSafe(gits::gui::Path::GITS_BASE);
+
+  if (gitsBasePath.empty() || !std::filesystem::exists(gitsBasePath)) {
+    return std::string();
+  }
+
+  switch (GetPluginsApi()) {
+  case gits::gui::Api::DIRECTX:
+    return gitsBasePath / "Plugins" / "DirectX";
+  case gits::gui::Api::VULKAN:
+    return gitsBasePath / "Plugins" / "Vulkan";
+  default:
+    return "";
+  }
+}
+
+static constexpr const char* PLUGIN_CONFIG_FILENAME = "config.yml";
+static constexpr const char* PLUGIN_CONFIG_GENERIC_ERROR_MESSAGE = "Couldn't load plugin's config.";
+static constexpr const char* PLUGIN_CONFIG_DOESNT_EXIST_MESSAGE =
+    "Couldn't load plugin's config. Plugin's config file doesn't exist";
+static constexpr const char* NO_GITS_BASE_PATH_MESSAGE =
+    "Couldn't find plugins directory. No GITS base path was selected.";
+static constexpr const char* GITS_BASE_PATH_DOESNT_EXIST_MESSAGE =
+    "Couldn't find plugins directory. Selected GITS base path doesn't exist.";
+static constexpr const char* INVALID_GITS_CONFIG_PATH_MESSAGE =
+    "Enabling plugins requires a GITS config. Please select a valid config path.";
+static constexpr const char* UNSUPPORTED_API_MESSAGE =
+    "Plugins are supported only for DirectX 12 and Vulkan.";
+} // namespace
+
+namespace gits::gui {
+
+PluginsPanel::PluginsPanel() : BasePanel(), m_PluginConfigEditor("PluginConfigEditor") {
+  m_PluginConfigEditor.SetFilterOutFirstYMLComment(true);
+
+  EventBus::GetInstance().subscribe<PathEvent>(
+      std::bind(&PluginsPanel::PathCallback, this, std::placeholders::_1));
+  EventBus::GetInstance().subscribe<AppEvent>(
+      std::bind(&PluginsPanel::AppCallback, this, std::placeholders::_1));
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&PluginsPanel::ContextCallback, this, std::placeholders::_1));
+}
+
+void PluginsPanel::Render() {
+  auto& baseContext = BaseContext::GetBaseInstance();
+  const auto& gitsBasePath = baseContext.GetPathSafe(Path::GITS_BASE);
+
+  if (gitsBasePath.empty()) {
+    ImGui::Text(NO_GITS_BASE_PATH_MESSAGE);
+    return;
+  }
+
+  if (!std::filesystem::exists(gitsBasePath)) {
+    ImGui::Text(GITS_BASE_PATH_DOESNT_EXIST_MESSAGE);
+    return;
+  }
+
+  const auto& pluginsPath = GetPluginsDirectory();
+
+  if (pluginsPath.empty()) {
+    ImGui::Text(UNSUPPORTED_API_MESSAGE);
+    return;
+  }
+
+  if (!std::filesystem::exists(pluginsPath)) {
+    ImGui::Text(("Couldn't find plugins directory. Expected directory: " + pluginsPath.string() +
+                 " doesn't exist.")
+                    .c_str());
+    return;
+  }
+
+  const auto& currentConfig = baseContext.GetPathSafe(Path::CONFIG);
+
+  if (currentConfig.empty() || !std::filesystem::exists(currentConfig)) {
+    ImGui::Text(INVALID_GITS_CONFIG_PATH_MESSAGE);
+    return;
+  }
+
+  if (ImGui::BeginTable("PluginsPanelTable", 2,
+                        ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV)) {
+
+    // PluginsList
+    ImGui::TableNextColumn();
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::BeginChild("LeftPane", ImVec2(0, 0), ImGuiChildFlags_Border);
+    RenderPluginsList();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+
+    // Selected plugin config
+    ImGui::TableNextColumn();
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 1.0f);
+    ImGui::BeginChild("RightPane", ImVec2(0, 0), ImGuiChildFlags_Border);
+    RenderSelectedPluginConfig();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::EndTable();
+  }
+}
+
+void PluginsPanel::InvalidatePluginsList() {
+  m_PluginsListNeedsUpdating = true;
+}
+
+bool PluginsPanel::LoadPluginConfig(const std::filesystem::path& pluginDirectoryName) {
+  const auto& pluginsPath = GetPluginsDirectory();
+  if (pluginsPath.empty() || !std::filesystem::exists(pluginsPath)) {
+    m_PluginConfigEditor.SetText(PLUGIN_CONFIG_GENERIC_ERROR_MESSAGE);
+    return false;
+  }
+
+  const auto& pluginConfigPath = GetPluginConfigPath(pluginDirectoryName);
+
+  if (pluginConfigPath.empty() || !std::filesystem::exists(pluginConfigPath)) {
+    m_PluginConfigEditor.SetText(PLUGIN_CONFIG_DOESNT_EXIST_MESSAGE);
+    return false;
+  }
+
+  m_PluginConfigEditor.LoadFromFile(pluginConfigPath);
+
+  return true;
+}
+
+std::filesystem::path PluginsPanel::GetPluginConfigPath(
+    const std::filesystem::path& pluginDirectoryName) {
+  const auto pluginsPath = GetPluginsDirectory();
+
+  if (pluginsPath.empty()) {
+    return std::filesystem::path();
+  }
+
+  const auto pluginConfigPath = pluginsPath / pluginDirectoryName / PLUGIN_CONFIG_FILENAME;
+  if (!std::filesystem::exists(pluginConfigPath)) {
+    return std::filesystem::path();
+  }
+
+  return pluginConfigPath;
+}
+
+std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
+    const std::filesystem::path& pluginPath) {
+  std::optional<PluginListEntry> entry = PluginListEntry{};
+
+  if (pluginPath.empty() || !std::filesystem::exists(pluginPath)) {
+    LOG_WARNING << "Couldn't add plugin " << entry.value().DirectoryName
+                << " to the plugins list. Plugin path: " << pluginPath << " doesn't exist";
+    return std::nullopt;
+  }
+
+  entry.value().DirectoryName = pluginPath.filename();
+
+  const auto& pluginConfigPath = GetPluginConfigPath(entry.value().DirectoryName);
+  if (pluginConfigPath.empty() || !std::filesystem::exists(pluginConfigPath)) {
+    LOG_WARNING << "Couldn't add plugin " << entry.value().DirectoryName
+                << " to the plugins list. Plugin's config path: " << pluginConfigPath
+                << " doesn't exist";
+    return std::nullopt;
+  }
+
+  try {
+    const auto& yaml = YAML::LoadFile(pluginConfigPath.string());
+    if (yaml["Info"]) {
+      if (const auto nameNode = yaml["Info"]["Name"]) {
+        const auto& name = nameNode.as<std::string>();
+        if (name.empty()) {
+          return std::nullopt;
+        }
+        entry.value().Name = name;
+      } else {
+        return std::nullopt;
+      }
+    } else {
+      return std::nullopt;
+    }
+  } catch (const std::exception& e) {
+    LOG_WARNING << "Couldn't add plugin " << entry.value().DirectoryName
+                << " to the plugins list. Couldn't load plugin's config: "
+                << pluginConfigPath.string() << ". Error: " << e.what();
+    return std::nullopt;
+  }
+
+  auto& context = Context::GetInstance();
+
+  const auto& pluginsList = context.SelectedAction == GitsAction::CAPTURE
+                                ? config_options::RecorderPlugins(context.SelectedAction)
+                                : config_options::PlayerPlugins(context.SelectedAction);
+
+  entry.value().Enabled = std::ranges::find(pluginsList, entry.value().Name) != pluginsList.end();
+
+  return entry;
+}
+
+void PluginsPanel::LoadPluginsList() {
+  m_PluginsList.clear();
+  m_CurrentSelection = -1;
+
+  const auto& pluginsPath = GetPluginsDirectory();
+
+  if (!pluginsPath.empty() && std::filesystem::exists(pluginsPath)) {
+    for (const auto& entry : std::filesystem::directory_iterator{pluginsPath}) {
+
+      if (entry.is_directory()) {
+        const auto listEntry = GetPluginListEntry(entry.path());
+
+        if (!listEntry.has_value()) {
+          continue;
+        }
+
+        m_PluginsList.push_back(listEntry.value());
+      }
+    }
+  }
+}
+
+void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool enable) {
+  auto& context = Context::GetInstance();
+  const auto& gitsConfigPath = context.GetPathSafe(Path::CONFIG);
+
+  if (gitsConfigPath.empty() || !std::filesystem::exists(gitsConfigPath)) {
+    return;
+  }
+
+  if (enable) {
+    LOG_INFO << "Enabling plugin: " << pluginName;
+  } else {
+    LOG_INFO << "Disabling plugin: " << pluginName;
+  }
+  const auto api = context.SelectedAction == GitsAction::CAPTURE ? context.SelectedApiForCapture
+                                                                 : context.GetStreamAPI();
+  auto& pluginsList = context.SelectedAction == GitsAction::CAPTURE
+                          ? config_options::RecorderPlugins()
+                          : config_options::PlayerPlugins();
+
+  if (enable) {
+    pluginsList.push_back(pluginName);
+  } else {
+    std::erase(pluginsList, pluginName);
+  }
+
+  context.UpdateInMemoryConfig();
+}
+
+void PluginsPanel::RenderPluginsList() {
+  const auto& pluginsPath = GetPluginsDirectory();
+  ImGui::Text(("Plugins path: " + pluginsPath.string()).c_str());
+
+  if (m_LastPluginsPath != pluginsPath) {
+    m_LastPluginsPath = pluginsPath;
+    InvalidatePluginsList();
+  }
+
+  if (m_PluginsListNeedsUpdating) {
+    LoadPluginsList();
+    m_PluginsListNeedsUpdating = false;
+  }
+
+  for (int i = 0; i < m_PluginsList.size(); i++) {
+    auto& plugin = m_PluginsList[i];
+    if (ImGui::Checkbox(("##" + plugin.Name + "checkbox").c_str(), &plugin.Enabled)) {
+      UpdateGitsConfig(plugin.Name, plugin.Enabled);
+    }
+    // We render the label separately for it to not extend the checkbox's hitbox
+    ImGui::SameLine();
+    bool selected = m_CurrentSelection == i;
+    if (ImGui::Selectable(plugin.Name.c_str(), &selected)) {
+      m_CurrentSelection = i;
+
+      const auto& selectedPlugin = m_PluginsList[m_CurrentSelection];
+      const auto pluginConfigPath = GetPluginConfigPath(selectedPlugin.DirectoryName.string());
+
+      if (pluginConfigPath.empty()) {
+        return;
+      }
+
+      LoadPluginConfig(selectedPlugin.DirectoryName);
+    }
+  }
+}
+
+void PluginsPanel::RenderSelectedPluginConfig() {
+  if (!m_PluginsList.empty() && m_CurrentSelection > -1 &&
+      m_CurrentSelection < m_PluginsList.size()) {
+    const auto& selectedPlugin = m_PluginsList[m_CurrentSelection];
+
+    ImGui::Text(("Plugin: " + selectedPlugin.Name).c_str());
+    m_PluginConfigEditor.Render();
+  }
+}
+
+void PluginsPanel::PathCallback(const Event& e) {
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+  if (pathEvent.EventType == PathEvent::Type::GITS_BASE ||
+      pathEvent.EventType == PathEvent::Type::CONFIG) {
+    InvalidatePluginsList();
+  }
+}
+
+void PluginsPanel::AppCallback(const Event& e) {
+  const AppEvent& appEvent = static_cast<const AppEvent&>(e);
+  if (appEvent.EventType == AppEvent::Type::ModeChanged) {
+    InvalidatePluginsList();
+  }
+}
+
+void PluginsPanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+  if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {
+    InvalidatePluginsList();
+  }
+}
+
+} // namespace gits::gui

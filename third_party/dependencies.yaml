@@ -82,6 +82,24 @@ dependencies:
     - name: json
       url: https://github.com/nlohmann/json.git
       branch: v3.11.3
+    - name: asio
+      url: https://github.com/chriskohlhoff/asio.git
+      branch: asio-1-38-2
+    - name: cereal
+      url: https://github.com/USCiLab/cereal.git
+      branch: v1.3.2
+    - name: dxil-spirv
+      url: https://github.com/HansKristian-Work/dxil-spirv.git
+      branch: master
+      commit_id: e0e2d1cac6a8c63a7659b61dd646657312bc5f93
+      recursive: true
+    - name: glslang
+      url: https://github.com/KhronosGroup/glslang.git
+      branch: 15.1.0
+      recursive: true
+    - name: spirv-cross
+      url: https://github.com/KhronosGroup/SPIRV-Cross.git
+      branch: vulkan-sdk-1.4.363.0
     - name: lz4
       url: https://github.com/lz4/lz4.git
       branch: v1.10.0
@@ -119,7 +137,7 @@ dependencies:
     - name: implot
       url: https://github.com/epezent/implot
       branch: master
-      commit_id: 3da8bd34299965d3b0ab124df743fe3e076fa222
+      commit_id: 09e2ba71766e25d88053a2173936c9d1043bae42
     - name: tbb
       url: https://github.com/uxlfoundation/oneTBB.git
       branch: master

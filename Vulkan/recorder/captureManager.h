@@ -31,6 +31,7 @@ class CaptureManager : public gits::noncopyable {
 public:
   static CaptureManager& Get();
   static void Cleanup();
+  void Shutdown();
 
   GITSKey CreateCommandKey() {
     return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
@@ -145,18 +146,19 @@ private:
 private:
   static CaptureManager* m_Instance;
   CaptureLayerManager m_LayerManager;
-  PluginService m_PluginService;
 
   std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   //std::atomic<uint32_t> m_RecursionDepth{0};
   static thread_local uint32_t m_RecursionDepth;
   std::atomic<GITSKey> m_CommandUniqueKey{0};
   std::atomic<GITSKey> m_HandleUniqueKey{0};
+  std::atomic<bool> m_Shutdown{false};
   VkGlobalLevelDispatchTable m_GlobalDispatchTable{};
   std::shared_mutex m_DispatchTablesMutex;
   std::unordered_map<void*, VkInstanceLevelDispatchTable> m_InstanceDispatchTable{};
   std::unordered_map<void*, VkDeviceLevelDispatchTable> m_DeviceDispatchTable{};
   std::unique_ptr<DispatchTablesHolder> m_DispatchTablesHolder;
+  PluginService m_PluginService;
 
   std::unique_ptr<MapTrackingService> m_MapTrackingService;
   std::unique_ptr<WindowTrackingService> m_WindowTrackingService;

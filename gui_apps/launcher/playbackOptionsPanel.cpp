@@ -1,0 +1,241 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "playbackOptionsPanel.h"
+
+#include <ranges>
+#include <algorithm>
+
+#include "imgui.h"
+#include "imGuiHelper.h"
+#include "launcherActions.h"
+#include "labels.h"
+#include "baseEventBus.h"
+#include "contextHelper.h"
+#include "configOptions.h"
+#include "configOptionsGuiHelpers.h"
+#include "configMetadataAuto.h"
+#include "guiActions.h"
+
+namespace {
+std::optional<std::filesystem::path> GetPath(bool flag, std::string path) {
+  if (flag) {
+    if (!path.empty()) {
+      if (std::filesystem::exists(path)) {
+        return path;
+      }
+    }
+  }
+  return std::nullopt;
+}
+} // namespace
+
+namespace gits::gui {
+
+PlaybackOptionsPanel::PlaybackOptionsPanel() : BasePanel() {
+  EventBus::GetInstance().subscribe<ContextEvent>(
+      std::bind(&PlaybackOptionsPanel::ContextCallback, this, std::placeholders::_1));
+  EventBus::GetInstance().subscribe<PathEvent>(
+      std::bind(&PlaybackOptionsPanel::PathCallback, this, std::placeholders::_1));
+}
+
+void PlaybackOptionsPanel::Render() {
+  auto& context = Context::GetInstance();
+  auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
+  auto windowWidth = ImGui::GetContentRegionAvail().x;
+
+  const auto labels = {Labels::SCREENSHOTS_RANGES, Labels::ARTIFACTS_PATH, Labels::TRACE_PATH};
+  auto labelWidth =
+      std::ranges::max(labels | std::views::transform([](const auto& label) {
+                         return ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Text, label);
+                       })) +
+      indent;
+  auto screenshotRangeInputWidth =
+      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, "123456789012345678901234567890");
+  auto screenshotRangeFieldInputWidth =
+      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, "12345678901234");
+
+  auto labelSize = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Label, Labels::ARTIFACTS_PATH);
+
+  auto changed = false;
+
+  changed |= ImGui::Checkbox(Labels::EXECUTABLE_NAME_ENABLED,
+                             &config_options::ExecutableNameOverrideEnabled(GitsAction::PLAYBACK));
+  ImGui::SameLine();
+
+  auto widthApplicationName =
+      ImGui::GetContentRegionAvail().x -
+      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::EXECUTABLE_NAME_RESET) -
+      ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::HELP_BUTTON) - 32.0f;
+  widthApplicationName *= 0.25f;
+
+  // Common subcapture option (shared with playback)
+  ImGui::BeginDisabled(!config_options::ExecutableNameOverrideEnabled(GitsAction::PLAYBACK));
+  changed |= ImGuiHelper::LabelInputString(
+      "", "###ExecutableCustomName",
+      config_options::ExecutableNameOverrideCustomName(GitsAction::PLAYBACK), 0,
+      widthApplicationName);
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::EXECUTABLE_NAME_RESET)) {
+    try {
+      auto recorderDiags =
+          context.ConfigurationForAction(GitsAction::PLAYBACK).MetaData.RecorderDiags;
+      static const nlohmann::json::json_pointer originalAppNamePtr("/original_app/name");
+      if (recorderDiags.contains(originalAppNamePtr)) {
+        config_options::ExecutableNameOverrideCustomName(GitsAction::PLAYBACK) =
+            recorderDiags.at(originalAppNamePtr).get<std::string>();
+        changed = true;
+      } else {
+        LOG_ERROR
+            << "Failed to reset executable name override, original application name not found "
+               "in metadata.";
+      }
+    } catch (...) {
+      LOG_ERROR << "Failed to reset executable name override, original application name not found "
+                   "in metadata.";
+    }
+  }
+  config_options_gui_helpers::ConfigOptionHelpButton(
+      ConfigMetadata::Common::Player::ExecutableNameOverride::GroupMetadata);
+  ImGui::EndDisabled();
+
+  ImGui::Text(Labels::ARTIFACTS_LABEL);
+  ImGui::SameLine();
+  ImGuiHelper::HelpButton(Labels::ARTIFACTS_HELP_TITLE, Labels::ARTIFACTS_HELP_TOOLTIP,
+                          Labels::ARTIFACTS_HELP_DESCRIPTION);
+  ImGui::SameLine();
+  auto artifacts = ImGui::GetContentRegionAvail().x -
+                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::BASE_ON_STREAMPATH) -
+                   ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, Labels::CHOOSE_TARGET) -
+                   16.0f;
+
+  context_helper::PathInput("###ArtifactsPath", Path::ARTIFACTS, GitsAction::PLAYBACK, 0,
+                            artifacts);
+  ImGuiHelper::AddTooltip(Labels::ARTIFACTS_HINT);
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::BASE_ON_STREAMPATH)) {
+    SetScreenshotPathFromInputStream();
+  }
+  ImGui::SameLine();
+  if (ImGui::Button(Labels::CHOOSE_TARGET)) {
+    gui_actions::ShowFileDialog(FileDialogKey{Path::ARTIFACTS, GitsAction::PLAYBACK});
+  }
+  ImGui::Separator();
+
+  auto api = context.GetStreamAPI();
+
+  if (api == Api::DIRECTX || api == Api::VULKAN) {
+    const auto hudApi = api == Api::DIRECTX ? gits::ApiBool::DX : gits::ApiBool::VK;
+    auto& hudApis = config_options::HudEnabled(GitsAction::PLAYBACK);
+    auto hudEnabled = std::find(hudApis.begin(), hudApis.end(), hudApi) != hudApis.end();
+    if (ImGui::Checkbox(Labels::HUD_ENABLED, &hudEnabled)) {
+      changed = true;
+      auto it = std::find(hudApis.begin(), hudApis.end(), hudApi);
+      if (hudEnabled && it == hudApis.end()) {
+        hudApis.push_back(hudApi);
+      } else if (!hudEnabled && it != hudApis.end()) {
+        hudApis.erase(it);
+      }
+    }
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::HUD::GroupMetadata);
+
+    changed |= ImGui::Checkbox(Labels::SCREENSHOTS,
+                               &config_options::ScreenshotsEnabled(GitsAction::PLAYBACK));
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::enabled);
+
+    ImGui::BeginDisabled(!config_options::ScreenshotsEnabled(GitsAction::PLAYBACK));
+    ImGui::Indent(indent);
+    auto inputPosition = ImGui::GetCursorPosX() + labelWidth - indent;
+
+    changed |= ImGuiHelper::RangeControls(
+        Labels::SCREENSHOTS_RANGES, labelWidth - indent, screenshotRangeInputWidth,
+        screenshotRangeFieldInputWidth, "###ScreenshotsRANGES", nullptr,
+        config_options::ScreenshotsFrames(GitsAction::PLAYBACK), ScreenshotsConfig.TmpStartFrame,
+        ScreenshotsConfig.TmpEndFrame, ScreenshotsConfig.TmpStepFrame,
+        Labels::SCREENSHOTS_ADD_RANGE, Labels::SCREENSHOTS_ADD_FRAME);
+    config_options_gui_helpers::ConfigOptionHelpButton(
+        ConfigMetadata::Common::Shared::Screenshots::frames);
+    ImGui::Unindent(indent);
+    ImGui::EndDisabled();
+
+    changed |= config_options_gui_helpers::Trace(GitsAction::PLAYBACK, indent);
+  }
+
+  if (changed) {
+    context.UpdateInMemoryConfig(GitsAction::PLAYBACK);
+  }
+}
+
+void PlaybackOptionsPanel::RenderSimple() {
+  // Nothing at the moment
+}
+
+void PlaybackOptionsPanel::SetScreenshotPathFromInputStream() {
+  auto& context = Context::GetInstance();
+  auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, GitsAction::PLAYBACK);
+  const auto screenshotPath = streamPath.parent_path();
+  context.SetPath(screenshotPath, Path::ARTIFACTS, GitsAction::PLAYBACK);
+}
+
+void PlaybackOptionsPanel::ContextCallback(const Event& e) {
+  const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
+
+  auto& context = Context::GetInstance();
+
+  if (contextEvent.Mode == GitsAction::PLAYBACK &&
+      (contextEvent.EventType == ContextEvent::Type::MetadataLoaded ||
+       contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded)) {
+    try {
+      const auto& recorderDiags =
+          context.ConfigurationForAction(GitsAction::PLAYBACK).MetaData.RecorderDiags;
+      static const nlohmann::json::json_pointer originalAppNamePtr("/original_app/name");
+      if (recorderDiags.contains(originalAppNamePtr)) {
+        config_options::ExecutableNameOverrideCustomName(GitsAction::PLAYBACK) =
+            recorderDiags.at(originalAppNamePtr).get<std::string>();
+        context.UpdateInMemoryConfig(GitsAction::PLAYBACK);
+      } else {
+        LOG_ERROR
+            << "Failed to set executable name override, original application name not found in "
+               "metadata.";
+      }
+    } catch (...) {
+      LOG_ERROR << "Failed to set executable name override, original application name not found in "
+                   "metadata.";
+    }
+  }
+
+  if (contextEvent.Mode == GitsAction::PLAYBACK &&
+      contextEvent.EventType == ContextEvent::Type::ConfigFileLoaded) {
+    auto screenshotPath = context.GetPathSafe(Path::ARTIFACTS, GitsAction::PLAYBACK);
+    if (screenshotPath.empty()) {
+      SetScreenshotPathFromInputStream();
+    }
+    auto tracePath = context.GetPathSafe(Path::TRACE, GitsAction::PLAYBACK);
+    if (tracePath.empty()) {
+      SetTracePathFromInputStream();
+    }
+  }
+}
+
+void PlaybackOptionsPanel::PathCallback(const Event& e) {
+  auto& baseContext = BaseContext::GetBaseInstance();
+  const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
+  if (pathEvent.EventType == PathEvent::Type::INPUT_STREAM) {
+    auto screenshotPath = baseContext.GetPathSafe(Path::ARTIFACTS, GitsAction::PLAYBACK);
+    if (screenshotPath.empty()) {
+      SetScreenshotPathFromInputStream();
+    }
+    auto tracePath = baseContext.GetPathSafe(Path::TRACE, GitsAction::PLAYBACK);
+    if (tracePath.empty()) {
+      SetTracePathFromInputStream();
+    }
+  }
+}
+} // namespace gits::gui

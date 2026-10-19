@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "log.h"
+#include "imGuiHelper.h"
 
 namespace gits {
 namespace ImGuiHelper {
@@ -244,13 +245,260 @@ bool Themes::SetThemeByID(std::string id) {
   return false;
 }
 
+void Themes::CycleTheme() {
+  CurrentThemeIdx = (CurrentThemeIdx + 1) % ThemeIDs.size();
+}
+
 void Themes::ApplyTheme() {
   const auto id = CurThemeID();
   if (id == ":dark") {
-    ImGui::StyleColorsDark();
+    ApplyDarkTheme();
   } else {
-    ImGui::StyleColorsLight();
+    ApplyLightTheme();
   }
+}
+
+void Themes::ApplyCommonThemeSettings() {
+  ImGuiStyle& style = ImGui::GetStyle();
+
+  // -------------------------------------------------------
+  // Rounding, Spacing, Sizes & Alpha
+  // -------------------------------------------------------
+  style.WindowRounding = 4.0f;
+  style.FrameRounding = 4.0f;
+  style.ScrollbarRounding = 4.0f;
+  style.GrabRounding = 4.0f;
+  style.TabRounding = 4.0f;
+  style.ChildRounding = 4.0f;
+  style.PopupRounding = 4.0f;
+
+  style.WindowPadding = ImVec2(10.0f, 10.0f);
+  style.FramePadding = ImVec2(6.0f, 4.0f);
+
+  style.ItemSpacing = ImVec2(8.0f, 8.0f);
+  style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
+
+  style.ScrollbarSize = 12.0f;
+  style.GrabMinSize = 8.0f;
+  style.WindowBorderSize = 1.0f;
+  style.ChildBorderSize = 1.0f;
+  style.PopupBorderSize = 1.0f;
+  style.FrameBorderSize = 1.0f;
+  style.TabBorderSize = 1.0f;
+
+  style.DisabledAlpha = 0.6f;
+}
+
+void Themes::ApplyDarkTheme() {
+  ImGui::StyleColorsDark();
+
+  ApplyCommonThemeSettings();
+
+  ImGuiStyle& style = ImGui::GetStyle();
+  // -------------------------------------------------------
+  // Colors
+  // -------------------------------------------------------
+  ImVec4* colors = style.Colors;
+
+  // -- Backgrounds --
+  colors[ImGuiCol_WindowBg] = ImVec4(0.071f, 0.106f, 0.176f, 1.000f);  // Shade 3: #141F45
+  colors[ImGuiCol_ChildBg] = ImVec4(0.059f, 0.090f, 0.161f, 1.000f);   // Shade 2: #0F1B43
+  colors[ImGuiCol_PopupBg] = ImVec4(0.078f, 0.114f, 0.196f, 1.000f);   // Shade 4: #19234A
+  colors[ImGuiCol_MenuBarBg] = ImVec4(0.027f, 0.051f, 0.176f, 1.000f); // Shade 1: #070D2D
+
+  // -- Borders --
+  colors[ImGuiCol_Border] = ImVec4(0.000f, 0.639f, 0.988f, 0.200f); // Notable Middle: #00A3F6
+  colors[ImGuiCol_BorderShadow] = ImVec4(0.000f, 0.000f, 0.000f, 0.000f);
+
+  // -- Frame (inputs, checkboxes, etc.) --
+  colors[ImGuiCol_FrameBg] = ImVec4(0.098f, 0.137f, 0.282f, 1.000f);        // Shade 5: #1B2652
+  colors[ImGuiCol_FrameBgHovered] = ImVec4(0.118f, 0.165f, 0.341f, 1.000f); // Shade 6: #1E2A57
+  colors[ImGuiCol_FrameBgActive] = ImVec4(0.000f, 0.639f, 0.988f, 0.400f);  // Notable Middle tinted
+
+  // -- Title --
+  colors[ImGuiCol_TitleBg] = ImVec4(0.027f, 0.051f, 0.176f, 1.000f);       // Shade 1: #070D2D
+  colors[ImGuiCol_TitleBgActive] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f); // Notable Dark: #0068B5
+  colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.059f, 0.090f, 0.161f, 1.000f); // Shade 2: #0F1B43
+
+  // -- Scrollbar --
+  colors[ImGuiCol_ScrollbarBg] = ImVec4(0.027f, 0.051f, 0.176f, 1.000f);   // Shade 1: #070D2D
+  colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f); // Notable Dark: #0068B5
+  colors[ImGuiCol_ScrollbarGrabHovered] =
+      ImVec4(0.000f, 0.639f, 0.988f, 1.000f); // Notable Middle: #00A3F6
+  colors[ImGuiCol_ScrollbarGrabActive] =
+      ImVec4(0.000f, 0.780f, 0.992f, 1.000f); // Notable Light: #00C7FD
+
+  // -- Checkmark & Slider --
+  colors[ImGuiCol_CheckMark] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f);  // Notable Light: #00C7FD
+  colors[ImGuiCol_SliderGrab] = ImVec4(0.000f, 0.639f, 0.988f, 1.000f); // Notable Middle: #00A3F6
+  colors[ImGuiCol_SliderGrabActive] =
+      ImVec4(0.000f, 0.780f, 0.992f, 1.000f); // Notable Light: #00C7FD
+
+  // -- Buttons --
+  colors[ImGuiCol_ButtonActive] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f); // Notable Dark: #0068B5
+  colors[ImGuiCol_ButtonHovered] =
+      ImVec4(0.000f, 0.639f, 0.988f, 1.000f); // Notable Middle: #00A3F6
+  colors[ImGuiCol_Button] =
+      ImVec4(0.000f, 0.220f, 0.450f, 1.000f); // Much darker blue - text stays readable
+
+  // -- Headers (CollapsingHeader, TreeNode, Selectable, MenuItem) --
+  colors[ImGuiCol_Header] = ImVec4(0.000f, 0.404f, 0.710f, 0.500f);        // Notable Dark tinted
+  colors[ImGuiCol_HeaderHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.600f); // Notable Middle tinted
+  colors[ImGuiCol_HeaderActive] = ImVec4(0.000f, 0.780f, 0.992f, 0.700f);  // Notable Light tinted
+
+  // -- Separator --
+  colors[ImGuiCol_Separator] = ImVec4(0.000f, 0.639f, 0.988f, 0.300f); // Notable Middle subtle
+  colors[ImGuiCol_SeparatorHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.800f);
+  colors[ImGuiCol_SeparatorActive] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f);
+
+  // -- Resize Grip --
+  colors[ImGuiCol_ResizeGrip] = ImVec4(0.000f, 0.404f, 0.710f, 0.400f);
+  colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.700f);
+  colors[ImGuiCol_ResizeGripActive] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f);
+
+  // -- Tabs --
+  colors[ImGuiCol_Tab] = ImVec4(0.059f, 0.090f, 0.161f, 1.000f);                // Shade 2: #0F1B43
+  colors[ImGuiCol_TabHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.800f);         // Notable Middle
+  colors[ImGuiCol_TabActive] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f);          // Notable Dark
+  colors[ImGuiCol_TabUnfocused] = ImVec4(0.027f, 0.051f, 0.176f, 1.000f);       // Shade 1
+  colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.098f, 0.137f, 0.282f, 1.000f); // Shade 5
+
+  // -- Plot --
+  colors[ImGuiCol_PlotLines] =
+      ImVec4(0.686f, 0.808f, 1.000f, 1.000f); // Less Notable Light: #C9E0FF
+  colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f); // Notable Light
+  colors[ImGuiCol_PlotHistogram] = ImVec4(0.000f, 0.639f, 0.988f, 1.000f);    // Notable Middle
+  colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f);
+
+  // -- Text --
+  colors[ImGuiCol_Text] = ImVec4(0.788f, 0.878f, 1.000f, 1.000f); // Less Notable Light: #C9E0FF
+  colors[ImGuiCol_TextDisabled] =
+      ImVec4(0.686f, 0.761f, 0.851f, 0.600f); // Less Notable Middle: #AFC2D9
+  colors[ImGuiCol_TextSelectedBg] = ImVec4(0.000f, 0.639f, 0.988f, 0.350f); // Notable Middle tinted
+
+  // -- Drag & Drop --
+  colors[ImGuiCol_DragDropTarget] = ImVec4(0.000f, 0.780f, 0.992f, 0.900f);
+
+  // -- Nav --
+  colors[ImGuiCol_NavHighlight] = ImVec4(0.000f, 0.780f, 0.992f, 1.000f);
+  colors[ImGuiCol_NavWindowingHighlight] = ImVec4(0.000f, 0.780f, 0.992f, 0.700f);
+  colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.027f, 0.051f, 0.176f, 0.500f);
+
+  // -- Modal --
+  colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.027f, 0.051f, 0.176f, 0.700f);
+
+  // -- Table --
+  colors[ImGuiCol_TableHeaderBg] = ImVec4(0.027f, 0.051f, 0.176f, 1.000f); // Shade 1
+  colors[ImGuiCol_TableBorderStrong] = ImVec4(0.000f, 0.404f, 0.710f, 0.500f);
+  colors[ImGuiCol_TableBorderLight] = ImVec4(0.000f, 0.404f, 0.710f, 0.200f);
+  colors[ImGuiCol_TableRowBg] = ImVec4(0.000f, 0.000f, 0.000f, 0.000f);
+  colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.000f, 0.639f, 0.988f, 0.050f);
+}
+
+void Themes::ApplyLightTheme() {
+  ImGui::StyleColorsLight();
+
+  ApplyCommonThemeSettings();
+
+  ImGuiStyle& style = ImGui::GetStyle();
+  // -------------------------------------------------------
+  // Colors
+  // -------------------------------------------------------
+  ImVec4* colors = style.Colors;
+
+  // -- Backgrounds --
+  colors[ImGuiCol_WindowBg] = ImVec4(0.957f, 0.973f, 1.000f, 1.000f);  // Shade 7: #F4F8FF
+  colors[ImGuiCol_ChildBg] = ImVec4(0.933f, 0.957f, 1.000f, 1.000f);   // Shade 6: #EEF4FF
+  colors[ImGuiCol_PopupBg] = ImVec4(0.957f, 0.973f, 1.000f, 1.000f);   // Shade 7: #F4F8FF
+  colors[ImGuiCol_MenuBarBg] = ImVec4(0.843f, 0.910f, 1.000f, 1.000f); // Shade 4: #D7E8FF
+
+  // -- Borders --
+  colors[ImGuiCol_Border] = ImVec4(0.000f, 0.404f, 0.710f, 0.200f); // Notable Dark subtle
+  colors[ImGuiCol_BorderShadow] = ImVec4(0.000f, 0.000f, 0.000f, 0.030f);
+
+  // -- Frame (inputs, checkboxes, etc.) --
+  colors[ImGuiCol_FrameBg] =
+      ImVec4(0.863f, 0.922f, 1.000f, 1.000f); // Shade 5: #DCE8FF - light but visible
+  colors[ImGuiCol_FrameBgHovered] = ImVec4(0.784f, 0.878f, 1.000f, 1.000f); // Shade 4 tinted
+  colors[ImGuiCol_FrameBgActive] = ImVec4(0.706f, 0.835f, 1.000f, 1.000f);  // Shade 3: #B4D5FF
+
+  // -- Title --
+  colors[ImGuiCol_TitleBg] = ImVec4(0.843f, 0.910f, 1.000f, 1.000f); // Shade 4: #D7E8FF
+  colors[ImGuiCol_TitleBgActive] =
+      ImVec4(0.784f, 0.878f, 1.000f, 1.000f); // Shade 4 slightly deeper
+  colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.933f, 0.957f, 1.000f, 1.000f); // Shade 6: #EEF4FF
+
+  // -- Scrollbar --
+  colors[ImGuiCol_ScrollbarBg] = ImVec4(0.933f, 0.957f, 1.000f, 1.000f); // Shade 6
+  colors[ImGuiCol_ScrollbarGrab] =
+      ImVec4(0.686f, 0.761f, 0.851f, 1.000f); // Less Notable Middle: #AFC2D9
+  colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.600f); // Notable Middle
+  colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f);  // Notable Dark
+
+  // -- Checkmark & Slider --
+  colors[ImGuiCol_CheckMark] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f);  // Notable Dark: #0068B5
+  colors[ImGuiCol_SliderGrab] = ImVec4(0.000f, 0.639f, 0.988f, 0.800f); // Notable Middle
+  colors[ImGuiCol_SliderGrabActive] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f); // Notable Dark
+
+  // -- Buttons --
+  colors[ImGuiCol_ButtonHovered] = ImVec4(0.149f, 0.694f, 0.969f, 1.000f);
+  colors[ImGuiCol_Button] = ImVec4(0.000f, 0.639f, 0.965f, 1.000f);
+  colors[ImGuiCol_ButtonActive] = ImVec4(0.000f, 0.545f, 0.820f, 1.000f);
+
+  // -- Headers (CollapsingHeader, TreeNode, Selectable, MenuItem) --
+  colors[ImGuiCol_Header] = ImVec4(0.000f, 0.639f, 0.988f, 0.150f); // Very subtle
+  colors[ImGuiCol_HeaderHovered] = ImVec4(0.000f, 0.639f, 0.988f, 0.250f);
+  colors[ImGuiCol_HeaderActive] = ImVec4(0.000f, 0.639f, 0.988f, 0.350f);
+
+  // -- Separator --
+  colors[ImGuiCol_Separator] = ImVec4(0.000f, 0.404f, 0.710f, 0.200f);
+  colors[ImGuiCol_SeparatorHovered] = ImVec4(0.000f, 0.404f, 0.710f, 0.400f);
+  colors[ImGuiCol_SeparatorActive] = ImVec4(0.000f, 0.404f, 0.710f, 0.800f);
+
+  // -- Resize Grip --
+  colors[ImGuiCol_ResizeGrip] = ImVec4(0.000f, 0.404f, 0.710f, 0.150f);
+  colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.000f, 0.404f, 0.710f, 0.350f);
+  colors[ImGuiCol_ResizeGripActive] = ImVec4(0.000f, 0.404f, 0.710f, 0.700f);
+
+  // -- Tabs --
+  colors[ImGuiCol_Tab] = ImVec4(0.843f, 0.910f, 1.000f, 1.000f);        // Shade 4: #D7E8FF - light
+  colors[ImGuiCol_TabHovered] = ImVec4(0.706f, 0.835f, 1.000f, 1.000f); // Shade 3: #B4D5FF
+  colors[ImGuiCol_TabActive] =
+      ImVec4(0.957f, 0.973f, 1.000f, 1.000f); // Shade 7 - active tab matches window bg
+  colors[ImGuiCol_TabUnfocused] = ImVec4(0.933f, 0.957f, 1.000f, 1.000f);       // Shade 6
+  colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.843f, 0.910f, 1.000f, 1.000f); // Shade 4
+
+  // -- Plot --
+  colors[ImGuiCol_PlotLines] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f);        // Notable Dark
+  colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.000f, 0.639f, 0.988f, 1.000f); // Notable Middle
+  colors[ImGuiCol_PlotHistogram] = ImVec4(0.000f, 0.404f, 0.710f, 1.000f);    // Notable Dark
+  colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.000f, 0.639f, 0.988f, 1.000f);
+
+  // -- Text --
+  colors[ImGuiCol_Text] =
+      ImVec4(0.059f, 0.090f, 0.161f, 1.000f); // Shade 2: #0F1B43 - dark but not pure black
+  colors[ImGuiCol_TextDisabled] =
+      ImVec4(0.592f, 0.659f, 0.749f, 1.000f); // Less Notable Middle muted
+  colors[ImGuiCol_TextSelectedBg] =
+      ImVec4(0.000f, 0.639f, 0.988f, 0.200f); // Notable Middle very subtle
+
+  // -- Drag & Drop --
+  colors[ImGuiCol_DragDropTarget] = ImVec4(0.000f, 0.404f, 0.710f, 0.700f);
+
+  // -- Nav --
+  colors[ImGuiCol_NavHighlight] = ImVec4(0.000f, 0.639f, 0.988f, 0.800f);
+  colors[ImGuiCol_NavWindowingHighlight] = ImVec4(0.000f, 0.639f, 0.988f, 0.600f);
+  colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.843f, 0.910f, 1.000f, 0.400f);
+
+  // -- Modal --
+  colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.686f, 0.761f, 0.851f, 0.350f);
+
+  // -- Table --
+  colors[ImGuiCol_TableHeaderBg] = ImVec4(0.843f, 0.910f, 1.000f, 1.000f); // Shade 4: #D7E8FF
+  colors[ImGuiCol_TableBorderStrong] = ImVec4(0.000f, 0.404f, 0.710f, 0.300f);
+  colors[ImGuiCol_TableBorderLight] = ImVec4(0.000f, 0.404f, 0.710f, 0.150f);
+  colors[ImGuiCol_TableRowBg] = ImVec4(0.000f, 0.000f, 0.000f, 0.000f);
+  colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.000f, 0.404f, 0.710f, 0.040f);
 }
 } // namespace ImGuiHelper
 } // namespace gits

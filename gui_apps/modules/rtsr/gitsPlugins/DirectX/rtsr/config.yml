@@ -1,0 +1,25 @@
+## ===================== begin_copyright_notice ============================
+##
+## Copyright (C) 2023-2026 Intel Corporation
+##
+## SPDX-License-Identifier: MIT
+##
+## ===================== end_copyright_notice ==============================
+
+Info:
+  Name: 'rtsr'
+  Description: 'Real Time Shader Replacement (RTSR) client. Tracks the DirectX 12 pipeline states of the stream and talks to a running RTSR server (RTSREditor today, GITS Studio later) so pipelines and shaders can be harvested, shaders replaced live, and performance data gathered during GITS playback or capture.'
+
+Config:
+  ## Address and ports of the RTSR server. The defaults are the ones RTSREditor
+  ## listens on. ClientRequestPort is where this process listens for the server,
+  ## which is how shader replacements arrive; change all four to run several
+  ## instrumented processes side by side.
+  ServerAddress: '127.0.0.1'
+  ServerPushPort: 9551
+  ServerRequestPort: 9552
+  ClientRequestPort: 9553
+
+  ## How long to wait for the server to answer the initial handshake. The plugin
+  ## disables itself and leaves the stream untouched when nothing answers.
+  ConnectTimeoutMs: 2000

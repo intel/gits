@@ -1,0 +1,116 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#define APP_ICON      101
+#define APP_FILE_ICON 102
+#define APP_VERSION   "2.0"
+
+inline const char* RELEASE_NOTES = R"(
+Release Notes v2.0
+====================
+- The launcher is now supported on Linux
+- Added Simple and Advanced modes
+  - Launcher will now start in Simple mode by default, with only the most basic options visible
+  - The mode can be switched to Advanced mode by clicking the button in the top left
+  - The Advanced mode retains all the functionality from the previous version of the launcher
+- Removed support for legacy APIs
+  - If you need that functionality, please let us know using the help button
+
+Release Notes v1.5
+====================
+- Added a checkbox for enabling/disabling the HUD for Vulkan
+
+Release Notes v1.4
+====================
+- Added a checkbox for enabling/disabling the HUD in Subcapture mode (disabled by default)
+
+Release Notes v1.3.1
+====================
+- Fixed a crash when trying to create a config backup file if a backup was already present in the directory
+- Minor text label changes
+
+Release Notes v1.3
+====================
+- Added initial support for the new Vulkan backend
+- Improved the placeholders rendered while Capture or Subcapture is in progress
+
+Release Notes v1.2
+====================
+- Add capture process monitoring to help with applications that relaunch themselves
+- The launcher will now always start with configurations from the installed GITS base path
+- Fixed issues with opening folders in the GITS Launcher menu
+- Minor UI improvements
+ - Show stream API
+ - Show only API relevant config options
+ - Export or send Launcher Log via email
+ - Introduced Artifacts Path for screenshots, resources & CCode.
+
+Release Notes v1.1
+====================
+- New System setup panel (Windows only)
+  - Registry keys setting
+  - Shader cache clearing
+- Add Command List subcapture mode
+- Minor text label changes
+
+Release Notes v1.0.0
+====================
+- New YAML-Editor panel:
+  - Tree for navigation,
+  - New YAML syntax highlighting
+  - Live validation of YAML syntax with error markers
+  - Filter for initial comment/copyright blocks in plugin editor
+  - Add support for the new overrides format
+- New metadata panel:
+  - Diags are converted to YAML format for consistency
+  - Tree for navigating in config and diags section
+  - New YAML syntax highlighting
+- UX improvements:
+  - Added Info/Help buttons for most GUI options
+  - Added ability to send Launcher log via email
+  - A 'New Session' button to reset paths/configs
+  - The captured stream is now automatically set as input for playback & subcapture
+  - Tabs for YAML text editor
+  - Tabs for configuration & plugin editor
+- Moved 'Detect GITS base' paths to GITS Button popup menu
+- Left action button bar segmented & cleaned up
+  - Removed CLI tab as it's no longer needed
+
+Release Notes v0.1.9
+====================
+- Added ability to send GITS log via email
+
+Release Notes v0.1.8.1
+====================
+- Added Resource Dump retry mode
+- Added CCode generation mechanism
+- Added save button for GITS log
+- Added drag and drop support for target executable, config and stream files
+
+Release Notes v0.1.8
+====================
+- Added release notes window
+- Added system for default paths for screenshots & trace based on playback stream
+- New default path for subcapture output based on original stream path
+- Added option to enable custom executable name for gitsPlayer
+
+- New system to determine base gits installation path
+- Added buttons to use configuration files from base gits installation
+- Revised system to select capture API & derive required configuration
+
+- Enabled DirectX HUD by default in playback
+- During subcapture: playback stops at the end subcapture frame
+- Read & use metadata when loading playback stream
+
+- Added DirectX plugins panel
+- Added Resource Dump panel
+
+- Removed option to specify custom gitsPlayer.exe
+)";

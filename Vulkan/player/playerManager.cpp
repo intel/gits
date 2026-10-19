@@ -56,6 +56,7 @@ PlayerManager::PlayerManager() : m_SwapchainImageSyncService(*this) {
   m_PluginService = std::make_unique<PluginService>();
   m_PluginService->SetVkDriverRewindPresentCountPtr(
       m_SwapchainImageSyncService.GetDriverRewindPresentCountPtr());
+  m_PluginService->SetDispatchTablesHolder(m_DispatchTablesHolder.get());
   m_PluginService->LoadPlugins();
   m_LayerManager.LoadLayers(*this, *m_PluginService);
 

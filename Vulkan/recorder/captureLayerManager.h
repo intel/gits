@@ -28,6 +28,9 @@ public:
   void LoadLayers(CaptureManager& captureManager,
                   stream::OrderingRecorder& recorder,
                   PluginService& pluginService);
+  // Destroys dispatch-table consumers while CaptureManager still owns valid
+  // tables. Idempotent and required before member destruction reverses order.
+  void Shutdown();
 
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;

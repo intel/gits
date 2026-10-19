@@ -236,6 +236,7 @@ class GitRepository(Dependency):
         self.branch = yaml_description.get("branch", "master")
         self.commit_id = yaml_description.get("commit_id", "")
         self.sparse_checkout = yaml_description.get("sparse_checkout", "")
+        self.recursive = yaml_description.get("recursive", False)
         self.modules = []
         self.patches = []
         if not THIRD_PARTY_PATH.exists():
@@ -345,6 +346,12 @@ class GitRepository(Dependency):
             if self.commit_id:
                 self.execute(f"git fetch --depth 1 origin {self.commit_id}")
                 self.execute(f"git checkout {self.commit_id}")
+            if self.recursive:
+                # A pinned parent can reference different submodule commits than
+                # the branch cloned above. Synchronize only after checkout so
+                # the dependency graph matches the requested parent exactly.
+                self.execute("git submodule sync --recursive")
+                self.execute("git submodule update --init --recursive --depth 1")
         except Exception as e:
             self.logger.error(f"Error during clone: {e}")
             return False
@@ -379,6 +386,7 @@ class GitRepository(Dependency):
         result = result and self.compare_and_log_difference("branch", repo_meta_info.get("branch", None), self.branch)
         result = result and self.compare_and_log_difference("commit id", repo_meta_info.get("commit_id", None), self.commit_id)
         result = result and self.compare_and_log_difference("URL", repo_meta_info.get("url", None), self.url)
+        result = result and self.compare_and_log_difference("recursive", repo_meta_info.get("recursive", False), self.recursive)
 
         if not result:
             return RepoStatus.WRONG_BASE
@@ -431,6 +439,7 @@ class GitRepository(Dependency):
         repo_meta_info["url"] = self.url
         repo_meta_info["commit_id"] = self.commit_id
         repo_meta_info["branch"] = self.branch
+        repo_meta_info["recursive"] = self.recursive
         repo_meta_info["path"] = str(self.repository_path)
         repo_meta_info["status"] = "required"
 

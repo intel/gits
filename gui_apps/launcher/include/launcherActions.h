@@ -1,0 +1,53 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+#include "baseCommon.h"
+#include "context.h"
+
+#include <filesystem>
+#include <string>
+#include <configurationAuto.h>
+#include <optional>
+#include <yaml-cpp/node/node.h>
+
+namespace gits::gui {
+
+struct CCodeExport {
+  std::filesystem::path StreamPath;
+  std::filesystem::path CCodePath;
+  bool WrapAPICalls = false;
+  int CommandsPerBlock = 1000;
+};
+
+std::optional<std::string> ValidateYaml(const std::string& text);
+std::optional<std::string> ValidateGITSConfig(const std::string& config);
+#ifdef _WIN32
+std::string QuoteWindowsPath(const std::string& path);
+bool IsElevated();
+void RelaunchAsAdmin();
+#endif
+void UpdateCLICall();
+void SetImGuiStyle(size_t selectedItem);
+std::string GetYamlStringFromConfig(const gits::Configuration& configuration,
+                                    std::optional<YAML::Node> overrides = std::nullopt);
+std::string GetYamlStringFromConfig(const BaseContext::GitsActionConfiguration& config);
+TemporaryConfigInfo PrepareTemporaryConfigFile(GitsAction gitsAction,
+                                               const std::filesystem::path& directory);
+void PlaybackStream();
+void SubcaptureStream();
+
+void GenerateCCode(CCodeExport parameters);
+
+bool IsValidGITSBasePath(const std::filesystem::path& path);
+void SetAllConfigsFromBasePath();
+void NewLauncherSession();
+void SetTracePathFromInputStream();
+void SetTracePathFromTargetExecutable();
+} // namespace gits::gui

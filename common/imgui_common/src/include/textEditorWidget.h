@@ -9,6 +9,7 @@
 #pragma once
 
 #include <filesystem>
+#include <deque>
 #include <functional>
 #include <optional>
 #include <mutex>
@@ -16,8 +17,11 @@
 #include <unordered_set>
 #include <string>
 
+#include "log.h"
 #include <imgui.h>
 #include <TextEditor.h>
+#include <plog/Appenders/IAppender.h>
+#include <plog/Record.h>
 
 #include "buttonGroup.h"
 #include "imGuiHelper.h"
@@ -83,6 +87,10 @@ public:
 
   void SetText(const std::string& msg);
   void AppendText(const std::string& msg, bool addNewLine = true);
+  // Queued text is consumed by Render on the UI thread.
+  void EnqueueText(const std::string& msg);
+  // Returns true when either the rendered buffer or queued updates contain text
+  bool HasTextToRender() const;
   const std::string GetText() const;
 
   void UpdatePalette();
@@ -111,6 +119,11 @@ private:
   std::function<void(std::filesystem::path)> m_OnExport;
 
 private:
+  struct PendingTextOperation {
+    std::string Text;
+    bool Replace = false;
+  };
+
   std::string m_Name;
   TextEditor m_Editor;
   std::filesystem::path m_FilePath;
@@ -119,11 +132,23 @@ private:
   bool m_DoLiveCheck = false;
   bool m_ShowCheckStatus = false;
   mutable std::mutex m_EditorMutex;
+  mutable std::mutex m_PendingTextMutex;
+  std::deque<PendingTextOperation> m_PendingText;
   std::unique_ptr<ImGuiHelper::ButtonGroup<TOOL_BAR_ITEMS>> m_BtnsToolBar;
   std::optional<bool> m_LastCheckResult = std::nullopt;
   std::optional<std::string> m_LastCheckErrorMessage = std::nullopt;
   bool m_FilterOutFirstYMLComment = false;
   std::string m_HeaderCommentBlock = "";
+};
+
+class TextEditorAppender : public plog::IAppender {
+public:
+  TextEditorAppender(TextEditorWidget* editor) : m_Editor(editor) {}
+
+  virtual void write(const plog::Record& record) override;
+
+private:
+  TextEditorWidget* m_Editor;
 };
 
 } // namespace ImGuiHelper

@@ -55,6 +55,36 @@ public:
     return &it->second;
   }
 
+  template <typename Handle>
+  bool CopyInstanceDispatchTable(Handle handle, VkInstanceLevelDispatchTable& table) {
+    if (handle == VK_NULL_HANDLE) {
+      return false;
+    }
+    void* dispatchKey = *reinterpret_cast<void**>(handle);
+    std::shared_lock lock(m_Mutex);
+    const auto it = m_InstanceDispatchTables.find(dispatchKey);
+    if (it == m_InstanceDispatchTables.end()) {
+      return false;
+    }
+    table = it->second;
+    return true;
+  }
+
+  template <typename Handle>
+  bool CopyDeviceDispatchTable(Handle handle, VkDeviceLevelDispatchTable& table) {
+    if (handle == VK_NULL_HANDLE) {
+      return false;
+    }
+    void* dispatchKey = *reinterpret_cast<void**>(handle);
+    std::shared_lock lock(m_Mutex);
+    const auto it = m_DeviceDispatchTables.find(dispatchKey);
+    if (it == m_DeviceDispatchTables.end()) {
+      return false;
+    }
+    table = it->second;
+    return true;
+  }
+
 private:
   std::unordered_map<void*, VkInstanceLevelDispatchTable>& m_InstanceDispatchTables;
   std::unordered_map<void*, VkDeviceLevelDispatchTable>& m_DeviceDispatchTables;

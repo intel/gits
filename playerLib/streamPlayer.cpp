@@ -8,6 +8,7 @@
 
 #include "streamPlayer.h"
 #include "configurationLib.h"
+#include "gits.h"
 #include "log.h"
 #include "messageBus.h"
 #include "streamReader.h"
@@ -17,7 +18,7 @@
 #include "commandId.h"
 #include "commandRunner.h"
 #include "timer.h"
-#include "apis_iface.h"
+#include "remotePlaybackController.h"
 
 #include <chrono>
 #include <cstring>
@@ -68,6 +69,28 @@ public:
       : m_StreamReader(streamReader), m_PlaybackTimer(playbackTimer) {
     m_Interactive = Configurator::Get().common.player.interactive;
     m_StopAfterFrames = Configurator::Get().common.player.stopAfterFrames;
+    if (m_Interactive) {
+      m_RemoteControl = std::make_unique<RemotePlaybackController>(
+          false, true,
+          [this](RemotePlaybackController::PlayerState state) {
+            if (state == RemotePlaybackController::PlayerState::Finished) {
+              m_StopRequested = true;
+            } else {
+              m_Paused = state == RemotePlaybackController::PlayerState::Paused;
+            }
+          },
+          [this] { return m_StopRequested; });
+    }
+  }
+
+  void SetStreamReader(stream::BaseStreamReader* streamReader) {
+    m_StreamReader = streamReader;
+  }
+
+  void NotifyPlaybackDone() {
+    if (m_RemoteControl) {
+      m_RemoteControl->NotifyPlaybackDone();
+    }
   }
 
   void RunLoop(unsigned frame) {
@@ -76,12 +99,30 @@ public:
       windowing::WindowManager::Get().SetTitle("Current frame: " + std::to_string(frame));
     }
 
-    do {
-      if (m_Interactive || m_StopAfterFrames[frame]) {
-        m_Paused = true;
-        m_PlaybackTimer->Pause();
+    if (m_RemoteControl) {
+      m_RemoteControl->SendFramePlayed(frame);
+    }
+    if (m_RemoteControl && m_RemoteControl->HasRemoteControl()) {
+      m_Paused = m_RemoteControl->ShouldPauseAfterFrame(frame);
+    } else if (m_Interactive) {
+      m_Paused = true;
+    }
+    if (m_StopAfterFrames[frame]) {
+      m_Paused = true;
+      if (m_RemoteControl && m_RemoteControl->HasRemoteControl()) {
+        m_RemoteControl->Pause();
       }
+    }
 
+    do {
+      if (m_RemoteControl) {
+        m_RemoteControl->ProcessPendingCommands();
+      }
+      if (m_StopRequested) {
+        m_StreamReader->Close();
+        m_Paused = false;
+        break;
+      }
       auto events = windowing::WindowManager::Get().PollEvents();
       for (auto event : events) {
         switch (event) {
@@ -90,8 +131,12 @@ public:
           m_StreamReader->Close();
           m_Paused = false;
           m_Interactive = false;
+          m_StopRequested = true;
           break;
         case windowing::WindowEvent::TogglePause:
+          if (m_RemoteControl) {
+            m_RemoteControl->UseLocalControl();
+          }
           m_Paused = !m_Paused;
           if (m_Paused) {
             m_PlaybackTimer->Pause();
@@ -100,6 +145,9 @@ public:
           }
           break;
         case windowing::WindowEvent::ToggleInteractive:
+          if (m_RemoteControl) {
+            m_RemoteControl->UseLocalControl();
+          }
           m_Interactive = !m_Interactive;
           if (!m_Interactive) {
             m_Paused = false;
@@ -107,6 +155,23 @@ public:
           }
           break;
         }
+      }
+      if (m_StopRequested) {
+        m_Paused = false;
+      }
+      if (m_Paused) {
+        m_PlaybackTimer->Pause();
+      } else if (!m_StopRequested) {
+        m_PlaybackTimer->Resume();
+      }
+      if (m_RemoteControl) {
+        using State = RemotePlaybackController::PlayerState;
+        m_RemoteControl->ReportState(m_StopRequested ? State::Finished
+                                     : m_Paused      ? State::Paused
+                                                     : State::Running);
+      }
+      if (m_Paused) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
       }
     } while (m_Paused);
   }
@@ -117,6 +182,8 @@ private:
   bool m_Paused{};
   bool m_Interactive{};
   BitRange m_StopAfterFrames;
+  bool m_StopRequested{};
+  std::unique_ptr<RemotePlaybackController> m_RemoteControl;
 };
 
 class StateRestoreBeginRunner : public stream::CommandRunner {
@@ -154,19 +221,23 @@ public:
       : m_MessageLoop(messageLoop), m_StreamReader(streamReader) {}
 
   void Run() override {
-    static unsigned frameCount = 0;
-    ++frameCount;
+    ++(*m_FrameCount);
 
-    m_MessageLoop->RunLoop(frameCount);
+    m_MessageLoop->RunLoop(*m_FrameCount);
 
-    if (frameCount == Configurator::Get().common.player.exitFrame) {
+    if (*m_FrameCount == Configurator::Get().common.player.exitFrame) {
       m_StreamReader->Close();
     }
+  }
+
+  void SetFrameCount(unsigned* frameCount) {
+    m_FrameCount = frameCount;
   }
 
 private:
   MessageLoop* m_MessageLoop{};
   stream::BaseStreamReader* m_StreamReader{};
+  unsigned* m_FrameCount{};
 };
 
 class MarkerUInt64StatusRunner : public stream::CommandRunner {
@@ -216,24 +287,37 @@ public:
     m_StateRestoreTimer = stateRestoreTimer;
   }
 
+  void SetStreamReader(stream::BaseStreamReader* streamReader) {
+    m_StreamReader = streamReader;
+    m_MessageLoop->SetStreamReader(streamReader);
+  }
+
   stream::CommandRunner* CreateCommand(unsigned id) override {
     switch (static_cast<stream::CommonCommandId>(id)) {
     case stream::CommonCommandId::ID_INIT_START:
       return new StateRestoreBeginRunner(m_StateRestoreTimer);
     case stream::CommonCommandId::ID_INIT_END:
       return new StateRestoreEndRunner(m_MessageLoop.get(), m_StateRestoreTimer);
-    case stream::CommonCommandId::ID_FRAME_END:
-      return new FrameEndCommandRunner(m_MessageLoop.get(), m_StreamReader);
+    case stream::CommonCommandId::ID_FRAME_END: {
+      auto runner = new FrameEndCommandRunner(m_MessageLoop.get(), m_StreamReader);
+      runner->SetFrameCount(&m_FrameCount);
+      return runner;
+    }
     case stream::CommonCommandId::ID_MARKER_UINT64:
       return new MarkerUInt64StatusRunner();
     }
     return nullptr;
   }
 
+  void NotifyPlaybackDone() {
+    m_MessageLoop->NotifyPlaybackDone();
+  }
+
 private:
   std::unique_ptr<MessageLoop> m_MessageLoop;
   stream::BaseStreamReader* m_StreamReader{};
   Timer* m_StateRestoreTimer{};
+  unsigned m_FrameCount = 0;
 };
 
 void PlayStream(const std::filesystem::path& streamPath) {
@@ -242,7 +326,10 @@ void PlayStream(const std::filesystem::path& streamPath) {
   header.ReadHeader(stream);
 
   Timer stateRestoreTimer(true);
-  Timer playbackTimer(true);
+  // Published on CGits rather than kept local, so a plugin can measure frame
+  // time on a clock that stops while playback is paused or being stepped. The
+  // TimerSet constructs it paused, exactly as a local Timer(true) would be.
+  Timer& playbackTimer = CGits::Instance().Timers().playback;
 
   std::vector<stream::CommandFactory*> commandFactories;
 
@@ -270,6 +357,11 @@ void PlayStream(const std::filesystem::path& streamPath) {
   CommonCommandFactory commonCommandFactory;
   commandFactories.push_back(&commonCommandFactory);
 
+  if (Configurator::Get().common.player.interactive) {
+    LOG_INFO << "Starting interactive playback IPC";
+  }
+  commonCommandFactory.Initialize(nullptr, &stateRestoreTimer, &playbackTimer);
+
   std::unique_ptr<stream::BaseStreamReader> streamReader;
 #if defined GITS_PLATFORM_WINDOWS_X64
   if (stream::StreamHeader::Get().IsLegacyStream()) {
@@ -281,7 +373,10 @@ void PlayStream(const std::filesystem::path& streamPath) {
   streamReader.reset(new stream::StreamReader(commandFactories, stream));
 #endif
 
-  commonCommandFactory.Initialize(streamReader.get(), &stateRestoreTimer, &playbackTimer);
+  commonCommandFactory.SetStreamReader(streamReader.get());
+  if (Configurator::Get().common.player.interactive) {
+    LOG_INFO << "Interactive playback IPC is ready for stream processing";
+  }
 
   auto closeSubscription = MessageBus::get().subscribe(
       {PUBLISHER_PLAYER, TOPIC_CLOSE_PLAYER},
@@ -290,6 +385,7 @@ void PlayStream(const std::filesystem::path& streamPath) {
   playbackTimer.Start();
   streamReader->Run();
   playbackTimer.Pause();
+  commonCommandFactory.NotifyPlaybackDone();
 
   MessageBus::get().unsubscribe(closeSubscription);
 

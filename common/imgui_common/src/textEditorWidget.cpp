@@ -22,6 +22,11 @@
 #include <iterator>
 #include <map>
 #include "baseButtonGroup.h"
+#include <plog/Appenders/IAppender.h>
+#include <plog/Record.h>
+#include <plog/Util.h>
+#include <plog/Formatters/TxtFormatter.h>
+#include "gitsLogFormatter.h"
 
 namespace {
 bool IsBlankLine(const std::string& line) {
@@ -53,17 +58,6 @@ static const auto& TOOL_BAR() {
           {TextEditorWidget::TOOL_BAR_ITEMS::EXPORT,
            {"Export", "Export the document into a file"}}};
   return items;
-}
-
-static const auto& TOOL_BAR_VEC() {
-  static const std::vector<std::string> values([] {
-    std::vector<std::string> result;
-    for (const auto& pair : TOOL_BAR()) {
-      result.push_back(pair.second.label);
-    }
-    return result;
-  }());
-  return values;
 }
 
 TextEditorWidget::TextEditorWidget(std::string name)
@@ -292,9 +286,8 @@ const std::filesystem::path& TextEditorWidget::GetFilePath() const {
 }
 
 void TextEditorWidget::SetText(const std::string& msg) {
-  std::lock_guard<std::mutex> lock(m_EditorMutex);
-  m_Editor.SetText(msg);
-  m_TextDirty = false;
+  std::lock_guard<std::mutex> lock(m_PendingTextMutex);
+  m_PendingText.push_back({msg, true});
 }
 
 void TextEditorWidget::SetFilterOutFirstYMLComment(bool enableFiltering) {
@@ -302,19 +295,37 @@ void TextEditorWidget::SetFilterOutFirstYMLComment(bool enableFiltering) {
 }
 
 void TextEditorWidget::AppendText(const std::string& msg, bool addNewLine) {
-  {
-    std::lock_guard<std::mutex> lock(m_EditorMutex);
-    std::string currentText = m_Editor.GetText();
-    currentText += msg;
-    if (addNewLine) {
-      currentText += "\n";
+  std::string text = msg;
+  if (addNewLine) {
+    text += "\n";
+  }
+  EnqueueText(text);
+}
+
+void TextEditorWidget::EnqueueText(const std::string& msg) {
+  std::lock_guard<std::mutex> lock(m_PendingTextMutex);
+  m_PendingText.push_back({msg, false});
+}
+
+bool TextEditorWidget::HasTextToRender() const {
+  const auto hasVisibleContent = [](const std::string& text) {
+    // Checks if the text contains any non-whitespace characters
+    return text.find_first_not_of(" \t\r\n") != std::string::npos;
+  };
+
+  std::lock_guard<std::mutex> pendingLock(m_PendingTextMutex);
+  std::lock_guard<std::mutex> editorLock(m_EditorMutex);
+
+  bool hasContent = hasVisibleContent(m_Editor.GetText());
+  for (const auto& operation : m_PendingText) {
+    if (operation.Replace) {
+      hasContent = hasVisibleContent(operation.Text);
+    } else if (!hasContent && hasVisibleContent(operation.Text)) {
+      hasContent = true;
     }
-    m_TextDirty = false;
-    m_Editor.SetText(currentText);
   }
-  if (m_Config.ScrollToBottom) {
-    ScrollToBottom();
-  }
+
+  return hasContent;
 }
 
 void TextEditorWidget::UpdatePalette() {
@@ -368,6 +379,7 @@ void TextEditorWidget::UpdatePalette() {
 }
 
 const std::string TextEditorWidget::GetText() const {
+  std::lock_guard<std::mutex> lock(m_EditorMutex);
   auto text = m_Editor.GetText();
   // For some reason, the GetText function of the third party editor
   // adds an additional blank line when text is retrieved
@@ -450,7 +462,7 @@ bool TextEditorWidget::LoadFromFile(std::filesystem::path filePath) {
     }
   }
 
-  m_Editor.SetText(displayStream.str());
+  SetText(displayStream.str());
   return true;
 }
 
@@ -460,6 +472,33 @@ void TextEditorWidget::Render() {
 }
 
 void TextEditorWidget::Render(ImVec2 size) {
+  std::deque<PendingTextOperation> pendingText;
+  {
+    std::lock_guard<std::mutex> lock(m_PendingTextMutex);
+    pendingText.swap(m_PendingText);
+  }
+
+  if (!pendingText.empty()) {
+    bool shouldScrollToBottom = false;
+    {
+      std::lock_guard<std::mutex> lock(m_EditorMutex);
+      for (const auto& operation : pendingText) {
+        if (operation.Replace) {
+          m_Editor.SetText(operation.Text);
+        } else {
+          std::string currentText = m_Editor.GetText();
+          currentText += operation.Text;
+          m_Editor.SetText(currentText);
+          shouldScrollToBottom = true;
+        }
+      }
+      m_TextDirty = false;
+    }
+    if (shouldScrollToBottom && m_Config.ScrollToBottom) {
+      ScrollToBottom();
+    }
+  }
+
   std::lock_guard<std::mutex> lock(m_EditorMutex);
   if (m_Config.ShowToolbar) {
     RenderToolbar(size);
@@ -511,13 +550,13 @@ void TextEditorWidget::RenderToolbar(ImVec2 size) {
   m_BtnsToolBar->SetEnabled(TOOL_BAR_ITEMS::REDO, m_Editor.CanRedo());
   if (m_LastCheckResult.has_value()) {
     m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, m_LastCheckResult.value()
-                                                        ? ButtonStatus::Success
-                                                        : ButtonStatus::Failure);
+                                                        ? ButtonStatus::BUTTON_STATUS_SUCCESS
+                                                        : ButtonStatus::BUTTON_STATUS_FAILURE);
     if (m_TextDirty && !m_DoLiveCheck) {
       m_LastCheckResult = std::nullopt;
     }
   } else {
-    m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, ButtonStatus::Default);
+    m_BtnsToolBar->SetStatus(TOOL_BAR_ITEMS::CHECK, ButtonStatus::BUTTON_STATUS_DEFAULT);
   }
 
   if (m_BtnsToolBar->Render(true)) {
@@ -598,6 +637,22 @@ void TextEditorWidget::RunCheck() {
     m_Editor.SetBreakpoints(breakpoints);
     m_LastCheckResult = !result.has_value();
   }
+}
+
+void TextEditorAppender::write(const plog::Record& record) {
+  if (!m_Editor) {
+    return;
+  }
+  plog::util::nstring str = plog::GITSLogFormatter::format(record);
+#ifdef _WIN32
+  std::string logLine = plog::util::toNarrow(str, 0);
+#else
+  std::string logLine = str;
+#endif
+  if (!logLine.empty() && logLine.back() == '\n') {
+    logLine.pop_back();
+  }
+  m_Editor->EnqueueText(logLine);
 }
 } // namespace ImGuiHelper
 } // namespace gits

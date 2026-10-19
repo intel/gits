@@ -42,8 +42,7 @@ bool ButtonGroup<T>::Render(bool newLine) {
     if (!item.visible) {
       continue;
     }
-
-    if (item.type == ItemType::Button) {
+    if ((item.type == ItemType::Button) || (item.type == ItemType::CheckableButton)) {
       this->PushButtonStyle(item);
       ImGui::BeginDisabled(!this->btnEnabled[it->first]);
       if (ImGui::Button(this->GetLabel(item).c_str(), btnSize)) {

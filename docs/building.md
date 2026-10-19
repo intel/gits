@@ -93,7 +93,7 @@ cmake --install . --config Release --prefix dist
 | `WITH_OPENCL` | `ON` | Build the OpenCL backend. |
 | `WITH_LEVELZERO` | `ON` | Build the LevelZero backend. |
 | `WITH_OCLOC` | `ON` | Build the Ocloc backend. |
-| `WITH_LAUNCHER` | `ON` | :material-microsoft-windows: Build the Launcher. |
+| `WITH_GUI` | `ON` | :material-microsoft-windows: Build with all GUI components: Launcher & Studio |
 | `SKIP_THIRDPARTY_FETCH` | `OFF` | Skip fetching third-party dependencies. |
 | `OFFLINE_MODE` | `OFF` | Offline Mode: no download of third party libraries, assuming folders are prepopulated. |
 

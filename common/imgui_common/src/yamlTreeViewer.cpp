@@ -9,6 +9,16 @@
 #include "yamlTreeViewer.h"
 
 namespace gits::ImGuiHelper {
+namespace {
+// Must match the path scheme used when storing nodes (top-level nodes have no "root." prefix).
+std::string ChildPath(const std::string& parentPath, const std::string& key) {
+  if (parentPath.empty() || parentPath == "root") {
+    return key;
+  }
+  return parentPath + "." + key;
+}
+} // namespace
+
 void YamlTreeViewer::SetTextEditor(TextEditor* editor) {
   m_TextEditor = editor;
 }
@@ -159,17 +169,15 @@ void YamlTreeViewer::BuildNodeInfoWithMarks(const YAML::Node& node,
     info.IsLeaf = false;
     info.ChildCount = node.size();
 
-    // Check if this map has any non-leaf children (only care about Maps)
     bool hasNonLeafChildren = false;
 
     for (const auto& pair : node) {
       std::string childKey = pair.first.as<std::string>();
       BuildNodeInfoWithMarks(pair.second, childKey, currentPath, lines);
 
-      // Check if this child is a Map (non-leaf that we care about)
-      auto childIt = m_NodeInfoMap.find(currentPath + "." + childKey);
+      auto childIt = m_NodeInfoMap.find(ChildPath(currentPath, childKey));
       if (childIt != m_NodeInfoMap.end()) {
-        if (childIt->second.Type == YAML::NodeType::Map) {
+        if (!childIt->second.IsLeaf) {
           hasNonLeafChildren = true;
         }
 
@@ -186,18 +194,24 @@ void YamlTreeViewer::BuildNodeInfoWithMarks(const YAML::Node& node,
   case YAML::NodeType::Sequence: {
     info.IsLeaf = false;
     info.ChildCount = node.size();
-    info.HasOnlyLeafs = true; // We don't care about sequence children, treat as having only leafs
+    bool hasNonLeafChildren = false;
 
     for (size_t i = 0; i < node.size(); ++i) {
       std::string indexKey = "[" + std::to_string(i) + "]";
       BuildNodeInfoWithMarks(node[i], indexKey, currentPath, lines);
 
-      // Update end line based on children
-      auto childIt = m_NodeInfoMap.find(currentPath + "." + indexKey);
-      if (childIt != m_NodeInfoMap.end() && childIt->second.EndLine > endLine) {
-        endLine = childIt->second.EndLine;
+      auto childIt = m_NodeInfoMap.find(ChildPath(currentPath, indexKey));
+      if (childIt != m_NodeInfoMap.end()) {
+        if (!childIt->second.IsLeaf) {
+          hasNonLeafChildren = true;
+        }
+        if (childIt->second.EndLine > endLine) {
+          endLine = childIt->second.EndLine;
+        }
       }
     }
+
+    info.HasOnlyLeafs = !hasNonLeafChildren;
     break;
   }
   default: {
@@ -246,16 +260,14 @@ void YamlTreeViewer::BuildNodeInfoEstimated(const YAML::Node& node,
     info.IsLeaf = false;
     info.ChildCount = node.size();
 
-    // Check if this map has any Map children (only care about Maps)
     bool hasNonLeafChildren = false;
 
     for (const auto& pair : node) {
       std::string childKey = pair.first.as<std::string>();
       BuildNodeInfoEstimated(pair.second, childKey, currentPath, lines, currentEstimate);
 
-      // Check if this child is a Map
-      auto childIt = m_NodeInfoMap.find(currentPath + "." + childKey);
-      if (childIt != m_NodeInfoMap.end() && childIt->second.Type == YAML::NodeType::Map) {
+      auto childIt = m_NodeInfoMap.find(ChildPath(currentPath, childKey));
+      if (childIt != m_NodeInfoMap.end() && !childIt->second.IsLeaf) {
         hasNonLeafChildren = true;
       }
 
@@ -269,14 +281,20 @@ void YamlTreeViewer::BuildNodeInfoEstimated(const YAML::Node& node,
   case YAML::NodeType::Sequence: {
     info.IsLeaf = false;
     info.ChildCount = node.size();
-    info.HasOnlyLeafs = true; // We don't care about sequence children
+    bool hasNonLeafChildren = false;
 
     for (size_t i = 0; i < node.size(); ++i) {
       std::string indexKey = "[" + std::to_string(i) + "]";
       BuildNodeInfoEstimated(node[i], indexKey, currentPath, lines, currentEstimate);
+
+      auto childIt = m_NodeInfoMap.find(ChildPath(currentPath, indexKey));
+      if (childIt != m_NodeInfoMap.end() && !childIt->second.IsLeaf) {
+        hasNonLeafChildren = true;
+      }
       currentEstimate++;
     }
 
+    info.HasOnlyLeafs = !hasNonLeafChildren;
     info.EndLine = currentEstimate - 1;
     break;
   }
@@ -399,6 +417,9 @@ void YamlTreeViewer::RenderNode(const YAML::Node& node,
   switch (node.Type()) {
   case YAML::NodeType::Map:
     RenderMapNode(node, key, currentPath);
+    break;
+  case YAML::NodeType::Sequence:
+    RenderSequenceNode(node, key, currentPath);
     break;
   default:
     break;
