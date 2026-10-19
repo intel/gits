@@ -1731,6 +1731,7 @@ Configuration:
           - Name: suppressProgramBinary
             Type: bool
             Default: true
+            Description: Prevent the application from loading program binaries, which only the recording driver is guaranteed to load, so it compiles its shaders from source.
           - Name: endFrameSleep
             Type: uint32_t
             Default: 0
