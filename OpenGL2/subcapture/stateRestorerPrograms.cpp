@@ -301,6 +301,11 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
       Emit<glShaderStorageBlockBindingCommandSerializer>(command);
     }
   }
+
+  // The context state is restored with no program in use, and RestoreBindings uses the recorded
+  // one last.
+  glUseProgramCommand unuse;
+  Emit<glUseProgramCommandSerializer>(unuse);
 }
 
 // Subroutine selections belong to the context and glUseProgram resets them, so they are restored
