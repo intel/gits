@@ -185,11 +185,13 @@ void PrintArgument(FastOStream& stream, const ArrayOfArrays<T>& argument) {
     const bool isNullTerminated = argument.Lengths[index] < 0 && !bytes.empty();
     const size_t length = isNullTerminated ? bytes.size() - 1 : bytes.size();
     const std::string_view text(bytes.empty() ? "" : bytes.data(), length);
-    const auto preview = text.substr(0, remaining);
-    const size_t last = preview.find_last_not_of(" \t\n\r\v\f");
-    const size_t printed = last == std::string_view::npos ? 0 : last + 1;
-    PrintText(stream, text, printed);
-    remaining -= printed;
+    auto preview = text.substr(0, remaining);
+    while (!preview.empty() &&
+           std::string_view(" \t\n\r\v\f").find(preview.back()) != std::string_view::npos) {
+      preview.remove_suffix(1);
+    }
+    PrintText(stream, text, preview.size());
+    remaining -= preview.size();
     stream << "(length=" << argument.Lengths[index] << ')';
   }
   if (count < argument.Value.size()) {
