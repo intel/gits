@@ -28,6 +28,7 @@ void ComputePipelineState::SetRootSignature(ObjectKey rootSignatureKey,
                                             D3D12_ROOT_SIGNATURE_DESC2* desc) {
   m_RootSignatureKey = rootSignatureKey;
   m_RootSignatureDesc = desc;
+  m_BindingState.Reset();
   m_BindingState.SetRootSignature(desc);
 }
 
