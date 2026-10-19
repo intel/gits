@@ -16,6 +16,7 @@ namespace DirectX {
 
 void PipelineBindingState::Reset() {
   m_RootSignatureDesc = nullptr;
+  m_Bindings.clear();
 }
 
 void PipelineBindingState::SetRootSignature(D3D12_ROOT_SIGNATURE_DESC2* desc) {
