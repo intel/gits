@@ -909,6 +909,9 @@ void StateTrackingService::RestoreD3D12PipelineStateObject(ObjectState* state) {
         static_cast<ID3D12Device2CreatePipelineStateCommand*>(state->CreationCommand.get());
     RestoreState(command->m_pDesc.RootSignatureKey);
   }
+  m_NvapiGlobalStateService.RestoreCreatePipelineStateOptionsBeforeCommand(
+      state->CreationCommand->Key);
+  m_NvapiGlobalStateService.RestoreShaderExtnSlotSpaceBeforeCommand(state->CreationCommand->Key);
   m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
 }
 
