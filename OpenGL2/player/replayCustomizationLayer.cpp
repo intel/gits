@@ -9,21 +9,104 @@
 #include "replayCustomizationLayer.h"
 
 #include "glEnumsAuto.h"
+#include "handleArgumentUpdaters.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
 #include "programBinaryCheckService.h"
+#include "uniformLocationMapService.h"
+
+#include <atomic>
 
 namespace gits::opengl2 {
 
 namespace {
 
 thread_local GLenum tl_RecordedWaitResult{};
+thread_local GLint tl_RecordedLocation{};
 
 bool Executed(const Command& command) {
   return PlayerManager::Get().ExecuteCommands() && !command.m_Skip;
 }
 
+// The other elements of a uniform array the location belongs to are registered by the
+// UniformArrayMetaCommand the recorder records right after the command, which knows the array's
+// capture-time size.
+template <typename CommandT>
+void RegisterLocation(const CommandT& command, const HandleArgument<GLuint>& program) {
+  if (Executed(command)) {
+    UniformLocationMapService::Get().Register(program.Key, tl_RecordedLocation,
+                                              command.m_Return.Value);
+  }
+}
+
+template <typename QueryCurrentProgramT>
+void TrackCurrentProgram(const Command& command,
+                         const HandleArgument<GLuint>& program,
+                         QueryCurrentProgramT queryCurrentProgram) {
+  if (Executed(command) && queryCurrentProgram() == program.Value) {
+    UniformLocationMapService::Get().SetCurrentProgram(CurrentContext(), program.Key);
+  }
+}
+
+template <typename CommandT>
+void TrackProgramPipeline(const CommandT& command) {
+  if (!Executed(command)) {
+    return;
+  }
+  GLint pipeline = 0;
+  player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_PROGRAM_PIPELINE_BINDING,
+                                                                        &pipeline);
+  if (static_cast<GLuint>(pipeline) == command.m_pipeline.Value) {
+    UniformLocationMapService::Get().BindProgramPipeline(CurrentContext(), command.m_pipeline.Key);
+  }
+}
+
+template <typename CommandT, typename QueryFunctionT>
+void TrackActiveProgram(const CommandT& command, const std::atomic<QueryFunctionT>& query) {
+  if (!Executed(command)) {
+    return;
+  }
+  GLint program = 0;
+  query.load(std::memory_order_acquire)(command.m_pipeline.Value, GL_ACTIVE_PROGRAM, &program);
+  if (static_cast<GLuint>(program) == command.m_program.Value) {
+    UniformLocationMapService::Get().SetActiveProgram(command.m_pipeline.Key,
+                                                      command.m_program.Key);
+  }
+}
+
 } // namespace
+
+void ReplayCustomizationLayer::Pre(glGetUniformLocationCommand& command) {
+  tl_RecordedLocation = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(glGetUniformLocationCommand& command) {
+  RegisterLocation(command, command.m_program);
+}
+
+void ReplayCustomizationLayer::Pre(glGetUniformLocationARBCommand& command) {
+  tl_RecordedLocation = command.m_Return.Value;
+}
+
+void ReplayCustomizationLayer::Post(glGetUniformLocationARBCommand& command) {
+  RegisterLocation(command, command.m_programObj);
+}
+
+void ReplayCustomizationLayer::Post(glBindProgramPipelineCommand& command) {
+  TrackProgramPipeline(command);
+}
+
+void ReplayCustomizationLayer::Post(glBindProgramPipelineEXTCommand& command) {
+  TrackProgramPipeline(command);
+}
+
+void ReplayCustomizationLayer::Post(glActiveShaderProgramCommand& command) {
+  TrackActiveProgram(command, player::g_DispatchTable.glGetProgramPipelineiv);
+}
+
+void ReplayCustomizationLayer::Post(glActiveShaderProgramEXTCommand& command) {
+  TrackActiveProgram(command, player::g_DispatchTable.glGetProgramPipelineivEXT);
+}
 
 void ReplayCustomizationLayer::Post(glProgramBinaryCommand& command) {
   ProgramBinaryCheckService::Get().OnBinaryLoad(command.m_program.Key);
@@ -50,10 +133,21 @@ void ReplayCustomizationLayer::Post(glDeleteObjectARBCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(glUseProgramCommand& command) {
+  TrackCurrentProgram(command, command.m_program, [] {
+    GLint program = 0;
+    player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_CURRENT_PROGRAM,
+                                                                          &program);
+    return static_cast<GLuint>(program);
+  });
   ProgramBinaryCheckService::Get().OnUse(command.m_program.Key, command.m_program.Value);
 }
 
 void ReplayCustomizationLayer::Post(glUseProgramObjectARBCommand& command) {
+  // GL_CURRENT_PROGRAM is a GL 2.0 query; a GL_ARB_shader_objects-only driver would reject it.
+  TrackCurrentProgram(command, command.m_programObj, [] {
+    return player::g_DispatchTable.glGetHandleARB.load(std::memory_order_acquire)(
+        GL_PROGRAM_OBJECT_ARB);
+  });
   ProgramBinaryCheckService::Get().OnUse(command.m_programObj.Key, command.m_programObj.Value);
 }
 

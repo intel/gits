@@ -11,7 +11,7 @@
 // Lives under player/ rather than common/services/, mirroring MapTrackingService's own
 // recorder/ placement (see recorder/include/mapTrackingService.h's header comment) for the
 // same reason in the opposite direction: every method below is only ever called from player-
-// side code (commandRunnersCustom.cpp/commandRunnersAuto.cpp.mako - see this class's own
+// side code (ReplayCustomizationLayer/commandRunnersAuto.cpp.mako - see this class's own
 // method comments for each call site) and only ever needs player-side identity
 // (CurrentContext()'s live, replay-time HGLRC - player/include/handleArgumentUpdaters.h). The
 // recorder has no counterpart: a captured stream already records whichever location the
@@ -76,7 +76,7 @@ namespace gits::opengl2 {
 // Scope decision (documented further in modern-opengl-backend-architecture.md): only exact
 // locations returned by glGetUniformLocation(ARB) are remapped, keyed by (program identity,
 // captured location). GL_ARB_shader_objects' glGetUniformLocationARB/glUseProgramObjectARB
-// share GlGetUniformLocationRunner's/GlUseProgramRunner's code; its `programObj` handle maps
+// share the core commands' tracking in ReplayCustomizationLayer; its `programObj` handle maps
 // through the same Program bucket as a core program name (see object_name_lifecycle.py's
 // HANDLE_ARB_CLASSES). The legacy backend's own
 // CGLUniformLocation additionally remaps whole *uniform arrays* (see playerRunWrap.h's
@@ -106,7 +106,7 @@ class UniformLocationMapService {
 public:
   static UniformLocationMapService& Get();
 
-  // Called by GlGetUniformLocation(ARB)Runner (player/commandRunnersCustom.cpp) right after a
+  // Called by ReplayCustomizationLayer (player/replayCustomizationLayer.cpp) right after a
   // real glGetUniformLocation(ARB) call returns, with the program's
   // stream-stable GITSKey (command.m_program.Key - see this class's own header comment for why
   // this, not the live replay-time handle, is the correct identity to key by),
@@ -150,7 +150,7 @@ public:
   // state restore. Locations queried before and after a relink can resolve to the same one.
   std::unordered_map<GLint, std::vector<GLint>> CapturedLocations(GITSKey programKey) const;
 
-  // Called by the generic per-command Run() for glUseProgram after a successful real call,
+  // Called by ReplayCustomizationLayer for glUseProgram after a successful real call,
   // with the same `context` CurrentContext() would return at that point (the context
   // glUseProgram was just called against) - see this class's own header comment for why
   // "current program" must be tracked per-context rather than passed explicitly (classic
@@ -162,8 +162,9 @@ public:
   // it is purged now (see PurgeProgram()'s own comment).
   //
   // `programKey` is the program's stream-stable GITSKey (command.m_program.Key), not its live
-  // replay-time handle - see this class's own header comment. The caller (GlUseProgramRunner)
-  // is responsible for only calling this when the real driver actually switched to the
+  // replay-time handle - see this class's own header comment. The caller
+  // (ReplayCustomizationLayer) is responsible for only calling this when the real driver actually
+  // switched to the
   // requested program (queried via glGetIntegerv(GL_CURRENT_PROGRAM, ...) after the real
   // call, not inferred from the call's own success/failure) - glUseProgram leaves
   // GL_CURRENT_PROGRAM unchanged on a failed link/validate, and tracking the requested program
@@ -172,9 +173,9 @@ public:
 
   GITSKey GetCurrentProgram(HGLRC context) const;
 
-  // Called by GlBindProgramPipeline(EXT)Runner after GL bound `pipelineKey` on `context`.
+  // Called by ReplayCustomizationLayer after GL bound `pipelineKey` on `context`.
   void BindProgramPipeline(HGLRC context, GITSKey pipelineKey);
-  // Called by GlActiveShaderProgram(EXT)Runner after GL made `programKey` the active program of
+  // Called by ReplayCustomizationLayer after GL made `programKey` the active program of
   // `pipelineKey`.
   void SetActiveProgram(GITSKey pipelineKey, GITSKey programKey);
   // Called by the glDeleteProgramPipelines(EXT) runners after the real call, which also unbinds

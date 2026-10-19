@@ -46,27 +46,6 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # HdcVirtualizationService::BindSampledWindows().
     'wglMakeContextCurrentARB': 'WglMakeContextCurrentARBRunner',
     'wglMakeContextCurrentEXT': 'WglMakeContextCurrentEXTRunner',
-    # Registers the real, replay-time location the driver just returned into
-    # UniformLocationMapService, keyed by the captured location this call's Command originally
-    # decoded - see that service's own header comment and
-    # modern-opengl-backend-architecture.md's uniform-location decision record.
-    'glGetUniformLocation': 'GlGetUniformLocationRunner',
-    'glGetUniformLocationARB': 'GlGetUniformLocationARBRunner',
-    # Tracks per-context "current program" in UniformLocationMapService after the real call -
-    # see that service's own header comment for why (classic glUniform*() calls have no
-    # program parameter of their own to resolve against). Previously a `% if cmd.name ==
-    # 'glUseProgram':` branch spliced directly into commandRunnersAuto.cpp.mako's shared
-    # per-command loop - moved here for the same reason Decision 11 moved the original three
-    # (a hardcoded per-command-name branch in a shared generated template, rather than in this
-    # table of hand-written exceptions).
-    'glUseProgram': 'GlUseProgramRunner',
-    'glUseProgramObjectARB': 'GlUseProgramObjectARBRunner',
-    # With no program in use, classic glUniform*() calls set uniforms of the active program of
-    # the bound program pipeline, so UniformLocationMapService tracks both after the real call.
-    'glBindProgramPipeline': 'GlBindProgramPipelineRunner',
-    'glBindProgramPipelineEXT': 'GlBindProgramPipelineEXTRunner',
-    'glActiveShaderProgram': 'GlActiveShaderProgramRunner',
-    'glActiveShaderProgramEXT': 'GlActiveShaderProgramEXTRunner',
     # Grows the player's fallback window (created at an arbitrary, hardcoded 640x480 default by
     # HdcVirtualizationService::Resolve() when no recorded window is known) to fit the app's
     # real rendering resolution - see GlViewportRunner::Run()'s own comment and

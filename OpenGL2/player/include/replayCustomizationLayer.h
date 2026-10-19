@@ -18,6 +18,18 @@ class ReplayCustomizationLayer : public Layer {
 public:
   ReplayCustomizationLayer() : Layer("ReplayCustomization") {}
 
+  // The replay location of each captured uniform location, and the program classic glUniform*()
+  // calls set uniforms of, are kept by UniformLocationMapService. A binding is tracked only once
+  // GL reports it, since GL keeps the previous one when the call fails.
+  void Pre(glGetUniformLocationCommand& command) override;
+  void Post(glGetUniformLocationCommand& command) override;
+  void Pre(glGetUniformLocationARBCommand& command) override;
+  void Post(glGetUniformLocationARBCommand& command) override;
+  void Post(glBindProgramPipelineCommand& command) override;
+  void Post(glBindProgramPipelineEXTCommand& command) override;
+  void Post(glActiveShaderProgramCommand& command) override;
+  void Post(glActiveShaderProgramEXTCommand& command) override;
+
   void Post(glProgramBinaryCommand& command) override;
   void Post(glProgramBinaryOESCommand& command) override;
   void Post(glLinkProgramCommand& command) override;
