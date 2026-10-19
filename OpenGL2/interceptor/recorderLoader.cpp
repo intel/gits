@@ -22,12 +22,15 @@ namespace gits::opengl2 {
 namespace {
 
 struct RecorderState {
+  RecorderState() = default;
   ~RecorderState() {
     if (Recorder != nullptr) {
       Recorder->Close();
     }
     Loader.reset();
   }
+  RecorderState(const RecorderState&) = delete;
+  RecorderState& operator=(const RecorderState&) = delete;
 
   std::unique_ptr<CGitsLoader> Loader;
   IRecorder* Recorder = nullptr;

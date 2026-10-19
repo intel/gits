@@ -49,9 +49,12 @@ uint64_t Identity(HWND hwnd, uint32_t lifetime) {
 
 class LastErrorGuard {
 public:
+  LastErrorGuard() = default;
   ~LastErrorGuard() {
     SetLastError(m_Error);
   }
+  LastErrorGuard(const LastErrorGuard&) = delete;
+  LastErrorGuard& operator=(const LastErrorGuard&) = delete;
 
 private:
   DWORD m_Error = GetLastError();

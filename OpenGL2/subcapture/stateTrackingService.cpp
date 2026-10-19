@@ -131,7 +131,7 @@ void StateTrackingService::SetCurrent(
   if (!state->second.LastMakeCurrent) {
     m_Topology.push_back(current->Call);
   }
-  state->second.LastMakeCurrent = current;
+  state->second.LastMakeCurrent = std::move(current);
 }
 
 void StateTrackingService::CreatePbuffer(GITSKey pbuffer, GLsizei width, GLsizei height) {

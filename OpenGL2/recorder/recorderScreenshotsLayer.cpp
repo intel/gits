@@ -43,9 +43,12 @@ thread_local MakeCurrentEntryPoint t_EntryPoint = MakeCurrentEntryPoint::Core;
 
 class LastErrorGuard {
 public:
+  LastErrorGuard() = default;
   ~LastErrorGuard() {
     SetLastError(m_Error);
   }
+  LastErrorGuard(const LastErrorGuard&) = delete;
+  LastErrorGuard& operator=(const LastErrorGuard&) = delete;
 
 private:
   DWORD m_Error = GetLastError();

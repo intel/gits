@@ -19,6 +19,7 @@ namespace gits::opengl2 {
 class StatisticsLayer : public Layer {
 public:
   StatisticsLayer(const StatisticsConfig& cfg, gits::MessageBus& msgBus);
+  ~StatisticsLayer() override {}
   StatisticsLayer(const StatisticsLayer&) = delete;
   StatisticsLayer& operator=(const StatisticsLayer&) = delete;
 
