@@ -306,27 +306,24 @@ bool BufferShadowService::ReadThroughStaging(uint64_t shareGroup,
   auto currentContextFn = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
   const StagingKey stagingKey{
       shareGroup, reinterpret_cast<uintptr_t>(currentContextFn ? currentContextFn() : nullptr)};
-  GLuint staging = 0;
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    auto it = m_Staging.find(stagingKey);
-    if (it != m_Staging.end()) {
-      staging = it->second;
-    }
-  }
   // ARB_copy_buffer can come with only ARB_vertex_buffer_object before GL 1.5, whose context
   // resolves only the ARB-suffixed buffer entry points.
   const auto [major, minor] = CurrentContextGLVersion();
   const bool coreBuffers = major > 1 || (major == 1 && minor >= 5);
-  if (staging == 0) {
-    auto genBuffers = coreBuffers ? g_DispatchTable.glGenBuffers.load(std::memory_order_acquire)
-                                  : g_DispatchTable.glGenBuffersARB.load(std::memory_order_acquire);
-    genBuffers(1, &staging);
-    if (staging == 0) {
-      return false;
-    }
+  GLuint staging = 0;
+  {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    m_Staging[stagingKey] = staging;
+    GLuint& cached = m_Staging[stagingKey];
+    if (cached == 0) {
+      auto genBuffers = coreBuffers
+                            ? g_DispatchTable.glGenBuffers.load(std::memory_order_acquire)
+                            : g_DispatchTable.glGenBuffersARB.load(std::memory_order_acquire);
+      genBuffers(1, &cached);
+    }
+    staging = cached;
+  }
+  if (staging == 0) {
+    return false;
   }
   auto bindBuffer = coreBuffers ? g_DispatchTable.glBindBuffer.load(std::memory_order_acquire)
                                 : g_DispatchTable.glBindBufferARB.load(std::memory_order_acquire);
