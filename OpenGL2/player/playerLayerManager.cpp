@@ -14,6 +14,7 @@
 #include "layerAuto.h"
 #include "log.h"
 #include "pluginService.h"
+#include "programBinaryCheckLayer.h"
 #include "recordingLayerAuto.h"
 #include "screenshotsLayer.h"
 #include "stateTrackingLayer.h"
@@ -62,6 +63,10 @@ void PlayerLayerManager::LoadLayers() {
   auto threadContextLayer = std::make_unique<ThreadContextLayer>();
   m_PostLayers.push_back(threadContextLayer.get());
   m_LayersOwner.push_back(std::move(threadContextLayer));
+
+  auto programBinaryCheckLayer = std::make_unique<ProgramBinaryCheckLayer>();
+  m_PostLayers.push_back(programBinaryCheckLayer.get());
+  m_LayersOwner.push_back(std::move(programBinaryCheckLayer));
 
   const auto& config = Configurator::Get().common;
   if (config.shared.screenshots.enabled || !config.player.captureFrames.empty()) {
