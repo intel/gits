@@ -288,6 +288,14 @@ def has_return_member(cmd: Command) -> bool:
     return not is_discarded_string_return(cmd.name, cmd.return_value)
 
 
+def has_unserialized_return(cmd: Command) -> bool:
+    """Whether the typed Command has an m_Return the stream does not carry: a discarded string
+    return, kept so recorder layers can see and replace it."""
+    if cmd.return_value.type.strip().lower() == 'void':  # WGL uses Win32 'VOID'.
+        return False
+    return is_discarded_string_return(cmd.name, cmd.return_value)
+
+
 def mako_render(inpath: str, **kwargs) -> str | None:
     """Render a Mako template into a string."""
     # Objects used by all (or almost all) Mako templates.
@@ -317,6 +325,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'consumed_pointer_params': consumed_pointer_params,
         'consumed_param_owner': consumed_param_owner,
         'has_return_member': has_return_member,
+        'has_unserialized_return': has_unserialized_return,
         'discarded_output_list_sizer': discarded_output_list_sizer,
     }
 

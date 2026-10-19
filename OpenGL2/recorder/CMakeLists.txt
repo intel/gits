@@ -22,6 +22,7 @@ add_library(OpenGL2_recorder STATIC
   ${GENERATED_SRC}
   include/bufferShadowService.h
   include/capabilitySuppression.h
+  include/captureCustomizationLayer.h
   include/captureLayerManager.h
   include/captureManager.h
   include/clientArraysService.h
@@ -43,6 +44,7 @@ add_library(OpenGL2_recorder STATIC
   include/windowGeometryTrackingService.h
   bufferShadowService.cpp
   capabilitySuppression.cpp
+  captureCustomizationLayer.cpp
   captureLayerManager.cpp
   captureManager.cpp
   clientArraysService.cpp

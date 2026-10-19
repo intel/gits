@@ -122,13 +122,15 @@ struct LengthOrNullTerminatedTag {};
 inline constexpr LengthOrNullTerminatedTag LengthOrNullTerminated{};
 
 // A single-indirection pointer to a fixed-size element type (TypeFacts.is_array_element_eligible
-// - see intermediates.py), captured as an owned copy. Deliberately does NOT keep a raw pointer
-// member the way Vulkan's ArrayArgument/PointerArgument do: OpenGL2's generated wrapper
+// - see intermediates.py), captured as an owned copy. OpenGL2's generated wrapper
 // (recorderWrappersAuto.cpp.mako) never reads member state to make the real driver call - it
-// always uses the original function parameters directly - so there is no code path that needs a
-// live pointer back into application memory once the copy exists. This also means no hand-written
-// copy/move constructor is needed (contrast Vulkan's PointerArgument): std::vector's own copy/move
-// semantics are already correct, since nothing aliases into Data from outside the class.
+// always uses the original function parameters directly - so Data is never aliased from outside
+// the class and std::vector's own copy/move semantics are correct (contrast Vulkan's
+// PointerArgument).
+//
+// Pointer is the application's pointer for an OUT-direction parameter, set by the recorder before
+// its Pre layers so a layer answering the command itself can write the result. It is never
+// serialized, and is a buffer offset when the command writes into a bound buffer.
 //
 // HasValue distinguishes a null pointer (HasValue == false, Data empty) from a valid, explicitly
 // zero-length array (HasValue == true, Data empty) - see argumentCoders.h for why this matters
@@ -137,6 +139,7 @@ template <typename T>
 struct ArrayArgument {
   std::vector<T> Data{};
   bool HasValue{false};
+  T* Pointer{};
 
   ArrayArgument() {}
 

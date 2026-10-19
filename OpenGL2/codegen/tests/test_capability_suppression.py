@@ -52,7 +52,8 @@ class CapabilitySuppressionTests(unittest.TestCase):
         for name in sorted(STATE_QUERIES):
             with self.subTest(command=name):
                 body = extract_wrapper_body(self.rendered, name)
-                self.assertIn('if (!record || !AnswerStateQuery(pname, data)) {\n'
+                self.assertIn('if (!record || (!command->m_Skip && '
+                              '!AnswerStateQuery(pname, data))) {\n'
                               '    realFunction(pname, data);', body)
                 self.assertIn('CreateCommandKey()', body)
 
@@ -75,7 +76,7 @@ class CapabilitySuppressionTests(unittest.TestCase):
         for name, replacement in sorted(RESULT_FILTERS.items()):
             with self.subTest(command=name):
                 body = extract_wrapper_body(self.rendered, name)
-                self.assertIn('result = realFunction', body)
+                self.assertIn('command->m_Return.Value : realFunction', body)
                 self.assertIn(f'  if (record) {{\n    result = {replacement};\n  }}', body)
 
     def test_other_commands_are_not_hooked(self) -> None:

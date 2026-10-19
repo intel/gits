@@ -263,6 +263,9 @@ QueryUnpackSkipRows(), QueryUnpackSkipPixels()))\
 % endfor
 % if has_return_member(cmd):
   ${wrapper_for(cmd.return_value.type_facts, object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_))}<${cmd.return_value.type}> m_Return;
+% elif has_unserialized_return(cmd):
+  // Not serialized: the recorder's view of the returned string, which a layer may replace.
+  Argument<${cmd.return_value.type}> m_Return;
 % endif
 };
 

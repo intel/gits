@@ -11,28 +11,19 @@ ${AUTO_GENERATED_HEADER}
 // codegen/generator_recorder.py). For an enabled command, the typed Command object is
 // constructed *before* the real driver call (this copies any IN-direction array/string bytes
 // out of application memory immediately before the call - see arguments.h's ArrayArgument<T>
-// and modern-opengl-backend-architecture.md's "Classify payloads from evidence" decision);
-// the real driver is then always called, unconditionally, matching the app's expectations
-// regardless of recording state; any OUT-direction array is captured immediately afterward,
-// once the driver has actually written into the app's buffer; then the command is keyed,
-// the return value and any handle keys are resolved, and the command is handed off to the
-// Post layer chain for encoding. Disabled commands just report themselves once (per
-// canonical name) as unsupported.
+// and modern-opengl-backend-architecture.md's "Classify payloads from evidence" decision).
+// Once its input handles are resolved and its OUT-direction arrays hold the application's
+// pointers, the Pre layers run (CaptureManager::GetPreLayers(), as in Vulkan's
+// wrappersAuto.cpp.mako). The driver is then called with the application's own parameters,
+// unless a Pre layer set command.m_Skip and answered the command itself. OUT-direction arrays are
+// captured once written, the return value and output handles are resolved, and the Post layers
+// run, with EncoderLayer last (see CaptureLayerManager::LoadLayers()). The application gets
+// command.m_Return, which a Post layer may have replaced. Disabled commands just report
+// themselves as unsupported.
 //
 // The recursion guard already distinguishes the outermost call (depth one) from calls
 // nested underneath it, so a nested call from within a Pre/Post layer will not re-record
-// or re-warn.
-//
-// Pre/Post layers (see docs/development/opengl2-layer-architecture-alignment-plan.md):
-// CaptureManager::GetPreLayers() runs immediately before the real driver call, once every
-// input handle/object-name field has been resolved to its GITSKey (matching Vulkan's
-// wrappersAuto.cpp.mako's own Pre-layer placement); CaptureManager::GetPostLayers() runs once
-// output handle/object-name fields have been registered and command.m_Return is set -
-// CaptureLayerManager::LoadLayers() registers exactly one Post layer, EncoderLayer, as the last
-// (and, today, only) entry in that chain, so this loop is where encoding onto the wire
-// actually happens (see encoderLayerAuto.cpp.mako's EncoderLayer::Post), matching Vulkan's own
-// Post-layer-does-the-encoding architecture instead of calling CaptureManager::RecordCommand()
-// directly and inline here.
+// or re-warn, and runs no layers.
 //
 // handle_creating_commands / handle_param_to_erase_on_success come from
 // codegen/handle_lifecycle.py - a single table already unioned across every mapped-handle type
@@ -320,6 +311,18 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endif
 % endfor
+% for p in cmd.params:
+<%
+    target_override = pointer_override_for(cmd, p.name)
+    target_wrapper = (wrapper_for(p.type_facts, object_name_override_for(cmd.name, p.name, p.class_),
+                                  target_override, array_of_arrays_override_for(cmd.name, p.name))
+                      if target_override is not None and p.name not in consumed_pointer_params(cmd.name)
+                      else None)
+%>\
+% if target_wrapper == 'ArrayArgument' and target_override.direction == PointerDirection.OUT:
+    command->m_${p.name}.Pointer = static_cast<${member_cpp_type(p, target_override)}*>(${p.name});
+% endif
+% endfor
     for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
       preLayer->Pre(*command);
     }
@@ -344,7 +347,11 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % if cmd.name in state_queries:
   // See capability_suppression.py: the query is recorded either way.
-  if (!record || !AnswerStateQuery(pname, data)) {
+  if (!record || (!command->m_Skip && !AnswerStateQuery(pname, data))) {
+    realFunction(${param_names});
+  }
+% elif is_void and cmd.enabled:
+  if (!record || !command->m_Skip) {
     realFunction(${param_names});
   }
 % elif is_void:
@@ -361,23 +368,17 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // blindly prepending const either double-qualifies it or - for a plain pointer return
   // type - turns "T*" into "const T*", changing the pointee's constness instead of the
   // pointer's, which then fails to convert back to `ret` at the return statement below.
+% if cmd.enabled:
+  ${ret} result = record && command->m_Skip ? command->m_Return.Value : realFunction(${call_args});
+% else:
   ${ret} result = realFunction(${call_args});
+% endif
 % endif
 % if cmd.name in result_filters:
   // See capability_suppression.py.
   if (record) {
     result = ${result_filters[cmd.name]};
   }
-% endif
-% if cmd.name == 'wglCreateContextAttribsARB':
-    if (record && result != nullptr && attribList != nullptr) {
-        for (const int* attribute = attribList; *attribute != 0; attribute += 2) {
-            if (*attribute == WGL_CONTEXT_PROFILE_MASK_ARB) {
-                GITS_ASSERT((attribute[1] & WGL_CONTEXT_ES_PROFILE_BIT_EXT) == 0,
-                                        "OpenGL ES contexts are not supported by the recorder");
-            }
-        }
-    }
 % endif
 % if cmd.name in buffer_content_hooks:
 <% hook = buffer_content_hooks[cmd.name] %>\
@@ -567,6 +568,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     // _validate_object_name_override (a return value can never be a LOOKUP/DELETE target).
     UpdateOutputHandle(command->m_Return, GLObjectKind::${return_obj_override.kind.value});
 % endif
+% elif has_unserialized_return(cmd):
+    command->m_Return.Value = result;
 % endif
 ## HandleShareGroupFor() (recorder/include/handleArgumentUpdaters.h) is overloaded per HandleT -
 ## 0 (process-global) for HGLRC, the real CurrentShareGroup() for GLsync - so this one call site
@@ -629,12 +632,6 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     }
 % endif
 % endfor
-    // See docs/development/opengl2-layer-architecture-alignment-plan.md: EncoderLayer - the
-    // sole, last-registered Post layer (see CaptureLayerManager::LoadLayers()) - does what
-    // this loop used to do directly right here: hand the command to
-    // CaptureManager::RecordCommand() for encoding onto the wire (and, for a
-    // FRAME_END_COMMANDS entry like this one might be, additionally emit the FrameEndCommand
-    // marker afterward - see encoderLayerAuto.cpp.mako's EncoderLayer::Post).
     for (Layer* postLayer : CaptureManager::Get().GetPostLayers()) {
       postLayer->Post(*command);
     }
@@ -645,7 +642,10 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     CaptureManager::Get().ReleasePendingPostHookKey();
 % endif
   }
-% if not is_void:
+% if not is_void and cmd.enabled:
+  // A Post layer may have replaced the result.
+  return record ? command->m_Return.Value : result;
+% elif not is_void:
   return result;
 % endif
 }

@@ -18,6 +18,10 @@ namespace gits::opengl2 {
 % for cmd in commands:
 % if cmd.enabled:
 void EncoderLayer::Post(${cmd.name}Command& command) {
+  if (command.m_SkipRecording) {
+    CaptureManager::Get().SkipCommandKey(command.m_Key);
+    return;
+  }
   CaptureManager::Get().RecordCommand(command, new ${cmd.name}CommandSerializer(command));
 % if cmd.name in frame_end_commands:
 <%

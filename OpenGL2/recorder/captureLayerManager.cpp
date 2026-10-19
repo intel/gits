@@ -8,6 +8,7 @@
 
 #include "captureLayerManager.h"
 
+#include "captureCustomizationLayer.h"
 #include "clientArraysLayerAuto.h"
 #include "configurator.h"
 #include "encoderLayerAuto.h"
@@ -24,6 +25,7 @@ CaptureLayerManager::CaptureLayerManager() = default;
 CaptureLayerManager::~CaptureLayerManager() = default;
 
 void CaptureLayerManager::LoadLayers() {
+  auto captureCustomizationLayer = std::make_unique<CaptureCustomizationLayer>();
   auto windowGeometryTrackingLayer = std::make_unique<WindowGeometryTrackingLayer>();
   // Records client-memory vertex arrays ahead of the draws that read them.
   auto clientArraysLayer = std::make_unique<ClientArraysLayer>();
@@ -39,6 +41,7 @@ void CaptureLayerManager::LoadLayers() {
   }
   auto encoderLayer = std::make_unique<EncoderLayer>();
 
+  m_PreLayers.push_back(captureCustomizationLayer.get());
   m_PreLayers.push_back(windowGeometryTrackingLayer.get());
   m_PreLayers.push_back(clientArraysLayer.get());
   m_PreLayers.push_back(mappedTextureLayer.get());
@@ -47,6 +50,7 @@ void CaptureLayerManager::LoadLayers() {
     m_PreLayers.push_back(screenshotsLayer.get());
   }
 
+  m_PostLayers.push_back(captureCustomizationLayer.get());
   m_PostLayers.push_back(pixelFormatCaptureLayer.get());
   m_PostLayers.push_back(uniformArrayCaptureLayer.get());
   if (screenshotsLayer) {
@@ -55,6 +59,7 @@ void CaptureLayerManager::LoadLayers() {
   // The encoder must run last.
   m_PostLayers.push_back(encoderLayer.get());
 
+  m_LayersOwner.push_back(std::move(captureCustomizationLayer));
   m_LayersOwner.push_back(std::move(windowGeometryTrackingLayer));
   m_LayersOwner.push_back(std::move(clientArraysLayer));
   m_LayersOwner.push_back(std::move(mappedTextureLayer));

@@ -236,7 +236,7 @@ class ExistenceQueryWrapperTests(unittest.TestCase):
             render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
         lookup = body.find(
             'UpdateHandleIfRegistered(command->m_texture, GLObjectKind::Texture);')
-        call = body.find('GLboolean result = realFunction(texture);')
+        call = body.find('realFunction(texture);')
         confirm = body.find(
             'ConfirmExistenceQuery(command->m_texture, GLObjectKind::Texture, result);')
         self.assertNotEqual(lookup, -1, body)
@@ -245,6 +245,59 @@ class ExistenceQueryWrapperTests(unittest.TestCase):
         self.assertLess(lookup, call)
         self.assertLess(call, confirm)
         self.assertNotIn('UpdateHandle(command->m_texture', body)
+
+
+class LayerReplacedCallWrapperTests(unittest.TestCase):
+    """A Pre layer that sets m_Skip answers the command itself: through the application's OUT
+    pointers, which it must have before the Pre layers run, or through m_Return, which the
+    application gets back after the Post layers, so they can replace it too."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rendered = render_commands(
+            [registry_command(name) for name in ('glGetIntegerv', 'glGetString', 'glIsTexture')],
+            frozenset())
+
+    def test_out_pointer_is_set_before_the_pre_layers(self) -> None:
+        body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
+        pointer = body.find('command->m_data.Pointer = static_cast<GLint*>(data);')
+        pre = body.find('preLayer->Pre(*command);')
+        self.assertNotEqual(pointer, -1, body)
+        self.assertLess(pointer, pre)
+
+    def test_void_call_is_skipped(self) -> None:
+        body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
+        self.assertIn('if (!record || !command->m_Skip) {\n    realFunction(pname, data);', body)
+
+    def test_skipped_call_returns_m_return(self) -> None:
+        body = extract_wrapper_body(self.rendered, 'glIsTexture')
+        self.assertIn('GLboolean result = record && command->m_Skip ? command->m_Return.Value : '
+                      'realFunction(texture);', body)
+        self.assertIn('return record ? command->m_Return.Value : result;', body)
+
+    def test_string_result_reaches_the_post_layers(self) -> None:
+        body = extract_wrapper_body(self.rendered, 'glGetString')
+        assign = body.find('command->m_Return.Value = result;')
+        post = body.find('postLayer->Post(*command);')
+        self.assertNotEqual(assign, -1, body)
+        self.assertLess(assign, post)
+        self.assertIn('return record ? command->m_Return.Value : result;', body)
+
+
+class EncoderLayerSkipRecordingTests(unittest.TestCase):
+    """A command a recorder layer leaves out of the stream must still release its key, or every
+    later command stalls in OrderingRecorder."""
+
+    def test_skip_recording_releases_the_key(self) -> None:
+        rendered = mako_render(
+            str(CODEGEN_DIR / 'templates' / 'encoderLayerAuto.cpp.mako'),
+            commands=[registry_command('glProgramBinary')], frame_end_commands=frozenset())
+        self.assertIsNotNone(rendered)
+        self.assertIn('  if (command.m_SkipRecording) {\n'
+                      '    CaptureManager::Get().SkipCommandKey(command.m_Key);\n'
+                      '    return;\n'
+                      '  }\n'
+                      '  CaptureManager::Get().RecordCommand(', rendered)
 
 
 if __name__ == '__main__':

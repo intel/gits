@@ -36,7 +36,11 @@ private:
 public:
   uint64_t m_Key{};
   uint32_t m_ThreadId{};
+  // Set by a Pre layer to skip the driver call. A recorder layer skipping a call that returns a
+  // value sets m_Return itself.
   bool m_Skip{};
+  // Set by a recorder layer to leave the command out of the stream.
+  bool m_SkipRecording{};
 };
 
 } // namespace gits::opengl2
