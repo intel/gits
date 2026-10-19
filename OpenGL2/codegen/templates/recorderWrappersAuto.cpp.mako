@@ -39,7 +39,6 @@ ${AUTO_GENERATED_HEADER}
 // docs/development/opengl2-object-name-mapping-plan.md.
 
 #include "bufferShadowService.h"
-#include "capabilitySuppression.h"
 #include "captureManager.h"
 #include "clientArraysMetaTypes.h"
 #include "clientArraysService.h"
@@ -93,12 +92,6 @@ namespace {
 ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   const RecursionGuard guard;
   const bool record = !guard.IsNested();
-% if cmd.name in binary_load_skips:
-  // See capability_suppression.py: returns before reserving a key, so nothing is recorded.
-  if (record && ${binary_load_skips[cmd.name]}) {
-    return;
-  }
-% endif
   auto realFunction = g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
   // Reserved here - before the real driver dispatch below - rather than deferred into
   // CaptureManager::RecordCommand/RecordUnsupportedCommand (as it used to be), so concurrent
@@ -345,40 +338,22 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
   }
 % endif
-% if cmd.name in state_queries:
-  // See capability_suppression.py: the query is recorded either way.
-  if (!record || (!command->m_Skip && !AnswerStateQuery(pname, data))) {
-    realFunction(${param_names});
-  }
-% elif is_void and cmd.enabled:
+% if is_void and cmd.enabled:
   if (!record || !command->m_Skip) {
     realFunction(${param_names});
   }
 % elif is_void:
   realFunction(${param_names});
 % else:
-<%
-    call_args = param_names
-    if cmd.name in argument_remaps:
-        remapped, replacement = argument_remaps[cmd.name]
-        call_args = ', '.join(f'record ? {replacement} : {p.name}' if p.name == remapped
-                              else p.name for p in cmd.params)
-%>\
   // Not const: `ret` may already be a pointer/qualified type (e.g. "const GLubyte*"), and
   // blindly prepending const either double-qualifies it or - for a plain pointer return
   // type - turns "T*" into "const T*", changing the pointee's constness instead of the
   // pointer's, which then fails to convert back to `ret` at the return statement below.
 % if cmd.enabled:
-  ${ret} result = record && command->m_Skip ? command->m_Return.Value : realFunction(${call_args});
+  ${ret} result = record && command->m_Skip ? command->m_Return.Value : realFunction(${param_names});
 % else:
-  ${ret} result = realFunction(${call_args});
+  ${ret} result = realFunction(${param_names});
 % endif
-% endif
-% if cmd.name in result_filters:
-  // See capability_suppression.py.
-  if (record) {
-    result = ${result_filters[cmd.name]};
-  }
 % endif
 % if cmd.name in buffer_content_hooks:
 <% hook = buffer_content_hooks[cmd.name] %>\

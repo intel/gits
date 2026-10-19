@@ -14,7 +14,6 @@ set_target_properties(OpenGL2_codegen PROPERTIES FOLDER OpenGL2)
 set(SCRIPTS_SRC
   array_of_arrays_metadata.py
   buffer_content_hooks.py
-  capability_suppression.py
   client_array_draws.py
   command_ids.py
   custom_player_runners.py

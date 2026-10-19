@@ -9,12 +9,6 @@
 # ===================== end_copyright_notice ==============================
 
 from buffer_content_hooks import buffer_content_hooks
-from capability_suppression import (
-    argument_remaps,
-    binary_load_skips,
-    result_filters,
-    state_queries,
-)
 from client_array_draws import client_array_draws, client_array_setters
 from generator_helpers import mako_write
 from handle_lifecycle import (
@@ -132,11 +126,7 @@ def generate_recorder_files(commands: list[Command]) -> None:
                pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
                frame_end_commands=FRAME_END_COMMANDS,
                client_array_setters=client_array_setters(commands),
-               buffer_content_hooks=buffer_content_hooks(commands),
-               state_queries=state_queries(commands),
-               binary_load_skips=binary_load_skips(commands),
-               argument_remaps=argument_remaps(commands),
-               result_filters=result_filters(commands))
+               buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl2-layer-architecture-alignment-plan.md): the sole,
     # last-registered Post layer, dispatched through by the wrapper above via its
     # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.

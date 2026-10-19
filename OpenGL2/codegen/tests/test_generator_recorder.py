@@ -61,11 +61,7 @@ def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: 
 def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset(),
                     pre_hook_extra_key_commands: dict[str, str] | None = None,
-                    frame_end_commands: frozenset[str] = frozenset(),
-                    state_queries: frozenset[str] = frozenset(),
-                    binary_load_skips: dict[str, str] | None = None,
-                    argument_remaps: dict[str, tuple[str, str]] | None = None,
-                    result_filters: dict[str, str] | None = None) -> str:
+                    frame_end_commands: frozenset[str] = frozenset()) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
@@ -74,9 +70,7 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
         post_hook_key_pair_commands=post_hook_key_pair_commands,
         pre_hook_extra_key_commands=pre_hook_extra_key_commands or {},
         frame_end_commands=frame_end_commands, client_array_setters={},
-        buffer_content_hooks={}, state_queries=state_queries,
-        binary_load_skips=binary_load_skips or {}, argument_remaps=argument_remaps or {},
-        result_filters=result_filters or {})
+        buffer_content_hooks={})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
 
