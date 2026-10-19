@@ -105,7 +105,7 @@ public:
                             const std::vector<int32_t>& attributes = {});
 
   // Grows the fallback window's client area to at least (width, height), never shrinking it, if
-  // `drawDc` (the real current draw DC) is the fallback's. GlViewportRunner calls this for every
+  // `drawDc` (the real current draw DC) is the fallback's. ReplayCustomizationLayer calls this for
   // glViewport(0, 0, width, height): for a stream without geometry samples, an origin-anchored
   // viewport is the closest available signal for the application's window size. Windows
   // identified by samples take their size from those samples only.

@@ -40,6 +40,10 @@ public:
   void Post(glUseProgramObjectARBCommand& command) override;
   void Post(glUseProgramStagesCommand& command) override;
 
+  // An origin-anchored viewport grows the player's fallback window to fit, for a stream without
+  // window geometry samples. See HdcVirtualizationService::GrowToFit().
+  void Post(glViewportCommand& command) override;
+
   // A wait that reached the sync object in the recording waits again while replay times out.
   void Pre(glClientWaitSyncCommand& command) override;
   void Post(glClientWaitSyncCommand& command) override;

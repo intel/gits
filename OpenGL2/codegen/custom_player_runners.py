@@ -46,20 +46,6 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # HdcVirtualizationService::BindSampledWindows().
     'wglMakeContextCurrentARB': 'WglMakeContextCurrentARBRunner',
     'wglMakeContextCurrentEXT': 'WglMakeContextCurrentEXTRunner',
-    # Grows the player's fallback window (created at an arbitrary, hardcoded 640x480 default by
-    # HdcVirtualizationService::Resolve() when no recorded window is known) to fit the app's
-    # real rendering resolution - see GlViewportRunner::Run()'s own comment and
-    # HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
-    #
-    # DEFENSIVE FALLBACK ONLY: this backend now captures the app's REAL Win32 window geometry
-    # at record time (WindowGeometryTrackingService, windowGeometryMetaTypes.h's
-    # WindowGeometryMetaCommand), so a stream recorded after that feature normally reaches
-    # Resolve() with the correct size already known and this glViewport-inferred substitute
-    # signal never fires a visible resize for it. Still needed - hence this custom runner
-    # staying excluded from the generic per-command codegen loop - for a stream recorded before
-    # that capture existed, or one where WindowFromDC/GetClientRect failed at capture time; not
-    # because glViewport remains the only size signal available.
-    'glViewport': 'GlViewportRunner',
     # Bind the recorded HDC to the window of the geometry sample taken for this exact swap (an
     # atomic pre-hook-key pair with WindowGeometryTrackingLayer's per-frame poll - see that
     # layer's own header comment) - see HdcVirtualizationService::BindSampledWindow().

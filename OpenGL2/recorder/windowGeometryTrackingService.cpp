@@ -104,8 +104,7 @@ WindowGeometryTrackingService::Sample WindowGeometryTrackingService::Query(void*
       g_WarnedWindowFromDcFailure = true;
       LOG_WARNING << "WindowGeometryTrackingService: WindowFromDC returned NULL for at least "
                      "one captured HDC - real window geometry could not be captured for it; "
-                     "GlViewportRunner's glViewport-inferred fallback will apply on replay "
-                     "instead";
+                     "the player's glViewport-inferred fallback will apply on replay instead";
     }
     return {};
   }
@@ -130,8 +129,8 @@ std::optional<WindowGeometryTrackingService::Sample> WindowGeometryTrackingServi
       g_WarnedGeometryQueryFailure = true;
       LOG_WARNING << "WindowGeometryTrackingService: GetClientRect/GetWindowRect failed for "
                      "at least one resolved HWND - real window geometry could not be captured "
-                     "for it; GlViewportRunner's glViewport-inferred fallback will apply on "
-                     "replay instead";
+                     "for it; the player's glViewport-inferred fallback will apply on replay "
+                     "instead";
     }
     return std::nullopt;
   }

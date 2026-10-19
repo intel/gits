@@ -126,31 +126,6 @@ private:
   wglSetPixelFormatCommand command;
 };
 
-// glViewport's Run() - beyond the generic real-call forward, also grows the player's fallback
-// window to fit this call's (width, height) when it targets the window origin - see
-// HdcVirtualizationService::GrowToFit()'s header comment for the full rationale.
-//
-// DEFENSIVE FALLBACK ONLY as of WindowGeometryMetaCommand/WindowGeometryMetaRunner (see
-// windowGeometryMetaTypes.h): this backend now captures real Win32 window geometry at record
-// time (WindowGeometryTrackingService, mirroring the legacy OpenGL backend's own
-// OpenGL/common/wglFunctions.cpp's GetWindowParams()/CwglSetPixelFormat capture, and DX12/
-// Vulkan's own CreateWindowMetaCommand-shaped idiom), so a stream recorded after this change
-// gives every recorded window its real size, and the fallback window this grows is not used.
-// Kept, not removed, only for a stream recorded BEFORE this change, or one where
-// WindowFromDC/GetClientRect failed at capture time.
-class GlViewportRunner : public stream::CommandRunner {
-public:
-  void Run() override;
-
-protected:
-  void DecodeCommand() override {
-    Decode(m_Data, command);
-  }
-
-private:
-  glViewportCommand command;
-};
-
 // wglSwapBuffers's Run() - binds the recorded HDC to the window of the geometry sample taken for
 // this swap (HdcVirtualizationService::BindSampledWindow()) before presenting that window.
 class WglSwapBuffersRunner : public stream::CommandRunner {

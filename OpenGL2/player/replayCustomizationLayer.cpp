@@ -10,6 +10,7 @@
 
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
+#include "hdcVirtualizationService.h"
 #include "openglDriversAuto.h"
 #include "playerManager.h"
 #include "programBinaryCheckService.h"
@@ -153,6 +154,17 @@ void ReplayCustomizationLayer::Post(glUseProgramObjectARBCommand& command) {
 
 void ReplayCustomizationLayer::Post(glUseProgramStagesCommand& command) {
   ProgramBinaryCheckService::Get().OnUse(command.m_program.Key, command.m_program.Value);
+}
+
+void ReplayCustomizationLayer::Post(glViewportCommand& command) {
+  // GrowToFit() no-ops unless the fallback window is the current draw window. The framebuffer
+  // binding is not checked: growing the window for a framebuffer object's viewport only leaves
+  // the default framebuffer larger than the application draws into.
+  if (Executed(command) && command.m_x.Value == 0 && command.m_y.Value == 0) {
+    HdcVirtualizationService::Get().GrowToFit(
+        player::g_DispatchTable.wglGetCurrentDC.load(std::memory_order_acquire)(),
+        command.m_width.Value, command.m_height.Value);
+  }
 }
 
 void ReplayCustomizationLayer::Pre(glClientWaitSyncCommand& command) {

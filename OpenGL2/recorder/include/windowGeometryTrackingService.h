@@ -81,9 +81,9 @@ public:
   // Records a sample with window 0 and no geometry (never throws, never logs more than once) if
   // an HDC's owning window cannot be resolved or queried - see .cpp for the specific, once-only
   // warning this emits. The player still needs it: it decides each call from the samples taken
-  // for that call, and must not reuse an earlier call's decision. GlViewportRunner's own
-  // glViewport-inferred fallback (player/include/commandRunnersCustom.h) still applies on replay
-  // for a stream where this capture never succeeded.
+  // for that call, and must not reuse an earlier call's decision. The player's
+  // glViewport-inferred fallback (player/include/replayCustomizationLayer.h) still applies on
+  // replay for a stream where this capture never succeeded.
   //
   // `geometryKey` must already be reserved by the caller - see
   // CaptureManager::CreateCommandKeyPair()'s own header comment (captureManager.h) for why

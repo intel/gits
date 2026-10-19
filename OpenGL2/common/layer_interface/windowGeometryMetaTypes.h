@@ -20,8 +20,8 @@ namespace gits::opengl2 {
 // Captures the application's REAL Win32 window geometry at record time, so the player can
 // size/position its window for each recorded window (HdcVirtualizationService) correctly
 // from the very first frame instead of starting at a hardcoded 640x480 and inferring the real
-// size later from glViewport calls (see GlViewportRunner/HdcVirtualizationService::GrowToFit(),
-// player/include/commandRunnersCustom.h - kept as a defensive fallback for streams recorded
+// size later from glViewport calls (see HdcVirtualizationService::GrowToFit(), called from
+// player/include/replayCustomizationLayer.h - kept as a defensive fallback for streams recorded
 // before this command existed, or where WindowFromDC/GetClientRect fail).
 //
 // Mirrors the same "capture real window geometry into a dedicated meta-command" idiom
