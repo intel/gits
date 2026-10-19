@@ -71,9 +71,12 @@ void* GetRecorderWrapper(const char* name) {
   }
 }
 
-[[noreturn]] void FatalRecorderError(const char* action, const char* details) {
-  EnsureLoggingInitialized();
-  LOG_ERROR << "Failure during " << action << ": " << details;
+[[noreturn]] void FatalRecorderError(const char* action, const char* details) noexcept {
+  try {
+    EnsureLoggingInitialized();
+    LOG_ERROR << "Failure during " << action << ": " << details;
+  } catch (...) {
+  }
   std::abort();
 }
 

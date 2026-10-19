@@ -17,7 +17,9 @@ namespace gits::opengl2 {
 
 IRecorder& GetRecorder();
 void* GetRecorderWrapper(const char* name);
-[[noreturn]] void FatalRecorderError(const char* action, const char* details);
+// Logs the failure if it can and aborts. Never throws, so it can be called from the handlers of
+// noexcept functions.
+[[noreturn]] void FatalRecorderError(const char* action, const char* details) noexcept;
 
 // Prevents C++ exceptions from escaping through exported C API entry points.
 // commandName is only used for logging.

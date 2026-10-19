@@ -9,6 +9,7 @@
 #include "subcaptureRecorder.h"
 
 #include "configurator.h"
+#include "exception.h"
 #include "log.h"
 #include "messageBus.h"
 
@@ -24,7 +25,11 @@ SubcaptureRecorder::SubcaptureRecorder() {
 }
 
 SubcaptureRecorder::~SubcaptureRecorder() {
-  FinishRecording();
+  try {
+    FinishRecording();
+  } catch (...) {
+    topmost_exception_handler("SubcaptureRecorder::~SubcaptureRecorder");
+  }
 }
 
 void SubcaptureRecorder::Record(const stream::CommandSerializer& serializer) {
