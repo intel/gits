@@ -8,7 +8,8 @@
 
 #pragma once
 
-#include "layerAuto.h"
+#include "arguments.h"
+#include "glTypes.h"
 
 #include <atomic>
 #include <mutex>
@@ -20,24 +21,17 @@ namespace gits::opengl2 {
 // that produced a binary is guaranteed to load it, so a stream recorded without
 // OpenGL.Recorder.SuppressProgramBinary may replay such programs unlinked. A rejected binary the
 // application replaced by linking from source, as after a stale cache, is not reported.
-class ProgramBinaryCheckLayer : public Layer {
+class ProgramBinaryCheckService {
 public:
-  ProgramBinaryCheckLayer() : Layer("ProgramBinaryCheckLayer") {}
+  static ProgramBinaryCheckService& Get();
 
-  void Post(glProgramBinaryCommand& command) override;
-  void Post(glProgramBinaryOESCommand& command) override;
-  void Post(glLinkProgramCommand& command) override;
-  void Post(glLinkProgramARBCommand& command) override;
-  void Post(glDeleteProgramCommand& command) override;
-  void Post(glDeleteObjectARBCommand& command) override;
-  void Post(glUseProgramCommand& command) override;
-  void Post(glUseProgramObjectARBCommand& command) override;
-  void Post(glUseProgramStagesCommand& command) override;
+  void OnBinaryLoad(GITSKey program);
+  // The program was linked from source or deleted.
+  void Forget(GITSKey program);
+  void OnUse(GITSKey program, GLuint name);
 
 private:
-  void OnBinaryLoad(GITSKey key);
-  void Forget(GITSKey key);
-  void OnUse(GITSKey key, GLuint program);
+  ProgramBinaryCheckService() = default;
 
   std::mutex m_Mutex;
   // Programs loaded from a binary and not linked since, checked at their first use: a load may

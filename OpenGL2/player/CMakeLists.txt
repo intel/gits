@@ -32,8 +32,9 @@ add_library(OpenGL2_player STATIC
   include/pixelFormatMetaRunner.h
   include/pbufferService.h
   include/pluginService.h
-  include/programBinaryCheckLayer.h
+  include/programBinaryCheckService.h
   include/replayContextCaps.h
+  include/replayCustomizationLayer.h
   include/threadContextService.h
   include/unsupportedCommandRunner.h
   include/uniformArrayMetaRunner.h
@@ -52,8 +53,9 @@ add_library(OpenGL2_player STATIC
   pixelFormatMetaRunner.cpp
   pbufferService.cpp
   pluginService.cpp
-  programBinaryCheckLayer.cpp
+  programBinaryCheckService.cpp
   replayContextCaps.cpp
+  replayCustomizationLayer.cpp
   threadContextService.cpp
   unsupportedCommandRunner.cpp
   uniformArrayMetaRunner.cpp
