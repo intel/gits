@@ -23,6 +23,37 @@ pnext_output_structs = [s for s in structures if s.pnext_output and s.stype_valu
 // terminated by VK_STRUCTURE_TYPE_MAX_ENUM
 // ============================================================================
 
+namespace {
+
+#ifdef _MSC_VER
+#define PNEXT_NODE_NOINLINE __declspec(noinline)
+#else
+#define PNEXT_NODE_NOINLINE __attribute__((noinline))
+#endif
+
+// The chain loops below walk the rest of the chain via node->pNext, so the coders must not also
+// do it: their own pNext handling would re-measure or re-encode everything after this node, making
+// the total cost exponential in chain length. They get a local copy of the node with pNext nulled.
+// The copies must not end up in the switch cases, not even through inlining: hundreds of per-type
+// locals in a single function make code generation very slow.
+template <typename T>
+PNEXT_NODE_NOINLINE uint32_t GetPNextNodeSize(const void* node) {
+  T nodeCopy = *reinterpret_cast<const T*>(node);
+  nodeCopy.pNext = nullptr;
+  return GetSize(&nodeCopy, 1);
+}
+
+template <typename T>
+PNEXT_NODE_NOINLINE void EncodePNextNode(const void* node, char* dst, uint32_t& offset) {
+  T nodeCopy = *reinterpret_cast<const T*>(node);
+  nodeCopy.pNext = nullptr;
+  Encode(&nodeCopy, 1, dst, offset);
+}
+
+#undef PNEXT_NODE_NOINLINE
+
+} // namespace
+
 <%def name="pnext_switch_cases(structs, action, structs_for_coder)">\
 % for s in structs:
 <% define = get_define(s.platform) %>
@@ -41,16 +72,7 @@ ${action(s, structs_for_coder)}\
 
 <%def name="getsize_action(s, structs_for_coder)">\
 % if struct_needs_coder(s, structs_for_coder, unions):
-        {
-          // The enclosing while loop already walks the rest of the chain via
-          // node->pNext, so GetSize() must not also do it (its own pNext
-          // handling would otherwise re-measure everything after this node,
-          // making the total cost exponential in chain length). Measure just
-          // this node's own fields by nulling pNext on a local copy.
-          ${s.name} nodeCopy = *reinterpret_cast<const ${s.name}*>(node);
-          nodeCopy.pNext = nullptr;
-          size += GetSize(&nodeCopy, 1);
-        }
+        size += GetPNextNodeSize<${s.name}>(node);
 % else:
         size += static_cast<uint32_t>(sizeof(${s.name}));
 % endif
@@ -61,14 +83,7 @@ ${action(s, structs_for_coder)}\
         std::memcpy(dst + offset, &node->sType, sizeof(VkStructureType));
         offset += sizeof(VkStructureType);
 % if struct_needs_coder(s, structs_for_coder, unions):
-        {
-          // See getsize_action() above: encode just this node's own fields,
-          // the caller's loop encodes the rest of the chain as separate
-          // entries in the flat [sType][bytes]... blob layout.
-          ${s.name} nodeCopy = *reinterpret_cast<const ${s.name}*>(node);
-          nodeCopy.pNext = nullptr;
-          Encode(&nodeCopy, 1, dst, offset);
-        }
+        EncodePNextNode<${s.name}>(node, dst, offset);
 % else:
         std::memcpy(dst + offset, node, sizeof(${s.name}));
         offset += static_cast<uint32_t>(sizeof(${s.name}));
