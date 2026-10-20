@@ -17,6 +17,7 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
+template <>
 uint32_t GetSize(const ${command.name}Command& command) {
   return GetSize(command.m_Key) +
          GetSize(command.m_ThreadId) +
@@ -29,6 +30,7 @@ uint32_t GetSize(const ${command.name}Command& command) {
          ;
 }
 
+template <>
 void Encode(const ${command.name}Command& command, char* dest) {
   uint32_t offset = 0;
   Encode(dest, offset, command.m_Key);
@@ -41,6 +43,7 @@ void Encode(const ${command.name}Command& command, char* dest) {
   % endif
 }
 
+template <>
 void Decode(char* src, ${command.name}Command& command) {
   uint32_t offset = 0;
   Decode(src, offset, command.m_Key);

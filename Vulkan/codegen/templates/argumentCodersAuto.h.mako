@@ -36,6 +36,10 @@ void Decode(const ${union.name}* dst, uint32_t count, char* src, uint32_t& offse
 % endif
 % endfor
 
+// The PointerArgument and ArrayArgument coders below are explicit specializations of the templates
+// in argumentCoders.h rather than overloads. Explicit specializations do not take part in overload
+// resolution, so calls to them are not resolved against one candidate per structure. Every caller
+// has to include this header, otherwise it silently uses the generic templates.
 % for structure in structures:
 <%
 define = get_define(structure.platform)
@@ -50,13 +54,19 @@ uint32_t GetSize(const ${structure.name}* src, uint32_t count);
 void Encode(const ${structure.name}* src, uint32_t count, char* dst, uint32_t& offset);
 void Decode(const ${structure.name}* dst, uint32_t count, char* src, uint32_t& offset);
 
-// PointerArgument / ArrayArgument overloads for ${structure.name}
+// PointerArgument / ArrayArgument specializations for ${structure.name}
+template <>
 uint32_t GetSize(const PointerArgument<${structure.name}>& arg);
+template <>
 void Encode(char* dst, uint32_t& offset, const PointerArgument<${structure.name}>& arg);
+template <>
 void Decode(char* src, uint32_t& offset, PointerArgument<${structure.name}>& arg);
 
+template <>
 uint32_t GetSize(const ArrayArgument<${structure.name}>& arg);
+template <>
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<${structure.name}>& arg);
+template <>
 void Decode(char* src, uint32_t& offset, ArrayArgument<${structure.name}>& arg);
 % if define:
 #endif

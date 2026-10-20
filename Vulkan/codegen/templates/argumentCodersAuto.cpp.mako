@@ -358,6 +358,7 @@ void Decode(const ${structure.name}* dst, uint32_t count, char* src, uint32_t& o
 }
 
 // PointerArgument overloads for ${structure.name}
+template <>
 uint32_t GetSize(const PointerArgument<${structure.name}>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
@@ -366,6 +367,7 @@ uint32_t GetSize(const PointerArgument<${structure.name}>& arg) {
        + sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
+template <>
 void Encode(char* dst, uint32_t& offset, const PointerArgument<${structure.name}>& arg) {
   std::memcpy(dst + offset, &arg.Value, sizeof(void*));
   offset += sizeof(void*);
@@ -382,6 +384,7 @@ void Encode(char* dst, uint32_t& offset, const PointerArgument<${structure.name}
   }
 }
 
+template <>
 void Decode(char* src, uint32_t& offset, PointerArgument<${structure.name}>& arg) {
   std::memcpy(&arg.Value, src + offset, sizeof(void*));
   offset += sizeof(void*);
@@ -401,6 +404,7 @@ void Decode(char* src, uint32_t& offset, PointerArgument<${structure.name}>& arg
 }
 
 // ArrayArgument overloads for ${structure.name}
+template <>
 uint32_t GetSize(const ArrayArgument<${structure.name}>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
@@ -409,6 +413,7 @@ uint32_t GetSize(const ArrayArgument<${structure.name}>& arg) {
        + sizeof(uint32_t) + static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
 }
 
+template <>
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<${structure.name}>& arg) {
   std::memcpy(dst + offset, &arg.Value, sizeof(void*));
   offset += sizeof(void*);
@@ -427,6 +432,7 @@ void Encode(char* dst, uint32_t& offset, const ArrayArgument<${structure.name}>&
   }
 }
 
+template <>
 void Decode(char* src, uint32_t& offset, ArrayArgument<${structure.name}>& arg) {
   std::memcpy(&arg.Value, src + offset, sizeof(void*));
   offset += sizeof(void*);
