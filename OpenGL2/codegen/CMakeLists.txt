@@ -68,6 +68,7 @@ set(OPENGL2_GENERATED_LAYER_INTERFACE_FILES
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandCodersAuto.h
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandCodersAuto.cpp
   ${OPENGL2_LAYER_INTERFACE_DIR}/commandSerializersAuto.h
+  ${OPENGL2_LAYER_INTERFACE_DIR}/commandSerializersAuto.cpp
   ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.h
   ${OPENGL2_LAYER_INTERFACE_DIR}/glEnumsAuto.cpp
   ${OPENGL2_LAYER_INTERFACE_DIR}/pnameValueCountsAuto.cpp

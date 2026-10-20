@@ -44,3 +44,5 @@ def generate_layer_interface_files(
                'common/layer_interface/commandCodersAuto.cpp', commands=command_list)
     mako_write('templates/commandSerializersAuto.h.mako',
                'common/layer_interface/commandSerializersAuto.h', commands=command_list)
+    mako_write('templates/commandSerializersAuto.cpp.mako',
+               'common/layer_interface/commandSerializersAuto.cpp', commands=command_list)

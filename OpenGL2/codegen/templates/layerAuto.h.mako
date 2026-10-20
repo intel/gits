@@ -28,10 +28,12 @@ namespace gits::opengl2 {
 // the full rationale. Mirrors Vulkan/common/layer_interface/layerAuto.h's shape, minus
 // per-platform #ifdef guards (GL/WGL commands have no Vulkan-style platform-conditional subset).
 //
-// Every default body below simply forwards to the generic hook via an explicit static_cast to
-// Command& (never recurses back into itself: the argument's STATIC type after the cast is
-// exactly Command&, so overload resolution picks LayerBase::Pre/Post - the only overload that
-// matches - not one of this class's own more-derived typed overloads). EncoderLayer
+// Every default body below forwards to the generic hook through a LayerBase& so the call is
+// still virtual but name lookup only sees LayerBase's Pre/Post, and casts the argument to
+// Command& so it always selects the generic overload. Calling Pre/Post unqualified here would
+// make each body resolve against every typed overload in this class, which is quadratic in
+// the number of commands and dominates the compile time of every translation unit that
+// includes this header. EncoderLayer
 // (encoderLayerAuto.h) is the only concrete Layer subclass that overrides any of these typed
 // hooks today, and the generated wrapper/runner code (recorderWrappersAuto.cpp.mako,
 // commandRunnersAuto.cpp.mako) is what actually dispatches through them.
@@ -48,55 +50,55 @@ public:
 % for cmd in commands:
 % if cmd.enabled:
   virtual void Pre(${cmd.name}Command& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(${cmd.name}Command& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
 % endif
 % endfor
 
   virtual void Pre(MappedDataMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(MappedDataMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(UnsupportedCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(UnsupportedCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(WindowGeometryMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(WindowGeometryMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(ClientArraysMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(ClientArraysMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(UniformArrayMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(UniformArrayMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(MappedTextureDataMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(MappedTextureDataMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
   virtual void Pre(PixelFormatMetaCommand& command) {
-    Pre(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
   }
   virtual void Post(PixelFormatMetaCommand& command) {
-    Post(static_cast<Command&>(command));
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
   }
 };
 

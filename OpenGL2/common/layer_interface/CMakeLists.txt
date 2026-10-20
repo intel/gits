@@ -17,6 +17,7 @@ set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/pnameValueCountsAuto.cpp
