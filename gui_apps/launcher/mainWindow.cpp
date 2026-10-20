@@ -385,14 +385,9 @@ void MainWindow::HelpMenu() {
 
   if (ImGui::BeginMenu(Labels::HELP_MENU)) {
 
-    if (ImGui::MenuItem(Labels::EMAIL_FEEDBACK_BUTTON)) {
-      gui_actions::SendEmail(Labels::EMAIL_FEEDBACK_RECIPIENT, Labels::EMAIL_FEEDBACK_SUBJECT,
-                             Labels::EMAIL_FEEDBACK_BODY_HEADER);
-    }
     auto& context = BaseContext::GetBaseInstance();
     auto configuration = context.GetBaseConfiguration();
     if (configuration) {
-      ImGui::Separator();
       if (ImGui::MenuItem("Switch theme")) {
         configuration->Theme.CycleTheme();
         configuration->Theme.ApplyTheme();
