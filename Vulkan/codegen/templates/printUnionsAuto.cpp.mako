@@ -9,6 +9,7 @@ ${header}
 
 #include "printUnionsAuto.h"
 #include "printCustom.h"
+#include "printGeneric.h"
 
 namespace gits {
 namespace vulkan {
@@ -19,18 +20,24 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 
-FastOStream& operator<<(FastOStream& stream, const ${union.name}& value) {
+FastOStream& Print${union.name}(FastOStream& stream, const ${union.name}& value) {
 ${print_union_members(union, bitmasks)}\
   return stream;
 }
 
-FastOStream& operator<<(FastOStream& stream, const ${union.name}* value) {
+FastOStream& Print${union.name}(FastOStream& stream, const ${union.name}* value) {
   if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
+    return Print${union.name}(stream, *value);
   }
-  return stream;
+  return PrintText(stream, "nullptr");
+}
+
+FastOStream& operator<<(FastOStream& stream, const ${union.name}& value) {
+  return Print${union.name}(stream, value);
+}
+
+FastOStream& operator<<(FastOStream& stream, const ${union.name}* value) {
+  return Print${union.name}(stream, value);
 }
 
 % if define:

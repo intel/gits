@@ -12,6 +12,7 @@ ${header}
 #include "printBitmasksAuto.h"
 #include "printEnumsAuto.h"
 #include "printCustom.h"
+#include "printGeneric.h"
 
 namespace gits {
 namespace vulkan {
@@ -24,18 +25,24 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 
-FastOStream& operator<<(FastOStream& stream, const ${structure.name}& value) {
+FastOStream& Print${structure.name}(FastOStream& stream, const ${structure.name}& value) {
 ${print_struct_members(structure, bitmasks)}\
   return stream;
 }
 
-FastOStream& operator<<(FastOStream& stream, const ${structure.name}* value) {
+FastOStream& Print${structure.name}(FastOStream& stream, const ${structure.name}* value) {
   if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
+    return Print${structure.name}(stream, *value);
   }
-  return stream;
+  return PrintText(stream, "nullptr");
+}
+
+FastOStream& operator<<(FastOStream& stream, const ${structure.name}& value) {
+  return Print${structure.name}(stream, value);
+}
+
+FastOStream& operator<<(FastOStream& stream, const ${structure.name}* value) {
+  return Print${structure.name}(stream, value);
 }
 
 % if define:

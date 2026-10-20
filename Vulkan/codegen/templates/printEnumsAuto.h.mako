@@ -21,6 +21,8 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 
+FastOStream& Print${enum.name}(FastOStream& stream, ${enum.name} value);
+FastOStream& Print${enum.name}(FastOStream& stream, const ${enum.name}* value);
 FastOStream& operator<<(FastOStream& stream, ${enum.name} value);
 FastOStream& operator<<(FastOStream& stream, const ${enum.name}* value);
 

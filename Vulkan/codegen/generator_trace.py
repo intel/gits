@@ -93,85 +93,144 @@ def is_printable_pointer(member) -> bool:
 
 bitmasks_dict = {}
 
-def print_inline_struct(access, nested_members, separator):
+# Types with a generated Print<Type> printer, and types which only the generic FastOStream
+# operator<< prints. Both are filled in by generate_trace_files.
+named_print_types = set()
+generic_print_types = set()
+
+def print_value(expr, member):
+    """Call printing expr of the member's type, picking the printer stream << would pick.
+
+    A plain stream << is resolved against every operator<< generated for Vulkan types, which
+    makes the printer sources very slow to compile, so it is only used for types which no named
+    printer covers.
+    """
+    if is_pointer_to_array(member):
+        return f'stream << {expr}'
+    if member.base_type in named_print_types and not member.is_pointer_to_pointer \
+            and not member.is_triple_pointer:
+        # The generated printers take a const pointer, so for a pointer to a non-const value
+        # stream << picks the generic operator<<, which prints only the address. These are output
+        # members, which are not initialized yet when printed before the call.
+        if member.is_pointer and not member.is_const:
+            return f'PrintValue(stream, {expr})'
+        return f'Print{member.base_type}(stream, {expr})'
+    if member.is_pointer_to_pointer or member.is_triple_pointer \
+            or member.base_type in generic_print_types or member.base_type.startswith('PFN_'):
+        return f'PrintValue(stream, {expr})'
+    return f'stream << {expr}'
+
+class StatementWriter:
+    """Collects printing statements, merging adjacent literals into a single PrintText call."""
+
+    def __init__(self):
+        self.code = ''
+        self.text = ''
+
+    def add_text(self, text):
+        self.text += text
+
+    def add_statement(self, statement):
+        self.flush_text()
+        self.code += f'  {statement};\n'
+
+    def add_code(self, code):
+        self.flush_text()
+        self.code += code
+
+    def flush_text(self):
+        if self.text:
+            self.code += f'  PrintText(stream, "{self.text}");\n'
+            self.text = ''
+
+    def get_code(self):
+        self.flush_text()
+        return self.code
+
+def print_inline_struct(writer, access, nested_members):
     """Emit member-wise printing for an anonymous inline struct or union nested in full_type."""
-    result = '  stream << "{";\n'
+    writer.add_text('{')
     for i, nested in enumerate(nested_members):
-        is_last = (i == (len(nested_members) - 1))
-        nested_separator = '' if is_last else ' << ", "'
         nested_access = f'{access}.{nested.name}' if nested.name else access
         if nested.is_inline_struct:
-            result += print_inline_struct(nested_access, nested.nested_members, nested_separator)
+            print_inline_struct(writer, nested_access, nested.nested_members)
         elif nested.is_pointer or nested.is_pointer_to_pointer or nested.is_triple_pointer:
-            result += f'  stream << {nested_access}{nested_separator};\n'
+            writer.add_statement(print_value(nested_access, nested))
         elif len(nested.fixed_array_size) == 1:
-            result += f'  PrintStaticArray(stream, {nested_access}){nested_separator};\n'
+            writer.add_statement(f'PrintStaticArray(stream, {nested_access})')
         elif len(nested.fixed_array_size) == 2:
-            result += f'  PrintStatic2DArray(stream, {nested_access}){nested_separator};\n'
+            writer.add_statement(f'PrintStatic2DArray(stream, {nested_access})')
         elif nested.bitfield is not None:
-            result += (
-                f'  stream << static_cast<{nested.base_type}>({nested_access})'
-                f'{nested_separator};\n'
-            )
+            writer.add_statement(
+                print_value(f'static_cast<{nested.base_type}>({nested_access})', nested))
         else:
-            result += f'  stream << {nested_access}{nested_separator};\n'
-    result += f'  stream << "}}"{separator};\n'
-    return result
+            writer.add_statement(print_value(nested_access, nested))
+        if i != len(nested_members) - 1:
+            writer.add_text(', ')
+    writer.add_text('}')
 
 def print_members(name, members, bitmasks):
     global bitmasks_dict
     if not bitmasks_dict:
         bitmasks_dict = {b.flag_name: b for b in bitmasks}
-    
-    str = f'  stream << "{name}{{";\n'
+
+    writer = StatementWriter()
+    writer.add_text(f'{name}{{')
     for i, member in enumerate(members):
-        is_last = (i == (len(members) - 1))
-        separator = '' if is_last else ' << ", "'
         accessName = member_name(member)
         memberVal = f'value.{accessName}' if accessName else 'value'
-        
+
         bitmask = bitmasks_dict.get(member.base_type)
 
         if accessName == 'pNext' and member.is_void and member.is_pointer:
-            str += f'  PrintPNext(stream, value.pNext){separator};\n'
+            writer.add_statement('PrintPNext(stream, value.pNext)')
         elif member.is_inline_struct:
             access = memberVal if accessName else 'value'
-            str += print_inline_struct(access, member.nested_members, separator)
+            print_inline_struct(writer, access, member.nested_members)
         elif bitmask is not None:
             if member.is_pointer:
                 length = '1'
                 if member.length:
                     length = f'value.{member.length}'
-                str += f'  Print{bitmask.flag_name}(stream, {length}, {memberVal}){separator};\n'
+                writer.add_statement(f'Print{bitmask.flag_name}(stream, {length}, {memberVal})')
             else:
-                str += f'  Print{bitmask.flag_name}(stream, {memberVal}){separator};\n'
+                writer.add_statement(f'Print{bitmask.flag_name}(stream, {memberVal})')
         elif member.base_type == 'char' and member.is_pointer:
-            str += f'  PrintString(stream, {memberVal}){separator};\n'
+            writer.add_statement(f'PrintString(stream, {memberVal})')
         elif member.base_type == 'char' and member.is_pointer_to_pointer:
-            str += f'  PrintStringArray(stream, value.{member.length}, {memberVal}){separator};\n'
+            writer.add_statement(f'PrintStringArray(stream, value.{member.length}, {memberVal})')
         elif len(member.fixed_array_size) == 1 and not is_pointer_to_array(member):
-            str += f'  PrintStaticArray(stream, {memberVal}){separator};\n'
+            writer.add_statement(f'PrintStaticArray(stream, {memberVal})')
         elif len(member.fixed_array_size) == 2 and not is_pointer_to_array(member):
-            str += f'  PrintStatic2DArray(stream, {memberVal}){separator};\n'
+            writer.add_statement(f'PrintStatic2DArray(stream, {memberVal})')
         elif member.length != '' and is_printable_pointer(member):
-            str += f'  PrintArray(stream, {get_array_len_expr(member)}, {memberVal}){separator};\n'
+            writer.add_statement(
+                f'PrintArray(stream, {get_array_len_expr(member)}, {memberVal})')
         elif member.length != '':
             len_expr = get_array_len_expr(member)
-            str += f'  if ({len_expr} > 0) {{\n'
-            str += f'    stream << {memberVal}{separator};\n'
-            str += f'  }}\n'
-            str += f'  else {{\n'
-            str += f'    stream << "nullptr"{separator};\n'
-            str += f'  }}\n'
-        elif member.bitfield is not None:
-            str += (
-                f'  stream << static_cast<{member.base_type}>({memberVal})'
-                f'{separator};\n'
+            writer.add_code(
+                f'  if ({len_expr} > 0) {{\n'
+                f'    {print_value(memberVal, member)};\n'
+                f'  }}\n'
+                f'  else {{\n'
+                f'    PrintText(stream, "nullptr");\n'
+                f'  }}\n'
             )
+        elif member.bitfield is not None:
+            writer.add_statement(
+                print_value(f'static_cast<{member.base_type}>({memberVal})', member))
         else:
-            str += f'  stream << {memberVal}{separator};\n'
-    str += '  stream << "}";\n'
-    return str
+            writer.add_statement(print_value(memberVal, member))
+        if i != len(members) - 1:
+            writer.add_text(', ')
+    writer.add_text('}')
+    return writer.get_code()
+
+def print_pnext_struct(structure):
+    value = f'*reinterpret_cast<const {structure.name}*>(pNext)'
+    if structure.name in named_print_types:
+        return f'      Print{structure.name}(stream, {value});\n'
+    return f'      stream << {value};\n'
 
 def print_struct_members(struct, bitmasks):
     return print_members(struct.name, struct.members, bitmasks)
@@ -180,6 +239,14 @@ def print_union_members(union, bitmasks):
     return print_members(union.name, union.members, bitmasks)
 
 def generate_trace_files(context, out_path):
+    generic_print_types.update(
+        printable_types
+        | {'void', 'VkFlags', 'VkFlags64'}
+        | {handle.name for handle in context['handles']}
+        | {bitmask.name for bitmask in context['bitmasks']}
+        | {bitmask.flag_name for bitmask in context['bitmasks']}
+        | {flag.name for flag in context['flags']}
+    )
     printable_types.update(
         {structure.name for structure in context['structures']}
         | {union.name for union in context['unions']}
@@ -196,9 +263,16 @@ def generate_trace_files(context, out_path):
       'VkSubmitInfo',
       'VkShaderModuleCreateInfo'
     ]
+    named_print_types.update(
+        {structure.name for structure in context['structures']
+         if structure.name not in structs_with_custom_print}
+        | {union.name for union in context['unions']}
+        | {enum.name for enum in context['enums']}
+    )
     additional_context = {
         'print_struct_members': print_struct_members,
         'print_union_members': print_union_members,
+        'print_pnext_struct': print_pnext_struct,
         'structs_with_custom_print': structs_with_custom_print,
         'get_define': get_define,
     }

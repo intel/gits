@@ -28,7 +28,7 @@ FastOStream& PrintPNext(FastOStream& stream, const void* pNext) {
 #ifdef ${define}
 % endif
     case ${structure.stype_value}:
-      stream << *reinterpret_cast<const ${structure.name}*>(pNext);
+${print_pnext_struct(structure)}\
       break;
 % if define:
 #endif

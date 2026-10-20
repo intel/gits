@@ -15,6 +15,8 @@ ${header}
 namespace gits {
 namespace vulkan {
 
+// Generated printers call the uniquely named Print<Type> functions instead of operator<<, which
+// would be resolved against every operator<< overload below at each call.
 %for structure in structures:
 %if structure.name not in structs_with_custom_print:
 
@@ -22,6 +24,8 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
+FastOStream& Print${structure.name}(FastOStream& stream, const ${structure.name}& value);
+FastOStream& Print${structure.name}(FastOStream& stream, const ${structure.name}* value);
 FastOStream& operator<<(FastOStream& stream, const ${structure.name}& value);
 FastOStream& operator<<(FastOStream& stream, const ${structure.name}* value);
 % if define:

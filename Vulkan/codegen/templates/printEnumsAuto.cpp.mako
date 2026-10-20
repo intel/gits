@@ -9,6 +9,7 @@ ${header}
 
 #include "printEnumsAuto.h"
 #include "enumToStrAuto.h"
+#include "printGeneric.h"
 
 namespace gits {
 namespace vulkan {
@@ -19,17 +20,23 @@ namespace vulkan {
 #ifdef ${define}
 % endif
 
+FastOStream& Print${enum.name}(FastOStream& stream, ${enum.name} value) {
+  return PrintValue(stream, toStr(value));
+}
+
+FastOStream& Print${enum.name}(FastOStream& stream, const ${enum.name}* value) {
+  if (value) {
+    return Print${enum.name}(stream, *value);
+  }
+  return PrintText(stream, "nullptr");
+}
+
 FastOStream& operator<<(FastOStream& stream, ${enum.name} value) {
-  return stream << toStr(value);
+  return Print${enum.name}(stream, value);
 }
 
 FastOStream& operator<<(FastOStream& stream, const ${enum.name}* value) {
-  if (value) {
-    stream << *value;
-  } else {
-    stream << "nullptr";
-  }
-  return stream;
+  return Print${enum.name}(stream, value);
 }
 
 % if define:
