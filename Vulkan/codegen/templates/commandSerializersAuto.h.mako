@@ -16,6 +16,9 @@ ${header}
 namespace gits {
 namespace vulkan {
 
+// Constructors are defined in commandSerializersAuto.cpp: their GetSize/Encode calls resolve
+// against overload sets spanning every command and structure, which is too slow to repeat in
+// every includer.
 % for command in commands:
 <% define = get_define(command.platform) %>\
 % if define:
@@ -23,11 +26,7 @@ namespace vulkan {
 % endif
 class ${command.name}Serializer : public stream::CommandSerializer {
 public:
-  ${command.name}Serializer(const ${command.name}Command& command) {
-    m_DataSize = GetSize(command);
-    m_Data.reset(new char[m_DataSize]);
-    Encode(command, m_Data.get());
-  }
+  ${command.name}Serializer(const ${command.name}Command& command);
 
   uint32_t Id() const override {
     return static_cast<uint32_t>(CommandId::ID_${command.name.upper()});

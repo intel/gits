@@ -26,6 +26,7 @@ source_group("coders" FILES ${CODERS_SRC})
 
 set(SERIALIZERS_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersCustom.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersFactory.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersFactoryAuto.cpp

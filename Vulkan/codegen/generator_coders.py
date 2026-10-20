@@ -1200,6 +1200,7 @@ def generate_coders_files(context, out_path):
       'argumentCodersAuto.h',
       'argumentCodersAuto.cpp',
       'commandSerializersAuto.h',
+      'commandSerializersAuto.cpp',
       'commandSerializersFactoryAuto.cpp'
     ]
     for file_name in files_to_generate:
