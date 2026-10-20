@@ -35,6 +35,7 @@ namespace gits::opengl2 {
 
 % for cmd in commands:
 % if cmd.enabled:
+template <>
 uint64_t GetSize(const ${cmd.name}Command& command) {
   return GetSize(command.m_Key) +
          GetSize(command.m_ThreadId)\
@@ -60,6 +61,7 @@ uint64_t GetSize(const ${cmd.name}Command& command) {
 ;
 }
 
+template <>
 void Encode(const ${cmd.name}Command& command, char* dest) {
   uint64_t offset = 0;
   Encode(dest, offset, command.m_Key);
@@ -81,6 +83,7 @@ void Encode(const ${cmd.name}Command& command, char* dest) {
 % endif
 }
 
+template <>
 void Decode(const char* src, ${cmd.name}Command& command) {
   uint64_t offset = 0;
   Decode(src, offset, command.m_Key);
