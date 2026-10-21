@@ -38,6 +38,7 @@ public:
                               VkPipelineLayout layout,
                               VkResult result);
   void OnCreateRenderPass(GITSKey deviceKey, GITSKey key, VkRenderPass renderPass, VkResult result);
+  // Forwards an application debug name. RTSR does not invent one.
   void OnSetName(GITSKey deviceKey, const VkDebugUtilsObjectNameInfoEXT* nameInfo);
   void OnDestroy(GITSKey deviceKey, GITSKey key, VkPipeline pipeline);
   void OnDestroyPipelineLayout(GITSKey deviceKey, VkPipelineLayout layout);
@@ -144,6 +145,8 @@ private:
   mutable std::mutex m_Mutex;
   std::unordered_map<GITSKey, std::unique_ptr<TrackedPipeline>> m_Pipelines;
   std::unordered_map<GITSKey, std::unordered_map<VkPipeline, GITSKey>> m_PipelineKeys;
+  // Debug names recorded before the pipeline is harvested.
+  std::unordered_map<GITSKey, std::unordered_map<VkPipeline, std::string>> m_PendingNames;
   std::unordered_map<GITSKey, std::unordered_map<VkPipelineLayout, GITSKey>> m_PipelineLayoutKeys;
   std::unordered_map<GITSKey, std::unordered_map<VkRenderPass, GITSKey>> m_RenderPassKeys;
   std::unordered_map<GITSKey, RetiredPipelines> m_Retired;

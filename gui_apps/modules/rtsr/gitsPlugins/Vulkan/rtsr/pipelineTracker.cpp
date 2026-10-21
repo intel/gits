@@ -13,9 +13,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <iomanip>
 #include <map>
-#include <sstream>
 #include <type_traits>
 #include <utility>
 
@@ -40,12 +38,6 @@ Handle HandleFromBits(uint64_t bits) {
   } else {
     return static_cast<Handle>(bits);
   }
-}
-
-std::string PipelineName(rtsr::RTSR_HASH hash, const char* type) {
-  std::ostringstream name;
-  name << "RTSR pipeline #" << std::uppercase << std::hex << hash << " (Vulkan " << type << ")";
-  return name.str();
 }
 
 class DeviceOperation {
@@ -181,7 +173,6 @@ void PipelineTracker::Publish(std::unique_ptr<TrackedPipeline> pipeline,
   const VkPipeline handle = pipeline->Original;
   const auto type = pipeline->Type;
   const auto hash = pipeline->StateHash;
-  const std::string name = pipeline->Name;
   const bool replacementEligible = pipeline->ReplacementEligible;
   const std::string replacementDiagnostic = pipeline->Diagnostic;
   rtsr::RTSR_PIPELINE_INCARNATION incarnation{};
@@ -190,6 +181,20 @@ void PipelineTracker::Publish(std::unique_ptr<TrackedPipeline> pipeline,
     std::lock_guard<std::mutex> lock(m_Mutex);
     pipeline->Incarnation = m_NextIncarnation++;
     incarnation = pipeline->Incarnation;
+    if (pipeline->Name.empty()) {
+      const auto pendingDevice = m_PendingNames.find(deviceKey);
+      if (pendingDevice != m_PendingNames.end()) {
+        const auto pending = pendingDevice->second.find(handle);
+        if (pending != pendingDevice->second.end()) {
+          pipeline->Name = std::move(pending->second);
+          pendingDevice->second.erase(pending);
+          if (pendingDevice->second.empty()) {
+            m_PendingNames.erase(pendingDevice);
+          }
+        }
+      }
+    }
+    const std::string name = pipeline->Name;
     const auto old = m_Pipelines.find(key);
     if (old != m_Pipelines.end()) {
       DestroyReplacement(*old->second);
@@ -204,7 +209,9 @@ void PipelineTracker::Publish(std::unique_ptr<TrackedPipeline> pipeline,
     }
     m_Client.PipelineCreated(key, type, state, hash, incarnation, replacementEligible,
                              replacementDiagnostic, std::move(stages));
-    m_Client.SetPipelineName(key, name);
+    if (!name.empty()) {
+      m_Client.SetPipelineName(key, name);
+    }
   }
 }
 
@@ -263,8 +270,8 @@ void PipelineTracker::HarvestGraphics(vkCreateGraphicsPipelinesCommand& command)
     const bool eligible = snapshot && allShadersResolved && document.ReplacementEligible;
     auto pipeline = std::make_unique<TrackedPipeline>(
         key, device, handle, createInfo.layout, createInfo.renderPass,
-        rtsr::RTSR_PIPELINE_TYPE_GRAPHICS, document.Hash, PipelineName(document.Hash, "graphics"),
-        std::move(snapshot), eligible, document.Diagnostic);
+        rtsr::RTSR_PIPELINE_TYPE_GRAPHICS, document.Hash, std::string{}, std::move(snapshot),
+        eligible, document.Diagnostic);
     Publish(std::move(pipeline), std::move(document.Json), std::move(stages));
   }
 }
@@ -309,8 +316,7 @@ void PipelineTracker::HarvestCompute(vkCreateComputePipelinesCommand& command) {
     const bool eligible = snapshot && allShadersResolved && document.ReplacementEligible;
     auto pipeline = std::make_unique<TrackedPipeline>(
         key, device, handle, createInfo.layout, VK_NULL_HANDLE, rtsr::RTSR_PIPELINE_TYPE_COMPUTE,
-        document.Hash, PipelineName(document.Hash, "compute"), std::move(snapshot), eligible,
-        document.Diagnostic);
+        document.Hash, std::string{}, std::move(snapshot), eligible, document.Diagnostic);
     Publish(std::move(pipeline), std::move(document.Json), std::move(stages));
   }
 }
@@ -323,13 +329,15 @@ void PipelineTracker::OnSetName(GITSKey deviceKey, const VkDebugUtilsObjectNameI
   GITSKey key{};
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    const VkPipeline handle = HandleFromBits<VkPipeline>(nameInfo->objectHandle);
     const auto devicePipelines = m_PipelineKeys.find(deviceKey);
     if (devicePipelines == m_PipelineKeys.end()) {
+      m_PendingNames[deviceKey][handle] = nameInfo->pObjectName;
       return;
     }
-    const auto found =
-        devicePipelines->second.find(HandleFromBits<VkPipeline>(nameInfo->objectHandle));
+    const auto found = devicePipelines->second.find(handle);
     if (found == devicePipelines->second.end()) {
+      m_PendingNames[deviceKey][handle] = nameInfo->pObjectName;
       return;
     }
     key = found->second;
@@ -407,6 +415,13 @@ void PipelineTracker::OnDestroy(GITSKey deviceKey, GITSKey key, VkPipeline pipel
       m_Pipelines.erase(found);
       removed = true;
     }
+    const auto pendingDevice = m_PendingNames.find(deviceKey);
+    if (pendingDevice != m_PendingNames.end()) {
+      pendingDevice->second.erase(pipeline);
+      if (pendingDevice->second.empty()) {
+        m_PendingNames.erase(pendingDevice);
+      }
+    }
   }
   if (removed) {
     m_Client.PipelineDeleted(key);
@@ -453,6 +468,7 @@ void PipelineTracker::OnDestroyDevice(GITSKey deviceKey) {
   std::vector<GITSKey> deleted;
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
+    m_PendingNames.erase(deviceKey);
     for (auto pipeline = m_Pipelines.begin(); pipeline != m_Pipelines.end();) {
       if (pipeline->second->Device->Key == deviceKey) {
         device = pipeline->second->Device;

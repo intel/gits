@@ -15,23 +15,12 @@
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 #include <windows.h>
 
-#include <sstream>
 #include <utility>
 
 namespace gits {
 namespace DirectX {
 
 namespace {
-
-std::string MakePipelineName(rtsr::RTSR_HASH stateHash, rtsr::RTSR_PIPELINE_TYPE type) {
-  // Matches the label RTSR generates, which is what users recognise in the
-  // editor's pipeline list.
-  std::ostringstream oss;
-  oss << "RTSR pipeline #" << std::uppercase << std::hex << stateHash << std::dec
-      << std::nouppercase << " ("
-      << (type == rtsr::RTSR_PIPELINE_TYPE_COMPUTE ? "compute" : "graphics") << ")";
-  return oss.str();
-}
 
 std::string ToNarrow(const wchar_t* text) {
   if (text == nullptr) {
@@ -202,10 +191,9 @@ void PipelineTracker::Publish(GITSKey key,
     return;
   }
 
-  const std::string name = MakePipelineName(serialized.Value.Hash, type);
-
   bool replacedExisting = false;
   rtsr::RTSR_PIPELINE_INCARNATION incarnation{};
+  std::string name;
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
 
@@ -221,6 +209,12 @@ void PipelineTracker::Publish(GITSKey key,
         m_Retired.push_back(std::move(existing->second.Replacement));
         m_ActiveReplacements.fetch_sub(1, std::memory_order_relaxed);
       }
+    }
+
+    const auto pending = m_PendingNames.find(key);
+    if (pending != m_PendingNames.end()) {
+      name = std::move(pending->second);
+      m_PendingNames.erase(pending);
     }
 
     TrackedPipeline tracked;
@@ -246,11 +240,11 @@ void PipelineTracker::Publish(GITSKey key,
   }
   m_Client.PipelineCreated(key, type, serialized.Value.Json, serialized.Value.Hash, incarnation,
                            true, {}, std::move(stages));
-  m_Client.SetPipelineName(key, name);
-
-  // Also label the live object so the same name shows up in external tools.
-  // Skipped when creation was deferred and no object exists yet.
-  SetObjectName(pipelineState, name);
+  // Leave the live object's debug name alone. The editor shows an application
+  // name when the stream recorded one, and "(unnamed)" otherwise.
+  if (!name.empty()) {
+    m_Client.SetPipelineName(key, name);
+  }
 }
 
 void PipelineTracker::HarvestGraphics(GITSKey key,
@@ -404,6 +398,7 @@ void PipelineTracker::OnSetName(GITSKey key, const wchar_t* name) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     auto it = m_Pipelines.find(key);
     if (it == m_Pipelines.end()) {
+      m_PendingNames[key] = std::move(narrow);
       return;
     }
     it->second.Name = narrow;
@@ -434,6 +429,7 @@ void PipelineTracker::OnRelease(GITSKey key) {
     // grew for the lifetime of the process and its raw pointer keys could be
     // reused by a later allocation.
     m_RootSignatures.erase(key);
+    m_PendingNames.erase(key);
   }
 
   if (wasPipeline) {
@@ -578,7 +574,9 @@ rtsr::RTSR_RESULT PipelineTracker::ApplyUpdates(
       continue;
     }
 
-    SetObjectName(replacement.Get(), inputs.Name + "-updated");
+    if (!inputs.Name.empty()) {
+      SetObjectName(replacement.Get(), inputs.Name + "-updated");
+    }
 
     if (!InstallReplacement(key, update.StateHash, update.Incarnation, std::move(replacement))) {
       LOG_WARNING << "Rtsr - pipeline " << update.Id

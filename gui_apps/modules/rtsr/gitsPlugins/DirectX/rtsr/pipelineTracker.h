@@ -95,7 +95,7 @@ public:
   // cost.
   bool IsTracked(GITSKey key) const;
 
-  // An application supplied debug name replaces the generated one.
+  // Forwards an application debug name to the editor. RTSR does not invent one.
   void OnSetName(GITSKey key, const wchar_t* name);
 
   // Reports the pipeline as gone. Harmless for keys that are not pipelines.
@@ -160,7 +160,8 @@ private:
                           rtsr::RTSR_PIPELINE_INCARNATION expectedIncarnation,
                           Microsoft::WRL::ComPtr<ID3D12PipelineState> replacement);
 
-  // Serializes the state, reports it and names it.
+  // Serializes the state and reports it. A name is sent only when the
+  // application already supplied one.
   void Publish(GITSKey key,
                GITSKey rootSignatureKey,
                rtsr::RTSR_PIPELINE_TYPE type,
@@ -174,6 +175,8 @@ private:
   mutable std::mutex m_Mutex;
   std::unordered_map<GITSKey, TrackedRootSignature> m_RootSignatures;
   std::unordered_map<GITSKey, TrackedPipeline> m_Pipelines;
+  // SetName can be recorded before the pipeline is harvested. Kept until then.
+  std::unordered_map<GITSKey, std::string> m_PendingNames;
 
   // Superseded replacements. The GPU may still be executing command lists that
   // reference one, and a plugin cannot know when that work retires without
