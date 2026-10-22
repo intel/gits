@@ -78,6 +78,11 @@ bool TryCacheRealFunction(const char* name, void* value);
 // whether it resolved.
 bool TryResolveRealFunction(const char* name);
 
+// Returns the real function for `name`, or nullptr, without caching it or warning on failure -
+// for code outside the dispatch table, such as plugins, that calls the driver directly.
+// Functions beyond OpenGL 1.1 and core WGL need a current context.
+void* GetRealFunction(const char* name);
+
 // Proactively resolves and caches every command's real function pointer that isn't cached yet
 // (best-effort - failures are silently skipped, leaving that entry's lazy resolve-thunk in
 // place for a later retry). Meant to be called right after a real wglMakeCurrent call makes

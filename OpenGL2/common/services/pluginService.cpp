@@ -145,6 +145,7 @@ void PluginService::LoadPlugins() {
     context.gits = &CGits::Instance();
     context.msgBus = &MessageBus::get();
     context.logAppender = plog::get();
+    context.glGetRealFunction = m_GetRealFunction;
 
     plugin.DestroyPlugin = reinterpret_cast<DestroyPluginPtr>(GetProcAddress(dll, "destroyPlugin"));
     plugin.Impl = createPlugin(context, plugin.DllPath.string().c_str());

@@ -287,9 +287,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % elif obj_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
     // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a miss here may be the real driver
     // about to implicitly create a new object; ConfirmImplicitCreate decides after the call.
-    ${p.name}ExistedBeforeBind = UpdateHandleIfKnown(
-        command->m_${p.name}, GLObjectKind::${obj_override.kind.value},
-        g_DispatchTable.${obj_override.is_command}.load(std::memory_order_acquire));
+    UpdateHandleIfKnown(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % elif is_existence_query(cmd.name, cmd.return_value.type, obj_override):
     UpdateHandleIfRegistered(command->m_${p.name}, GLObjectKind::${obj_override.kind.value});
 % elif obj_override.target_param is not None:
@@ -320,6 +318,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
       preLayer->Pre(*command);
     }
+% for p in cmd.params:
+<%
+    bind_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if bind_override is not None and bind_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+    ${p.name}ExistedBeforeBind = ExistsBeforeImplicitCreate(
+        command->m_${p.name},
+        g_DispatchTable.${bind_override.is_command}.load(std::memory_order_acquire));
+% endif
+% endfor
 % if cmd.name in frame_end_commands:
     CaptureManager::Get().FrameEndPreLayersRan(orderingKey);
 % endif

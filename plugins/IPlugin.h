@@ -66,6 +66,10 @@ struct IPluginContext {
   // SwapchainImageSyncService during swapchain image rewind (not stream presents).
   std::uint64_t* vkDriverRewindPresentCount = nullptr;
   gits::vulkan::DispatchTablesHolder* vkDispatchTables = nullptr;
+  // OpenGL: returns the real driver function for `name`, or nullptr. Calls through it bypass
+  // GITS, so the recorder does not record them. Functions beyond OpenGL 1.1 and core WGL need a
+  // current context.
+  void* (*glGetRealFunction)(const char* name) = nullptr;
 };
 
 class IPlugin {

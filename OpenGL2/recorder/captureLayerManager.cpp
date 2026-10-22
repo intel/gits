@@ -13,6 +13,7 @@
 #include "configurator.h"
 #include "encoderLayerAuto.h"
 #include "mappedTextureLayer.h"
+#include "openglDriversAuto.h"
 #include "pixelFormatCaptureLayer.h"
 #include "pluginService.h"
 #include "recorderScreenshotsLayer.h"
@@ -71,7 +72,7 @@ void CaptureLayerManager::LoadLayers() {
   }
   m_LayersOwner.push_back(std::move(encoderLayer));
 
-  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService = std::make_unique<PluginService>(&GetRealFunction);
   m_PluginService->LoadPlugins();
   for (const auto& plugin : m_PluginService->GetPlugins()) {
     Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());

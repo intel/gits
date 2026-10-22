@@ -215,25 +215,27 @@ inline void UpdateOutputHandle(HandleArgument<GLuint>& arg, GLObjectKind kind) {
 // ObjectNameRole.LOOKUP_OR_CREATE for the commands and why): resolves an already-registered name
 // and leaves Key 0 for a never-seen one without warning, since the bind may create it.
 // ConfirmImplicitCreate decides after the call. A zero name (unbind) is left alone.
-//
-// `isObject` is the bind family's own glIs* entry point. Returns whether a never-seen name was
-// already an object before the bind - one created before capture started, or by an unsupported
-// command - which ConfirmImplicitCreate must not mistake for one the bind itself created.
-template <typename IsObjectFn>
-inline bool UpdateHandleIfKnown(HandleArgument<GLuint>& arg,
-                                GLObjectKind kind,
-                                IsObjectFn isObject) {
+inline void UpdateHandleIfKnown(HandleArgument<GLuint>& arg, GLObjectKind kind) {
   if (arg.Value == 0) {
-    return false;
+    return;
   }
   arg.Key = ObjectNameMapService::Get().TryGetKey(kind, GroupIdentityFor(kind), arg.Value);
-  return arg.Key == 0 && isObject != nullptr && isObject(arg.Value) != GL_FALSE;
+}
+
+// Right before the real call of a LOOKUP_OR_CREATE bind, after the Pre layers, which may free the
+// name (a plugin giving back a query of its own): whether a name UpdateHandleIfKnown did not find
+// is already an object - one created before capture started, or by an unsupported command - which
+// ConfirmImplicitCreate must not mistake for one the bind itself created. `isObject` is the bind
+// family's own glIs* entry point.
+template <typename IsObjectFn>
+inline bool ExistsBeforeImplicitCreate(const HandleArgument<GLuint>& arg, IsObjectFn isObject) {
+  return arg.Value != 0 && arg.Key == 0 && isObject != nullptr && isObject(arg.Value) != GL_FALSE;
 }
 
 // After the real call of a LOOKUP_OR_CREATE bind whose name UpdateHandleIfKnown did not find:
 // `isObject` is the bind family's own glIs* entry point and `existedBefore` is
-// UpdateHandleIfKnown's result. Only a name that was not an object before the bind and is one
-// now was implicitly created by it; a fresh key is then registered like an ordinary Gen call's
+// ExistsBeforeImplicitCreate's result. Only a name that was not an object before the bind and is
+// one now was implicitly created by it; a fresh key is then registered like an ordinary Gen call's
 // result. Otherwise this is an ordinary lookup miss - the bind was rejected (a core profile's
 // unknown texture or buffer name), or bound an object this capture never saw created: GetKey
 // warns and Key becomes UNMAPPED_OBJECT_NAME_KEY, so replay skips the bind instead of silently

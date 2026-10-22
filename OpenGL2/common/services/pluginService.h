@@ -26,10 +26,12 @@ struct PluginInfo {
 };
 
 // Loads the Common.Player.Plugins or Common.Recorder.Plugins plugins from Plugins/OpenGL2 in
-// the GITS installation.
+// the GITS installation. `getRealFunction` resolves the real driver functions that plugins call
+// directly; the recorder and the player each have their own.
 class PluginService {
 public:
-  PluginService() = default;
+  explicit PluginService(void* (*getRealFunction)(const char* name))
+      : m_GetRealFunction(getRealFunction) {}
   ~PluginService();
   PluginService(const PluginService&) = delete;
   PluginService& operator=(const PluginService&) = delete;
@@ -40,6 +42,7 @@ public:
   }
 
 private:
+  void* (*m_GetRealFunction)(const char* name);
   std::vector<PluginInfo> m_Plugins;
 };
 
