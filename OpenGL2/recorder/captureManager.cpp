@@ -56,11 +56,12 @@ CaptureManager::CaptureManager() {
   // Runs inside the application's first OpenGL call.
   const LastErrorGuard lastErrorGuard;
   m_LayerManager.LoadLayers();
+  // After the layers, so that plugins handle a close request before the recorder closes the
+  // stream. Layer hooks run only after this, so a plugin may request closing from its first hook.
+  m_Recorder = std::make_unique<stream::OrderingRecorder>();
 }
 
 stream::OrderingRecorder& CaptureManager::GetOrderingRecorder() {
-  std::call_once(m_RecorderInitFlag,
-                 [this] { m_Recorder = std::make_unique<stream::OrderingRecorder>(); });
   return *m_Recorder;
 }
 

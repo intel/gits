@@ -253,7 +253,6 @@ private:
   CaptureManager();
   stream::OrderingRecorder& GetOrderingRecorder();
 
-  std::once_flag m_RecorderInitFlag;
   std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   std::atomic<uint64_t> m_CommandKey{0};
   std::atomic<GITSKey> m_HandleKey{0};
