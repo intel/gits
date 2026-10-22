@@ -250,9 +250,7 @@ public:
   }
 
 private:
-  CaptureManager() {
-    m_LayerManager.LoadLayers();
-  }
+  CaptureManager();
   stream::OrderingRecorder& GetOrderingRecorder();
 
   std::once_flag m_RecorderInitFlag;
