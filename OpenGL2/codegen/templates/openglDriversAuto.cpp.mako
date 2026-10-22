@@ -29,6 +29,7 @@ ${AUTO_GENERATED_HEADER}
 #include <cstring>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -127,7 +128,13 @@ ${ret} APIENTRY ResolveAndCall_${cmd.name}(${param_decls}) {
 bool TryCacheRealFunction(const char* name, void* value) {
   // This function is rarely run, so doesn't really matter for performance.
 
-  static const std::unordered_map<std::string, void (*)(void*)> nameToSetter = {
+  // A braced map initializer would construct every key inline, which makes this function very
+  // slow to compile.
+  struct SetterEntry {
+    const char* Name;
+    void (*Setter)(void*);
+  };
+  static const SetterEntry entries[] = {
 % for cmd in commands:
     {"${cmd.name}", [](void* pointer) {
          g_DispatchTable.${cmd.name}.store(
@@ -136,6 +143,14 @@ bool TryCacheRealFunction(const char* name, void* value) {
      }},
 % endfor
   };
+  static const std::unordered_map<std::string_view, void (*)(void*)> nameToSetter = [] {
+    std::unordered_map<std::string_view, void (*)(void*)> map;
+    map.reserve(std::size(entries));
+    for (const SetterEntry& entry : entries) {
+      map.emplace(entry.Name, entry.Setter);
+    }
+    return map;
+  }();
   auto it = nameToSetter.find(name);
   if (it == nameToSetter.end()) {
     return false;

@@ -61,6 +61,7 @@ ${AUTO_GENERATED_HEADER}
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 // Hand-declared instead of including <windows.h>, which would redeclare PROC/tagRECT/etc.
@@ -634,11 +635,25 @@ void* GetGeneratedRecorderWrapper(const char* name) {
   if (void* custom = GetCustomRecorderWrapper(name)) {
     return custom;
   }
-  static const std::unordered_map<std::string, void*> nameToWrapper = {
+  // A braced map initializer would construct every key inline, which makes this function very
+  // slow to compile.
+  struct WrapperEntry {
+    const char* Name;
+    void* Wrapper;
+  };
+  static const WrapperEntry entries[] = {
 % for cmd in commands:
     {"${cmd.name}", reinterpret_cast<void*>(&Wrapper_${cmd.name})},
 % endfor
   };
+  static const std::unordered_map<std::string_view, void*> nameToWrapper = [] {
+    std::unordered_map<std::string_view, void*> map;
+    map.reserve(std::size(entries));
+    for (const WrapperEntry& entry : entries) {
+      map.emplace(entry.Name, entry.Wrapper);
+    }
+    return map;
+  }();
   auto it = nameToWrapper.find(name);
   if (it == nameToWrapper.end()) {
     return nullptr;
