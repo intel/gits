@@ -143,7 +143,7 @@ target_link_libraries(DirectX_player PRIVATE
   DirectX_portability
   DirectX_address_pinning
   DirectX_ccode
-  ${INTEL_EXT_DIR}/lib/igdext64.lib
+  ${INTEL_EXT_DIR}/lib/x64/Release/igdext64.lib
   ${NVAPI_DIR}/amd64/nvapi64.lib
 )
 

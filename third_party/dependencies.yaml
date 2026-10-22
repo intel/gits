@@ -70,6 +70,12 @@ dependencies:
       url: https://github.com/intel/xess.git
       branch: v3.0.1
       os: WINDOWS
+    - name: d3dext-sdk
+      argument: d3dext-sdk
+      url: https://github.com/GameTechDev/d3dext-sdk.git
+      branch: main
+      commit_id: b63d3fcb8c98f77ad4d32d243da50b2132aca44c
+      os: WINDOWS
     - name: fast_io
       argument: fastio
       url: https://github.com/cppfastio/fast_io.git

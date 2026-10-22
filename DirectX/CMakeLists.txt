@@ -10,7 +10,6 @@ set(D3D12_HEADERS_DIR ${AGILITY_SDK_DIR}/include)
 set(DML_HEADERS_DIR ${DML_DIR}/include)
 set(DSTORAGE_HEADERS_DIR ${DSTORAGE_DIR}/native/include)
 set(DXC_HEADERS_DIR ${DXC_DIR}/include)
-set(INTEL_EXT_DIR ${CMAKE_SOURCE_DIR}/third_party/IntelExtensions)
 set(XESS_HEADERS_DIR ${XESS_SDK_DIR}/inc)
 
 set(DIRECTX_DIR ${CMAKE_SOURCE_DIR}/DirectX)

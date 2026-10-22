@@ -65,7 +65,6 @@ uv.lock
 build/
 third_party/*
 !third_party/patch
-!third_party/IntelExtensions
 !third_party/dependencies.yaml
 venv/
 

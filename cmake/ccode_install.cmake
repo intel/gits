@@ -12,8 +12,16 @@ install(FILES .clang-format DESTINATION CCode)
 
 # Copy third-party dependencies
 
-# Intel Extensions
-install(DIRECTORY third_party/IntelExtensions/ DESTINATION CCode/third_party/IntelExtensions)
+# Intel Graphics Extensions SDK (d3dext-sdk)
+install(DIRECTORY "${INTEL_EXT_DIR}/"
+  DESTINATION CCode/third_party/d3dext-sdk/sdk)
+# LICENSE lives at the SDK repo root (outside sdk/); include it for redistributed CCode.
+get_filename_component(_INTEL_EXT_ROOT "${INTEL_EXT_DIR}" DIRECTORY)
+if(EXISTS "${_INTEL_EXT_ROOT}/LICENSE")
+  install(FILES "${_INTEL_EXT_ROOT}/LICENSE"
+    DESTINATION CCode/third_party/d3dext-sdk)
+endif()
+unset(_INTEL_EXT_ROOT)
 
 # Plog
 install(DIRECTORY third_party/plog/include/ DESTINATION CCode/third_party/plog/include)

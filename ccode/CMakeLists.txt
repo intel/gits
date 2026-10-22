@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(ARGS_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/argshxx/)
 set(PLOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/plog/)
 set(DX12_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/AgilitySDK/)
-set(INTEL_EXT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/IntelExtensions/)
+set(INTEL_EXT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/d3dext-sdk/sdk/)
 set(STB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/stb/)
 set(NVAPI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nvapi/)
 set(DSTORAGE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/DirectStorage)
@@ -115,7 +115,7 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
   d3d12.lib
   dxguid.lib
   dxgi.lib
-  ${INTEL_EXT_DIR}/lib/igdext64.lib
+  ${INTEL_EXT_DIR}/lib/x64/Release/igdext64.lib
   ${DSTORAGE_DIR}/native/lib/x64/dstorage.lib
   ${XESS_SDK_DIR}/lib/libxess.lib
   ${XESS_SDK_DIR}/lib/libxell.lib

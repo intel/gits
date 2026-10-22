@@ -30,7 +30,6 @@ add_subdirectory(common)
 
 if(BUILD_DIRECTX_PLUGINS)
   set(D3D12_HEADERS_DIR ${AGILITY_SDK_DIR}/include)
-  set(INTEL_EXT_DIR ${CMAKE_SOURCE_DIR}/third_party/IntelExtensions)
 
   add_subdirectory(DirectX/common/utils)
   add_subdirectory(DirectX/hello_plugin)
