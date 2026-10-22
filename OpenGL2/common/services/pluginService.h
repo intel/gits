@@ -25,7 +25,8 @@ struct PluginInfo {
   void Free();
 };
 
-// Loads the Common.Player.Plugins plugins from Plugins/OpenGL2 next to the player.
+// Loads the Common.Player.Plugins or Common.Recorder.Plugins plugins from Plugins/OpenGL2 in
+// the GITS installation.
 class PluginService {
 public:
   PluginService() = default;

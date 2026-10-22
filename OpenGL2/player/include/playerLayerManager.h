@@ -27,9 +27,10 @@ public:
   PlayerLayerManager& operator=(const PlayerLayerManager&) = delete;
 
   void LoadLayers();
-  // Idempotent. Clears layer views, then destroys owned layers. Plugins stay loaded until
-  // destruction: Shutdown() runs from a TOPIC_PROGRAM_EXIT callback, and a plugin unsubscribing
-  // there would modify the subscriber list being published.
+  // Idempotent. Clears layer views, then destroys owned layers. Plugins are never unloaded:
+  // Shutdown() runs from a TOPIC_PROGRAM_EXIT callback, and a plugin unsubscribing there would
+  // modify the subscriber list being published. Each plugin DLL destroys its plugin when it is
+  // detached at process exit.
   void Shutdown();
 
   // These two return non-owning views whose pointers remain valid until Shutdown():

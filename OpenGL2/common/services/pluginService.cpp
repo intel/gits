@@ -34,6 +34,23 @@ bool IsDirectory(const std::filesystem::path& path) {
   return std::filesystem::exists(path) && std::filesystem::is_directory(path);
 }
 
+// The recorder runs inside the application's process, so its plugins are found relative to
+// the recorder installation rather than to the executable.
+std::filesystem::path FindPluginsPath(const Configuration& cfg) {
+  if (Configurator::IsRecorder()) {
+    return std::filesystem::absolute(cfg.common.recorder.installPath.parent_path() / "Plugins" /
+                                     "OpenGL2");
+  }
+  std::vector<char> moduleFilename(MAX_PATH + 1, 0);
+  GetModuleFileNameA(nullptr, moduleFilename.data(), static_cast<DWORD>(moduleFilename.size()));
+  const auto exePath = std::filesystem::absolute(moduleFilename.data());
+  auto pluginsPath = exePath.parent_path() / "Plugins" / "OpenGL2";
+  if (!IsDirectory(pluginsPath)) {
+    pluginsPath = exePath.parent_path().parent_path() / "Plugins" / "OpenGL2";
+  }
+  return pluginsPath;
+}
+
 } // namespace
 
 void PluginInfo::Free() {
@@ -60,18 +77,13 @@ PluginService::~PluginService() {
 
 void PluginService::LoadPlugins() {
   auto& cfg = Configurator::Get();
-  const auto& pluginNames = cfg.common.player.plugins;
+  const auto& pluginNames =
+      Configurator::IsPlayer() ? cfg.common.player.plugins : cfg.common.recorder.plugins;
   if (pluginNames.empty()) {
     return;
   }
 
-  std::vector<char> moduleFilename(MAX_PATH + 1, 0);
-  GetModuleFileNameA(nullptr, moduleFilename.data(), static_cast<DWORD>(moduleFilename.size()));
-  const auto exePath = std::filesystem::absolute(moduleFilename.data());
-  auto pluginsPath = exePath.parent_path() / "Plugins" / "OpenGL2";
-  if (!IsDirectory(pluginsPath)) {
-    pluginsPath = exePath.parent_path().parent_path() / "Plugins" / "OpenGL2";
-  }
+  const auto pluginsPath = FindPluginsPath(cfg);
   if (!IsDirectory(pluginsPath)) {
     LOG_ERROR << "PluginService - Plugin directory does not exist! Expected: "
               << pluginsPath.string();

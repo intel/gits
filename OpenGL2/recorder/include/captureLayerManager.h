@@ -17,8 +17,10 @@ namespace gits::opengl2 {
 // with <windows.h>, and this header reaches recorder/unsupportedCommand.cpp, which needs
 // <windows.h>, through captureManager.h.
 class Layer;
+class PluginService;
 
-// Builds and owns the recorder's Pre and Post layers, with EncoderLayer last in Post order.
+// Builds and owns the recorder's Pre and Post layers, with EncoderLayer last among the built-in
+// Post layers, followed by the plugin layers.
 class CaptureLayerManager {
 public:
   // Defined in the .cpp file, as Layer is forward-declared and owned by unique_ptr.
@@ -37,6 +39,7 @@ public:
   }
 
 private:
+  std::unique_ptr<PluginService> m_PluginService;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;

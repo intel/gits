@@ -31,7 +31,6 @@ add_library(OpenGL2_player STATIC
   include/mappedTextureDataMetaRunner.h
   include/pixelFormatMetaRunner.h
   include/pbufferService.h
-  include/pluginService.h
   include/programBinaryCheckService.h
   include/replayContextCaps.h
   include/replayCustomizationLayer.h
@@ -52,7 +51,6 @@ add_library(OpenGL2_player STATIC
   mappedTextureDataMetaRunner.cpp
   pixelFormatMetaRunner.cpp
   pbufferService.cpp
-  pluginService.cpp
   programBinaryCheckService.cpp
   replayContextCaps.cpp
   replayCustomizationLayer.cpp

@@ -51,5 +51,6 @@ if(BUILD_VULKAN_PLUGINS)
 endif()
 
 if(BUILD_OPENGL2_PLUGINS)
+  add_subdirectory(OpenGL2/benchmark)
   add_subdirectory(OpenGL2/statistics)
 endif()

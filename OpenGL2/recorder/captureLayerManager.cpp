@@ -14,6 +14,7 @@
 #include "encoderLayerAuto.h"
 #include "mappedTextureLayer.h"
 #include "pixelFormatCaptureLayer.h"
+#include "pluginService.h"
 #include "recorderScreenshotsLayer.h"
 #include "uniformArrayCaptureLayer.h"
 #include "windowGeometryTrackingLayer.h"
@@ -56,7 +57,7 @@ void CaptureLayerManager::LoadLayers() {
   if (screenshotsLayer) {
     m_PostLayers.push_back(screenshotsLayer.get());
   }
-  // The encoder must run last.
+  // The encoder must run after the other built-in layers. Plugin layers follow it.
   m_PostLayers.push_back(encoderLayer.get());
 
   m_LayersOwner.push_back(std::move(captureCustomizationLayer));
@@ -69,6 +70,16 @@ void CaptureLayerManager::LoadLayers() {
     m_LayersOwner.push_back(std::move(screenshotsLayer));
   }
   m_LayersOwner.push_back(std::move(encoderLayer));
+
+  m_PluginService = std::make_unique<PluginService>();
+  m_PluginService->LoadPlugins();
+  for (const auto& plugin : m_PluginService->GetPlugins()) {
+    Layer* layer = static_cast<Layer*>(plugin.Impl->getImpl());
+    if (layer) {
+      m_PreLayers.push_back(layer);
+      m_PostLayers.push_back(layer);
+    }
+  }
 }
 
 } // namespace gits::opengl2

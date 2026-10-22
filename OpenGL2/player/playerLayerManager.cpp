@@ -27,7 +27,11 @@ namespace gits::opengl2 {
 
 PlayerLayerManager::PlayerLayerManager() = default;
 
-PlayerLayerManager::~PlayerLayerManager() = default;
+PlayerLayerManager::~PlayerLayerManager() {
+  // Destroyed during process exit, after the plugin DLLs were detached and destroyed their
+  // plugins, so unloading them here would destroy them twice.
+  (void)m_PluginService.release();
+}
 
 void PlayerLayerManager::LoadLayers() {
   m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
