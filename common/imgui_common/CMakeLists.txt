@@ -138,6 +138,5 @@ add_library(implot STATIC ${IMPLOT_SOURCE})
 # PUBLIC because implot.h includes imgui.h, so consumers need ImGui's headers.
 target_link_libraries(implot PUBLIC imgui_common)
 target_include_directories(implot PUBLIC ${IMPLOT_DIR})
-# RTSR-only third party; keep it with the other GUI externals in the VS tree.
 set_target_properties(implot PROPERTIES FOLDER "${GUI_APPS_FOLDER}/External")
 

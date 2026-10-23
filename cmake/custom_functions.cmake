@@ -19,8 +19,7 @@ endif()
 endfunction()
 
 # Recursively assign the VS/solution FOLDER of every non-interface target created
-# under a source directory that was processed with add_subdirectory(). Used to
-# keep RTSR-only third parties under gui_apps/External instead of the solution root.
+# under a source directory that was processed with add_subdirectory().
 function(gits_assign_folder_recursive source_dir folder)
   if(NOT IS_DIRECTORY "${source_dir}")
     return()

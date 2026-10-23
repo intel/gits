@@ -49,8 +49,6 @@ function(init_dxil_spirv)
                      "${CMAKE_BINARY_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
   endif()
 
-  # Keep RTSR-only third parties out of the solution root (core GITS uses
-  # "External"; GUI-owned deps nest under gui_apps/External).
   gits_assign_folder_recursive("${DXIL_SPIRV_DIR}" "${GUI_APPS_FOLDER}/External")
   gits_assign_folder_recursive("${SPIRV_CROSS_DIR}" "${GUI_APPS_FOLDER}/External")
 endfunction()
