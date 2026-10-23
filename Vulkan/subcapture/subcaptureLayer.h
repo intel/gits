@@ -181,6 +181,8 @@ public:
   void Post(vkCreateComputePipelinesCommand& command) override;
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkCreateRayTracingPipelinesNVCommand& command) override;
+  void Pre(vkGetRayTracingShaderGroupHandlesKHRCommand& command) override;
+  void Pre(vkGetRayTracingShaderGroupHandlesNVCommand& command) override;
   void Post(vkDestroyPipelineCommand& command) override;
 
   // ---- Descriptors -----------------------------------------------------

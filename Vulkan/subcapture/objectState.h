@@ -311,6 +311,10 @@ struct PipelineState : ObjectState {
   // as restored after emitting the batch command once, preventing N redundant
   // full-batch emissions when a batch of N pipelines is state-restored.
   std::vector<uint64_t> BatchPipelineKeys;
+  // Latest encoded vkGetRayTracingShaderGroupHandles* call per (firstGroup, groupCount). Replayed
+  // after creation so the player knows the recorded handles it must patch in SBTs.
+  std::map<std::pair<uint32_t, uint32_t>, std::pair<CommandId, std::vector<char>>>
+      ShaderGroupHandleQueries;
 };
 
 struct ShaderModuleState : ObjectState {};

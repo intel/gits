@@ -18,7 +18,7 @@ namespace vulkan {
 % if define:
 #ifdef ${define}
 % endif
-% if command.name not in recording_layer_custom_commands:
+% if command.name not in recording_layer_custom_commands and command.name not in recording_layer_pre_only_commands:
 % if command.name.startswith('vkCmd'):
 void RecordingLayer::Post(${command.name}Command& command) {
   if (m_Range.InRange()) {
@@ -30,6 +30,25 @@ void RecordingLayer::Post(${command.name}Command& command) {
 
 % else:
 void RecordingLayer::Post(${command.name}Command& command) {
+  if (m_Range.InRange()) {
+    m_Recorder.Record(${command.name}Serializer(command));
+  }
+}
+
+% endif
+% endif
+% if command.name in recording_layer_pre_only_commands:
+% if command.name.startswith('vkCmd'):
+void RecordingLayer::Pre(${command.name}Command& command) {
+  if (m_Range.InRange()) {
+    m_Recorder.Record(${command.name}Serializer(command));
+  } else {
+    TrackCmdBuffer(command);
+  }
+}
+
+% else:
+void RecordingLayer::Pre(${command.name}Command& command) {
   if (m_Range.InRange()) {
     m_Recorder.Record(${command.name}Serializer(command));
   }

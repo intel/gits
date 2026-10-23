@@ -717,6 +717,17 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
     for (uint64_t sibKey : ps->BatchPipelineKeys) {
       m_RestoredThisPass.insert(sibKey);
     }
+
+    // The player's SBT patching maps recorded shader group handles to the replay ones
+    for (uint64_t sibKey : ps->BatchPipelineKeys) {
+      auto* sibling = GetState<PipelineState>(sibKey);
+      if (!sibling) {
+        continue;
+      }
+      for (const auto& [_, query] : sibling->ShaderGroupHandleQueries) {
+        EmitRawCommand(query.first, query.second);
+      }
+    }
   }
 }
 

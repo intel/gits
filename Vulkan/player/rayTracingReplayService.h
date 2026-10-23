@@ -31,6 +31,9 @@ public:
   void OnPostAllocateCommandBuffers(vkAllocateCommandBuffersCommand& command);
   void OnPreFreeCommandBuffers(vkFreeCommandBuffersCommand& command);
   void OnPreDestroyCommandPool(vkDestroyCommandPoolCommand& command);
+  void OnPreBeginCommandBuffer(vkBeginCommandBufferCommand& command);
+  void OnPostResetCommandBuffer(vkResetCommandBufferCommand& command);
+  void OnPostResetCommandPool(vkResetCommandPoolCommand& command);
   void OnPostBindPipeline(vkCmdBindPipelineCommand& command);
   void OnPostPushConstants(vkCmdPushConstantsCommand& command);
   void OnPreCreateRayTracingPipelines(vkCreateRayTracingPipelinesKHRCommand& command);
@@ -46,11 +49,19 @@ public:
 private:
   static const uint32_t s_ShaderGroupHandleSize = 32;
 
+  struct PatchSBTPushConstantsBuffer {
+    VkDeviceAddress OldHandlesMap;
+    VkDeviceAddress NewHandlesMap;
+    VkDeviceAddress SBTBaseAddress;
+    uint32_t Stride;
+    uint32_t Size;
+    uint32_t MapEntriesCount;
+  };
+
   struct CommandBufferData {
     VkDevice m_Device;
-    VkPipelineBindPoint m_BindPoint;
-    VkPipeline m_Pipeline;
-    GITSKey m_PipelineKey;
+    VkPipeline m_ComputePipeline;
+    GITSKey m_RayTracingPipelineKey;
 
     struct PushConstantData {
       VkPipelineLayout m_Layout;
@@ -95,6 +106,7 @@ private:
   VkPipelineLayout CreatePipelineLayout(VkDevice device);
   VkPipeline CreateComputePipeline(VkDevice device, VkPipelineLayout layout);
   BufferData CreateBuffer(VkDevice device, VkPhysicalDevice physicalDevice, VkDeviceSize size);
+  void ResetCommandBufferState(VkCommandBuffer cmdBuf);
   bool CopyHandles(vkGetRayTracingShaderGroupHandlesKHRCommand& command,
                    uint32_t totalGroupCount,
                    uint8_t* target);

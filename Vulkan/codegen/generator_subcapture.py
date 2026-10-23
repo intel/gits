@@ -18,6 +18,12 @@ RECORDING_LAYER_CUSTOM_COMMANDS = [
     'vkQueuePresentKHR',
 ]
 
+# Commands that require a pre-layer only
+RECORDING_LAYER_PRE_ONLY_COMMANDS = [
+    'vkGetRayTracingShaderGroupHandlesKHR',
+    'vkGetRayTracingShaderGroupHandlesNV',
+]
+
 # Custom-handled because SBT regions carry only raw device addresses,
 # not handle keys
 ANALYZER_LAYER_CUSTOM_COMMANDS = [
@@ -32,6 +38,7 @@ def generate_subcapture_files(context, output_path):
       'collect_structs_needing_handle_updater': collect_structs_needing_handle_updater,
       'custom_handle_structs': CUSTOM_HANDLE_STRUCTS,
       'recording_layer_custom_commands': RECORDING_LAYER_CUSTOM_COMMANDS,
+      'recording_layer_pre_only_commands': RECORDING_LAYER_PRE_ONLY_COMMANDS,
       'analyzer_layer_custom_commands': ANALYZER_LAYER_CUSTOM_COMMANDS,
     }
     os.makedirs(output_path, exist_ok=True)

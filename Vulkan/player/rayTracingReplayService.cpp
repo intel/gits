@@ -319,6 +319,18 @@ void RayTracingReplayService::OnPreFreeCommandBuffers(vkFreeCommandBuffersComman
   for (uint32_t i = 0; i < command.m_commandBufferCount.Value; ++i) {
     m_CommandBuffersData.erase(command.m_pCommandBuffers.Value[i]);
   }
+
+  auto deviceIt = m_DevicesData.find(command.m_device.Value);
+  if (deviceIt == m_DevicesData.end()) {
+    return;
+  }
+  auto poolIt = deviceIt->second.m_CommandBuffers.find(command.m_commandPool.Value);
+  if (poolIt == deviceIt->second.m_CommandBuffers.end()) {
+    return;
+  }
+  for (uint32_t i = 0; i < command.m_commandBufferCount.Value; ++i) {
+    poolIt->second.erase(command.m_pCommandBuffers.Value[i]);
+  }
 }
 
 void RayTracingReplayService::OnPreDestroyCommandPool(vkDestroyCommandPoolCommand& command) {
@@ -331,6 +343,40 @@ void RayTracingReplayService::OnPreDestroyCommandPool(vkDestroyCommandPoolComman
   deviceData.m_CommandBuffers.erase(commandPool);
 }
 
+void RayTracingReplayService::OnPreBeginCommandBuffer(vkBeginCommandBufferCommand& command) {
+  ResetCommandBufferState(command.m_commandBuffer.Value);
+}
+
+void RayTracingReplayService::OnPostResetCommandBuffer(vkResetCommandBufferCommand& command) {
+  ResetCommandBufferState(command.m_commandBuffer.Value);
+}
+
+void RayTracingReplayService::OnPostResetCommandPool(vkResetCommandPoolCommand& command) {
+  auto deviceIt = m_DevicesData.find(command.m_device.Value);
+  if (deviceIt == m_DevicesData.end()) {
+    return;
+  }
+  auto poolIt = deviceIt->second.m_CommandBuffers.find(command.m_commandPool.Value);
+  if (poolIt == deviceIt->second.m_CommandBuffers.end()) {
+    return;
+  }
+  for (auto cmdBuf : poolIt->second) {
+    ResetCommandBufferState(cmdBuf);
+  }
+}
+
+void RayTracingReplayService::ResetCommandBufferState(VkCommandBuffer cmdBuf) {
+  auto it = m_CommandBuffersData.find(cmdBuf);
+  if (it == m_CommandBuffersData.end()) {
+    return;
+  }
+
+  auto& cmdBufData = it->second;
+  cmdBufData.m_ComputePipeline = VK_NULL_HANDLE;
+  cmdBufData.m_RayTracingPipelineKey = 0;
+  cmdBufData.m_PushConstants = {};
+}
+
 void RayTracingReplayService::OnPostBindPipeline(vkCmdBindPipelineCommand& command) {
   if (!Configurator::Get().vulkan.player.portability.patchShaderGroupHandles) {
     return;
@@ -338,9 +384,16 @@ void RayTracingReplayService::OnPostBindPipeline(vkCmdBindPipelineCommand& comma
 
   auto& cmdBufData = m_CommandBuffersData[command.m_commandBuffer.Value];
 
-  cmdBufData.m_BindPoint = command.m_pipelineBindPoint.Value;
-  cmdBufData.m_Pipeline = command.m_pipeline.Value;
-  cmdBufData.m_PipelineKey = command.m_pipeline.Key;
+  switch (command.m_pipelineBindPoint.Value) {
+  case VK_PIPELINE_BIND_POINT_COMPUTE:
+    cmdBufData.m_ComputePipeline = command.m_pipeline.Value;
+    break;
+  case VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR:
+    cmdBufData.m_RayTracingPipelineKey = command.m_pipeline.Key;
+    break;
+  default:
+    break;
+  }
 }
 
 void RayTracingReplayService::OnPostPushConstants(vkCmdPushConstantsCommand& command) {
@@ -596,9 +649,8 @@ void RayTracingReplayService::OnPreTraceRays(vkCmdTraceRaysKHRCommand& command) 
 
   const auto cmdBuf = command.m_commandBuffer.Value;
   const auto& cmdBufData = m_CommandBuffersData[cmdBuf];
-  const auto& pipelineData = m_PipelinesData[cmdBufData.m_PipelineKey];
-
-  if (!pipelineData.m_PatchingRequired) {
+  auto it = m_PipelinesData.find(cmdBufData.m_RayTracingPipelineKey);
+  if ((it == m_PipelinesData.end()) || !it->second.m_PatchingRequired) {
     return;
   }
 
@@ -607,6 +659,7 @@ void RayTracingReplayService::OnPreTraceRays(vkCmdTraceRaysKHRCommand& command) 
   const VkStridedDeviceAddressRegionKHR* pHitSBT = command.m_pHitShaderBindingTable.Value;
   const VkStridedDeviceAddressRegionKHR* pCallableSBT = command.m_pCallableShaderBindingTable.Value;
 
+  const auto& pipelineData = it->second;
   const auto originalHandlesAddress = pipelineData.m_Buffer.m_DeviceAddress;
   const auto newHandlesAddress = originalHandlesAddress + pipelineData.m_OriginalHandles.size();
 
@@ -621,9 +674,8 @@ void RayTracingReplayService::OnPostTraceRays(vkCmdTraceRaysKHRCommand& command)
 
   const auto cmdBuf = command.m_commandBuffer.Value;
   const auto& cmdBufData = m_CommandBuffersData[cmdBuf];
-  const auto& pipelineData = m_PipelinesData[cmdBufData.m_PipelineKey];
-
-  if (!pipelineData.m_PatchingRequired) {
+  auto it = m_PipelinesData.find(cmdBufData.m_RayTracingPipelineKey);
+  if ((it == m_PipelinesData.end()) || !it->second.m_PatchingRequired) {
     return;
   }
 
@@ -632,6 +684,7 @@ void RayTracingReplayService::OnPostTraceRays(vkCmdTraceRaysKHRCommand& command)
   const VkStridedDeviceAddressRegionKHR* pHitSBT = command.m_pHitShaderBindingTable.Value;
   const VkStridedDeviceAddressRegionKHR* pCallableSBT = command.m_pCallableShaderBindingTable.Value;
 
+  const auto& pipelineData = it->second;
   const auto originalHandlesAddress = pipelineData.m_Buffer.m_DeviceAddress;
   const auto newHandlesAddress = originalHandlesAddress + pipelineData.m_OriginalHandles.size();
 
@@ -646,9 +699,8 @@ void RayTracingReplayService::OnPreTraceRaysIndirect(vkCmdTraceRaysIndirectKHRCo
 
   const auto cmdBuf = command.m_commandBuffer.Value;
   const auto& cmdBufData = m_CommandBuffersData[cmdBuf];
-  const auto& pipelineData = m_PipelinesData[cmdBufData.m_PipelineKey];
-
-  if (!pipelineData.m_PatchingRequired) {
+  auto it = m_PipelinesData.find(cmdBufData.m_RayTracingPipelineKey);
+  if ((it == m_PipelinesData.end()) || !it->second.m_PatchingRequired) {
     return;
   }
 
@@ -657,6 +709,7 @@ void RayTracingReplayService::OnPreTraceRaysIndirect(vkCmdTraceRaysIndirectKHRCo
   const VkStridedDeviceAddressRegionKHR* pHitSBT = command.m_pHitShaderBindingTable.Value;
   const VkStridedDeviceAddressRegionKHR* pCallableSBT = command.m_pCallableShaderBindingTable.Value;
 
+  const auto& pipelineData = it->second;
   const auto originalHandlesAddress = pipelineData.m_Buffer.m_DeviceAddress;
   const auto newHandlesAddress = originalHandlesAddress + pipelineData.m_OriginalHandles.size();
 
@@ -671,9 +724,8 @@ void RayTracingReplayService::OnPostTraceRaysIndirect(vkCmdTraceRaysIndirectKHRC
 
   const auto cmdBuf = command.m_commandBuffer.Value;
   const auto& cmdBufData = m_CommandBuffersData[cmdBuf];
-  const auto& pipelineData = m_PipelinesData[cmdBufData.m_PipelineKey];
-
-  if (!pipelineData.m_PatchingRequired) {
+  auto it = m_PipelinesData.find(cmdBufData.m_RayTracingPipelineKey);
+  if ((it == m_PipelinesData.end()) || !it->second.m_PatchingRequired) {
     return;
   }
 
@@ -682,6 +734,7 @@ void RayTracingReplayService::OnPostTraceRaysIndirect(vkCmdTraceRaysIndirectKHRC
   const VkStridedDeviceAddressRegionKHR* pHitSBT = command.m_pHitShaderBindingTable.Value;
   const VkStridedDeviceAddressRegionKHR* pCallableSBT = command.m_pCallableShaderBindingTable.Value;
 
+  const auto& pipelineData = it->second;
   const auto originalHandlesAddress = pipelineData.m_Buffer.m_DeviceAddress;
   const auto newHandlesAddress = originalHandlesAddress + pipelineData.m_OriginalHandles.size();
 
@@ -691,9 +744,9 @@ void RayTracingReplayService::OnPostTraceRaysIndirect(vkCmdTraceRaysIndirectKHRC
 
 VkPipelineLayout RayTracingReplayService::CreatePipelineLayout(VkDevice device) {
   VkPushConstantRange pushConstantsRange = {
-      VK_SHADER_STAGE_COMPUTE_BIT, // VkShaderStageFlags stageFlags
-      0,                           // uint32_t           offset
-      5 * sizeof(VkDeviceAddress)  // uint32_t           size
+      VK_SHADER_STAGE_COMPUTE_BIT,        // VkShaderStageFlags stageFlags
+      0,                                  // uint32_t           offset
+      sizeof(PatchSBTPushConstantsBuffer) // uint32_t           size
   };
 
   VkPipelineLayoutCreateInfo createInfo = {
@@ -908,14 +961,7 @@ void RayTracingReplayService::PatchSBT(VkCommandBuffer cmdBuf,
     auto dispatchComputeShader = [&](const VkStridedDeviceAddressRegionKHR* pSBT) {
       if (pSBT && pSBT->deviceAddress && pSBT->size) {
         auto stride = pSBT->stride > 0 ? pSBT->stride : pSBT->size;
-        struct PushConstantsData {
-          VkDeviceAddress OldHandlesMap;
-          VkDeviceAddress NewHandlesMap;
-          VkDeviceAddress SBTBaseAddress;
-          uint32_t Stride;
-          uint32_t Size;
-          uint32_t HandleCount;
-        } pushConstants = {
+        PatchSBTPushConstantsBuffer pushConstants = {
             oldHandlesMap,          // VkDeviceAddress OldHandlesMap;
             newHandlesMap,          // VkDeviceAddress NewHandlesMap;
             pSBT->deviceAddress,    // VkDeviceAddress SBTBaseAddress;
@@ -928,7 +974,7 @@ void RayTracingReplayService::PatchSBT(VkCommandBuffer cmdBuf,
         uint32_t invocationsCount = (pSBT->size / divisor) + ((pSBT->size % divisor > 0) ? 1 : 0);
 
         dt.vkCmdPushConstants(cmdBuf, deviceData.m_Layout, VK_SHADER_STAGE_COMPUTE_BIT, 0,
-                              sizeof(PushConstantsData), &pushConstants);
+                              sizeof(PatchSBTPushConstantsBuffer), &pushConstants);
         // Every invocation reads one record and looks it up in the handles map, so a record is
         // read once regardless of the number of shader groups.
         dt.vkCmdDispatch(cmdBuf, invocationsCount, 1, 1);
@@ -951,15 +997,17 @@ void RayTracingReplayService::PatchSBT(VkCommandBuffer cmdBuf,
                             nullptr, 0, nullptr);
   }
 
+  // Restore original compute pipeline
+  if (cmdBufData.m_ComputePipeline != VK_NULL_HANDLE) {
+    dt.vkCmdBindPipeline(cmdBuf, VK_PIPELINE_BIND_POINT_COMPUTE, cmdBufData.m_ComputePipeline);
+  }
+
   // Restore original push constants data
-  if (cmdBufData.m_Pipeline != VK_NULL_HANDLE) {
-    dt.vkCmdBindPipeline(cmdBuf, cmdBufData.m_BindPoint, cmdBufData.m_Pipeline);
-    if (cmdBufData.m_PushConstants.m_Data.size()) {
-      auto& pushConstants = cmdBufData.m_PushConstants;
-      dt.vkCmdPushConstants(cmdBuf, pushConstants.m_Layout, pushConstants.m_StageFlags,
-                            pushConstants.m_Offset, pushConstants.m_Data.size(),
-                            pushConstants.m_Data.data());
-    }
+  if (cmdBufData.m_PushConstants.m_Data.size()) {
+    auto& pushConstants = cmdBufData.m_PushConstants;
+    dt.vkCmdPushConstants(cmdBuf, pushConstants.m_Layout, pushConstants.m_StageFlags,
+                          pushConstants.m_Offset, pushConstants.m_Data.size(),
+                          pushConstants.m_Data.data());
   }
 }
 

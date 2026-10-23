@@ -1362,6 +1362,38 @@ void SubcaptureLayer::Post(vkCreateRayTracingPipelinesNVCommand& command) {
   }
 }
 
+void SubcaptureLayer::Pre(vkGetRayTracingShaderGroupHandlesKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto* state = m_StateTracking.GetState(command.m_pipeline.Key);
+  if (!state || (state->CreationCommandId != CommandId::ID_VKCREATERAYTRACINGPIPELINESKHR)) {
+    return;
+  }
+  auto& query =
+      static_cast<PipelineState*>(state)
+          ->ShaderGroupHandleQueries[{command.m_firstGroup.Value, command.m_groupCount.Value}];
+  query.first = command.GetId();
+  query.second.resize(GetSize(command));
+  Encode(command, query.second.data());
+}
+
+void SubcaptureLayer::Pre(vkGetRayTracingShaderGroupHandlesNVCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  auto* state = m_StateTracking.GetState(command.m_pipeline.Key);
+  if (!state || (state->CreationCommandId != CommandId::ID_VKCREATERAYTRACINGPIPELINESNV)) {
+    return;
+  }
+  auto& query =
+      static_cast<PipelineState*>(state)
+          ->ShaderGroupHandleQueries[{command.m_firstGroup.Value, command.m_groupCount.Value}];
+  query.first = command.GetId();
+  query.second.resize(GetSize(command));
+  Encode(command, query.second.data());
+}
+
 void SubcaptureLayer::Post(vkDestroyPipelineCommand& command) {
   // Same pattern as vkDestroyShaderModule: VkPipeline may still appear in
   // encoded vkCmdBindPipeline blobs after the app destroys it.  Removing state

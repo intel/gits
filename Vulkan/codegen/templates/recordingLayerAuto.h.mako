@@ -46,8 +46,11 @@ public:
   % if define:
 #ifdef ${define}
   % endif
-  % if command.name not in recording_layer_custom_commands:
+  % if command.name not in recording_layer_custom_commands and command.name not in recording_layer_pre_only_commands:
   void Post(${command.name}Command& command) override;
+  % endif
+  % if command.name in recording_layer_pre_only_commands:
+  void Pre(${command.name}Command& command) override;
   % endif
   % if define:
 #endif

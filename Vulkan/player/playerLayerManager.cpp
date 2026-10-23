@@ -142,6 +142,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(subcaptureLayer);
   enablePreLayer(analyzerLayer);
   enablePreLayer(logVkErrorLayer);
+  enablePreLayer(recordingLayer);
 
   std::unique_ptr<Layer> hudLayer;
   if (Configurator::IsHudEnabledForApi(gits::ApiBool::VK)) {

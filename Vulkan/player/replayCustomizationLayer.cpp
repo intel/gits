@@ -147,12 +147,14 @@ void ReplayCustomizationLayer::Pre(vkFreeCommandBuffersCommand& command) {
 void ReplayCustomizationLayer::Post(vkResetCommandBufferCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetEventPendingSignalService().ClearCommandBuffer(command.m_commandBuffer.Value);
+    m_RayTracingService.OnPostResetCommandBuffer(command);
   }
 }
 
 void ReplayCustomizationLayer::Post(vkResetCommandPoolCommand& command) {
   if (command.m_Return.Value == VK_SUCCESS) {
     m_Manager.GetEventPendingSignalService().ResetCommandPool(command.m_commandPool.Value);
+    m_RayTracingService.OnPostResetCommandPool(command);
   }
 }
 
@@ -385,6 +387,7 @@ void ReplayCustomizationLayer::Post(vkDestroyEventCommand& command) {
 // state to begin, so nothing buffered here can be applied again via submit).
 void ReplayCustomizationLayer::Pre(vkBeginCommandBufferCommand& command) {
   m_Manager.GetEventPendingSignalService().ClearCommandBuffer(command.m_commandBuffer.Value);
+  m_RayTracingService.OnPreBeginCommandBuffer(command);
 }
 
 // vkCmdSetEvent/vkCmdResetEvent (and the 2/2KHR variants) only take effect once
