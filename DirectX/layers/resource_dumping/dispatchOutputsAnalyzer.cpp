@@ -112,9 +112,11 @@ void DispatchOutputsAnalyzer::CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand
 
 void DispatchOutputsAnalyzer::SetComputeRootSignature(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
-  m_RootSignatureByCommandList[c.m_Object.Key] = c.m_pRootSignature.Key;
-  m_DescriptorBySlotByCommandList.erase(c.m_Object.Key);
-  m_DescriptorTableBySlotByDispatchByCommandList.erase(c.m_Object.Key);
+  if (m_RootSignatureByCommandList[c.m_Object.Key] != c.m_pRootSignature.Key) {
+    m_RootSignatureByCommandList[c.m_Object.Key] = c.m_pRootSignature.Key;
+    m_DescriptorBySlotByCommandList.erase(c.m_Object.Key);
+    m_DescriptorTableBySlotByDispatchByCommandList.erase(c.m_Object.Key);
+  }
 }
 
 void DispatchOutputsAnalyzer::SetComputeRootUnorderedAccessView(

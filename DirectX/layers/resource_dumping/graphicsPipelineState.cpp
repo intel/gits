@@ -33,10 +33,12 @@ void GraphicsPipelineState::Reset() {
 
 void GraphicsPipelineState::SetRootSignature(ObjectKey rootSignatureKey,
                                              D3D12_ROOT_SIGNATURE_DESC2* desc) {
-  m_RootSignatureKey = rootSignatureKey;
-  m_RootSignatureDesc = desc;
-  m_BindingState.Reset();
-  m_BindingState.SetRootSignature(desc);
+  if (m_RootSignatureKey != rootSignatureKey) {
+    m_RootSignatureKey = rootSignatureKey;
+    m_RootSignatureDesc = desc;
+    m_BindingState.Reset();
+    m_BindingState.SetRootSignature(desc);
+  }
 }
 
 void GraphicsPipelineState::IASetIndexBuffer(ID3D12GraphicsCommandListIASetIndexBufferCommand& c) {

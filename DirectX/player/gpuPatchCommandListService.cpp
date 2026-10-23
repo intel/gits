@@ -17,8 +17,11 @@ namespace DirectX {
 
 void GpuPatchCommandListService::StoreCommand(
     ID3D12GraphicsCommandListSetComputeRootSignatureCommand& c) {
-  m_CommandLists[c.m_Object.Key].CurrentRootSignature = c.m_pRootSignature.Value;
-  m_CommandLists[c.m_Object.Key].CurrentRootArguments.clear();
+  CommandListState& state = m_CommandLists[c.m_Object.Key];
+  if (state.CurrentRootSignature != c.m_pRootSignature.Value) {
+    state.CurrentRootSignature = c.m_pRootSignature.Value;
+    state.CurrentRootArguments.clear();
+  }
 }
 
 void GpuPatchCommandListService::StoreCommand(
