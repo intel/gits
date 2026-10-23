@@ -9,6 +9,9 @@
 #include "gpuPatchCommandListService.h"
 #include "arguments.h"
 
+#include <algorithm>
+#include <cstddef>
+
 namespace gits {
 namespace DirectX {
 
@@ -30,26 +33,42 @@ void GpuPatchCommandListService::StoreCommand(
 
 void GpuPatchCommandListService::StoreCommand(
     ID3D12GraphicsCommandListSetComputeRoot32BitConstantCommand& c) {
-  SetComputeRoot32BitConstantState* state = new SetComputeRoot32BitConstantState();
-  state->Id = c.GetId();
-  state->RootParameterIndex = c.m_RootParameterIndex.Value;
-  state->SrcData = c.m_SrcData.Value;
-  state->DestOffsetIn32BitValues = c.m_DestOffsetIn32BitValues.Value;
-
-  m_CommandLists[c.m_Object.Key].CurrentRootArguments[c.m_RootParameterIndex.Value].reset(state);
+  StoreRootConstants(c.m_Object.Key, c.m_RootParameterIndex.Value,
+                     c.m_DestOffsetIn32BitValues.Value, 1, &c.m_SrcData.Value);
 }
 
 void GpuPatchCommandListService::StoreCommand(
     ID3D12GraphicsCommandListSetComputeRoot32BitConstantsCommand& c) {
-  SetComputeRoot32BitConstantsState* state = new SetComputeRoot32BitConstantsState();
-  state->Id = c.GetId();
-  state->RootParameterIndex = c.m_RootParameterIndex.Value;
-  state->SrcData.resize(c.m_Num32BitValuesToSet.Value);
-  memcpy(state->SrcData.data(), c.m_pSrcData.Value,
-         c.m_Num32BitValuesToSet.Value * sizeof(unsigned));
-  state->DestOffsetIn32BitValues = c.m_DestOffsetIn32BitValues.Value;
+  StoreRootConstants(c.m_Object.Key, c.m_RootParameterIndex.Value,
+                     c.m_DestOffsetIn32BitValues.Value, c.m_Num32BitValuesToSet.Value,
+                     c.m_pSrcData.Value);
+}
 
-  m_CommandLists[c.m_Object.Key].CurrentRootArguments[c.m_RootParameterIndex.Value].reset(state);
+void GpuPatchCommandListService::StoreRootConstants(ObjectKey commandListKey,
+                                                    unsigned rootParameterIndex,
+                                                    unsigned destOffset,
+                                                    unsigned count,
+                                                    const void* values) {
+  if (count == 0) {
+    return;
+  }
+
+  auto& argument = m_CommandLists[commandListKey].CurrentRootArguments[rootParameterIndex];
+  if (!argument ||
+      argument->Id != CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOT32BITCONSTANTS) {
+    auto state = std::make_unique<SetComputeRoot32BitConstantsState>();
+    state->Id = CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOT32BITCONSTANTS;
+    state->RootParameterIndex = rootParameterIndex;
+    argument = std::move(state);
+  }
+  auto* state = static_cast<SetComputeRoot32BitConstantsState*>(argument.get());
+  const auto end = static_cast<std::size_t>(destOffset) + count;
+  if (end > state->SrcData.size()) {
+    state->SrcData.resize(end);
+    state->Initialized.resize(end, false);
+  }
+  memcpy(state->SrcData.data() + destOffset, values, count * sizeof(unsigned));
+  std::fill_n(state->Initialized.begin() + destOffset, count, true);
 }
 
 void GpuPatchCommandListService::StoreCommand(
@@ -143,17 +162,22 @@ void GpuPatchCommandListService::RestoreState(ObjectKey commandListKey,
       commandList->SetComputeRootDescriptorTable(state->RootParameterIndex, state->BaseDescriptor);
       break;
     }
-    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOT32BITCONSTANT: {
-      auto* state = static_cast<SetComputeRoot32BitConstantState*>(rootArgument.second.get());
-      commandList->SetComputeRoot32BitConstant(state->RootParameterIndex, state->SrcData,
-                                               state->DestOffsetIn32BitValues);
-      break;
-    }
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOT32BITCONSTANTS: {
       auto* state = static_cast<SetComputeRoot32BitConstantsState*>(rootArgument.second.get());
-      commandList->SetComputeRoot32BitConstants(state->RootParameterIndex, state->SrcData.size(),
-                                                state->SrcData.data(),
-                                                state->DestOffsetIn32BitValues);
+      // Restore contiguous initialized ranges without writing gaps between partial updates.
+      unsigned offset = 0;
+      while (offset < state->SrcData.size()) {
+        if (!state->Initialized[offset]) {
+          ++offset;
+          continue;
+        }
+        const unsigned start = offset;
+        while (offset < state->SrcData.size() && state->Initialized[offset]) {
+          ++offset;
+        }
+        commandList->SetComputeRoot32BitConstants(state->RootParameterIndex, offset - start,
+                                                  state->SrcData.data() + start, start);
+      }
       break;
     }
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST_SETCOMPUTEROOTSHADERRESOURCEVIEW: {

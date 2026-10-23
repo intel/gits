@@ -37,6 +37,12 @@ public:
   void RestoreState(ObjectKey commandListKey, ID3D12GraphicsCommandList* commandList);
 
 private:
+  void StoreRootConstants(ObjectKey commandListKey,
+                          unsigned rootParameterIndex,
+                          unsigned destOffset,
+                          unsigned count,
+                          const void* values);
+
   struct CommandState {
     virtual ~CommandState() = default;
     CommandId Id{};
@@ -49,15 +55,10 @@ private:
     unsigned RootParameterIndex{};
     D3D12_GPU_VIRTUAL_ADDRESS BufferLocation{};
   };
-  struct SetComputeRoot32BitConstantState : public CommandState {
-    unsigned RootParameterIndex{};
-    unsigned SrcData{};
-    unsigned DestOffsetIn32BitValues{};
-  };
   struct SetComputeRoot32BitConstantsState : public CommandState {
     unsigned RootParameterIndex{};
     std::vector<unsigned> SrcData;
-    unsigned DestOffsetIn32BitValues{};
+    std::vector<bool> Initialized;
   };
 
   struct CommandListState {
