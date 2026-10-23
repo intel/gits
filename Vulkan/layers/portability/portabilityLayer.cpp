@@ -8,9 +8,12 @@
 
 #include "portabilityLayer.h"
 
+#include "configurationLib.h"
 #include "log.h"
+#include "vulkanHelpers.h"
 
 #include <algorithm>
+#include <ios>
 
 namespace gits {
 namespace vulkan {
@@ -96,16 +99,46 @@ std::vector<VkQueueFamilyProperties> ToBaseProperties(const VkQueueFamilyPropert
   return out;
 }
 
+constexpr uint32_t ADDRESS_BITS = 48;
+constexpr uint64_t ADDRESS_MASK = (1ull << ADDRESS_BITS) - 1;
+
+uint64_t ToBits48Address(uint64_t address) {
+  return address & ADDRESS_MASK;
+}
+
+uint64_t ToCanonicalAddress(uint64_t address) {
+  constexpr uint32_t SHIFT = 64 - ADDRESS_BITS;
+  return static_cast<uint64_t>(static_cast<int64_t>(address << SHIFT) >> SHIFT);
+}
+
+uint64_t ConvertAddress(uint64_t address, VulkanCaptureReplayAddressForm form) {
+  switch (form) {
+  case VulkanCaptureReplayAddressForm::BITS_48:
+    return ToBits48Address(address);
+  case VulkanCaptureReplayAddressForm::CANONICAL:
+    return ToCanonicalAddress(address);
+  default:
+    return address;
+  }
+}
+
 } // namespace
 
-PortabilityLayer::PortabilityLayer() : Layer("Portability") {}
+thread_local PortabilityLayer::ConvertedAddress PortabilityLayer::tl_ConvertedAddress;
+
+PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
+    : Layer("Portability"),
+      m_DispatchTablesHolder(dispatchTablesHolder),
+      m_RemapQueueFamilies(Configurator::Get().vulkan.player.portability.remapQueueFamilies),
+      m_RequestedAddressForm(
+          Configurator::Get().vulkan.player.portability.captureReplayAddressForm) {}
 
 // --- Building the remap from the queue family property queries ---------------
 
 void PortabilityLayer::StoreSource(VkPhysicalDevice physicalDevice,
                                    const VkQueueFamilyProperties* props,
                                    uint32_t count) {
-  if (props == nullptr || count == 0) {
+  if (!m_RemapQueueFamilies || props == nullptr || count == 0) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -115,7 +148,7 @@ void PortabilityLayer::StoreSource(VkPhysicalDevice physicalDevice,
 void PortabilityLayer::StoreTargetAndBuild(VkPhysicalDevice physicalDevice,
                                            const VkQueueFamilyProperties* props,
                                            uint32_t count) {
-  if (props == nullptr || count == 0) {
+  if (!m_RemapQueueFamilies || props == nullptr || count == 0) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -205,6 +238,8 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
   }
 
   std::lock_guard<std::mutex> lock(m_Mutex);
+
+  m_AddressForm = SelectAddressForm(command.m_physicalDevice.Value);
 
   auto it = m_Families.find(command.m_physicalDevice.Value);
   if (it == m_Families.end() || !it->second.built) {
@@ -335,6 +370,90 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
 
   createInfo->queueCreateInfoCount = static_cast<uint32_t>(m_MergedQueueInfos.size());
   createInfo->pQueueCreateInfos = m_MergedQueueInfos.data();
+}
+
+// --- Converting memory opaque capture addresses ------------------------------
+
+VulkanCaptureReplayAddressForm PortabilityLayer::SelectAddressForm(
+    VkPhysicalDevice physicalDevice) const {
+  if (m_RequestedAddressForm != VulkanCaptureReplayAddressForm::AUTO) {
+    return m_RequestedAddressForm;
+  }
+
+  VkInstanceLevelDispatchTable* dispatchTable =
+      m_DispatchTablesHolder.GetInstanceDispatchTable(physicalDevice);
+  PFN_vkGetPhysicalDeviceProperties2 vkGetPhysicalDeviceProperties2Unified = nullptr;
+  if (dispatchTable != nullptr) {
+    vkGetPhysicalDeviceProperties2Unified = dispatchTable->vkGetPhysicalDeviceProperties2
+                                                ? dispatchTable->vkGetPhysicalDeviceProperties2
+                                                : dispatchTable->vkGetPhysicalDeviceProperties2KHR;
+  }
+  if (vkGetPhysicalDeviceProperties2Unified == nullptr) {
+    LOG_WARNING << "Portability: cannot query the replay driver, memory opaque capture addresses "
+                   "are passed unchanged.";
+    return VulkanCaptureReplayAddressForm::KEEP;
+  }
+
+  VkPhysicalDeviceDriverProperties driverProperties{};
+  driverProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES;
+  VkPhysicalDeviceProperties2 properties{};
+  properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+  properties.pNext = &driverProperties;
+  vkGetPhysicalDeviceProperties2Unified(physicalDevice, &properties);
+
+  // Mesa ANV reports and accepts memory opaque capture addresses zero-extended to
+  // 48 bits, the Intel Windows driver reports them canonical. Buffer device
+  // addresses are canonical on both.
+  VulkanCaptureReplayAddressForm form = VulkanCaptureReplayAddressForm::KEEP;
+  if (driverProperties.driverID == VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA) {
+    form = VulkanCaptureReplayAddressForm::BITS_48;
+  } else if (driverProperties.driverID == VK_DRIVER_ID_INTEL_PROPRIETARY_WINDOWS) {
+    form = VulkanCaptureReplayAddressForm::CANONICAL;
+  }
+  LOG_INFO << "Portability: memory opaque capture address form for driver \""
+           << driverProperties.driverName << "\": " << form << ".";
+  return form;
+}
+
+void PortabilityLayer::Pre(vkAllocateMemoryCommand& command) {
+  tl_ConvertedAddress = {};
+  const VkMemoryAllocateInfo* allocateInfo = command.m_pAllocateInfo.Value;
+  if (allocateInfo == nullptr) {
+    return;
+  }
+  auto* opaqueAddressInfo = const_cast<VkMemoryOpaqueCaptureAddressAllocateInfo*>(
+      static_cast<const VkMemoryOpaqueCaptureAddressAllocateInfo*>(getPNextStructure(
+          allocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO)));
+  if (opaqueAddressInfo == nullptr || opaqueAddressInfo->opaqueCaptureAddress == 0) {
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const uint64_t recorded = opaqueAddressInfo->opaqueCaptureAddress;
+  const uint64_t replayed = ConvertAddress(recorded, m_AddressForm);
+  if (replayed == recorded) {
+    return;
+  }
+  if (m_ConvertedAddressCount++ == 0) {
+    LOG_INFO << "Portability: converting memory opaque capture addresses to the " << m_AddressForm
+             << " form (first: 0x" << std::hex << recorded << " -> 0x" << replayed << std::dec
+             << ").";
+  }
+  opaqueAddressInfo->opaqueCaptureAddress = replayed;
+  tl_ConvertedAddress = {recorded, replayed};
+}
+
+void PortabilityLayer::Post(vkAllocateMemoryCommand& command) {
+  const ConvertedAddress converted = tl_ConvertedAddress;
+  tl_ConvertedAddress = {};
+  if (converted.Recorded == 0 || command.m_Return.Value == VK_SUCCESS) {
+    return;
+  }
+  LOG_ERROR << "Portability: vkAllocateMemory failed for memory opaque capture address 0x"
+            << std::hex << converted.Replayed << " (recorded 0x" << converted.Recorded << ")"
+            << std::dec
+            << ". The address range is not available on the replay device; the stream "
+               "cannot be replayed with its recorded GPU virtual addresses.";
 }
 
 // --- Applying the active remap ----------------------------------------------

@@ -39,8 +39,10 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
 
   std::unique_ptr<Layer> portabilityLayer;
-  if (execute && Configurator::Get().vulkan.player.portability.remapQueueFamilies) {
-    portabilityLayer = std::make_unique<PortabilityLayer>();
+  const auto& portabilityCfg = Configurator::Get().vulkan.player.portability;
+  if (execute && (portabilityCfg.remapQueueFamilies || portabilityCfg.captureReplayAddressForm !=
+                                                           VulkanCaptureReplayAddressForm::KEEP)) {
+    portabilityLayer = std::make_unique<PortabilityLayer>(playerManager.GetDispatchTablesHolder());
   }
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;

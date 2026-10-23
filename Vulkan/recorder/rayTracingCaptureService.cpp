@@ -12,10 +12,44 @@
 namespace gits {
 namespace vulkan {
 
+namespace {
+
+bool IsMemoryImport(const void* pNext) {
+  for (auto* pStruct = static_cast<const VkBaseInStructure*>(pNext); pStruct != nullptr;
+       pStruct = pStruct->pNext) {
+    switch (pStruct->sType) {
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT:
+    case VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA:
+    case VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT:
+    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_METAL_HANDLE_INFO_EXT:
+    case VK_STRUCTURE_TYPE_IMPORT_SCREEN_BUFFER_INFO_QNX:
+    case VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS:
+      return true;
+    default:
+      break;
+    }
+  }
+  return false;
+}
+
+bool IsDedicatedToImage(const void* pNext) {
+  auto* pDedicatedInfo = static_cast<const VkMemoryDedicatedAllocateInfo*>(
+      getPNextStructure(pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO));
+  return pDedicatedInfo != nullptr && pDedicatedInfo->image != VK_NULL_HANDLE;
+}
+
+} // namespace
+
 thread_local VkBufferOpaqueCaptureAddressCreateInfo
     RayTracingCaptureService::s_BufferOpaqueCaptureAddress;
 thread_local VkMemoryOpaqueCaptureAddressAllocateInfo
     RayTracingCaptureService::s_MemoryOpaqueCaptureAddress;
+thread_local VkMemoryAllocateFlagsInfo RayTracingCaptureService::s_MemoryAllocateFlags;
 thread_local RayTracingCaptureService::RayTracingCapabilities
     RayTracingCaptureService::s_DeviceCaps;
 
@@ -273,14 +307,44 @@ void RayTracingCaptureService::OnPostCreateBuffer(vkCreateBufferCommand& command
 }
 
 void RayTracingCaptureService::OnPreAllocateMemory(vkAllocateMemoryCommand& command) {
+  if (!m_Caps[command.m_device.Key].m_BufferDeviceAddressCaptureReplay) {
+    return;
+  }
+
+  auto* pAllocateInfo = command.m_pAllocateInfo.Value;
   auto* pAllocateFlagsInfo = (VkMemoryAllocateFlagsInfo*)getPNextStructure(
-      command.m_pAllocateInfo.Value->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
+      pAllocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO);
 
   if (pAllocateFlagsInfo &&
-      isBitSet(pAllocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT) &&
-      m_Caps[command.m_device.Key].m_BufferDeviceAddressCaptureReplay) {
+      isBitSet(pAllocateFlagsInfo->flags, VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT)) {
     pAllocateFlagsInfo->flags |= VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+    return;
   }
+
+  // Buffers whose usage is extended with SHADER_DEVICE_ADDRESS in ModifyBufferCreateInfo (e.g.
+  // acceleration structure storage) can be bound to memory allocated without a device address.
+  // Drivers which derive a buffer's device address from its memory (e.g. Mesa ANV) ignore
+  // VkBufferOpaqueCaptureAddressCreateInfo, so the memory address has to be captured as well.
+  // Imports cannot be given an opaque capture address and memory dedicated to an image never
+  // backs a buffer.
+  if (IsMemoryImport(pAllocateInfo->pNext) || IsDedicatedToImage(pAllocateInfo->pNext)) {
+    return;
+  }
+
+  const VkMemoryAllocateFlags flags =
+      VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT | VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+  if (pAllocateFlagsInfo) {
+    pAllocateFlagsInfo->flags |= flags;
+    return;
+  }
+
+  s_MemoryAllocateFlags = {
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, // VkStructureType sType
+      pAllocateInfo->pNext,                         // const void* pNext
+      flags,                                        // VkMemoryAllocateFlags flags
+      0                                             // uint32_t deviceMask
+  };
+  pAllocateInfo->pNext = &s_MemoryAllocateFlags;
 }
 
 void RayTracingCaptureService::OnPostAllocateMemory(vkAllocateMemoryCommand& command) {

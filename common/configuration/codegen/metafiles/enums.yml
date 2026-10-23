@@ -239,3 +239,13 @@ Enums:
     Values:
       - Value: COUNT_ONLY
       - Value: COUNT_OR_MAXVERTEX
+  - Name: VulkanCaptureReplayAddressForm
+    Values:
+      - Value: AUTO
+        Description: Select the form expected by the replay driver
+      - Value: KEEP
+        Description: Pass recorded addresses unchanged
+      - Value: BITS_48
+        Description: Zero-extended 48-bit form
+      - Value: CANONICAL
+        Description: Sign-extended canonical form

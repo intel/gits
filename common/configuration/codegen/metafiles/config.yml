@@ -1891,6 +1891,17 @@ Configuration:
                   family properties stored in the stream are matched against the
                   replay (target) device queue families by capability in a single
                   replay pass; colliding logical-device queue requests are merged.
+              - Name: captureReplayAddressForm
+                Type: VulkanCaptureReplayAddressForm
+                Default: Auto
+                Arguments: [vkCaptureReplayAddressForm]
+                Description:
+                  Form of the recorded memory opaque capture addresses passed to the
+                  replay driver (Auto/Keep/Bits48/Canonical). Drivers report these
+                  addresses either sign-extended (canonical) or zero-extended to 48
+                  bits, and accept only their own form. Auto selects the 48-bit form
+                  for Mesa ANV, the canonical form for the Intel Windows driver and
+                  keeps the recorded addresses on other drivers.
               - Name: patchShaderGroupHandles
                 Type: bool
                 Default: false

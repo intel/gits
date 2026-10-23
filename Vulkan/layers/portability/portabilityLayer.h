@@ -9,6 +9,8 @@
 #pragma once
 
 #include "layerAuto.h"
+#include "dispatchTablesHolder.h"
+#include "enumsAuto.h"
 
 #include <cstdint>
 #include <mutex>
@@ -23,10 +25,14 @@ namespace vulkan {
 //   * the target queue family properties are produced in Post hook.
 // The layer builds a source->target family remap by capability matching.
 //
+// Memory opaque capture addresses are rewritten into the form (canonical or
+// 48-bit) accepted by the replay driver. Both forms describe the same GPU
+// virtual address, so buffer device addresses stored in the stream stay valid.
+//
 // Assumption: a single physical+logical device.
 class PortabilityLayer : public Layer {
 public:
-  PortabilityLayer();
+  PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder);
 
   // Build the source->target remap.
   void Pre(vkGetPhysicalDeviceQueueFamilyPropertiesCommand& command) override;
@@ -36,8 +42,12 @@ public:
   void Pre(vkGetPhysicalDeviceQueueFamilyProperties2KHRCommand& command) override;
   void Post(vkGetPhysicalDeviceQueueFamilyProperties2KHRCommand& command) override;
 
-  // Activate the remap for the device.
+  // Activate the remap for the device and select the capture/replay address form.
   void Pre(vkCreateDeviceCommand& command) override;
+
+  // Convert memory opaque capture addresses to the form expected by the driver.
+  void Pre(vkAllocateMemoryCommand& command) override;
+  void Post(vkAllocateMemoryCommand& command) override;
 
   // Apply the remap.
   void Pre(vkGetDeviceQueueCommand& command) override;
@@ -80,6 +90,25 @@ private:
   // Remap src/dst family ownership transfer indices of a barrier in place.
   template <typename Barrier>
   void RemapBarriers(Barrier* barriers, uint32_t count) const;
+
+  // Resolve the configured capture/replay address form for the replay device.
+  VulkanCaptureReplayAddressForm SelectAddressForm(VkPhysicalDevice physicalDevice) const;
+
+  DispatchTablesHolder& m_DispatchTablesHolder;
+  const bool m_RemapQueueFamilies;
+  const VulkanCaptureReplayAddressForm m_RequestedAddressForm;
+
+  // Form applied to memory opaque capture addresses of the active device
+  VulkanCaptureReplayAddressForm m_AddressForm{VulkanCaptureReplayAddressForm::KEEP};
+  uint64_t m_ConvertedAddressCount{0};
+
+  // Address passed to the driver by the vkAllocateMemory call in flight on this
+  // thread, zero when the call was not converted.
+  struct ConvertedAddress {
+    uint64_t Recorded{0};
+    uint64_t Replayed{0};
+  };
+  static thread_local ConvertedAddress tl_ConvertedAddress;
 
   std::mutex m_Mutex;
   std::unordered_map<VkPhysicalDevice, DeviceFamilies> m_Families;

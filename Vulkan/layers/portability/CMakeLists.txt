@@ -21,6 +21,7 @@ target_sources(Vulkan_portability PRIVATE
 
 target_link_libraries(Vulkan_portability PRIVATE
   Vulkan_layer_interface
+  Vulkan_utils
 )
 
 target_include_directories(Vulkan_portability PUBLIC

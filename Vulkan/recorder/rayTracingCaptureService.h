@@ -49,6 +49,7 @@ private:
   bool m_MicromapCaptureReplayWarningIssued = false;
   static thread_local VkBufferOpaqueCaptureAddressCreateInfo s_BufferOpaqueCaptureAddress;
   static thread_local VkMemoryOpaqueCaptureAddressAllocateInfo s_MemoryOpaqueCaptureAddress;
+  static thread_local VkMemoryAllocateFlagsInfo s_MemoryAllocateFlags;
   static thread_local RayTracingCapabilities s_DeviceCaps;
 }; // class RayTracingCaptureService
 
