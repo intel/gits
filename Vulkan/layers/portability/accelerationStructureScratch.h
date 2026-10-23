@@ -9,6 +9,7 @@
 #pragma once
 
 #include "dispatchTablesHolder.h"
+#include "portabilityHelpers.h"
 
 #include <cstdint>
 #include <unordered_map>
@@ -25,7 +26,9 @@ namespace vulkan {
 // undefined between builds, so the recorded scratch addresses can be replaced by
 // regions of GITS-owned buffers. Every build recorded into a command buffer gets its
 // own region, so builds can't overwrite each other's scratch. The regions are reused
-// when the command buffer is recorded again and released when it is freed.
+// when the command buffer is recorded again and released when it is freed. A command
+// buffer's scratch memory grows with its builds and is merged into a single chunk
+// when the command buffer is recorded again.
 class AccelerationStructureScratch {
 public:
   explicit AccelerationStructureScratch(DispatchTablesHolder& dispatchTablesHolder)
@@ -51,8 +54,7 @@ public:
 
 private:
   struct Chunk {
-    VkBuffer Buffer{VK_NULL_HANDLE};
-    VkDeviceMemory Memory{VK_NULL_HANDLE};
+    portability::DeviceLocalBuffer Buffer;
     VkDeviceAddress Address{0};
     VkDeviceSize Size{0};
     VkDeviceSize Used{0};
@@ -60,6 +62,8 @@ private:
   struct Arena {
     VkDevice Device{VK_NULL_HANDLE};
     std::vector<Chunk> Chunks;
+    // Minimum size of the next chunk
+    VkDeviceSize Reserve{0};
   };
 
   bool Allocate(VkDevice device, Arena& arena, VkDeviceSize size, VkDeviceAddress& address);
@@ -72,6 +76,7 @@ private:
   std::unordered_map<VkCommandBuffer, Arena> m_Arenas;
   std::unordered_map<VkCommandPool, std::unordered_set<VkCommandBuffer>> m_PoolCommandBuffers;
   uint64_t m_ReplacedBuildCount{0};
+  bool m_MissingDeviceAddressReported{false};
   VkDeviceSize m_TotalChunkSize{0};
 };
 

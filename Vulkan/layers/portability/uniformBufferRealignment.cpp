@@ -9,8 +9,11 @@
 #include "uniformBufferRealignment.h"
 
 #include "log.h"
+#include "portabilityHelpers.h"
+#include "vulkanHelpers.h"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 
 namespace gits {
@@ -21,16 +24,13 @@ namespace {
 constexpr VkDeviceSize CHUNK_SIZE = 1024ull * 1024;
 constexpr VkDeviceSize MIN_SLOT_SIZE = 256;
 constexpr uint32_t SIZE_CLASS_COUNT = 9; // 256 B .. 64 KiB
-constexpr uint32_t DEDICATED = UINT32_MAX;
 
-VkDeviceSize AlignUp(VkDeviceSize value, VkDeviceSize alignment) {
-  return (value + alignment - 1) / alignment * alignment;
-}
-
-// Command buffer arrays of the submission in flight on this thread.
+// Command buffer and semaphore wait arrays of the submission in flight on this thread.
 struct SubmitStorage {
   std::vector<std::vector<VkCommandBuffer>> CommandBuffers;
+  std::vector<std::vector<VkPipelineStageFlags>> WaitStageMasks;
   std::vector<std::vector<VkCommandBufferSubmitInfo>> CommandBufferInfos;
+  std::vector<std::vector<VkSemaphoreSubmitInfo>> WaitSemaphoreInfos;
   std::vector<VkCommandBuffer> CopyCommandBuffers;
 };
 thread_local SubmitStorage tl_Submit;
@@ -54,33 +54,113 @@ void UniformBufferRealignment::AddQueue(VkDevice device, uint32_t queueFamilyInd
   m_Queues[queue] = {device, queueFamilyIndex};
 }
 
-void UniformBufferRealignment::PrepareBufferCreateInfo(VkBufferCreateInfo& createInfo) const {
-  if (m_Enabled && (createInfo.usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)) {
-    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  }
+void UniformBufferRealignment::AddMemory(VkDeviceMemory memory,
+                                         const VkMemoryAllocateInfo& allocateInfo) {
+  MemoryInfo& info = m_Memories[memory];
+  info.TypeIndex = allocateInfo.memoryTypeIndex;
+  info.Size = allocateInfo.allocationSize;
+  info.Dedicated = getPNextStructure(allocateInfo.pNext,
+                                     VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO) != nullptr;
+}
+
+void UniformBufferRealignment::RemoveMemory(VkDeviceMemory memory) {
+  m_Memories.erase(memory);
 }
 
 void UniformBufferRealignment::AddBuffer(VkBuffer buffer, const VkBufferCreateInfo& createInfo) {
-  if (createInfo.usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) {
-    m_BufferSizes[buffer] = createInfo.size;
+  if ((createInfo.usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == 0 ||
+      (createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != 0) {
+    return;
+  }
+  SourceBuffer& source = m_SourceBuffers[buffer];
+  source = {};
+  source.Size = createInfo.size;
+  source.SharingMode = createInfo.sharingMode;
+  if (createInfo.sharingMode == VK_SHARING_MODE_CONCURRENT &&
+      createInfo.pQueueFamilyIndices != nullptr) {
+    source.QueueFamilies.assign(createInfo.pQueueFamilyIndices,
+                                createInfo.pQueueFamilyIndices + createInfo.queueFamilyIndexCount);
   }
 }
 
+void UniformBufferRealignment::BindBufferMemory(VkDevice device,
+                                                VkBuffer buffer,
+                                                VkDeviceMemory memory,
+                                                VkDeviceSize memoryOffset) {
+  auto it = m_SourceBuffers.find(buffer);
+  if (it == m_SourceBuffers.end()) {
+    return;
+  }
+  it->second.Device = device;
+  it->second.Memory = memory;
+  it->second.MemoryOffset = memoryOffset;
+}
+
 void UniformBufferRealignment::RemoveBuffer(VkBuffer buffer) {
-  if (m_BufferSizes.erase(buffer) == 0) {
+  auto it = m_SourceBuffers.find(buffer);
+  if (it == m_SourceBuffers.end()) {
+    return;
+  }
+  const SourceBuffer source = std::move(it->second);
+  m_SourceBuffers.erase(it);
+  if (source.Alias == VK_NULL_HANDLE) {
     return;
   }
   // Descriptors of a destroyed buffer can't be used any more, stop copying from it.
   for (auto& [set, entries] : m_Entries) {
-    for (auto it = entries.begin(); it != entries.end();) {
-      if (it->Source == buffer) {
-        FreeSlot(it->Shadow);
-        it = entries.erase(it);
+    for (auto entryIt = entries.begin(); entryIt != entries.end();) {
+      if (entryIt->Source == source.Alias) {
+        FreeSlot(entryIt->Shadow);
+        entryIt = entries.erase(entryIt);
       } else {
-        ++it;
+        ++entryIt;
       }
     }
   }
+  // Work reading the buffer has completed, so has the copy reading the alias.
+  VkDeviceLevelDispatchTable* dispatchTable =
+      m_DispatchTablesHolder.GetDeviceDispatchTable(source.Device);
+  if (dispatchTable != nullptr) {
+    dispatchTable->vkDestroyBuffer(source.Device, source.Alias, nullptr);
+  }
+}
+
+VkBuffer UniformBufferRealignment::GetAlias(SourceBuffer& source) {
+  if (source.Alias != VK_NULL_HANDLE || source.AliasFailed) {
+    return source.Alias;
+  }
+  source.AliasFailed = true;
+  auto memoryIt = m_Memories.find(source.Memory);
+  VkDeviceLevelDispatchTable* dispatchTable =
+      m_DispatchTablesHolder.GetDeviceDispatchTable(source.Device);
+  // Dedicated allocations can't be bound to other resources.
+  if (memoryIt == m_Memories.end() || memoryIt->second.Dedicated || dispatchTable == nullptr) {
+    return VK_NULL_HANDLE;
+  }
+  VkBufferCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
+  createInfo.size = source.Size;
+  createInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  createInfo.sharingMode = source.SharingMode;
+  createInfo.queueFamilyIndexCount = static_cast<uint32_t>(source.QueueFamilies.size());
+  createInfo.pQueueFamilyIndices = source.QueueFamilies.data();
+  VkBuffer alias = VK_NULL_HANDLE;
+  if (dispatchTable->vkCreateBuffer(source.Device, &createInfo, nullptr, &alias) != VK_SUCCESS) {
+    return VK_NULL_HANDLE;
+  }
+  VkMemoryRequirements requirements{};
+  dispatchTable->vkGetBufferMemoryRequirements(source.Device, alias, &requirements);
+  const MemoryInfo& memory = memoryIt->second;
+  if ((requirements.memoryTypeBits & (1u << memory.TypeIndex)) == 0 ||
+      source.MemoryOffset % requirements.alignment != 0 ||
+      source.MemoryOffset + requirements.size > memory.Size ||
+      dispatchTable->vkBindBufferMemory(source.Device, alias, source.Memory, source.MemoryOffset) !=
+          VK_SUCCESS) {
+    dispatchTable->vkDestroyBuffer(source.Device, alias, nullptr);
+    return VK_NULL_HANDLE;
+  }
+  source.Alias = alias;
+  source.AliasFailed = false;
+  return alias;
 }
 
 void UniformBufferRealignment::AddDescriptorSets(VkDescriptorPool pool,
@@ -184,23 +264,29 @@ void UniformBufferRealignment::UpdateDescriptorSets(VkDevice device,
       if (!m_Enabled) {
         continue;
       }
-      auto sizeIt = m_BufferSizes.find(info.buffer);
-      if (write.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-          sizeIt == m_BufferSizes.end() || info.offset >= sizeIt->second) {
+      auto sourceIt = m_SourceBuffers.find(info.buffer);
+      const VkBuffer alias = write.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+                                     sourceIt == m_SourceBuffers.end() ||
+                                     info.offset >= sourceIt->second.Size
+                                 ? VK_NULL_HANDLE
+                                 : GetAlias(sourceIt->second);
+      if (alias == VK_NULL_HANDLE) {
         if (!m_UnsupportedReported) {
           m_UnsupportedReported = true;
           LOG_WARNING << "Portability: a misaligned uniform buffer descriptor at call " << key
-                      << " can't be realigned (dynamic uniform buffer or unknown buffer).";
+                      << " can't be realigned (dynamic uniform buffer, sparse or unknown "
+                         "buffer, or its memory can't be read by a copy).";
         }
         continue;
       }
-      VkDeviceSize size = info.range == VK_WHOLE_SIZE ? sizeIt->second - info.offset : info.range;
-      size = std::min(size, sizeIt->second - info.offset);
+      const VkDeviceSize bufferSize = sourceIt->second.Size;
+      VkDeviceSize size = info.range == VK_WHOLE_SIZE ? bufferSize - info.offset : info.range;
+      size = std::min(size, bufferSize - info.offset);
 
       Entry entry;
       entry.Binding = write.dstBinding;
       entry.ArrayElement = element;
-      entry.Source = info.buffer;
+      entry.Source = alias;
       entry.SourceOffset = info.offset;
       if (!AllocateSlot(device, size, entry.Shadow)) {
         LOG_ERROR << "Portability: allocation of an aligned uniform buffer copy (" << size
@@ -211,6 +297,67 @@ void UniformBufferRealignment::UpdateDescriptorSets(VkDevice device,
       info.offset = entry.Shadow.Offset;
       info.range = size;
       m_Entries[write.dstSet].push_back(entry);
+      ++m_RealignedCount;
+    }
+  }
+}
+
+void UniformBufferRealignment::CopyDescriptorSets(VkDevice device,
+                                                  uint32_t copyCount,
+                                                  const VkCopyDescriptorSet* copies) {
+  if (!m_Enabled || copies == nullptr) {
+    return;
+  }
+  VkDeviceLevelDispatchTable* dispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
+  for (uint32_t c = 0; c < copyCount; ++c) {
+    const VkCopyDescriptorSet& copy = copies[c];
+    auto inRange = [&](const Entry& entry, uint32_t binding, uint32_t arrayElement) {
+      return entry.Binding == binding && entry.ArrayElement >= arrayElement &&
+             entry.ArrayElement - arrayElement < copy.descriptorCount;
+    };
+    std::vector<Entry> sources;
+    auto srcIt = m_Entries.find(copy.srcSet);
+    if (srcIt != m_Entries.end()) {
+      std::copy_if(srcIt->second.begin(), srcIt->second.end(), std::back_inserter(sources),
+                   [&](const Entry& entry) {
+                     return inRange(entry, copy.srcBinding, copy.srcArrayElement);
+                   });
+    }
+    // The copied descriptors replace the destination descriptors and their copies.
+    auto dstIt = m_Entries.find(copy.dstSet);
+    if (dstIt != m_Entries.end()) {
+      auto& entries = dstIt->second;
+      for (auto it = entries.begin(); it != entries.end();) {
+        if (inRange(*it, copy.dstBinding, copy.dstArrayElement)) {
+          FreeSlot(it->Shadow);
+          it = entries.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    }
+    if (dispatchTable == nullptr) {
+      continue;
+    }
+    // A copied descriptor points to the slot of the source descriptor, give it its own.
+    for (Entry entry : sources) {
+      entry.Binding = copy.dstBinding;
+      entry.ArrayElement = copy.dstArrayElement + (entry.ArrayElement - copy.srcArrayElement);
+      if (!AllocateSlot(device, entry.Shadow.Size, entry.Shadow)) {
+        LOG_ERROR << "Portability: allocation of an aligned uniform buffer copy ("
+                  << entry.Shadow.Size << " bytes) failed.";
+        continue;
+      }
+      VkDescriptorBufferInfo info{entry.Shadow.Buffer, entry.Shadow.Offset, entry.Shadow.Size};
+      VkWriteDescriptorSet write{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+      write.dstSet = copy.dstSet;
+      write.dstBinding = entry.Binding;
+      write.dstArrayElement = entry.ArrayElement;
+      write.descriptorCount = 1;
+      write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      write.pBufferInfo = &info;
+      dispatchTable->vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+      m_Entries[copy.dstSet].push_back(entry);
       ++m_RealignedCount;
     }
   }
@@ -243,15 +390,31 @@ void UniformBufferRealignment::BindDescriptorSets(VkCommandBuffer commandBuffer,
   }
 }
 
+void UniformBufferRealignment::ExecuteCommands(VkCommandBuffer commandBuffer,
+                                               const VkCommandBuffer* secondaryCommandBuffers,
+                                               uint32_t count) {
+  if (!m_Enabled || secondaryCommandBuffers == nullptr) {
+    return;
+  }
+  for (uint32_t i = 0; i < count; ++i) {
+    auto it = m_BoundSets.find(secondaryCommandBuffers[i]);
+    if (it != m_BoundSets.end()) {
+      m_BoundSets[commandBuffer].insert(it->second.begin(), it->second.end());
+    }
+  }
+}
+
 void UniformBufferRealignment::PrepareSubmit(VkQueue queue,
                                              uint32_t submitCount,
                                              VkSubmitInfo* submits) {
   tl_Submit.CommandBuffers.clear();
+  tl_Submit.WaitStageMasks.clear();
   tl_Submit.CopyCommandBuffers.clear();
   if (!m_Enabled || m_RealignedCount == 0 || submits == nullptr) {
     return;
   }
   tl_Submit.CommandBuffers.resize(submitCount);
+  tl_Submit.WaitStageMasks.resize(submitCount);
   for (uint32_t s = 0; s < submitCount; ++s) {
     VkSubmitInfo& submit = submits[s];
     std::vector<VkCommandBuffer> commandBuffers(submit.pCommandBuffers,
@@ -266,6 +429,17 @@ void UniformBufferRealignment::PrepareSubmit(VkQueue queue,
     storage.insert(storage.end(), commandBuffers.begin(), commandBuffers.end());
     submit.pCommandBuffers = storage.data();
     submit.commandBufferCount = static_cast<uint32_t>(storage.size());
+
+    // The copies read data the semaphores wait for.
+    if (submit.waitSemaphoreCount != 0 && submit.pWaitDstStageMask != nullptr) {
+      auto& stageMasks = tl_Submit.WaitStageMasks[s];
+      stageMasks.assign(submit.pWaitDstStageMask,
+                        submit.pWaitDstStageMask + submit.waitSemaphoreCount);
+      for (VkPipelineStageFlags& stageMask : stageMasks) {
+        stageMask |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+      }
+      submit.pWaitDstStageMask = stageMasks.data();
+    }
   }
 }
 
@@ -273,11 +447,13 @@ void UniformBufferRealignment::PrepareSubmit2(VkQueue queue,
                                               uint32_t submitCount,
                                               VkSubmitInfo2* submits) {
   tl_Submit.CommandBufferInfos.clear();
+  tl_Submit.WaitSemaphoreInfos.clear();
   tl_Submit.CopyCommandBuffers.clear();
   if (!m_Enabled || m_RealignedCount == 0 || submits == nullptr) {
     return;
   }
   tl_Submit.CommandBufferInfos.resize(submitCount);
+  tl_Submit.WaitSemaphoreInfos.resize(submitCount);
   for (uint32_t s = 0; s < submitCount; ++s) {
     VkSubmitInfo2& submit = submits[s];
     std::vector<VkCommandBuffer> commandBuffers;
@@ -296,6 +472,17 @@ void UniformBufferRealignment::PrepareSubmit2(VkQueue queue,
                    submit.pCommandBufferInfos + submit.commandBufferInfoCount);
     submit.pCommandBufferInfos = storage.data();
     submit.commandBufferInfoCount = static_cast<uint32_t>(storage.size());
+
+    // The copies read data the semaphores wait for.
+    if (submit.waitSemaphoreInfoCount != 0 && submit.pWaitSemaphoreInfos != nullptr) {
+      auto& waitInfos = tl_Submit.WaitSemaphoreInfos[s];
+      waitInfos.assign(submit.pWaitSemaphoreInfos,
+                       submit.pWaitSemaphoreInfos + submit.waitSemaphoreInfoCount);
+      for (VkSemaphoreSubmitInfo& waitInfo : waitInfos) {
+        waitInfo.stageMask |= VK_PIPELINE_STAGE_2_COPY_BIT;
+      }
+      submit.pWaitSemaphoreInfos = waitInfos.data();
+    }
   }
 }
 
@@ -444,66 +631,39 @@ void UniformBufferRealignment::Recycle(VkDevice device, FamilyPool& familyPool) 
 }
 
 bool UniformBufferRealignment::CreateChunk(VkDevice device, VkDeviceSize size, Chunk& chunk) {
-  VkDeviceLevelDispatchTable* dispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
-  VkInstanceLevelDispatchTable* instanceDispatchTable =
-      m_DispatchTablesHolder.GetInstanceDispatchTable(m_PhysicalDevice);
-  if (dispatchTable == nullptr || instanceDispatchTable == nullptr) {
+  if (!portability::CreateDeviceLocalBuffer(
+          m_DispatchTablesHolder, m_PhysicalDevice, device, size,
+          VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, chunk)) {
     return false;
   }
-  VkBufferCreateInfo bufferInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-  bufferInfo.size = size;
-  bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  if (dispatchTable->vkCreateBuffer(device, &bufferInfo, nullptr, &chunk.Buffer) != VK_SUCCESS) {
-    return false;
-  }
-  VkMemoryRequirements requirements{};
-  dispatchTable->vkGetBufferMemoryRequirements(device, chunk.Buffer, &requirements);
-  VkPhysicalDeviceMemoryProperties memoryProperties{};
-  instanceDispatchTable->vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-  uint32_t memoryType = UINT32_MAX;
-  for (uint32_t t = 0; t < memoryProperties.memoryTypeCount && memoryType == UINT32_MAX; ++t) {
-    if ((requirements.memoryTypeBits & (1u << t)) &&
-        (memoryProperties.memoryTypes[t].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-      memoryType = t;
-    }
-  }
-  VkMemoryAllocateInfo allocateInfo{VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
-  allocateInfo.allocationSize = requirements.size;
-  allocateInfo.memoryTypeIndex = memoryType;
-  if (memoryType == UINT32_MAX ||
-      dispatchTable->vkAllocateMemory(device, &allocateInfo, nullptr, &chunk.Memory) !=
-          VK_SUCCESS ||
-      dispatchTable->vkBindBufferMemory(device, chunk.Buffer, chunk.Memory, 0) != VK_SUCCESS) {
-    dispatchTable->vkDestroyBuffer(device, chunk.Buffer, nullptr);
-    if (chunk.Memory != VK_NULL_HANDLE) {
-      dispatchTable->vkFreeMemory(device, chunk.Memory, nullptr);
-    }
-    chunk = {};
-    return false;
-  }
-  m_ShadowBytes += requirements.size;
+  m_ShadowBytes += chunk.AllocationSize;
   return true;
 }
 
 bool UniformBufferRealignment::AllocateSlot(VkDevice device, VkDeviceSize size, Slot& slot) {
-  const VkDeviceSize minSlot = std::max(MIN_SLOT_SIZE, AlignUp(m_Alignment, MIN_SLOT_SIZE));
+  const VkDeviceSize minSlot =
+      std::max(MIN_SLOT_SIZE, portability::AlignUp(m_Alignment, MIN_SLOT_SIZE));
   uint32_t sizeClass = 0;
-  while (sizeClass < SIZE_CLASS_COUNT && (minSlot << sizeClass) < size) {
+  while ((minSlot << sizeClass) < size) {
     ++sizeClass;
   }
   slot.Size = size;
-  if (sizeClass == SIZE_CLASS_COUNT) {
-    // Large ranges get a dedicated chunk, kept for reuse once released.
-    Chunk chunk;
-    if (!CreateChunk(device, AlignUp(size, minSlot), chunk)) {
-      return false;
+  if (sizeClass >= SIZE_CLASS_COUNT) {
+    // Large ranges get a dedicated chunk of their size class, reused once released.
+    auto& freeChunks = m_FreeDedicatedChunks[sizeClass];
+    if (freeChunks.empty()) {
+      Chunk chunk;
+      if (!CreateChunk(device, minSlot << sizeClass, chunk)) {
+        return false;
+      }
+      freeChunks.push_back(static_cast<uint32_t>(m_DedicatedChunks.size()));
+      m_DedicatedChunks.push_back(chunk);
     }
-    slot.Buffer = chunk.Buffer;
+    slot.ChunkIndex = freeChunks.back();
+    freeChunks.pop_back();
+    slot.Buffer = m_DedicatedChunks[slot.ChunkIndex].Buffer;
     slot.Offset = 0;
-    slot.SizeClass = DEDICATED;
-    slot.ChunkIndex = static_cast<uint32_t>(m_DedicatedChunks.size());
-    m_DedicatedChunks.push_back(chunk);
+    slot.SizeClass = sizeClass;
     return true;
   }
   if (m_Chunks.size() < SIZE_CLASS_COUNT) {
@@ -536,8 +696,8 @@ void UniformBufferRealignment::FreeSlot(const Slot& slot) {
   if (slot.Buffer == VK_NULL_HANDLE) {
     return;
   }
-  if (slot.SizeClass == DEDICATED) {
-    // The chunk may still be read by work in flight; it is destroyed with the device.
+  if (slot.SizeClass >= SIZE_CLASS_COUNT) {
+    m_FreeDedicatedChunks[slot.SizeClass].push_back(slot.ChunkIndex);
     return;
   }
   m_FreeSlots[slot.SizeClass].push_back({slot.ChunkIndex, slot.Offset});
@@ -551,16 +711,22 @@ void UniformBufferRealignment::DestroyDevice(VkDevice device) {
              << m_RealignedCount << " realigned, " << m_CopySubmitCount
              << " submission(s) with copies, " << m_ShadowBytes << " bytes of copy memory.";
   }
+  for (const auto& [buffer, source] : m_SourceBuffers) {
+    VkDeviceLevelDispatchTable* dispatchTable =
+        m_DispatchTablesHolder.GetDeviceDispatchTable(source.Device);
+    if (source.Alias != VK_NULL_HANDLE && dispatchTable != nullptr) {
+      dispatchTable->vkDestroyBuffer(source.Device, source.Alias, nullptr);
+    }
+  }
+  auto destroyChunk = [&](Chunk& chunk) {
+    portability::DestroyDeviceLocalBuffer(m_DispatchTablesHolder, device, chunk);
+  };
+  for (auto& chunks : m_Chunks) {
+    std::for_each(chunks.begin(), chunks.end(), destroyChunk);
+  }
+  std::for_each(m_DedicatedChunks.begin(), m_DedicatedChunks.end(), destroyChunk);
   VkDeviceLevelDispatchTable* dispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
   if (dispatchTable != nullptr) {
-    auto destroyChunk = [&](const Chunk& chunk) {
-      dispatchTable->vkDestroyBuffer(device, chunk.Buffer, nullptr);
-      dispatchTable->vkFreeMemory(device, chunk.Memory, nullptr);
-    };
-    for (const auto& chunks : m_Chunks) {
-      std::for_each(chunks.begin(), chunks.end(), destroyChunk);
-    }
-    std::for_each(m_DedicatedChunks.begin(), m_DedicatedChunks.end(), destroyChunk);
     for (auto& [family, familyPool] : m_FamilyPools) {
       for (const PendingCopies& pending : familyPool.Pending) {
         dispatchTable->vkDestroyFence(device, pending.Fence, nullptr);
@@ -576,6 +742,7 @@ void UniformBufferRealignment::DestroyDevice(VkDevice device) {
   m_Chunks.clear();
   m_FreeSlots.clear();
   m_DedicatedChunks.clear();
+  m_FreeDedicatedChunks.clear();
   m_FamilyPools.clear();
   m_FreeFences.clear();
   m_Entries.clear();
@@ -583,7 +750,8 @@ void UniformBufferRealignment::DestroyDevice(VkDevice device) {
   m_PoolSets.clear();
   m_BoundSets.clear();
   m_Queues.clear();
-  m_BufferSizes.clear();
+  m_SourceBuffers.clear();
+  m_Memories.clear();
   m_MisalignedCount = 0;
   m_RealignedCount = 0;
   m_CopySubmitCount = 0;

@@ -9,6 +9,7 @@
 #include "accelerationStructureScratch.h"
 
 #include "log.h"
+#include "portabilityHelpers.h"
 
 #include <algorithm>
 
@@ -17,11 +18,10 @@ namespace vulkan {
 
 namespace {
 
-constexpr VkDeviceSize MIN_CHUNK_SIZE = 64ull * 1024 * 1024;
-
-VkDeviceSize AlignUp(VkDeviceSize value, VkDeviceSize alignment) {
-  return (value + alignment - 1) / alignment * alignment;
-}
+// Arenas start small and double their capacity with every chunk, up to steps of
+// MAX_CHUNK_GROWTH.
+constexpr VkDeviceSize MIN_CHUNK_SIZE = 1024ull * 1024;
+constexpr VkDeviceSize MAX_CHUNK_GROWTH = 64ull * 1024 * 1024;
 
 } // namespace
 
@@ -63,6 +63,14 @@ void AccelerationStructureScratch::ReplaceScratch(
       rangeInfos == nullptr) {
     return;
   }
+  if (portability::GetBufferDeviceAddressFunction(*dispatchTable) == nullptr) {
+    if (!m_MissingDeviceAddressReported) {
+      m_MissingDeviceAddressReported = true;
+      LOG_WARNING << "Portability: vkGetBufferDeviceAddress is not enabled, acceleration "
+                     "structure builds keep their recorded scratch.";
+    }
+    return;
+  }
 
   Arena& arena = m_Arenas[commandBuffer];
   arena.Device = device;
@@ -102,17 +110,25 @@ bool AccelerationStructureScratch::Allocate(VkDevice device,
                                             VkDeviceSize size,
                                             VkDeviceAddress& address) {
   for (Chunk& chunk : arena.Chunks) {
-    const VkDeviceSize offset = AlignUp(chunk.Used, m_Alignment);
+    const VkDeviceSize offset = portability::AlignUp(chunk.Used, m_Alignment);
     if (offset + size <= chunk.Size) {
       chunk.Used = offset + size;
       address = chunk.Address + offset;
       return true;
     }
   }
+  VkDeviceSize capacity = arena.Reserve;
+  for (const Chunk& chunk : arena.Chunks) {
+    capacity += chunk.Size;
+  }
+  const VkDeviceSize growth = std::clamp(capacity, MIN_CHUNK_SIZE, MAX_CHUNK_GROWTH);
   Chunk chunk;
-  if (!CreateChunk(device, std::max(MIN_CHUNK_SIZE, AlignUp(size, m_Alignment)), chunk)) {
+  if (!CreateChunk(device,
+                   portability::AlignUp(std::max({size, growth, arena.Reserve}), m_Alignment),
+                   chunk)) {
     return false;
   }
+  arena.Reserve = 0;
   chunk.Used = size;
   address = chunk.Address;
   arena.Chunks.push_back(chunk);
@@ -121,62 +137,27 @@ bool AccelerationStructureScratch::Allocate(VkDevice device,
 
 bool AccelerationStructureScratch::CreateChunk(VkDevice device, VkDeviceSize size, Chunk& chunk) {
   VkDeviceLevelDispatchTable* dispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
-  VkInstanceLevelDispatchTable* instanceDispatchTable =
-      m_DispatchTablesHolder.GetInstanceDispatchTable(m_PhysicalDevice);
-  if (dispatchTable == nullptr || instanceDispatchTable == nullptr) {
+  if (dispatchTable == nullptr) {
     return false;
   }
-  auto vkGetBufferDeviceAddressUnified = dispatchTable->vkGetBufferDeviceAddress
-                                             ? dispatchTable->vkGetBufferDeviceAddress
-                                             : dispatchTable->vkGetBufferDeviceAddressKHR;
-
-  VkBufferCreateInfo bufferInfo{};
-  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-  bufferInfo.size = size;
-  bufferInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  if (dispatchTable->vkCreateBuffer(device, &bufferInfo, nullptr, &chunk.Buffer) != VK_SUCCESS) {
+  auto vkGetBufferDeviceAddressUnified =
+      portability::GetBufferDeviceAddressFunction(*dispatchTable);
+  if (vkGetBufferDeviceAddressUnified == nullptr) {
     return false;
   }
-
-  VkMemoryRequirements requirements{};
-  dispatchTable->vkGetBufferMemoryRequirements(device, chunk.Buffer, &requirements);
-  VkPhysicalDeviceMemoryProperties memoryProperties{};
-  instanceDispatchTable->vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-  uint32_t memoryType = UINT32_MAX;
-  for (uint32_t t = 0; t < memoryProperties.memoryTypeCount && memoryType == UINT32_MAX; ++t) {
-    if ((requirements.memoryTypeBits & (1u << t)) &&
-        (memoryProperties.memoryTypes[t].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-      memoryType = t;
-    }
-  }
-
-  VkMemoryAllocateFlagsInfo flagsInfo{};
-  flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
-  flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
-  VkMemoryAllocateInfo allocateInfo{};
-  allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  allocateInfo.pNext = &flagsInfo;
-  allocateInfo.allocationSize = requirements.size;
-  allocateInfo.memoryTypeIndex = memoryType;
-  if (memoryType == UINT32_MAX ||
-      dispatchTable->vkAllocateMemory(device, &allocateInfo, nullptr, &chunk.Memory) !=
-          VK_SUCCESS ||
-      dispatchTable->vkBindBufferMemory(device, chunk.Buffer, chunk.Memory, 0) != VK_SUCCESS) {
+  if (!portability::CreateDeviceLocalBuffer(m_DispatchTablesHolder, m_PhysicalDevice, device, size,
+                                            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                                VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+                                            chunk.Buffer)) {
     LOG_WARNING << "Portability: allocating " << size
                 << " bytes of acceleration structure scratch memory failed, the build keeps its "
                    "recorded scratch.";
-    if (chunk.Memory != VK_NULL_HANDLE) {
-      dispatchTable->vkFreeMemory(device, chunk.Memory, nullptr);
-    }
-    dispatchTable->vkDestroyBuffer(device, chunk.Buffer, nullptr);
-    chunk = {};
     return false;
   }
 
   VkBufferDeviceAddressInfo addressInfo{};
   addressInfo.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
-  addressInfo.buffer = chunk.Buffer;
+  addressInfo.buffer = chunk.Buffer.Buffer;
   chunk.Address = vkGetBufferDeviceAddressUnified(device, &addressInfo);
   chunk.Size = size;
   m_TotalChunkSize += size;
@@ -186,13 +167,8 @@ bool AccelerationStructureScratch::CreateChunk(VkDevice device, VkDeviceSize siz
 }
 
 void AccelerationStructureScratch::Release(Arena& arena) {
-  VkDeviceLevelDispatchTable* dispatchTable =
-      m_DispatchTablesHolder.GetDeviceDispatchTable(arena.Device);
   for (Chunk& chunk : arena.Chunks) {
-    if (dispatchTable != nullptr) {
-      dispatchTable->vkDestroyBuffer(arena.Device, chunk.Buffer, nullptr);
-      dispatchTable->vkFreeMemory(arena.Device, chunk.Memory, nullptr);
-    }
+    portability::DestroyDeviceLocalBuffer(m_DispatchTablesHolder, arena.Device, chunk.Buffer);
     m_TotalChunkSize -= chunk.Size;
   }
   arena.Chunks.clear();
@@ -211,10 +187,20 @@ void AccelerationStructureScratch::AddCommandBuffers(VkCommandPool commandPool,
 void AccelerationStructureScratch::ResetCommandBuffer(VkCommandBuffer commandBuffer) {
   // The previous recording has completed execution, so its scratch regions can be reused.
   auto it = m_Arenas.find(commandBuffer);
-  if (it != m_Arenas.end()) {
-    for (Chunk& chunk : it->second.Chunks) {
-      chunk.Used = 0;
+  if (it == m_Arenas.end()) {
+    return;
+  }
+  Arena& arena = it->second;
+  if (arena.Chunks.size() > 1) {
+    // Replace the chunks the arena grew by with a single one of their total size.
+    for (const Chunk& chunk : arena.Chunks) {
+      arena.Reserve += chunk.Size;
     }
+    Release(arena);
+    return;
+  }
+  for (Chunk& chunk : arena.Chunks) {
+    chunk.Used = 0;
   }
 }
 

@@ -9,6 +9,7 @@
 #include "sparseBufferRelocation.h"
 
 #include "log.h"
+#include "portabilityHelpers.h"
 #include "vulkanHelpers.h"
 
 #include <algorithm>
@@ -21,16 +22,6 @@ namespace {
 
 // Granularity of the address range probes (sparse block size)
 constexpr VkDeviceSize PROBE_SIZE = 64ull * 1024;
-
-VkDeviceSize AlignUp(VkDeviceSize value, VkDeviceSize alignment) {
-  return (value + alignment - 1) / alignment * alignment;
-}
-
-// Device addresses are canonical, buffer opaque capture addresses may be zero-extended.
-VkDeviceAddress ToCanonicalAddress(uint64_t address) {
-  constexpr uint32_t SHIFT = 64 - 48;
-  return static_cast<uint64_t>(static_cast<int64_t>(address << SHIFT) >> SHIFT);
-}
 
 } // namespace
 
@@ -57,7 +48,8 @@ bool SparseBufferRelocation::PrepareBuffer(
     return false;
   }
 
-  const VkDeviceAddress recorded = ToCanonicalAddress(addressInfo->opaqueCaptureAddress);
+  const VkDeviceAddress recorded =
+      portability::ToCanonicalAddress(addressInfo->opaqueCaptureAddress);
   LOG_WARNING << "Portability: the recorded address range 0x" << std::hex << recorded << "-0x"
               << recorded + createInfo.size << std::dec
               << " of a sparse buffer is not available on the replay device, the buffer is "
@@ -78,9 +70,8 @@ void SparseBufferRelocation::AddBuffer(VkDevice device, VkBuffer buffer) {
   if (relocation.Size == 0 || buffer == VK_NULL_HANDLE || dispatchTable == nullptr) {
     return;
   }
-  auto vkGetBufferDeviceAddressUnified = dispatchTable->vkGetBufferDeviceAddress
-                                             ? dispatchTable->vkGetBufferDeviceAddress
-                                             : dispatchTable->vkGetBufferDeviceAddressKHR;
+  auto vkGetBufferDeviceAddressUnified =
+      portability::GetBufferDeviceAddressFunction(*dispatchTable);
   if (vkGetBufferDeviceAddressUnified == nullptr) {
     return;
   }
@@ -134,8 +125,8 @@ bool SparseBufferRelocation::IsRangeAvailable(VkDevice device,
                                               VkDeviceSize size) {
   // The driver's address space is contiguous, so the first and the last page tell
   // whether the whole range lies inside it.
-  const uint64_t last =
-      memoryCaptureAddress + AlignUp(std::max(size, PROBE_SIZE), PROBE_SIZE) - PROBE_SIZE;
+  const uint64_t last = memoryCaptureAddress +
+                        portability::AlignUp(std::max(size, PROBE_SIZE), PROBE_SIZE) - PROBE_SIZE;
   return IsAddressAvailable(device, memoryCaptureAddress) &&
          (last == memoryCaptureAddress || IsAddressAvailable(device, last));
 }
@@ -175,9 +166,7 @@ uint32_t SparseBufferRelocation::ProbeMemoryType(VkDevice device) {
   }
   m_ProbeMemoryTypeSelected = true;
   VkDeviceLevelDispatchTable* dispatchTable = m_DispatchTablesHolder.GetDeviceDispatchTable(device);
-  VkInstanceLevelDispatchTable* instanceDispatchTable =
-      m_DispatchTablesHolder.GetInstanceDispatchTable(m_PhysicalDevice);
-  if (dispatchTable == nullptr || instanceDispatchTable == nullptr) {
+  if (dispatchTable == nullptr) {
     return m_ProbeMemoryType;
   }
 
@@ -195,15 +184,8 @@ uint32_t SparseBufferRelocation::ProbeMemoryType(VkDevice device) {
   dispatchTable->vkGetBufferMemoryRequirements(device, buffer, &requirements);
   dispatchTable->vkDestroyBuffer(device, buffer, nullptr);
 
-  VkPhysicalDeviceMemoryProperties memoryProperties{};
-  instanceDispatchTable->vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &memoryProperties);
-  for (uint32_t t = 0; t < memoryProperties.memoryTypeCount; ++t) {
-    if ((requirements.memoryTypeBits & (1u << t)) &&
-        (memoryProperties.memoryTypes[t].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
-      m_ProbeMemoryType = t;
-      break;
-    }
-  }
+  m_ProbeMemoryType = portability::FindDeviceLocalMemoryType(
+      m_DispatchTablesHolder, m_PhysicalDevice, requirements.memoryTypeBits);
   if (m_ProbeMemoryType == UINT32_MAX) {
     LOG_WARNING << "Portability: no memory type to test sparse buffer address ranges with, "
                    "sparse buffers keep their recorded addresses.";

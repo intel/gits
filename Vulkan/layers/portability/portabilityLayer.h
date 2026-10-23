@@ -77,16 +77,24 @@ public:
   void Pre(vkCmdTraceRaysKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
 
-  // Realign uniform buffer descriptors (vkBeginCommandBuffer and vkFreeCommandBuffers are
-  // hooked above).
+  // Realign uniform buffer descriptors (vkAllocateMemory, vkCreateBuffer,
+  // vkDestroyBuffer, vkBeginCommandBuffer and vkFreeCommandBuffers are hooked above).
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
+  void Pre(vkFreeMemoryCommand& command) override;
+  void Post(vkBindBufferMemoryCommand& command) override;
+  void Post(vkBindBufferMemory2Command& command) override;
+  void Post(vkBindBufferMemory2KHRCommand& command) override;
   void Post(vkAllocateDescriptorSetsCommand& command) override;
   void Pre(vkFreeDescriptorSetsCommand& command) override;
   void Pre(vkResetDescriptorPoolCommand& command) override;
   void Pre(vkDestroyDescriptorPoolCommand& command) override;
   void Pre(vkUpdateDescriptorSetsCommand& command) override;
+  void Post(vkUpdateDescriptorSetsCommand& command) override;
   void Pre(vkCmdBindDescriptorSetsCommand& command) override;
+  void Pre(vkCmdBindDescriptorSets2Command& command) override;
+  void Pre(vkCmdBindDescriptorSets2KHRCommand& command) override;
+  void Pre(vkCmdExecuteCommandsCommand& command) override;
   void Pre(vkQueueSubmitCommand& command) override;
   void Post(vkQueueSubmitCommand& command) override;
   void Pre(vkQueueSubmit2Command& command) override;
@@ -145,6 +153,7 @@ private:
   AccelerationStructureScratch m_Scratch;
   bool m_RelocateSparseBuffers;
   SparseBufferRelocation m_SparseBuffers;
+  bool m_RealignUniformBuffers;
   UniformBufferRealignment m_UniformBuffers;
   // Device owning the command buffers (single device assumption)
   VkDevice m_ActiveScratchDevice{VK_NULL_HANDLE};
@@ -155,7 +164,7 @@ private:
   uint64_t m_ConvertedAddressCount{0};
 
   // Address passed to the driver by the vkAllocateMemory call in flight on this
-  // thread, zero when the call was not converted.
+  // thread, zero when the call has no opaque capture address.
   struct ConvertedAddress {
     uint64_t Recorded{0};
     uint64_t Replayed{0};
