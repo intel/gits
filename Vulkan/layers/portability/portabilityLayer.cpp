@@ -135,6 +135,7 @@ PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
       m_Scratch(dispatchTablesHolder),
       m_RelocateSparseBuffers(Configurator::Get().vulkan.player.portability.relocateSparseBuffers),
       m_SparseBuffers(dispatchTablesHolder),
+      m_UniformBuffers(dispatchTablesHolder),
       m_RequestedAddressForm(
           Configurator::Get().vulkan.player.portability.captureReplayAddressForm) {
   if (m_ReplaceScratch && Configurator::Get().common.player.subcapture.enabled) {
@@ -148,6 +149,13 @@ PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
     LOG_WARNING << "Portability: sparse buffer relocation is disabled during subcapture.";
     m_RelocateSparseBuffers = false;
   }
+  bool realignUniformBuffers = Configurator::Get().vulkan.player.portability.realignUniformBuffers;
+  if (realignUniformBuffers && Configurator::Get().common.player.subcapture.enabled) {
+    // A subcapture would record the descriptors pointing to the GITS-owned copies.
+    LOG_WARNING << "Portability: uniform buffer realignment is disabled during subcapture.";
+    realignUniformBuffers = false;
+  }
+  m_UniformBuffers.SetEnabled(realignUniformBuffers);
 }
 
 // --- Building the remap from the queue family property queries ---------------
@@ -263,6 +271,7 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
   if (m_RelocateSparseBuffers) {
     m_SparseBuffers.SetPhysicalDevice(command.m_physicalDevice.Value);
   }
+  m_UniformBuffers.SetPhysicalDevice(command.m_physicalDevice.Value);
 
   auto it = m_Families.find(command.m_physicalDevice.Value);
   if (it == m_Families.end() || !it->second.built) {
@@ -423,10 +432,11 @@ void PortabilityLayer::Post(vkAllocateCommandBuffersCommand& command) {
 }
 
 void PortabilityLayer::Pre(vkBeginCommandBufferCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.BeginCommandBuffer(command.m_commandBuffer.Value);
   if (!m_ReplaceScratch) {
     return;
   }
-  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Scratch.ResetCommandBuffer(command.m_commandBuffer.Value);
 }
 
@@ -447,10 +457,12 @@ void PortabilityLayer::Pre(vkResetCommandPoolCommand& command) {
 }
 
 void PortabilityLayer::Pre(vkFreeCommandBuffersCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.FreeCommandBuffers(command.m_pCommandBuffers.Value,
+                                      command.m_commandBufferCount.Value);
   if (!m_ReplaceScratch) {
     return;
   }
-  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Scratch.FreeCommandBuffers(command.m_commandPool.Value, command.m_pCommandBuffers.Value,
                                command.m_commandBufferCount.Value);
 }
@@ -465,6 +477,7 @@ void PortabilityLayer::Pre(vkDestroyCommandPoolCommand& command) {
 
 void PortabilityLayer::Pre(vkDestroyDeviceCommand& command) {
   std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.DestroyDevice(command.m_device.Value);
   if (m_RelocateSparseBuffers) {
     m_SparseBuffers.DestroyDevice();
   }
@@ -476,10 +489,14 @@ void PortabilityLayer::Pre(vkDestroyDeviceCommand& command) {
 // --- Relocating sparse buffers -------------------------------------------------
 
 void PortabilityLayer::Post(vkCreateBufferCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pBuffer.Value &&
+      command.m_pCreateInfo.Value) {
+    m_UniformBuffers.AddBuffer(*command.m_pBuffer.Value, *command.m_pCreateInfo.Value);
+  }
   if (!m_RelocateSparseBuffers) {
     return;
   }
-  std::lock_guard<std::mutex> lock(m_Mutex);
   m_SparseBuffers.AddBuffer(command.m_device.Value,
                             command.m_Return.Value == VK_SUCCESS && command.m_pBuffer.Value
                                 ? *command.m_pBuffer.Value
@@ -487,11 +504,11 @@ void PortabilityLayer::Post(vkCreateBufferCommand& command) {
 }
 
 void PortabilityLayer::Pre(vkDestroyBufferCommand& command) {
-  if (!m_RelocateSparseBuffers) {
-    return;
-  }
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_SparseBuffers.RemoveBuffer(command.m_buffer.Value);
+  m_UniformBuffers.RemoveBuffer(command.m_buffer.Value);
+  if (m_RelocateSparseBuffers) {
+    m_SparseBuffers.RemoveBuffer(command.m_buffer.Value);
+  }
 }
 
 void PortabilityLayer::Pre(vkCmdTraceRaysKHRCommand& command) {
@@ -514,6 +531,100 @@ void PortabilityLayer::Pre(vkCmdTraceRaysIndirectKHRCommand& command) {
   m_SparseBuffers.TranslateRegion(command.m_pMissShaderBindingTable.Value);
   m_SparseBuffers.TranslateRegion(command.m_pHitShaderBindingTable.Value);
   m_SparseBuffers.TranslateRegion(command.m_pCallableShaderBindingTable.Value);
+}
+
+// --- Realigning uniform buffer descriptors ----------------------------------
+
+void PortabilityLayer::Post(vkGetDeviceQueueCommand& command) {
+  if (command.m_pQueue.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.AddQueue(command.m_device.Value, command.m_queueFamilyIndex.Value,
+                            *command.m_pQueue.Value);
+}
+
+void PortabilityLayer::Post(vkGetDeviceQueue2Command& command) {
+  if (command.m_pQueue.Value == nullptr || command.m_pQueueInfo.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.AddQueue(command.m_device.Value, command.m_pQueueInfo.Value->queueFamilyIndex,
+                            *command.m_pQueue.Value);
+}
+
+void PortabilityLayer::Post(vkAllocateDescriptorSetsCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pAllocateInfo.Value == nullptr ||
+      command.m_pDescriptorSets.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.AddDescriptorSets(command.m_pAllocateInfo.Value->descriptorPool,
+                                     command.m_pDescriptorSets.Value,
+                                     command.m_pAllocateInfo.Value->descriptorSetCount);
+}
+
+void PortabilityLayer::Pre(vkFreeDescriptorSetsCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.FreeDescriptorSets(command.m_pDescriptorSets.Value,
+                                      command.m_descriptorSetCount.Value);
+}
+
+void PortabilityLayer::Pre(vkResetDescriptorPoolCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.ResetDescriptorPool(command.m_descriptorPool.Value);
+}
+
+void PortabilityLayer::Pre(vkDestroyDescriptorPoolCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.ResetDescriptorPool(command.m_descriptorPool.Value);
+}
+
+void PortabilityLayer::Pre(vkUpdateDescriptorSetsCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.UpdateDescriptorSets(command.m_device.Value,
+                                        command.m_descriptorWriteCount.Value,
+                                        command.m_pDescriptorWrites.Value, command.m_Key);
+}
+
+void PortabilityLayer::Pre(vkCmdBindDescriptorSetsCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.BindDescriptorSets(command.m_commandBuffer.Value,
+                                      command.m_pDescriptorSets.Value,
+                                      command.m_descriptorSetCount.Value);
+}
+
+void PortabilityLayer::Pre(vkQueueSubmitCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.PrepareSubmit(command.m_queue.Value, command.m_submitCount.Value,
+                                 const_cast<VkSubmitInfo*>(command.m_pSubmits.Value));
+}
+
+void PortabilityLayer::Post(vkQueueSubmitCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.FinishSubmit(command.m_queue.Value);
+}
+
+void PortabilityLayer::Pre(vkQueueSubmit2Command& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.PrepareSubmit2(command.m_queue.Value, command.m_submitCount.Value,
+                                  const_cast<VkSubmitInfo2*>(command.m_pSubmits.Value));
+}
+
+void PortabilityLayer::Post(vkQueueSubmit2Command& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.FinishSubmit(command.m_queue.Value);
+}
+
+void PortabilityLayer::Pre(vkQueueSubmit2KHRCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.PrepareSubmit2(command.m_queue.Value, command.m_submitCount.Value,
+                                  const_cast<VkSubmitInfo2*>(command.m_pSubmits.Value));
+}
+
+void PortabilityLayer::Post(vkQueueSubmit2KHRCommand& command) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_UniformBuffers.FinishSubmit(command.m_queue.Value);
 }
 
 // --- Converting memory opaque capture addresses ------------------------------
@@ -704,6 +815,9 @@ void PortabilityLayer::Pre(vkCreateCommandPoolCommand& command) {
 
 void PortabilityLayer::Pre(vkCreateBufferCommand& command) {
   VkBufferCreateInfo* info = command.m_pCreateInfo.Value;
+  if (info != nullptr) {
+    m_UniformBuffers.PrepareBufferCreateInfo(*info);
+  }
   if (m_RelocateSparseBuffers && info != nullptr) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_SparseBuffers.PrepareBuffer(command.m_device.Value, *info, [this](uint64_t address) {

@@ -11,6 +11,7 @@
 #include "layerAuto.h"
 #include "accelerationStructureScratch.h"
 #include "sparseBufferRelocation.h"
+#include "uniformBufferRealignment.h"
 #include "dispatchTablesHolder.h"
 #include "enumsAuto.h"
 
@@ -36,6 +37,9 @@ namespace vulkan {
 //
 // Sparse buffers whose recorded address range isn't available on the replay device
 // are created at another address (see SparseBufferRelocation).
+//
+// Uniform buffer descriptors with offsets the replay device doesn't accept are
+// reported and can read from aligned copies (see UniformBufferRealignment).
 //
 // Assumption: a single physical+logical device.
 class PortabilityLayer : public Layer {
@@ -72,6 +76,23 @@ public:
   void Pre(vkDestroyBufferCommand& command) override;
   void Pre(vkCmdTraceRaysKHRCommand& command) override;
   void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
+
+  // Realign uniform buffer descriptors (vkBeginCommandBuffer and vkFreeCommandBuffers are
+  // hooked above).
+  void Post(vkGetDeviceQueueCommand& command) override;
+  void Post(vkGetDeviceQueue2Command& command) override;
+  void Post(vkAllocateDescriptorSetsCommand& command) override;
+  void Pre(vkFreeDescriptorSetsCommand& command) override;
+  void Pre(vkResetDescriptorPoolCommand& command) override;
+  void Pre(vkDestroyDescriptorPoolCommand& command) override;
+  void Pre(vkUpdateDescriptorSetsCommand& command) override;
+  void Pre(vkCmdBindDescriptorSetsCommand& command) override;
+  void Pre(vkQueueSubmitCommand& command) override;
+  void Post(vkQueueSubmitCommand& command) override;
+  void Pre(vkQueueSubmit2Command& command) override;
+  void Post(vkQueueSubmit2Command& command) override;
+  void Pre(vkQueueSubmit2KHRCommand& command) override;
+  void Post(vkQueueSubmit2KHRCommand& command) override;
 
   // Apply the remap.
   void Pre(vkGetDeviceQueueCommand& command) override;
@@ -124,6 +145,7 @@ private:
   AccelerationStructureScratch m_Scratch;
   bool m_RelocateSparseBuffers;
   SparseBufferRelocation m_SparseBuffers;
+  UniformBufferRealignment m_UniformBuffers;
   // Device owning the command buffers (single device assumption)
   VkDevice m_ActiveScratchDevice{VK_NULL_HANDLE};
   const VulkanCaptureReplayAddressForm m_RequestedAddressForm;

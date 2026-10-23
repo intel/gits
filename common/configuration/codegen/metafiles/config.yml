@@ -1910,6 +1910,16 @@ Configuration:
                   them. Without it, such a buffer fails to be created or, on drivers
                   that don't report the failure, aliases other memory. Disabled during
                   subcapture.
+              - Name: realignUniformBuffers
+                Type: bool
+                Default: false
+                Arguments: [vkRealignUniformBuffers]
+                Description:
+                  Make uniform buffer descriptors whose offset is not a multiple of the
+                  replay device's minUniformBufferOffsetAlignment read from aligned
+                  copies, refreshed by a copy at the start of every queue submission
+                  that binds them. Such offsets are always reported; drivers may read
+                  wrong data or hang on them (Mesa ANV). Disabled during subcapture.
               - Name: captureReplayAddressForm
                 Type: VulkanCaptureReplayAddressForm
                 Default: Auto

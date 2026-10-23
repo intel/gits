@@ -16,6 +16,8 @@ set(PORTABILITY_SRC
   ${SRC_DIR}/portabilityLayer.cpp
   ${SRC_DIR}/sparseBufferRelocation.h
   ${SRC_DIR}/sparseBufferRelocation.cpp
+  ${SRC_DIR}/uniformBufferRealignment.h
+  ${SRC_DIR}/uniformBufferRealignment.cpp
 )
 source_group("" FILES ${PORTABILITY_SRC})
 

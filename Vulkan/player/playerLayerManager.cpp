@@ -42,7 +42,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   const auto& portabilityCfg = Configurator::Get().vulkan.player.portability;
   if (execute &&
       (portabilityCfg.remapQueueFamilies || portabilityCfg.replaceAccelerationStructureScratch ||
-       portabilityCfg.relocateSparseBuffers ||
+       portabilityCfg.relocateSparseBuffers || portabilityCfg.realignUniformBuffers ||
        portabilityCfg.captureReplayAddressForm != VulkanCaptureReplayAddressForm::KEEP)) {
     portabilityLayer = std::make_unique<PortabilityLayer>(playerManager.GetDispatchTablesHolder());
   }
