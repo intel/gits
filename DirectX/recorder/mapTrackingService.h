@@ -22,7 +22,7 @@ namespace DirectX {
 
 class MapTrackingService {
 public:
-  MapTrackingService(stream::OrderingRecorder& recorder);
+  MapTrackingService(stream::OrderingRecorder* recorder);
 
   void EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
   void MapResource(ObjectKey resourceKey,
@@ -57,7 +57,7 @@ private:
   size_t m_PageSize{0};
   std::mutex m_Mutex;
 
-  stream::OrderingRecorder& m_Recorder;
+  stream::OrderingRecorder* m_Recorder{};
 
 private:
   bool IsUploadHeap(D3D12_HEAP_TYPE heapType, D3D12_CPU_PAGE_PROPERTY cpuPageProperty);

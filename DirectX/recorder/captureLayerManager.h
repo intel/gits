@@ -28,7 +28,7 @@ class CaptureManager;
 class CaptureLayerManager {
 public:
   void LoadLayers(CaptureManager& captureManager,
-                  stream::OrderingRecorder& gitsRecorder,
+                  stream::OrderingRecorder* gitsRecorder,
                   GpuAddressService& gpuAddressService,
                   PluginService& pluginService);
 

@@ -21,7 +21,7 @@ namespace DirectX {
 
 class FenceService {
 public:
-  FenceService(stream::OrderingRecorder& recorder);
+  FenceService(stream::OrderingRecorder* recorder);
   void SetEventOnCompletion(ID3D12Fence* fence, ObjectKey fenceKey, UINT64 value, HANDLE event);
   void WaitSignaled(HANDLE handle);
   void WaitSignaled(DWORD count, const HANDLE* handles);
@@ -43,7 +43,7 @@ private:
   std::unordered_set<ObjectKey> m_Fences;
 
   std::mutex m_Mutex;
-  stream::OrderingRecorder& m_Recorder;
+  stream::OrderingRecorder* m_Recorder{};
 
   std::mutex m_GlobalMutex;
 };

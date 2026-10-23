@@ -112,13 +112,15 @@ CaptureManager::CaptureManager() {
   m_D3D12DispatchTableWrapper.D3D12SerializeVersionedRootSignature =
       D3D12SerializeVersionedRootSignatureWrapper;
 
-  m_Recorder.reset(new stream::OrderingRecorder());
+  if (Configurator::Get().common.recorder.enabled) {
+    m_Recorder.reset(new stream::OrderingRecorder());
+  }
 
-  m_MapTrackingService.reset(new MapTrackingService(*m_Recorder));
-  m_FenceService.reset(new FenceService(*m_Recorder));
+  m_MapTrackingService.reset(new MapTrackingService(m_Recorder.get()));
+  m_FenceService.reset(new FenceService(m_Recorder.get()));
 
   m_PluginService.LoadPlugins();
-  m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_GpuAddressService, m_PluginService);
+  m_LayerManager.LoadLayers(*this, m_Recorder.get(), m_GpuAddressService, m_PluginService);
 }
 
 void CaptureManager::InterceptDirectMLFunctions() {

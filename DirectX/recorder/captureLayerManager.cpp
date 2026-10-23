@@ -24,7 +24,7 @@ namespace gits {
 namespace DirectX {
 
 void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
-                                     stream::OrderingRecorder& gitsRecorder,
+                                     stream::OrderingRecorder* gitsRecorder,
                                      GpuAddressService& gpuAddressService,
                                      PluginService& pluginService) {
   auto& cfg = Configurator::Get();
@@ -64,16 +64,16 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   if (cfg.common.recorder.enabled) {
     captureCustomizationLayer =
-        std::make_unique<CaptureCustomizationLayer>(captureManager, gitsRecorder);
+        std::make_unique<CaptureCustomizationLayer>(captureManager, *gitsRecorder);
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(captureManager);
-    encoderLayer = std::make_unique<EncoderLayer>(gitsRecorder);
+    encoderLayer = std::make_unique<EncoderLayer>(*gitsRecorder);
     gpuPatchLayer = std::make_unique<CaptureGpuPatchLayer>(gpuAddressService);
     portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
     addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningStore");
     if (!addressPinningLayer) {
       addressPinningLayer = m_AddressPinningLayerGroup.GetLayer("AddressPinningUse");
     }
-    dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(captureManager, gitsRecorder);
+    dllOverrideStoreLayer = std::make_unique<DllOverrideStoreLayer>(captureManager, *gitsRecorder);
   }
 
   if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {

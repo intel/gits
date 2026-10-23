@@ -13,12 +13,15 @@
 #include "commandsAuto.h"
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
+#include "configurator.h"
 #include "log.h"
 
 namespace gits {
 namespace DirectX {
 
-FenceService::FenceService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {}
+FenceService::FenceService(stream::OrderingRecorder* recorder) : m_Recorder(recorder) {
+  GITS_ASSERT(m_Recorder || !Configurator::Get().common.recorder.enabled);
+}
 
 void FenceService::SetEventOnCompletion(ID3D12Fence* fence,
                                         ObjectKey fenceKey,
@@ -101,7 +104,9 @@ void FenceService::WaitSignaled(HANDLE handle) {
     command.m_fence.Key = fenceInfos[i].FenceKey;
     command.m_Value.Value = fenceInfos[i].Fence->GetCompletedValue();
 
-    m_Recorder.Record(command.Key, new WaitForFenceSignaledSerializer(command));
+    if (m_Recorder) {
+      m_Recorder->Record(command.Key, new WaitForFenceSignaledSerializer(command));
+    }
   }
 }
 
@@ -164,7 +169,9 @@ void FenceService::WaitSignaled(DWORD count, const HANDLE* handles) {
     command.m_fence.Key = fenceInfos[i].FenceKey;
     command.m_Value.Value = fenceInfos[i].Fence->GetCompletedValue();
 
-    m_Recorder.Record(command.Key, new WaitForFenceSignaledSerializer(command));
+    if (m_Recorder) {
+      m_Recorder->Record(command.Key, new WaitForFenceSignaledSerializer(command));
+    }
   }
 }
 

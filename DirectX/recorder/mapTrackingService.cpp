@@ -20,7 +20,8 @@
 namespace gits {
 namespace DirectX {
 
-MapTrackingService::MapTrackingService(stream::OrderingRecorder& recorder) : m_Recorder(recorder) {
+MapTrackingService::MapTrackingService(stream::OrderingRecorder* recorder) : m_Recorder(recorder) {
+  GITS_ASSERT(m_Recorder || !Configurator::Get().common.recorder.enabled);
   SYSTEM_INFO sSysInfo;
   GetSystemInfo(&sSysInfo);
   m_PageSize = sSysInfo.dwPageSize;
@@ -204,7 +205,9 @@ void MapTrackingService::CaptureData(
   command.m_data.Value = data;
   command.m_data.Size = dataSize;
 
-  m_Recorder.Record(command.Key, new MappedDataMetaSerializer(command));
+  if (m_Recorder) {
+    m_Recorder->Record(command.Key, new MappedDataMetaSerializer(command));
+  }
 }
 
 size_t MapTrackingService::GetSubresourceSize(ID3D12Resource* resource, unsigned subresource) {
