@@ -133,6 +133,8 @@ PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
       m_ReplaceScratch(
           Configurator::Get().vulkan.player.portability.replaceAccelerationStructureScratch),
       m_Scratch(dispatchTablesHolder),
+      m_RelocateSparseBuffers(Configurator::Get().vulkan.player.portability.relocateSparseBuffers),
+      m_SparseBuffers(dispatchTablesHolder),
       m_RequestedAddressForm(
           Configurator::Get().vulkan.player.portability.captureReplayAddressForm) {
   if (m_ReplaceScratch && Configurator::Get().common.player.subcapture.enabled) {
@@ -140,6 +142,11 @@ PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
     LOG_WARNING << "Portability: acceleration structure scratch replacement is disabled during "
                    "subcapture.";
     m_ReplaceScratch = false;
+  }
+  if (m_RelocateSparseBuffers && Configurator::Get().common.player.subcapture.enabled) {
+    // A subcapture would record the relocated buffer without its recorded address.
+    LOG_WARNING << "Portability: sparse buffer relocation is disabled during subcapture.";
+    m_RelocateSparseBuffers = false;
   }
 }
 
@@ -252,6 +259,9 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
   m_AddressForm = SelectAddressForm(command.m_physicalDevice.Value);
   if (m_ReplaceScratch) {
     m_Scratch.SetPhysicalDevice(command.m_physicalDevice.Value);
+  }
+  if (m_RelocateSparseBuffers) {
+    m_SparseBuffers.SetPhysicalDevice(command.m_physicalDevice.Value);
   }
 
   auto it = m_Families.find(command.m_physicalDevice.Value);
@@ -454,11 +464,56 @@ void PortabilityLayer::Pre(vkDestroyCommandPoolCommand& command) {
 }
 
 void PortabilityLayer::Pre(vkDestroyDeviceCommand& command) {
-  if (!m_ReplaceScratch) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_RelocateSparseBuffers) {
+    m_SparseBuffers.DestroyDevice();
+  }
+  if (m_ReplaceScratch) {
+    m_Scratch.DestroyDevice(command.m_device.Value);
+  }
+}
+
+// --- Relocating sparse buffers -------------------------------------------------
+
+void PortabilityLayer::Post(vkCreateBufferCommand& command) {
+  if (!m_RelocateSparseBuffers) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_Scratch.DestroyDevice(command.m_device.Value);
+  m_SparseBuffers.AddBuffer(command.m_device.Value,
+                            command.m_Return.Value == VK_SUCCESS && command.m_pBuffer.Value
+                                ? *command.m_pBuffer.Value
+                                : VK_NULL_HANDLE);
+}
+
+void PortabilityLayer::Pre(vkDestroyBufferCommand& command) {
+  if (!m_RelocateSparseBuffers) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_SparseBuffers.RemoveBuffer(command.m_buffer.Value);
+}
+
+void PortabilityLayer::Pre(vkCmdTraceRaysKHRCommand& command) {
+  if (!m_RelocateSparseBuffers) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_SparseBuffers.TranslateRegion(command.m_pRaygenShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pMissShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pHitShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pCallableShaderBindingTable.Value);
+}
+
+void PortabilityLayer::Pre(vkCmdTraceRaysIndirectKHRCommand& command) {
+  if (!m_RelocateSparseBuffers) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_SparseBuffers.TranslateRegion(command.m_pRaygenShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pMissShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pHitShaderBindingTable.Value);
+  m_SparseBuffers.TranslateRegion(command.m_pCallableShaderBindingTable.Value);
 }
 
 // --- Converting memory opaque capture addresses ------------------------------
@@ -649,6 +704,12 @@ void PortabilityLayer::Pre(vkCreateCommandPoolCommand& command) {
 
 void PortabilityLayer::Pre(vkCreateBufferCommand& command) {
   VkBufferCreateInfo* info = command.m_pCreateInfo.Value;
+  if (m_RelocateSparseBuffers && info != nullptr) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_SparseBuffers.PrepareBuffer(command.m_device.Value, *info, [this](uint64_t address) {
+      return ConvertAddress(address, m_AddressForm);
+    });
+  }
   if (!m_Active || info == nullptr || info->sharingMode != VK_SHARING_MODE_CONCURRENT) {
     return;
   }

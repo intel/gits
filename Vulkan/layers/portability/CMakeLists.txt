@@ -14,6 +14,8 @@ set(PORTABILITY_SRC
   ${SRC_DIR}/accelerationStructureScratch.cpp
   ${SRC_DIR}/portabilityLayer.h
   ${SRC_DIR}/portabilityLayer.cpp
+  ${SRC_DIR}/sparseBufferRelocation.h
+  ${SRC_DIR}/sparseBufferRelocation.cpp
 )
 source_group("" FILES ${PORTABILITY_SRC})
 

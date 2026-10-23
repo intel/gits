@@ -10,6 +10,7 @@
 
 #include "layerAuto.h"
 #include "accelerationStructureScratch.h"
+#include "sparseBufferRelocation.h"
 #include "dispatchTablesHolder.h"
 #include "enumsAuto.h"
 
@@ -32,6 +33,9 @@ namespace vulkan {
 //
 // Acceleration structure builds can get scratch memory sized for the replay driver
 // (see AccelerationStructureScratch).
+//
+// Sparse buffers whose recorded address range isn't available on the replay device
+// are created at another address (see SparseBufferRelocation).
 //
 // Assumption: a single physical+logical device.
 class PortabilityLayer : public Layer {
@@ -62,6 +66,12 @@ public:
   void Pre(vkFreeCommandBuffersCommand& command) override;
   void Pre(vkDestroyCommandPoolCommand& command) override;
   void Pre(vkDestroyDeviceCommand& command) override;
+
+  // Relocate sparse buffers whose recorded address range isn't available.
+  void Post(vkCreateBufferCommand& command) override;
+  void Pre(vkDestroyBufferCommand& command) override;
+  void Pre(vkCmdTraceRaysKHRCommand& command) override;
+  void Pre(vkCmdTraceRaysIndirectKHRCommand& command) override;
 
   // Apply the remap.
   void Pre(vkGetDeviceQueueCommand& command) override;
@@ -112,6 +122,8 @@ private:
   const bool m_RemapQueueFamilies;
   bool m_ReplaceScratch;
   AccelerationStructureScratch m_Scratch;
+  bool m_RelocateSparseBuffers;
+  SparseBufferRelocation m_SparseBuffers;
   // Device owning the command buffers (single device assumption)
   VkDevice m_ActiveScratchDevice{VK_NULL_HANDLE};
   const VulkanCaptureReplayAddressForm m_RequestedAddressForm;

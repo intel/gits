@@ -1899,6 +1899,17 @@ Configuration:
                   Give acceleration structure builds scratch memory sized by the replay
                   driver instead of the recorded scratch regions, which were sized for
                   the recording driver. Disabled during subcapture.
+              - Name: relocateSparseBuffers
+                Type: bool
+                Default: false
+                Arguments: [vkRelocateSparseBuffers]
+                Description:
+                  Create sparse buffers whose recorded GPU virtual address range is not
+                  available on the replay device at another address, and translate the
+                  shader binding table addresses of ray tracing commands that point into
+                  them. Without it, such a buffer fails to be created or, on drivers
+                  that don't report the failure, aliases other memory. Disabled during
+                  subcapture.
               - Name: captureReplayAddressForm
                 Type: VulkanCaptureReplayAddressForm
                 Default: Auto
