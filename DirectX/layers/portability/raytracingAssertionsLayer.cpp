@@ -20,9 +20,7 @@
 namespace gits {
 namespace DirectX {
 
-RaytracingAssertionsLayer::RaytracingAssertionsLayer() : Layer("RaytracingAssertions") {
-  m_AddressService.EnablePlayerAddressLookup();
-}
+RaytracingAssertionsLayer::RaytracingAssertionsLayer() : Layer("RaytracingAssertions") {}
 
 RaytracingAssertionsLayer::~RaytracingAssertionsLayer() {
   ProcessReadyEvents(true);
@@ -43,10 +41,10 @@ void RaytracingAssertionsLayer::Pre(
   operation.Key = c.Key;
   operation.RecordedDestination = ResourceLocation{c.m_pDesc.DestAccelerationStructureKey,
                                                    c.m_pDesc.DestAccelerationStructureOffset};
-  operation.DestinationReplayAddress = GetReplayAddress(c.m_pDesc.DestAccelerationStructureKey,
-                                                        c.m_pDesc.DestAccelerationStructureOffset);
+  operation.DestinationLocation = GetHeapLocation(c.m_pDesc.DestAccelerationStructureKey,
+                                                  c.m_pDesc.DestAccelerationStructureOffset);
   if (update) {
-    operation.SourceReplayAddresses.push_back(GetReplayAddress(
+    operation.SourceLocations.push_back(GetHeapLocation(
         c.m_pDesc.SourceAccelerationStructureKey, c.m_pDesc.SourceAccelerationStructureOffset));
   }
   if (desc.Inputs.Type == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL &&
@@ -93,8 +91,8 @@ void RaytracingAssertionsLayer::Pre(
           ++inputIndex;
           GITS_ASSERT(inputIndex < c.m_pDesc.InputKeys.size(),
                       "RaytracingAssertionsLayer: missing OMM array input key");
-          operation.OmmArrayReplayAddresses.push_back(GetReplayAddress(
-              c.m_pDesc.InputKeys[inputIndex], c.m_pDesc.InputOffsets[inputIndex]));
+          operation.OmmArrayLocations.push_back(
+              GetHeapLocation(c.m_pDesc.InputKeys[inputIndex], c.m_pDesc.InputOffsets[inputIndex]));
           ++inputIndex;
         }
       }
@@ -167,15 +165,15 @@ void RaytracingAssertionsLayer::Pre(
     const UINT64 size = m_Resources.at(sourceKey)->GetDesc().Width - sourceOffset;
     operation.SerializedHeader = StageReadback(c.m_Object.Value, sourceKey, sourceOffset, size);
   } else {
-    operation.SourceReplayAddresses.push_back(GetReplayAddress(sourceKey, sourceOffset));
+    operation.SourceLocations.push_back(GetHeapLocation(sourceKey, sourceOffset));
   }
   if (mode == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE ||
       mode == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT ||
       mode == D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE) {
     operation.RecordedDestination = ResourceLocation{c.m_DestAccelerationStructureData.InterfaceKey,
                                                      c.m_DestAccelerationStructureData.Offset};
-    operation.DestinationReplayAddress = GetReplayAddress(
-        c.m_DestAccelerationStructureData.InterfaceKey, c.m_DestAccelerationStructureData.Offset);
+    operation.DestinationLocation = GetHeapLocation(c.m_DestAccelerationStructureData.InterfaceKey,
+                                                    c.m_DestAccelerationStructureData.Offset);
     operation.InheritInputs = mode != D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_DESERIALIZE;
     operation.PostbuildSizeQuery = CreateSizeQuery();
   }
@@ -210,9 +208,9 @@ void RaytracingAssertionsLayer::Pre(
   Operation operation;
   operation.Key = c.Key;
   for (UINT i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
-    operation.SourceReplayAddresses.push_back(
-        GetReplayAddress(c.m_pSourceAccelerationStructureData.InterfaceKeys[i],
-                         c.m_pSourceAccelerationStructureData.Offsets[i]));
+    operation.SourceLocations.push_back(
+        GetHeapLocation(c.m_pSourceAccelerationStructureData.InterfaceKeys[i],
+                        c.m_pSourceAccelerationStructureData.Offsets[i]));
   }
   m_RecordedOperations[c.m_Object.Key].push_back(std::move(operation));
 }
@@ -354,8 +352,7 @@ void RaytracingAssertionsLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
       !c.m_pDesc.Value) {
     return;
   }
-  StoreHeapReplayBounds(c.m_ppvHeap.Key, static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value),
-                        c.m_pDesc.Value->SizeInBytes);
+  m_HeapSizes[c.m_ppvHeap.Key] = c.m_pDesc.Value->SizeInBytes;
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12Device4CreateHeap1Command& c) {
@@ -363,20 +360,19 @@ void RaytracingAssertionsLayer::Post(ID3D12Device4CreateHeap1Command& c) {
       !c.m_pDesc.Value) {
     return;
   }
-  StoreHeapReplayBounds(c.m_ppvHeap.Key, static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value),
-                        c.m_pDesc.Value->SizeInBytes);
+  m_HeapSizes[c.m_ppvHeap.Key] = c.m_pDesc.Value->SizeInBytes;
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
-  AddResource(c, c.m_InitialState.Value, c.m_pHeap.Key);
+  AddResource(c, c.m_InitialState.Value, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
-  AddResource(c, c.m_InitialState.Value, c.m_pHeap.Key);
+  AddResource(c, c.m_InitialState.Value, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
-  AddResource(c, c.m_InitialLayout.Value, c.m_pHeap.Key);
+  AddResource(c, c.m_InitialLayout.Value, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -403,41 +399,15 @@ void RaytracingAssertionsLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c
                                         c.m_Result.Value);
 }
 
-void RaytracingAssertionsLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
-  if (c.Skip || !c.m_Result.Value) {
-    return;
-  }
-  auto it = m_Resources.find(c.m_Object.Key);
-  if (it == m_Resources.end()) {
-    return;
-  }
-  m_AddressService.AddGpuPlayerAddress(it->second, c.m_Object.Key, it->second->GetDesc().Width,
-                                       it->second->GetGPUVirtualAddress());
-}
-
 void RaytracingAssertionsLayer::Post(IUnknownReleaseCommand& c) {
   if (c.Skip || c.m_Result.Value != 0) {
     return;
   }
-  if (auto heapBounds = m_HeapReplayBounds.find(c.m_Object.Key);
-      heapBounds != m_HeapReplayBounds.end()) {
-    ProcessReadyEvents();
-    EraseBuildsInReplayRange(heapBounds->second.first, heapBounds->second.second, c.Key);
-    m_HeapReplayBounds.erase(heapBounds);
-  }
-  if (auto resourceBounds = m_ResourceReplayBounds.find(c.m_Object.Key);
-      resourceBounds != m_ResourceReplayBounds.end()) {
-    ProcessReadyEvents();
-    EraseBuildsInReplayRange(resourceBounds->second.first, resourceBounds->second.second, c.Key);
-    m_ResourceReplayBounds.erase(resourceBounds);
-  }
-  auto resource = m_Resources.find(c.m_Object.Key);
-  if (resource != m_Resources.end()) {
-    m_PlacedResources.erase(c.m_Object.Key);
-    m_ResourceHeap.erase(c.m_Object.Key);
-    m_Resources.erase(resource);
-  }
   ProcessReadyEvents();
+  EraseBuilds(c.m_Object.Key, c.Key);
+  m_HeapSizes.erase(c.m_Object.Key);
+  m_ResourceHeapLocations.erase(c.m_Object.Key);
+  m_Resources.erase(c.m_Object.Key);
   m_AddressService.DestroyInterface(c.m_Object.Key);
   m_RecordedOperations.erase(c.m_Object.Key);
   m_RecordedScratch.erase(c.m_Object.Key);
@@ -489,22 +459,18 @@ void RaytracingAssertionsLayer::ProcessReadyEvents(bool block) {
       GITS_ASSERT(validationEvent.Fence->GetCompletedValue() != UINT64_MAX,
                   "RaytracingAssertionsLayer: device removed");
     }
-    std::vector<CapturePlayerGpuAddressService::GpuAddressMapping> gpuAddressMappings;
-    m_AddressService.GetMappings(gpuAddressMappings);
     for (const Operation& operation : validationEvent.Operations) {
-      ValidateOperation(operation, gpuAddressMappings);
+      ValidateOperation(operation);
     }
     m_PendingValidationEvents.pop();
   }
 }
 
-void RaytracingAssertionsLayer::ValidateOperation(
-    const Operation& operation,
-    const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings) {
+void RaytracingAssertionsLayer::ValidateOperation(const Operation& operation) {
   std::set<BuildPtr> inputs;
   ValidateOperationSources(operation, inputs);
-  ValidateOperationTlasInputs(operation, gpuAddressMappings, inputs);
-  ValidateOperationSerialization(operation, gpuAddressMappings, inputs);
+  ValidateOperationTlasInputs(operation, inputs);
+  ValidateOperationSerialization(operation, inputs);
   ValidateOperationOmmArrayInputs(operation, inputs);
 
   if (!operation.RecordedDestination) {
@@ -513,8 +479,8 @@ void RaytracingAssertionsLayer::ValidateOperation(
 
   BuildPtr newBuild = std::make_shared<Build>();
   newBuild->Key = operation.Key;
-  newBuild->ReplayAddress = operation.DestinationReplayAddress;
   newBuild->RecordedLocation = *operation.RecordedDestination;
+  newBuild->Location = operation.DestinationLocation;
   newBuild->Inputs = std::move(inputs);
   {
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_CURRENT_SIZE_DESC size{};
@@ -525,63 +491,40 @@ void RaytracingAssertionsLayer::ValidateOperation(
     newBuild->Size = size.CurrentSizeInBytes;
   }
 
-  const CapturePlayerGpuAddressService::ResourceInfo& destinationResource =
-      FindReplayResource(newBuild->ReplayAddress);
-  {
-    const UINT64 destinationOffset = newBuild->ReplayAddress - destinationResource.PlayerStart;
-    if (destinationResource.Key != newBuild->RecordedLocation.ResourceKey ||
-        destinationOffset != newBuild->RecordedLocation.Offset) {
-      static bool logged = false;
-      if (!logged) {
-        LOG_WARNING << "RaytracingAssertionsLayer: " << keyToStr(newBuild->Key)
-                    << " RTAS build replay address resolves to O"
-                    << keyToStr(destinationResource.Key) << " offset " << destinationOffset
-                    << " but was recorded as O" << keyToStr(newBuild->RecordedLocation.ResourceKey)
-                    << " offset " << newBuild->RecordedLocation.Offset;
-        logged = true;
-      }
-    }
-    ValidateBuildFitsAllocation(newBuild->Key, newBuild->ReplayAddress, newBuild->Size,
-                                destinationResource);
-  }
+  ValidateBuildFitsAllocation(*newBuild);
 
-  {
-    const auto [scanStart, scanEnd] = GetBackingAllocationBounds(destinationResource);
-    for (auto it = m_Builds.lower_bound(scanStart); it != m_Builds.lower_bound(scanEnd); ++it) {
-      const auto& [existingReplayAddress, existingBuild] = *it;
-      if (existingBuild->Overwriter) {
-        continue;
-      }
-      if (existingReplayAddress < newBuild->ReplayAddress + newBuild->Size &&
-          newBuild->ReplayAddress < existingReplayAddress + existingBuild->Size) {
-        existingBuild->Overwriter = newBuild;
-      }
+  std::map<UINT64, BuildPtr>& heapBuilds = m_Builds[newBuild->Location.HeapKey];
+  const UINT64 newStart = newBuild->Location.Offset;
+  const UINT64 newEnd = newStart + newBuild->Size;
+  const auto scanEnd = heapBuilds.lower_bound(newEnd);
+  for (auto it = heapBuilds.begin(); it != scanEnd; ++it) {
+    const auto& [existingStart, existingBuild] = *it;
+    if (!existingBuild->Overwriter && newStart < existingStart + existingBuild->Size) {
+      existingBuild->Overwriter = newBuild;
     }
   }
 
-  m_Builds[newBuild->ReplayAddress] = newBuild;
+  heapBuilds[newStart] = newBuild;
 }
 
 void RaytracingAssertionsLayer::ValidateOperationSources(const Operation& operation,
                                                          std::set<BuildPtr>& inputs) {
-  for (D3D12_GPU_VIRTUAL_ADDRESS sourceReplayAddress : operation.SourceReplayAddresses) {
-    BuildPtr build = FindBuild(sourceReplayAddress);
+  for (const HeapLocation& sourceLocation : operation.SourceLocations) {
+    BuildPtr build = FindBuild(sourceLocation);
     if (build) {
       ValidateBuildDependency(operation.Key, *build);
       if (operation.InheritInputs) {
         inputs.insert(build->Inputs.begin(), build->Inputs.end());
       }
     } else {
-      LogMissingBuild(operation.Key, sourceReplayAddress);
+      LogMissingBuild(operation.Key, sourceLocation);
     }
   }
 }
 
-void RaytracingAssertionsLayer::ValidateOperationTlasInputs(
-    const Operation& operation,
-    const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings,
-    std::set<BuildPtr>& inputs) {
-  std::set<D3D12_GPU_VIRTUAL_ADDRESS> seenReplayAddresses;
+void RaytracingAssertionsLayer::ValidateOperationTlasInputs(const Operation& operation,
+                                                            std::set<BuildPtr>& inputs) {
+  std::set<HeapLocation> seenLocations;
   for (const ReadbackBuffer& readbackBuffer : operation.Instances) {
     constexpr UINT64 stride = sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
     const std::vector<uint8_t> data = ReadBuffer(readbackBuffer.Buffer.get(), readbackBuffer.Size);
@@ -592,12 +535,12 @@ void RaytracingAssertionsLayer::ValidateOperationTlasInputs(
       if (!instance.AccelerationStructure) {
         continue;
       }
-      const D3D12_GPU_VIRTUAL_ADDRESS replayBlasAddress =
-          GetReplayAddressFromMappings(instance.AccelerationStructure, gpuAddressMappings);
-      if (!seenReplayAddresses.insert(replayBlasAddress).second) {
+      const std::optional<HeapLocation> blasLocation =
+          FindBuildHeapLocation(instance.AccelerationStructure);
+      if (blasLocation && !seenLocations.insert(*blasLocation).second) {
         continue;
       }
-      BuildPtr build = FindBuild(replayBlasAddress);
+      BuildPtr build = blasLocation ? FindBuild(*blasLocation) : nullptr;
       if (build) {
         ValidateBuildDependency(operation.Key, *build);
         inputs.insert(std::move(build));
@@ -605,9 +548,12 @@ void RaytracingAssertionsLayer::ValidateOperationTlasInputs(
         LOG_ERROR << "RaytracingAssertionsLayer: TLAS build " << keyToStr(operation.Key)
                   << " INSTANCE " << i + 1 << " (InstanceID " << instance.InstanceID
                   << ") references missing BLAS at capture address 0x" << std::hex
-                  << instance.AccelerationStructure << " replay address 0x" << replayBlasAddress
-                  << std::dec;
-        LogMissingBuild(operation.Key, replayBlasAddress);
+                  << instance.AccelerationStructure << std::dec;
+        if (blasLocation) {
+          LogMissingBuild(operation.Key, *blasLocation);
+        } else {
+          GITS_ASSERT(false, "RaytracingAssertionsLayer: unresolved BLAS capture address");
+        }
       }
     }
   }
@@ -615,25 +561,23 @@ void RaytracingAssertionsLayer::ValidateOperationTlasInputs(
 
 void RaytracingAssertionsLayer::ValidateOperationOmmArrayInputs(const Operation& operation,
                                                                 std::set<BuildPtr>& inputs) {
-  std::set<D3D12_GPU_VIRTUAL_ADDRESS> seenReplayAddresses;
-  for (D3D12_GPU_VIRTUAL_ADDRESS ommArrayReplayAddress : operation.OmmArrayReplayAddresses) {
-    if (!seenReplayAddresses.insert(ommArrayReplayAddress).second) {
+  std::set<HeapLocation> seenLocations;
+  for (const HeapLocation& ommArrayLocation : operation.OmmArrayLocations) {
+    if (!seenLocations.insert(ommArrayLocation).second) {
       continue;
     }
-    BuildPtr build = FindBuild(ommArrayReplayAddress);
+    BuildPtr build = FindBuild(ommArrayLocation);
     if (build) {
       ValidateBuildDependency(operation.Key, *build);
       inputs.insert(std::move(build));
     } else {
-      LogMissingBuild(operation.Key, ommArrayReplayAddress);
+      LogMissingBuild(operation.Key, ommArrayLocation);
     }
   }
 }
 
-void RaytracingAssertionsLayer::ValidateOperationSerialization(
-    const Operation& operation,
-    const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings,
-    std::set<BuildPtr>& inputs) {
+void RaytracingAssertionsLayer::ValidateOperationSerialization(const Operation& operation,
+                                                               std::set<BuildPtr>& inputs) {
   if (!operation.SerializedHeader.Buffer) {
     return;
   }
@@ -649,7 +593,7 @@ void RaytracingAssertionsLayer::ValidateOperationSerialization(
                   sizeof(header) + pointersSize <= header.SerializedSizeInBytesIncludingHeader,
               "RaytracingAssertionsLayer: invalid serialized RTAS header");
 
-  std::set<D3D12_GPU_VIRTUAL_ADDRESS> seenReplayAddresses;
+  std::set<HeapLocation> seenLocations;
   for (UINT64 i = 0; i < header.NumBottomLevelAccelerationStructurePointersAfterHeader; ++i) {
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress{};
     std::memcpy(&captureAddress, data.data() + sizeof(header) + i * sizeof(captureAddress),
@@ -657,17 +601,24 @@ void RaytracingAssertionsLayer::ValidateOperationSerialization(
     if (!captureAddress) {
       continue;
     }
-    const D3D12_GPU_VIRTUAL_ADDRESS replayBlasAddress =
-        GetReplayAddressFromMappings(captureAddress, gpuAddressMappings);
-    if (!seenReplayAddresses.insert(replayBlasAddress).second) {
+    const std::optional<HeapLocation> blasLocation = FindBuildHeapLocation(captureAddress);
+    if (!blasLocation) {
+      LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(operation.Key)
+                << " serialized RTAS BLAS pointer " << i + 1
+                << " references unresolved capture address 0x" << std::hex << captureAddress
+                << std::dec;
+      GITS_ASSERT(false, "RaytracingAssertionsLayer: unresolved BLAS capture address");
       continue;
     }
-    BuildPtr build = FindBuild(replayBlasAddress);
+    if (!seenLocations.insert(*blasLocation).second) {
+      continue;
+    }
+    BuildPtr build = FindBuild(*blasLocation);
     if (build) {
       ValidateBuildDependency(operation.Key, *build);
       inputs.insert(std::move(build));
     } else {
-      LogMissingBuild(operation.Key, replayBlasAddress);
+      LogMissingBuild(operation.Key, *blasLocation);
     }
   }
 }
@@ -687,9 +638,9 @@ void RaytracingAssertionsLayer::ValidateBuildDependency(CommandKey commandKey, c
     GITS_ASSERT(false, "RaytracingAssertionsLayer: deleted RTAS was used");
   } else if (invalid->Overwriter) {
     const Build& overwriter = *invalid->Overwriter;
-    const uint64_t overlapStart = std::max(invalid->ReplayAddress, overwriter.ReplayAddress);
-    const uint64_t overlapEnd = std::min(invalid->ReplayAddress + invalid->Size,
-                                         overwriter.ReplayAddress + overwriter.Size);
+    const uint64_t overlapStart = std::max(invalid->Location.Offset, overwriter.Location.Offset);
+    const uint64_t overlapEnd = std::min(invalid->Location.Offset + invalid->Size,
+                                         overwriter.Location.Offset + overwriter.Size);
     LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " uses RTAS in O"
               << keyToStr(build.RecordedLocation.ResourceKey) << " offset "
               << build.RecordedLocation.Offset << " that depends on RTAS built by "
@@ -717,22 +668,21 @@ const RaytracingAssertionsLayer::Build* RaytracingAssertionsLayer::FindFirstInva
   return nullptr;
 }
 
-void RaytracingAssertionsLayer::ValidateBuildFitsAllocation(
-    CommandKey commandKey,
-    D3D12_GPU_VIRTUAL_ADDRESS replayAddress,
-    UINT64 sizeInBytes,
-    const CapturePlayerGpuAddressService::ResourceInfo& resource) {
-  const UINT64 resourceOffset = replayAddress - resource.PlayerStart;
-  const UINT64 resourceBytes = resource.Resource->GetDesc().Width;
-  const bool placed = m_PlacedResources.contains(resource.Key);
-  const UINT64 buildEnd = resourceOffset + sizeInBytes;
+void RaytracingAssertionsLayer::ValidateBuildFitsAllocation(const Build& build) {
+  const ResourceLocation& resource = build.RecordedLocation;
+  const auto resourceIt = m_Resources.find(resource.ResourceKey);
+  GITS_ASSERT(resourceIt != m_Resources.end(),
+              "RaytracingAssertionsLayer: RTAS build destination resource not found");
+  const UINT64 resourceBytes = resourceIt->second->GetDesc().Width;
+  const bool placed = build.Location.HeapKey != resource.ResourceKey;
+  const UINT64 buildEnd = resource.Offset + build.Size;
 
   if (buildEnd > resourceBytes) {
     std::stringstream message;
-    message << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " RTAS build in O"
-            << keyToStr(resource.Key) << " offset " << resourceOffset << " size " << sizeInBytes
-            << " exceeds " << (placed ? "placed" : "committed") << " buffer (" << resourceBytes
-            << " bytes) by " << buildEnd - resourceBytes << " bytes";
+    message << "RaytracingAssertionsLayer: " << keyToStr(build.Key) << " RTAS build in O"
+            << keyToStr(resource.ResourceKey) << " offset " << resource.Offset << " size "
+            << build.Size << " exceeds " << (placed ? "placed" : "committed") << " buffer ("
+            << resourceBytes << " bytes) by " << buildEnd - resourceBytes << " bytes";
 
     if (!placed) {
       LOG_ERROR << message.str();
@@ -745,31 +695,24 @@ void RaytracingAssertionsLayer::ValidateBuildFitsAllocation(
   if (!placed) {
     return;
   }
-  const auto heapIt = m_ResourceHeap.find(resource.Key);
-  GITS_ASSERT(heapIt != m_ResourceHeap.end(),
-              "RaytracingAssertionsLayer: placed resource missing heap");
-  const auto heapBoundsIt = m_HeapReplayBounds.find(heapIt->second);
-  GITS_ASSERT(heapBoundsIt != m_HeapReplayBounds.end(),
-              "RaytracingAssertionsLayer: heap missing replay bounds");
-  const D3D12_GPU_VIRTUAL_ADDRESS replayEnd = replayAddress + sizeInBytes;
-  GITS_ASSERT(replayAddress >= heapBoundsIt->second.first,
-              "RaytracingAssertionsLayer: RTAS build starts before heap replay range");
-  if (replayEnd > heapBoundsIt->second.second) {
-    LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " RTAS build in O"
-              << keyToStr(resource.Key) << " offset " << resourceOffset << " size " << sizeInBytes
-              << " exceeds heap O" << keyToStr(heapIt->second) << " replay range [0x" << std::hex
-              << heapBoundsIt->second.first << ", 0x" << heapBoundsIt->second.second << ")"
-              << std::dec << " by " << replayEnd - heapBoundsIt->second.second << " bytes";
+  const auto heapSizeIt = m_HeapSizes.find(build.Location.HeapKey);
+  GITS_ASSERT(heapSizeIt != m_HeapSizes.end(), "RaytracingAssertionsLayer: heap size not found");
+  const UINT64 heapBytes = heapSizeIt->second;
+  const UINT64 heapEnd = build.Location.Offset + build.Size;
+  if (heapEnd > heapBytes) {
+    LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(build.Key) << " RTAS build in O"
+              << keyToStr(resource.ResourceKey) << " offset " << resource.Offset << " size "
+              << build.Size << " at heap O" << keyToStr(build.Location.HeapKey) << " offset "
+              << build.Location.Offset << " exceeds heap (" << heapBytes << " bytes) by "
+              << heapEnd - heapBytes << " bytes";
     GITS_ASSERT(false, "RaytracingAssertionsLayer: RTAS build exceeds heap");
   }
 }
 
 void RaytracingAssertionsLayer::LogMissingBuild(CommandKey commandKey,
-                                                D3D12_GPU_VIRTUAL_ADDRESS replayAddress) {
-  const CapturePlayerGpuAddressService::ResourceInfo& resource = FindReplayResource(replayAddress);
-  const UINT64 offset = replayAddress - resource.PlayerStart;
+                                                const HeapLocation& location) {
   LOG_ERROR << "RaytracingAssertionsLayer: " << keyToStr(commandKey) << " uses RTAS in O"
-            << keyToStr(resource.Key) << " offset " << offset;
+            << keyToStr(location.HeapKey) << " offset " << location.Offset;
   GITS_ASSERT(false, "RaytracingAssertionsLayer: used RTAS was erased or never built");
 }
 
@@ -797,7 +740,7 @@ void RaytracingAssertionsLayer::RecordBuildScratch(
   usage.ResourceKey = scratchKey;
   usage.Offset = c.m_pDesc.ScratchAccelerationStructureOffset;
   usage.ResourceSize = scratch->second->GetDesc().Width;
-  usage.ReplayAddress = scratch->second->GetGPUVirtualAddress() + usage.Offset;
+  usage.Location = GetHeapLocation(scratchKey, usage.Offset);
   usage.Update = inputs.Flags & D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
   usage.RequiredSize =
       usage.Update ? liveInfo.UpdateScratchDataSizeInBytes : liveInfo.ScratchDataSizeInBytes;
@@ -842,10 +785,12 @@ void RaytracingAssertionsLayer::ValidateBuildScratchSize(const ScratchUsage& usa
 
 void RaytracingAssertionsLayer::ValidateBuildScratchOverlap(const ScratchUsage& usage,
                                                             const ScratchUsage& concurrent) {
-  const D3D12_GPU_VIRTUAL_ADDRESS overlapStart =
-      std::max(usage.ReplayAddress, concurrent.ReplayAddress);
-  const D3D12_GPU_VIRTUAL_ADDRESS overlapEnd = std::min(
-      usage.ReplayAddress + usage.RequiredSize, concurrent.ReplayAddress + concurrent.RequiredSize);
+  if (usage.Location.HeapKey != concurrent.Location.HeapKey) {
+    return;
+  }
+  const UINT64 overlapStart = std::max(usage.Location.Offset, concurrent.Location.Offset);
+  const UINT64 overlapEnd = std::min(usage.Location.Offset + usage.RequiredSize,
+                                     concurrent.Location.Offset + concurrent.RequiredSize);
   if (overlapStart >= overlapEnd) {
     return;
   }
@@ -931,62 +876,39 @@ void RaytracingAssertionsLayer::RecordSizeQuery(ID3D12GraphicsCommandList* comma
 }
 
 RaytracingAssertionsLayer::BuildPtr RaytracingAssertionsLayer::FindBuild(
-    D3D12_GPU_VIRTUAL_ADDRESS replayAddress) const {
-  const auto buildIt = m_Builds.find(replayAddress);
-  return buildIt != m_Builds.end() ? buildIt->second : nullptr;
+    const HeapLocation& location) const {
+  const auto heapBuilds = m_Builds.find(location.HeapKey);
+  if (heapBuilds == m_Builds.end()) {
+    return nullptr;
+  }
+  const auto buildIt = heapBuilds->second.find(location.Offset);
+  return buildIt != heapBuilds->second.end() ? buildIt->second : nullptr;
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS RaytracingAssertionsLayer::GetReplayAddress(ObjectKey resourceKey,
-                                                                      UINT64 offset) const {
-  const auto it = m_Resources.find(resourceKey);
-  if (it == m_Resources.end()) {
-    LOG_ERROR << "RaytracingAssertionsLayer: no replay GPUVA for O" << keyToStr(resourceKey);
+RaytracingAssertionsLayer::HeapLocation RaytracingAssertionsLayer::GetHeapLocation(
+    ObjectKey resourceKey, UINT64 offset) const {
+  const auto it = m_ResourceHeapLocations.find(resourceKey);
+  if (it == m_ResourceHeapLocations.end()) {
+    LOG_ERROR << "RaytracingAssertionsLayer: no heap location for O" << keyToStr(resourceKey);
   }
-  GITS_ASSERT(it != m_Resources.end(),
-              "RaytracingAssertionsLayer: unresolved RTAS resource replay address");
-  return it->second->GetGPUVirtualAddress() + offset;
+  GITS_ASSERT(it != m_ResourceHeapLocations.end(),
+              "RaytracingAssertionsLayer: unresolved RTAS resource heap location");
+  return {it->second.HeapKey, it->second.Offset + offset};
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS RaytracingAssertionsLayer::GetReplayAddressFromMappings(
-    D3D12_GPU_VIRTUAL_ADDRESS captureAddress,
-    const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings) {
-  int first = 0;
-  int last = static_cast<int>(gpuAddressMappings.size()) - 1;
-  while (first <= last) {
-    const int mid = first + (last - first) / 2;
-    const auto& mapping = gpuAddressMappings[mid];
-    if (captureAddress >= mapping.CaptureStart &&
-        captureAddress < mapping.CaptureStart + mapping.Size) {
-      return mapping.PlayerStart + (captureAddress - mapping.CaptureStart);
-    }
-    if (captureAddress >= mapping.CaptureStart + mapping.Size) {
-      first = mid + 1;
-    } else {
-      last = mid - 1;
-    }
+std::optional<RaytracingAssertionsLayer::HeapLocation> RaytracingAssertionsLayer::
+    FindBuildHeapLocation(D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
+  const CapturePlayerGpuAddressService::ResourceInfo* resource =
+      TryFindCaptureResource(captureAddress);
+  if (!resource || !resource->CaptureStart) {
+    return std::nullopt;
   }
-  GITS_ASSERT(!captureAddress, "RaytracingAssertionsLayer: unresolved instance BLAS GPUVA");
-  return 0;
-}
-
-CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindReplayResource(
-    D3D12_GPU_VIRTUAL_ADDRESS replayAddress) {
-  CapturePlayerGpuAddressService::ResourceInfo* info =
-      m_AddressService.GetResourceInfoByPlayerAddress(replayAddress, true);
-  if (!info) {
-    LOG_ERROR << "RaytracingAssertionsLayer: unresolved replay GPUVA 0x" << std::hex
-              << replayAddress << std::dec;
-    GITS_ASSERT(false, "RaytracingAssertionsLayer: unresolved replay GPU address");
-  }
-  GITS_ASSERT(info->PlayerStart, "RaytracingAssertionsLayer: replay GPUVA not registered");
-  GITS_ASSERT(info->Resource, "RaytracingAssertionsLayer: replay GPUVA resource not registered");
-  return *info;
+  return GetHeapLocation(resource->Key, captureAddress - resource->CaptureStart);
 }
 
 CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindCaptureResource(
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
-  CapturePlayerGpuAddressService::ResourceInfo* info =
-      m_AddressService.GetResourceInfoByCaptureAddress(captureAddress, true);
+  CapturePlayerGpuAddressService::ResourceInfo* info = TryFindCaptureResource(captureAddress);
   if (!info) {
     LOG_ERROR << "RaytracingAssertionsLayer: unresolved capture GPUVA 0x" << std::hex
               << captureAddress << std::dec;
@@ -996,96 +918,42 @@ CapturePlayerGpuAddressService::ResourceInfo& RaytracingAssertionsLayer::FindCap
   return *info;
 }
 
-void RaytracingAssertionsLayer::EraseBuildsInReplayRange(D3D12_GPU_VIRTUAL_ADDRESS start,
-                                                         D3D12_GPU_VIRTUAL_ADDRESS end,
-                                                         CommandKey deletedBy) {
-  GITS_ASSERT(end > start);
-  for (auto it = m_Builds.lower_bound(start); it != m_Builds.lower_bound(end);) {
-    it->second->DeletedBy = deletedBy;
-    it = m_Builds.erase(it);
+CapturePlayerGpuAddressService::ResourceInfo* RaytracingAssertionsLayer::TryFindCaptureResource(
+    D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
+  CapturePlayerGpuAddressService::ResourceInfo* info =
+      m_AddressService.GetResourceInfoByCaptureAddress(captureAddress, true);
+  if (info) {
+    return info;
   }
+  info = m_AddressService.GetResourceInfoByCaptureAddress(captureAddress, false);
+  if (info) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_ERROR << "RaytracingAssertionsLayer: capture GPUVA 0x" << std::hex << captureAddress
+                << std::dec << " not resolved as RTAS resource, resolved as non-RTAS resource O"
+                << keyToStr(info->Key);
+      logged = true;
+    }
+  }
+  return info;
 }
 
-std::pair<D3D12_GPU_VIRTUAL_ADDRESS, D3D12_GPU_VIRTUAL_ADDRESS> RaytracingAssertionsLayer::
-    GetBackingAllocationBounds(const CapturePlayerGpuAddressService::ResourceInfo& resource) const {
-  if (!m_PlacedResources.contains(resource.Key)) {
-    const D3D12_GPU_VIRTUAL_ADDRESS start = resource.PlayerStart;
-    return {start, start + resource.Resource->GetDesc().Width};
-  }
-  const auto heapIt = m_ResourceHeap.find(resource.Key);
-  GITS_ASSERT(heapIt != m_ResourceHeap.end(),
-              "RaytracingAssertionsLayer: placed resource missing heap");
-  const auto heapBoundsIt = m_HeapReplayBounds.find(heapIt->second);
-  GITS_ASSERT(heapBoundsIt != m_HeapReplayBounds.end(),
-              "RaytracingAssertionsLayer: heap missing replay bounds");
-  return heapBoundsIt->second;
-}
-
-D3D12_GPU_VIRTUAL_ADDRESS RaytracingAssertionsLayer::GetHeapGpuVirtualAddress(ID3D12Heap* heap) {
-  D3D12_HEAP_DESC heapDesc = heap->GetDesc();
-
-  D3D12_RESOURCE_DESC dummyDesc{};
-  dummyDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-  dummyDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-  dummyDesc.Width = 1;
-  dummyDesc.Height = 1;
-  dummyDesc.DepthOrArraySize = 1;
-  dummyDesc.MipLevels = 1;
-  dummyDesc.Format = DXGI_FORMAT_UNKNOWN;
-  dummyDesc.SampleDesc = {1, 0};
-  dummyDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-  dummyDesc.Flags = heapDesc.Flags & D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER
-                        ? D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER
-                        : D3D12_RESOURCE_FLAG_NONE;
-
-  ComPtr<ID3D12Device> device;
-  HRESULT res = heap->GetDevice(IID_PPV_ARGS(&device));
-  GITS_ASSERT(res == S_OK);
-
-  D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON;
-  if (heapDesc.Properties.Type == D3D12_HEAP_TYPE_UPLOAD ||
-      heapDesc.Properties.Type == D3D12_HEAP_TYPE_GPU_UPLOAD) {
-    initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
-  } else if (heapDesc.Properties.Type == D3D12_HEAP_TYPE_READBACK) {
-    initialState = D3D12_RESOURCE_STATE_COPY_DEST;
-  }
-
-  ComPtr<ID3D12Resource> dummyResource;
-  res = device->CreatePlacedResource(heap, 0, &dummyDesc, initialState, nullptr,
-                                     IID_PPV_ARGS(&dummyResource));
-  GITS_ASSERT(res == S_OK);
-
-  D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = dummyResource->GetGPUVirtualAddress();
-  GITS_ASSERT(gpuAddress);
-
-  return gpuAddress;
-}
-
-void RaytracingAssertionsLayer::StoreHeapReplayBounds(ObjectKey heapKey,
-                                                      ID3D12Heap* heap,
-                                                      UINT64 sizeInBytes) {
-  if (!sizeInBytes) {
+void RaytracingAssertionsLayer::EraseBuilds(ObjectKey heapKey, CommandKey deletedBy) {
+  const auto heapBuilds = m_Builds.find(heapKey);
+  if (heapBuilds == m_Builds.end()) {
     return;
   }
-  if (heap->GetDesc().Flags & D3D12_HEAP_FLAG_DENY_BUFFERS) {
-    return;
+  for (const auto& [offset, build] : heapBuilds->second) {
+    build->DeletedBy = deletedBy;
   }
-  const D3D12_GPU_VIRTUAL_ADDRESS start = GetHeapGpuVirtualAddress(heap);
-  m_HeapReplayBounds[heapKey] = {start, start + sizeInBytes};
-}
-
-void RaytracingAssertionsLayer::StoreResourceReplayBounds(ObjectKey resourceKey,
-                                                          ID3D12Resource* resource) {
-  const UINT64 width = resource->GetDesc().Width;
-  if (!width) {
-    return;
-  }
-  const D3D12_GPU_VIRTUAL_ADDRESS start = resource->GetGPUVirtualAddress();
-  m_ResourceReplayBounds[resourceKey] = {start, start + width};
+  m_Builds.erase(heapBuilds);
 }
 
 template <typename Command, typename State>
-void RaytracingAssertionsLayer::AddResource(Command& c, State initialState, ObjectKey heapKey) {
+void RaytracingAssertionsLayer::AddResource(Command& c,
+                                            State initialState,
+                                            ObjectKey heapKey,
+                                            UINT64 heapOffset) {
   if (c.Skip || FAILED(c.m_Result.Value) || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
     return;
   }
@@ -1100,10 +968,9 @@ void RaytracingAssertionsLayer::AddResource(Command& c, State initialState, Obje
   }
   if (heapKey) {
     m_AddressService.CreatePlacedResource(heapKey, key, c.m_pDesc.Value->Flags, initialState);
-    m_PlacedResources.insert(key);
-    m_ResourceHeap[key] = heapKey;
+    m_ResourceHeapLocations[key] = {heapKey, heapOffset};
   } else {
-    StoreResourceReplayBounds(key, resource);
+    m_ResourceHeapLocations[key] = {key, 0};
   }
   m_Resources[key] = resource;
   m_ResourceStates.AddResource(resource, key, initialState);

@@ -13,13 +13,13 @@
 #include "gpuExecutionTracker.h"
 #include "resourceStateTracker.h"
 
+#include <compare>
 #include <queue>
 #include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <unordered_map>
-#include <unordered_set>
 #include <variant>
 #include <vector>
 #include <wrl/client.h>
@@ -63,7 +63,6 @@ public:
   void Post(ID3D12Device4CreateReservedResource1Command& c) override;
   void Post(ID3D12Device10CreateReservedResource2Command& c) override;
   void Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
-  void Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) override;
   void Post(IUnknownReleaseCommand& c) override;
   void Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
   void Post(ID3D12GraphicsCommandList7BarrierCommand& c) override;
@@ -78,10 +77,17 @@ private:
     UINT64 Offset{};
   };
 
+  // Committed and reserved resources act as their own heap
+  struct HeapLocation {
+    ObjectKey HeapKey{};
+    UINT64 Offset{};
+    auto operator<=>(const HeapLocation&) const = default;
+  };
+
   struct Build {
     CommandKey Key{};
     ResourceLocation RecordedLocation{};
-    D3D12_GPU_VIRTUAL_ADDRESS ReplayAddress{};
+    HeapLocation Location{};
     UINT64 Size{};
     std::set<std::shared_ptr<Build>> Inputs;
     std::shared_ptr<Build> Overwriter;
@@ -128,13 +134,13 @@ private:
   struct Operation {
     CommandKey Key{};
     std::optional<ResourceLocation> RecordedDestination;
-    D3D12_GPU_VIRTUAL_ADDRESS DestinationReplayAddress{};
-    std::vector<D3D12_GPU_VIRTUAL_ADDRESS> SourceReplayAddresses;
+    HeapLocation DestinationLocation{};
+    std::vector<HeapLocation> SourceLocations;
     bool InheritInputs{};
     std::vector<ReadbackBuffer> Instances;
     ReadbackBuffer SerializedHeader;
     SizeQuery PostbuildSizeQuery;
-    std::vector<D3D12_GPU_VIRTUAL_ADDRESS> OmmArrayReplayAddresses;
+    std::vector<HeapLocation> OmmArrayLocations;
   };
 
   struct ScratchUsage {
@@ -142,7 +148,7 @@ private:
     ObjectKey ResourceKey{};
     UINT64 Offset{};
     UINT64 ResourceSize{};
-    D3D12_GPU_VIRTUAL_ADDRESS ReplayAddress{};
+    HeapLocation Location{};
     UINT64 RequiredSize{};
     bool Update{};
   };
@@ -162,26 +168,15 @@ private:
 
   void ProcessReadyEvents(bool block = false);
 
-  void ValidateOperation(
-      const Operation& operation,
-      const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
+  void ValidateOperation(const Operation& operation);
   void ValidateOperationSources(const Operation& operation, std::set<BuildPtr>& inputs);
-  void ValidateOperationTlasInputs(
-      const Operation& operation,
-      const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings,
-      std::set<BuildPtr>& inputs);
-  void ValidateOperationSerialization(
-      const Operation& operation,
-      const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings,
-      std::set<BuildPtr>& inputs);
+  void ValidateOperationTlasInputs(const Operation& operation, std::set<BuildPtr>& inputs);
+  void ValidateOperationSerialization(const Operation& operation, std::set<BuildPtr>& inputs);
   void ValidateOperationOmmArrayInputs(const Operation& operation, std::set<BuildPtr>& inputs);
   void ValidateBuildDependency(CommandKey commandKey, const Build& build);
   static const Build* FindFirstInvalidBuild(const Build& build);
-  void ValidateBuildFitsAllocation(CommandKey commandKey,
-                                   D3D12_GPU_VIRTUAL_ADDRESS replayAddress,
-                                   UINT64 sizeInBytes,
-                                   const CapturePlayerGpuAddressService::ResourceInfo& resource);
-  void LogMissingBuild(CommandKey commandKey, D3D12_GPU_VIRTUAL_ADDRESS replayAddress);
+  void ValidateBuildFitsAllocation(const Build& build);
+  void LogMissingBuild(CommandKey commandKey, const HeapLocation& location);
 
   void RecordBuildScratch(
       const ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
@@ -199,26 +194,17 @@ private:
   SizeQuery CreateSizeQuery();
   void RecordSizeQuery(ID3D12GraphicsCommandList* commandList, const SizeQuery& query);
 
-  BuildPtr FindBuild(D3D12_GPU_VIRTUAL_ADDRESS replayAddress) const;
-  D3D12_GPU_VIRTUAL_ADDRESS GetReplayAddress(ObjectKey resourceKey, UINT64 offset) const;
-  static D3D12_GPU_VIRTUAL_ADDRESS GetReplayAddressFromMappings(
-      D3D12_GPU_VIRTUAL_ADDRESS captureAddress,
-      const std::vector<CapturePlayerGpuAddressService::GpuAddressMapping>& gpuAddressMappings);
-  CapturePlayerGpuAddressService::ResourceInfo& FindReplayResource(
-      D3D12_GPU_VIRTUAL_ADDRESS replayAddress);
+  BuildPtr FindBuild(const HeapLocation& location) const;
+  HeapLocation GetHeapLocation(ObjectKey resourceKey, UINT64 offset) const;
+  std::optional<HeapLocation> FindBuildHeapLocation(D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
   CapturePlayerGpuAddressService::ResourceInfo& FindCaptureResource(
       D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
-  void EraseBuildsInReplayRange(D3D12_GPU_VIRTUAL_ADDRESS start,
-                                D3D12_GPU_VIRTUAL_ADDRESS end,
-                                CommandKey deletedBy);
-  std::pair<D3D12_GPU_VIRTUAL_ADDRESS, D3D12_GPU_VIRTUAL_ADDRESS> GetBackingAllocationBounds(
-      const CapturePlayerGpuAddressService::ResourceInfo& resource) const;
+  CapturePlayerGpuAddressService::ResourceInfo* TryFindCaptureResource(
+      D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
+  void EraseBuilds(ObjectKey heapKey, CommandKey deletedBy);
 
   template <typename Command, typename State>
-  void AddResource(Command& c, State initialState, ObjectKey heapKey = 0);
-  void StoreHeapReplayBounds(ObjectKey heapKey, ID3D12Heap* heap, UINT64 sizeInBytes);
-  void StoreResourceReplayBounds(ObjectKey resourceKey, ID3D12Resource* resource);
-  static D3D12_GPU_VIRTUAL_ADDRESS GetHeapGpuVirtualAddress(ID3D12Heap* heap);
+  void AddResource(Command& c, State initialState, ObjectKey heapKey = 0, UINT64 heapOffset = 0);
   static std::vector<uint8_t> ReadBuffer(ID3D12Resource* resource, UINT64 size);
 
 private:
@@ -228,15 +214,11 @@ private:
   CapturePlayerGpuAddressService m_AddressService;
   BufferPool m_BufferPool;
 
-  std::map<D3D12_GPU_VIRTUAL_ADDRESS, BuildPtr> m_Builds;
+  std::unordered_map<ObjectKey, std::map<UINT64, BuildPtr>> m_Builds;
 
   std::unordered_map<ObjectKey, ID3D12Resource*> m_Resources;
-  std::unordered_set<ObjectKey> m_PlacedResources;
-  std::unordered_map<ObjectKey, ObjectKey> m_ResourceHeap;
-  std::unordered_map<ObjectKey, std::pair<D3D12_GPU_VIRTUAL_ADDRESS, D3D12_GPU_VIRTUAL_ADDRESS>>
-      m_HeapReplayBounds;
-  std::unordered_map<ObjectKey, std::pair<D3D12_GPU_VIRTUAL_ADDRESS, D3D12_GPU_VIRTUAL_ADDRESS>>
-      m_ResourceReplayBounds;
+  std::unordered_map<ObjectKey, HeapLocation> m_ResourceHeapLocations;
+  std::unordered_map<ObjectKey, UINT64> m_HeapSizes;
 
   std::unordered_map<ObjectKey, std::vector<Operation>> m_RecordedOperations;
   std::unordered_map<ObjectKey, std::vector<ScratchEvent>> m_RecordedScratch;
