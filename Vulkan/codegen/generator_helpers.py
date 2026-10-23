@@ -180,6 +180,17 @@ def generate_args(command):
         list.append(str)
     return list
 
+def generate_player_args(command):
+    # Recorded allocation callbacks point into the recorded application's address space, so they
+    # must never reach the replay driver.
+    list = []
+    for param in command.params:
+        if param.base_type == 'VkAllocationCallbacks':
+            list.append('nullptr')
+        else:
+            list.append(f'command.m_{param.name}.Value')
+    return list
+
 def get_dispatch_table(command):
     dispatch_table_map = {
       'global': 'GetGlobalDispatchTable',
@@ -207,6 +218,7 @@ def generate_file(context, file_name, out_path, template_dir='templates'):
     base_context = {
         'header': AUTO_GENERATED_HEADER,
         'generate_args': generate_args,
+        'generate_player_args': generate_player_args,
         'get_dispatch_table': get_dispatch_table,
         'get_define': get_define
     }

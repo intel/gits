@@ -24,7 +24,7 @@ structures_by_name = {s.name: s for s in structures}
 %>
 % for command in commands:
 <%
-args = generate_args(command)
+args = generate_player_args(command)
 define = get_define(command.platform)
 dispatch_table = get_dispatch_table(command)
 %>\
