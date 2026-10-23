@@ -49,6 +49,6 @@ function(init_dxil_spirv)
                      "${CMAKE_BINARY_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
   endif()
 
-  gits_assign_folder_recursive("${DXIL_SPIRV_DIR}" "${GUI_APPS_FOLDER}/External")
-  gits_assign_folder_recursive("${SPIRV_CROSS_DIR}" "${GUI_APPS_FOLDER}/External")
+  gits_assign_folder_recursive("${DXIL_SPIRV_DIR}" "External")
+  gits_assign_folder_recursive("${SPIRV_CROSS_DIR}" "External")
 endfunction()

@@ -55,8 +55,8 @@ function(init_glslang)
   endif()
 
   # SPIRV-Tools is added as its own add_subdirectory (not nested under
-  # glslang's tree), so assign both roots into gui_apps/External.
+  # glslang's tree), so assign both roots into External.
   gits_assign_folder_recursive(
-    "${DXIL_SPIRV_DIR}/third_party/SPIRV-Tools" "${GUI_APPS_FOLDER}/External")
-  gits_assign_folder_recursive("${GLSLANG_DIR}" "${GUI_APPS_FOLDER}/External")
+    "${DXIL_SPIRV_DIR}/third_party/SPIRV-Tools" "External")
+  gits_assign_folder_recursive("${GLSLANG_DIR}" "External")
 endfunction()
