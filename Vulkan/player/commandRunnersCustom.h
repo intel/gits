@@ -11,6 +11,7 @@
 #include "commandRunner.h"
 #include "commandsCustom.h"
 #include "commandCodersCustom.h"
+#include "commandRunnersAuto.h"
 
 namespace gits {
 namespace vulkan {
@@ -116,6 +117,22 @@ protected:
 private:
   RestoreContentDataCommand m_Command;
 };
+
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+// Replays vkCreateWin32SurfaceKHR as vkCreateXlibSurfaceKHR on the Xlib window which
+// WindowService creates for the recorded Win32 window.
+class vkCreateWin32SurfaceKHRAsXlibRunner : public vkCreateXlibSurfaceKHRRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override;
+
+private:
+  uint64_t m_RecordedHwnd{};
+  VkXlibSurfaceCreateInfoKHR m_CreateInfo{};
+};
+#endif
 
 } // namespace vulkan
 } // namespace gits

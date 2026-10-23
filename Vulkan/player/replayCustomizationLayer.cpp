@@ -13,9 +13,11 @@
 #include "suppressNames.h"
 #include "log.h"
 
+#include <algorithm>
 #include <thread>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -695,6 +697,49 @@ static void RedirectDebugCallbacksInPNext(const void* pNext) {
   }
 }
 
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+// Streams recorded on Windows enable Win32-only extensions. Win32 surfaces are replayed as Xlib
+// surfaces (see vkCreateWin32SurfaceKHRAsXlibRunner), the other Win32 extensions are dropped.
+// The extension name macros come from vulkan_win32.h, which is only included on Windows.
+namespace {
+const std::vector<std::string> WIN32_DEVICE_EXTENSIONS = {
+    "VK_KHR_external_memory_win32", "VK_KHR_external_semaphore_win32",
+    "VK_KHR_external_fence_win32",  "VK_KHR_win32_keyed_mutex",
+    "VK_NV_external_memory_win32",  "VK_NV_win32_keyed_mutex",
+    "VK_EXT_full_screen_exclusive"};
+constexpr const char* WIN32_SURFACE_EXTENSION_NAME = "VK_KHR_win32_surface";
+
+thread_local std::vector<const char*> tl_instancePlatformExtensionNames;
+thread_local std::vector<const char*> tl_devicePlatformExtensionNames;
+
+void ReplaceWin32SurfaceExtension(VkInstanceCreateInfo* createInfo) {
+  const char* const* names = createInfo->ppEnabledExtensionNames;
+  const auto begin = names;
+  const auto end = names + createInfo->enabledExtensionCount;
+  auto isName = [](const char* expected) {
+    return [expected](const char* name) { return name && std::strcmp(name, expected) == 0; };
+  };
+  if (names == nullptr || std::none_of(begin, end, isName(WIN32_SURFACE_EXTENSION_NAME))) {
+    return;
+  }
+  const bool hasXlib = std::any_of(begin, end, isName(VK_KHR_XLIB_SURFACE_EXTENSION_NAME));
+  tl_instancePlatformExtensionNames.clear();
+  for (auto it = begin; it != end; ++it) {
+    if (!isName(WIN32_SURFACE_EXTENSION_NAME)(*it)) {
+      tl_instancePlatformExtensionNames.push_back(*it);
+    } else if (!hasXlib) {
+      tl_instancePlatformExtensionNames.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    }
+  }
+  createInfo->enabledExtensionCount =
+      static_cast<uint32_t>(tl_instancePlatformExtensionNames.size());
+  createInfo->ppEnabledExtensionNames = tl_instancePlatformExtensionNames.data();
+  LOG_INFO << "ReplayCustomization: enabled " << VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+           << " instead of " << WIN32_SURFACE_EXTENSION_NAME << " during vkCreateInstance.";
+}
+} // namespace
+#endif
+
 void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
   if (command.m_pCreateInfo.Value) {
     RedirectDebugCallbacksInPNext(command.m_pCreateInfo.Value->pNext);
@@ -719,6 +764,9 @@ void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
       LOG_INFO << "ReplayCustomization: suppressed " << removedExtensions
                << " instance extension(s) during vkCreateInstance.";
     }
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+    ReplaceWin32SurfaceExtension(createInfo);
+#endif
   }
 }
 
@@ -736,6 +784,15 @@ void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
       LOG_INFO << "ReplayCustomization: suppressed " << removedExtensions
                << " device extension(s) during vkCreateDevice.";
     }
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+    const uint32_t removedWin32Extensions =
+        RemoveSuppressedNames(WIN32_DEVICE_EXTENSIONS, createInfo->enabledExtensionCount,
+                              createInfo->ppEnabledExtensionNames, tl_devicePlatformExtensionNames);
+    if (removedWin32Extensions > 0) {
+      LOG_INFO << "ReplayCustomization: dropped " << removedWin32Extensions
+               << " Win32-only device extension(s) during vkCreateDevice.";
+    }
+#endif
 
     // Features can be enabled either through pEnabledFeatures or a
     // VkPhysicalDeviceFeatures2 chained into pNext; handle both.

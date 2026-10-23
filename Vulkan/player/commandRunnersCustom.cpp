@@ -7,10 +7,13 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandRunnersCustom.h"
+#include "argumentCodersAuto.h"
 #include "layerAuto.h"
 #include "playerManager.h"
 
 #include "log.h"
+
+#include <cstring>
 
 namespace gits {
 namespace vulkan {
@@ -161,6 +164,74 @@ void RestoreContentDataRunner::Run() {
     layer->Post(m_Command);
   }
 }
+
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+namespace {
+
+// Layout of VkWin32SurfaceCreateInfoKHR, which the Vulkan headers declare only on Windows.
+struct Win32SurfaceCreateInfo {
+  VkStructureType sType;
+  const void* pNext;
+  VkFlags flags;
+  void* hinstance;
+  void* hwnd;
+};
+
+// Reads a PointerArgument<VkWin32SurfaceCreateInfoKHR> the same way the generated decoder does
+// and returns the recorded window handle.
+uint64_t DecodeWin32SurfaceCreateInfo(char* src, uint32_t& offset) {
+  void* pointer{};
+  std::memcpy(&pointer, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (pointer == nullptr) {
+    return 0;
+  }
+  Win32SurfaceCreateInfo createInfo{};
+  std::memcpy(&createInfo, src + offset, sizeof(createInfo));
+  offset += sizeof(createInfo);
+  if (createInfo.pNext) {
+    DecodePNextChainInput(src, offset, const_cast<void**>(&createInfo.pNext));
+  }
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount) + keyCount * sizeof(GITSKey);
+  return reinterpret_cast<uint64_t>(createInfo.hwnd);
+}
+
+} // namespace
+
+void vkCreateWin32SurfaceKHRAsXlibRunner::DecodeCommand() {
+  uint32_t offset = 0;
+  Decode(m_Data, offset, command.m_Key);
+  Decode(m_Data, offset, command.m_ThreadId);
+  Decode(m_Data, offset, command.m_instance);
+  m_RecordedHwnd = DecodeWin32SurfaceCreateInfo(m_Data, offset);
+  Decode(m_Data, offset, command.m_pAllocator);
+  Decode(m_Data, offset, command.m_pSurface);
+  Decode(m_Data, offset, command.m_Return);
+
+  m_CreateInfo = {};
+  m_CreateInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  command.m_pCreateInfo.Value = &m_CreateInfo;
+}
+
+void vkCreateWin32SurfaceKHRAsXlibRunner::Run() {
+  CALL_ONCE[] {
+    LOG_INFO << "Replaying Win32 surfaces as Xlib surfaces.";
+  };
+  // The window is created by an earlier command, so it can only be looked up when this command
+  // runs. ReplayCustomizationLayer doesn't remap these live handles again.
+  const auto window = PlayerManager::Get().GetWindowService().GetPlaybackWindow(m_RecordedHwnd);
+  if (window.first == 0 || window.second == 0) {
+    LOG_ERROR << "vkCreateWin32SurfaceKHR: no playback window for the recorded window "
+              << m_RecordedHwnd << ", skipping the surface.";
+    command.m_Skip = true;
+  }
+  m_CreateInfo.dpy = reinterpret_cast<Display*>(window.first);
+  m_CreateInfo.window = static_cast<Window>(window.second);
+  vkCreateXlibSurfaceKHRRunner::Run();
+}
+#endif
 
 } // namespace vulkan
 } // namespace gits

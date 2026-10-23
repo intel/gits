@@ -35,6 +35,11 @@ stream::CommandRunner* VulkanCommandFactory::CreateCommand(unsigned id) {
     return new RestoreContentManifestRunner();
   case CommandId::ID_META_RESTORE_CONTENT_DATA:
     return new RestoreContentDataRunner();
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+  // Surfaces of windows recorded on Windows are replayed on Xlib windows.
+  case CommandId::ID_VKCREATEWIN32SURFACEKHR:
+    return new vkCreateWin32SurfaceKHRAsXlibRunner();
+#endif
   % for command in commands:
   <% define = get_define(command.platform) %>\
   % if define:

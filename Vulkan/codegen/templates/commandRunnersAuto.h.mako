@@ -32,7 +32,6 @@ protected:
     Decode(m_Data, command);
   }
 
-private:
   ${command.name}Command command;
 };
 % if define:

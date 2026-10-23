@@ -649,6 +649,12 @@ void HudLayer::Initialize() {
     return;
   }
 
+  if (CGits::Instance().GetImGuiHUD() == nullptr) {
+    LOG_WARNING << "Vulkan HUD disabled: the HUD is not available on this platform.";
+    m_HudDisabled = true;
+    return;
+  }
+
 #if defined(_WIN32)
   if (m_Hwnd == nullptr) {
     LOG_WARNING << "Vulkan HUD disabled: no Win32 window is associated with the swapchain.";

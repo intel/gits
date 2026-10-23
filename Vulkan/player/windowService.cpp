@@ -27,6 +27,13 @@ uint64_t WindowService::SetWindow(uint32_t protocol,
   if (Configurator::Get().common.player.showWindowsWA) {
     visible = true;
   }
+#if !defined(VK_USE_PLATFORM_WIN32_KHR) && defined(VK_USE_PLATFORM_XLIB_KHR)
+  // Windows recorded on Windows are replayed as Xlib windows (see
+  // vkCreateWin32SurfaceKHRAsXlibRunner).
+  if (protocol == CreateWindowMetaCommand::DisplayProtocol::WIN) {
+    protocol = CreateWindowMetaCommand::DisplayProtocol::XLIB;
+  }
+#endif
 
   auto it = m_WindowMap.find(handle);
   if (it != m_WindowMap.end()) {
@@ -232,6 +239,14 @@ uint64_t WindowService::GetCurrentWindowHandle(uint64_t captureWindow) {
     return it->second.playbackHandle;
   }
   return 0;
+}
+
+std::pair<uint64_t, uint64_t> WindowService::GetPlaybackWindow(uint64_t captureWindow) {
+  auto it = m_WindowMap.find(captureWindow);
+  if (it != m_WindowMap.end()) {
+    return {it->second.playbackHandle, it->second.playbackInstance};
+  }
+  return {};
 }
 
 uint64_t WindowService::GetCurrentInstance(uint64_t captureInstance) {

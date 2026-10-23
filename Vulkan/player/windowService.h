@@ -11,6 +11,7 @@
 #include "vulkanHeader2.h"
 
 #include <unordered_map>
+#include <utility>
 
 namespace gits {
 namespace vulkan {
@@ -29,6 +30,8 @@ public:
       uint64_t handle, int32_t x, int32_t y, int32_t width, int32_t height, bool visible);
   uint64_t GetCurrentWindowHandle(uint64_t captureWindow);
   uint64_t GetCurrentInstance(uint64_t captureInstance);
+  // Playback handle and instance of a recorded window (for Xlib: display and window).
+  std::pair<uint64_t, uint64_t> GetPlaybackWindow(uint64_t captureWindow);
 
 private:
 #ifdef GITS_PLATFORM_WINDOWS
