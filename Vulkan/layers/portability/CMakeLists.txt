@@ -10,6 +10,8 @@ add_library(Vulkan_portability STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(PORTABILITY_SRC
+  ${SRC_DIR}/accelerationStructureScratch.h
+  ${SRC_DIR}/accelerationStructureScratch.cpp
   ${SRC_DIR}/portabilityLayer.h
   ${SRC_DIR}/portabilityLayer.cpp
 )

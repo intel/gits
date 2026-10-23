@@ -130,8 +130,18 @@ PortabilityLayer::PortabilityLayer(DispatchTablesHolder& dispatchTablesHolder)
     : Layer("Portability"),
       m_DispatchTablesHolder(dispatchTablesHolder),
       m_RemapQueueFamilies(Configurator::Get().vulkan.player.portability.remapQueueFamilies),
+      m_ReplaceScratch(
+          Configurator::Get().vulkan.player.portability.replaceAccelerationStructureScratch),
+      m_Scratch(dispatchTablesHolder),
       m_RequestedAddressForm(
-          Configurator::Get().vulkan.player.portability.captureReplayAddressForm) {}
+          Configurator::Get().vulkan.player.portability.captureReplayAddressForm) {
+  if (m_ReplaceScratch && Configurator::Get().common.player.subcapture.enabled) {
+    // A subcapture can't refer to the scratch buffers created by the layer.
+    LOG_WARNING << "Portability: acceleration structure scratch replacement is disabled during "
+                   "subcapture.";
+    m_ReplaceScratch = false;
+  }
+}
 
 // --- Building the remap from the queue family property queries ---------------
 
@@ -240,6 +250,9 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   m_AddressForm = SelectAddressForm(command.m_physicalDevice.Value);
+  if (m_ReplaceScratch) {
+    m_Scratch.SetPhysicalDevice(command.m_physicalDevice.Value);
+  }
 
   auto it = m_Families.find(command.m_physicalDevice.Value);
   if (it == m_Families.end() || !it->second.built) {
@@ -370,6 +383,82 @@ void PortabilityLayer::Pre(vkCreateDeviceCommand& command) {
 
   createInfo->queueCreateInfoCount = static_cast<uint32_t>(m_MergedQueueInfos.size());
   createInfo->pQueueCreateInfos = m_MergedQueueInfos.data();
+}
+
+// --- Replacing acceleration structure build scratch memory --------------------
+
+void PortabilityLayer::Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) {
+  if (!m_ReplaceScratch || command.m_Skip) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_ActiveScratchDevice == VK_NULL_HANDLE) {
+    return;
+  }
+  m_Scratch.ReplaceScratch(m_ActiveScratchDevice, command.m_commandBuffer.Value,
+                           command.m_infoCount.Value, command.m_pInfos.Value,
+                           command.m_ppBuildRangeInfos.Value);
+}
+
+void PortabilityLayer::Post(vkAllocateCommandBuffersCommand& command) {
+  if (!m_ReplaceScratch || command.m_Return.Value != VK_SUCCESS ||
+      command.m_pAllocateInfo.Value == nullptr) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_ActiveScratchDevice = command.m_device.Value;
+  m_Scratch.AddCommandBuffers(command.m_pAllocateInfo.Value->commandPool,
+                              command.m_pCommandBuffers.Value,
+                              command.m_pAllocateInfo.Value->commandBufferCount);
+}
+
+void PortabilityLayer::Pre(vkBeginCommandBufferCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.ResetCommandBuffer(command.m_commandBuffer.Value);
+}
+
+void PortabilityLayer::Pre(vkResetCommandBufferCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.ResetCommandBuffer(command.m_commandBuffer.Value);
+}
+
+void PortabilityLayer::Pre(vkResetCommandPoolCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.ResetCommandPool(command.m_commandPool.Value);
+}
+
+void PortabilityLayer::Pre(vkFreeCommandBuffersCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.FreeCommandBuffers(command.m_commandPool.Value, command.m_pCommandBuffers.Value,
+                               command.m_commandBufferCount.Value);
+}
+
+void PortabilityLayer::Pre(vkDestroyCommandPoolCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.DestroyCommandPool(command.m_commandPool.Value);
+}
+
+void PortabilityLayer::Pre(vkDestroyDeviceCommand& command) {
+  if (!m_ReplaceScratch) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Scratch.DestroyDevice(command.m_device.Value);
 }
 
 // --- Converting memory opaque capture addresses ------------------------------

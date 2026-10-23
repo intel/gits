@@ -1891,6 +1891,14 @@ Configuration:
                   family properties stored in the stream are matched against the
                   replay (target) device queue families by capability in a single
                   replay pass; colliding logical-device queue requests are merged.
+              - Name: replaceAccelerationStructureScratch
+                Type: bool
+                Default: false
+                Arguments: [vkReplaceAccelerationStructureScratch]
+                Description:
+                  Give acceleration structure builds scratch memory sized by the replay
+                  driver instead of the recorded scratch regions, which were sized for
+                  the recording driver. Disabled during subcapture.
               - Name: captureReplayAddressForm
                 Type: VulkanCaptureReplayAddressForm
                 Default: Auto

@@ -9,6 +9,7 @@
 #pragma once
 
 #include "layerAuto.h"
+#include "accelerationStructureScratch.h"
 #include "dispatchTablesHolder.h"
 #include "enumsAuto.h"
 
@@ -29,6 +30,9 @@ namespace vulkan {
 // 48-bit) accepted by the replay driver. Both forms describe the same GPU
 // virtual address, so buffer device addresses stored in the stream stay valid.
 //
+// Acceleration structure builds can get scratch memory sized for the replay driver
+// (see AccelerationStructureScratch).
+//
 // Assumption: a single physical+logical device.
 class PortabilityLayer : public Layer {
 public:
@@ -48,6 +52,16 @@ public:
   // Convert memory opaque capture addresses to the form expected by the driver.
   void Pre(vkAllocateMemoryCommand& command) override;
   void Post(vkAllocateMemoryCommand& command) override;
+
+  // Replace acceleration structure build scratch memory.
+  void Pre(vkCmdBuildAccelerationStructuresKHRCommand& command) override;
+  void Post(vkAllocateCommandBuffersCommand& command) override;
+  void Pre(vkBeginCommandBufferCommand& command) override;
+  void Pre(vkResetCommandBufferCommand& command) override;
+  void Pre(vkResetCommandPoolCommand& command) override;
+  void Pre(vkFreeCommandBuffersCommand& command) override;
+  void Pre(vkDestroyCommandPoolCommand& command) override;
+  void Pre(vkDestroyDeviceCommand& command) override;
 
   // Apply the remap.
   void Pre(vkGetDeviceQueueCommand& command) override;
@@ -96,6 +110,10 @@ private:
 
   DispatchTablesHolder& m_DispatchTablesHolder;
   const bool m_RemapQueueFamilies;
+  bool m_ReplaceScratch;
+  AccelerationStructureScratch m_Scratch;
+  // Device owning the command buffers (single device assumption)
+  VkDevice m_ActiveScratchDevice{VK_NULL_HANDLE};
   const VulkanCaptureReplayAddressForm m_RequestedAddressForm;
 
   // Form applied to memory opaque capture addresses of the active device
