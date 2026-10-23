@@ -30,6 +30,7 @@ class PlayerManager;
 class PlayerLayerManager {
 public:
   void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
+  void Reset();
 
   std::vector<Layer*>& GetPreLayers() {
     return m_PreLayers;

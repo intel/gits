@@ -64,8 +64,6 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/accelerationStructuresPrebuildInfoService.cpp
   ${SRC_DIR}/raytracingBuildInputsHash.h
   ${SRC_DIR}/raytracingBuildInputsHash.cpp
-  ${SRC_DIR}/gpuExecutionFlusher.h
-  ${SRC_DIR}/gpuExecutionFlusher.cpp
   ${SRC_DIR}/residencyService.h
   ${SRC_DIR}/residencyService.cpp
   ${SRC_DIR}/resourceUsageTrackingService.h

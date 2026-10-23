@@ -20,7 +20,9 @@ namespace DirectX {
 
 class LayerGroup {
 public:
-  virtual ~LayerGroup() {}
+  virtual ~LayerGroup() {
+    ResetLayers();
+  }
   LayerGroup(const LayerGroup&) = delete;
   LayerGroup& operator=(const LayerGroup&) = delete;
 
@@ -32,6 +34,10 @@ public:
       return nullptr;
     }
     return it->second.get();
+  }
+
+  void ResetLayers() {
+    m_Layers.clear();
   }
 
 protected:

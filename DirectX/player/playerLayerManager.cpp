@@ -214,5 +214,21 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   retainLayer(std::move(ccodeLayer));
 }
 
+void PlayerLayerManager::Reset() {
+  m_PreLayers.clear();
+  m_PostLayers.clear();
+
+  m_TraceLayerGroup.ResetLayers();
+  m_SubcaptureLayerGroup.ResetLayers();
+  m_ExecutionSerializationLayerGroup.ResetLayers();
+  m_CommandListSplitLayerGroup.ResetLayers();
+  m_ResourceDumpingLayerGroup.ResetLayers();
+  m_SkipCallsLayerGroup.ResetLayers();
+  m_PortabilityLayerGroup.ResetLayers();
+  m_AddressPinningLayerGroup.ResetLayers();
+
+  m_LayersOwner.clear();
+}
+
 } // namespace DirectX
 } // namespace gits

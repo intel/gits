@@ -44,6 +44,7 @@ void GpuExecutionFlusher::FlushCommandQueues() {
       GITS_ASSERT(hr == S_OK);
     }
   }
+  m_CommandQueues.clear();
 }
 
 } // namespace DirectX

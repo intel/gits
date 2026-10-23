@@ -38,6 +38,7 @@ PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
     m_MultithreadedObjectCreationService.Shutdown();
+    m_LayerManager.Reset();
     m_PluginService.reset();
   } catch (...) {
     topmost_exception_handler("PlayerManager::~PlayerManager");
