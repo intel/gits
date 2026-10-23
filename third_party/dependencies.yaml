@@ -8,7 +8,7 @@ dependencies:
       folder_to_extract: build/native/
     - name: dxc
       package_url: https://www.nuget.org/api/v2/package/Microsoft.Direct3D.DXC/
-      version: 1.8.2407.12
+      version: 1.9.2609.5
       os: WINDOWS
       folder_to_extract: build/native/
     - name: DirectML
