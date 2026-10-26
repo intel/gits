@@ -42,10 +42,6 @@ target_link_libraries(Vulkan_interceptor PRIVATE
   Vulkan_recorder
 )
 
-if(NOT WIN32)
-  target_link_libraries(Vulkan_interceptor PRIVATE pthread dl)
-endif()
-
 if(MSVC)
   set_target_properties(Vulkan_interceptor PROPERTIES OUTPUT_NAME vulkan-1)
 else()

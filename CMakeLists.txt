@@ -175,7 +175,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_DEBUG")
-set(CLANG_COMPILER CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
 if(UNIX AND NOT ARCH STREQUAL "-march=armv8-a")
   add_definitions(-msse4.2)
@@ -198,8 +197,8 @@ elseif(MSVC)
   add_link_options("$<$<NOT:$<CONFIG:DEBUG>>:/OPT:REF>")
 endif()
 
-if(NOT MSVC AND NOT CLANG_COMPILER)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-undefined")
+if(UNIX)
+  add_link_options("LINKER:--no-undefined" "LINKER:--as-needed")
 endif()
 
 if(NOT MSVC)
