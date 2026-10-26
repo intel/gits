@@ -42,7 +42,7 @@ dependencies:
     - name: yaml-cpp
       argument: yamlcpp
       url: https://github.com/jbeder/yaml-cpp.git
-      branch: 0.8.0
+      branch: yaml-cpp-0.9.0
     - name: Detours
       url: https://github.com/microsoft/Detours.git
       branch: main

@@ -120,6 +120,7 @@ target_compile_options(gits_launcher PRIVATE
     -Wno-error=parentheses
     -Wno-error=sequence-point
     -Wno-error=unknown-pragmas
+    -Wno-error=unused-but-set-variable
   >
   $<$<CXX_COMPILER_ID:MSVC>:
     /wd4996  # deprecated warnings
