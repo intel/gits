@@ -397,6 +397,18 @@ void RayTracingCaptureService::OnPostCreateAccelerationStructureKHR(
       VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR;
 }
 
+void RayTracingCaptureService::OnPostCreateAccelerationStructure2KHR(
+    vkCreateAccelerationStructure2KHRCommand& command) {
+  if (!m_Caps[command.m_device.Key].m_AccelerationStructureCaptureReplay) {
+    return;
+  }
+
+  // *2* has no separate AS deviceAddress field (addressRange is storage). Capture/replay
+  // placement relies on the backing buffer's pinned address; only the create flag is set here.
+  command.m_pCreateInfo.Value->createFlags |=
+      VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR;
+}
+
 void RayTracingCaptureService::OnPostCreateMicromapEXT(vkCreateMicromapEXTCommand& command) {
   // Intentionally a no-op, unlike its acceleration structure counterpart above. No micromap
   // capture/replay address is requested: nothing consumes one (every reference is by handle, and

@@ -26,6 +26,7 @@ public:
   void OnPreAllocateMemory(vkAllocateMemoryCommand& command);
   void OnPostAllocateMemory(vkAllocateMemoryCommand& command);
   void OnPostCreateAccelerationStructureKHR(vkCreateAccelerationStructureKHRCommand& command);
+  void OnPostCreateAccelerationStructure2KHR(vkCreateAccelerationStructure2KHRCommand& command);
   void OnPostCreateMicromapEXT(vkCreateMicromapEXTCommand& command);
   void OnPreCreateRayTracingPipelinesKHR(vkCreateRayTracingPipelinesKHRCommand& command);
   void OnPostCreateRayTracingPipelinesKHR(vkCreateRayTracingPipelinesKHRCommand& command);

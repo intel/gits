@@ -150,7 +150,7 @@ dependencies:
       commit_id: b96362630241bc29b77df842bc3893b4ff131180
     - name: Vulkan-Headers
       url: https://github.com/KhronosGroup/Vulkan-Headers.git
-      branch: v1.4.335
+      branch: v1.4.365
     - name: stb
       url: https://github.com/nothings/stb.git
       branch: master

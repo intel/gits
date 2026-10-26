@@ -638,7 +638,8 @@ def get_platform_names(vk_xml_root) -> tuple[set[str], dict[str, str]]:
       'ggp',
       'sci',
       'screen',
-      'ohos'
+      'ohos',
+      'ubm',
     ]
 
     excluded = set()

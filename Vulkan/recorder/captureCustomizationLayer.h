@@ -112,6 +112,7 @@ public:
   void Pre(vkCmdPushDescriptorSetWithTemplateKHRCommand& command) override;
 
   void Post(vkCreateAccelerationStructureKHRCommand& command) override;
+  void Post(vkCreateAccelerationStructure2KHRCommand& command) override;
   void Post(vkCreateMicromapEXTCommand& command) override;
   void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;

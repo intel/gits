@@ -720,6 +720,15 @@ void CaptureCustomizationLayer::Post(vkCreateAccelerationStructureKHRCommand& co
   m_RayTracingService.OnPostCreateAccelerationStructureKHR(command);
 }
 
+void CaptureCustomizationLayer::Post(vkCreateAccelerationStructure2KHRCommand& command) {
+  if ((command.m_Return.Value != VK_SUCCESS) || !command.m_pAccelerationStructure.Value ||
+      (*command.m_pAccelerationStructure.Value == VK_NULL_HANDLE)) {
+    return;
+  }
+
+  m_RayTracingService.OnPostCreateAccelerationStructure2KHR(command);
+}
+
 void CaptureCustomizationLayer::Post(vkCreateMicromapEXTCommand& command) {
   if ((command.m_Return.Value != VK_SUCCESS) || !command.m_pCreateInfo.Value ||
       !command.m_pMicromap.Value || (*command.m_pMicromap.Value == VK_NULL_HANDLE)) {
