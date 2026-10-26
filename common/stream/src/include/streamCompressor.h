@@ -10,6 +10,7 @@
 
 #include "zstd.h"
 
+#include <cstdint>
 #include <memory>
 
 namespace gits {
