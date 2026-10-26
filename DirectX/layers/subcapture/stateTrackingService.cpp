@@ -574,27 +574,33 @@ void StateTrackingService::RestoreDXGISwapChain(ObjectState* state) {
                         *command->m_ppSwapChain.Value, command->m_pDesc.Value->BufferCount);
     }
   } else if (state->CreationCommand->GetId() == CommandId::ID_XEFGSWAPCHAIND3D12GETSWAPCHAINPTR) {
-    auto* command =
+    auto command =
         static_cast<xefgSwapChainD3D12GetSwapChainPtrCommand*>(state->CreationCommand.get());
-    auto contextKey = command->m_hSwapChain.Key;
+    ObjectKey contextKey = command->m_hSwapChain.Key;
     m_XellStateService.RestoreState();
     m_XefgStateService.RestoreState();
-    auto xefgContextState = m_XefgStateService.GetContextState(contextKey);
+    XefgStateService::ContextState* xefgContextState =
+        m_XefgStateService.GetContextState(contextKey);
     ID3D12CommandQueue* cmdQueue{};
+    ObjectKey cmdQueueKey{};
     if (xefgContextState->InitFromSwapChainParams.has_value()) {
-      auto& initParams = xefgContextState->InitFromSwapChainParams.value();
+      XefgStateService::InitFromSwapChainState& initParams =
+          xefgContextState->InitFromSwapChainParams.value();
       cmdQueue = initParams.CmdQueue;
+      cmdQueueKey = initParams.CmdQueueKey;
     } else if (xefgContextState->InitFromSwapChainDescParams.has_value()) {
-      auto& initParams = xefgContextState->InitFromSwapChainDescParams.value();
+      XefgStateService::InitFromSwapChainDescState& initParams =
+          xefgContextState->InitFromSwapChainDescParams.value();
       cmdQueue = initParams.CmdQueue;
+      cmdQueueKey = initParams.CmdQueueKey;
     }
-    auto& swapChainInfo = xefgContextState->SwapChain.value();
+    XefgStateService::SwapChainPtrState& swapChainInfo = xefgContextState->SwapChain.value();
     DXGI_SWAP_CHAIN_DESC desc{};
     swapChainInfo.SwapChain->GetDesc(&desc);
     unsigned bufferCount = desc.BufferCount;
     GetSwapChainService(swapChainInfo.SwapChainKey)
-        .SetSwapChain(xefgContextState->DeviceKey, cmdQueue, swapChainInfo.SwapChainKey,
-                      swapChainInfo.SwapChain, bufferCount);
+        .SetSwapChain(cmdQueueKey, cmdQueue, swapChainInfo.SwapChainKey, swapChainInfo.SwapChain,
+                      bufferCount);
     return;
   }
   m_Recorder.Record(*createCommandSerializer(state->CreationCommand.get()));
