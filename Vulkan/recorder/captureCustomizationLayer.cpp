@@ -623,7 +623,7 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
 }
 
 void CaptureCustomizationLayer::Post(vkFreeMemoryCommand& command) {
-  m_Manager.GetMapTrackingService().FreeExternalMemory(command.m_memory.Key);
+  m_Manager.GetMapTrackingService().RemoveAllocationInfo(command.m_memory.Key);
 }
 
 void CaptureCustomizationLayer::Post(vkMapMemoryCommand& command) {

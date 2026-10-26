@@ -11,6 +11,8 @@
 #include "commandSerializersCustom.h"
 
 #ifdef GITS_PLATFORM_LINUX
+#include <algorithm>
+#include <atomic>
 #include <cerrno>
 #include <csignal>
 #include <pthread.h>
@@ -19,6 +21,8 @@
 namespace {
 struct sigaction g_PreviousSigsegv = {};
 bool g_PreviousSigsegvValid = false;
+// Cleared on teardown, after which every fault goes to the previous handler.
+std::atomic<bool> g_MapTrackingActive{false};
 
 void SigsegvHandler(int sig, siginfo_t* si, void* context);
 
@@ -78,7 +82,7 @@ void SigsegvHandler(int sig, siginfo_t* si, void* context) {
   const int savedErrno = errno;
   // Shadowed map pages are PROT_NONE or PROT_READ, so tracked accesses always fault with
   // SEGV_ACCERR. Anything else (including SIGSEGV sent by kill) belongs to the previous handler.
-  if (si->si_code != SEGV_ACCERR ||
+  if (si->si_code != SEGV_ACCERR || !g_MapTrackingActive.load(std::memory_order_acquire) ||
       !gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(
           si->si_addr, IsWriteFault(context))) {
     ForwardToPreviousHandler(sig, si, context);
@@ -101,6 +105,23 @@ void InstallSigsegvHandler() {
     g_PreviousSigsegvValid = true;
   }
 }
+
+bool IsSigsegvHandlerInstalled() {
+  struct sigaction current = {};
+  int ret = sigaction(SIGSEGV, nullptr, &current);
+  GITS_ASSERT(ret != -1, "Sigaction query for SIGSEGV failed.");
+  return (current.sa_flags & SA_SIGINFO) != 0 && current.sa_sigaction == SigsegvHandler;
+}
+
+void RestoreSigsegvHandler() {
+  // A handler installed after GITS may chain to it, so only the GITS handler itself is replaced.
+  if (!IsSigsegvHandlerInstalled()) {
+    return;
+  }
+  int ret = sigaction(SIGSEGV, &g_PreviousSigsegv, nullptr);
+  GITS_ASSERT(ret != -1, "Sigaction restore for SIGSEGV failed.");
+  g_PreviousSigsegvValid = false;
+}
 } // namespace
 
 #endif
@@ -117,6 +138,24 @@ MapTrackingService::MapTrackingService(CaptureManager& manager, stream::Ordering
 #else
   m_PageSize = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
   InstallSigsegvHandler();
+  g_MapTrackingActive.store(true, std::memory_order_release);
+#endif
+}
+
+MapTrackingService::~MapTrackingService() {
+#ifdef GITS_PLATFORM_LINUX
+  g_MapTrackingActive.store(false, std::memory_order_release);
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  // The app may keep using its mapped pointers after recording ends, so the shadows are left
+  // mapped and accessible instead of being released.
+  for (auto& entry : m_ShadowAllocations) {
+    AllocationInfo* allocationInfo = entry.second;
+    int ret = mprotect(allocationInfo->ShadowMemory, static_cast<size_t>(allocationInfo->MapSize),
+                       PROT_READ | PROT_WRITE);
+    GITS_ASSERT(ret != -1);
+  }
+  m_ShadowAllocations.clear();
+  RestoreSigsegvHandler();
 #endif
 }
 
@@ -193,18 +232,22 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
   m_Allocations[deviceMemoryKey] = std::move(allocationInfo);
 }
 
-void MapTrackingService::FreeExternalMemory(GITSKey deviceMemoryKey) {
+void MapTrackingService::RemoveAllocationInfo(GITSKey deviceMemoryKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-#ifdef GITS_PLATFORM_WINDOWS
   auto it = m_Allocations.find(deviceMemoryKey);
   if (it == m_Allocations.end()) {
     return;
   }
+#ifdef GITS_PLATFORM_WINDOWS
   if (it->second.ExternalMemory) {
     VirtualFree(it->second.ExternalMemory, 0, MEM_RELEASE);
   }
-  m_Allocations.erase(deviceMemoryKey);
+#else
+  // vkFreeMemory implicitly unmaps the memory. Writes since the last submit can never reach the
+  // GPU, so the shadow is dropped without touching the already freed mapping.
+  ReleaseShadowMemory(it->second);
 #endif
+  m_Allocations.erase(it);
 }
 
 void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
@@ -222,8 +265,6 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
 #ifdef GITS_PLATFORM_WINDOWS
   ResetWriteWatch(allocationInfo.MappedData, static_cast<SIZE_T>(allocationInfo.MapSize));
 #else
-  allocationInfo.TouchedPages.clear();
-  allocationInfo.ReadTriggeredPages.clear();
   size_t shadowSize = static_cast<size_t>(allocationInfo.MapSize);
   allocationInfo.ShadowMemory =
       mmap(nullptr, shadowSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -231,6 +272,16 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
   std::memcpy(allocationInfo.ShadowMemory, *ppData, shadowSize);
   int ret = mprotect(allocationInfo.ShadowMemory, shadowSize, PROT_NONE);
   GITS_ASSERT(ret != -1);
+  allocationInfo.PageStates.assign((shadowSize + m_PageSize - 1) / m_PageSize,
+                                   PageState::Protected);
+  allocationInfo.AccessedBegin = 0;
+  allocationInfo.AccessedEnd = 0;
+  m_ShadowAllocations[reinterpret_cast<uintptr_t>(allocationInfo.ShadowMemory)] = &allocationInfo;
+  if (!m_SigsegvHandlerReplacedLogged && !IsSigsegvHandlerInstalled()) {
+    LOG_WARNING << "MapTrackingService SIGSEGV handler was replaced. Accessing mapped memory may "
+                   "crash unless the new handler forwards to the previous one.";
+    m_SigsegvHandlerReplacedLogged = true;
+  }
   *ppData = allocationInfo.ShadowMemory;
 #endif
 }
@@ -243,17 +294,27 @@ void MapTrackingService::RemoveData(GITSKey deviceMemoryKey) {
     ScheduleMemoryUpdate(deviceMemoryKey);
   }
 #ifdef GITS_PLATFORM_LINUX
-  if (it->second.ShadowMemory) {
-    int ret = munmap(it->second.ShadowMemory, static_cast<size_t>(it->second.MapSize));
-    GITS_ASSERT(ret != -1);
-    it->second.ShadowMemory = nullptr;
-  }
+  ReleaseShadowMemory(it->second);
 #endif
   it->second.IsMapped = false;
   it->second.MapOffset = 0;
   it->second.MapSize = 0;
   it->second.MappedData = nullptr;
 }
+
+#ifdef GITS_PLATFORM_LINUX
+void MapTrackingService::ReleaseShadowMemory(AllocationInfo& allocationInfo) {
+  if (allocationInfo.ShadowMemory) {
+    m_ShadowAllocations.erase(reinterpret_cast<uintptr_t>(allocationInfo.ShadowMemory));
+    int ret = munmap(allocationInfo.ShadowMemory, static_cast<size_t>(allocationInfo.MapSize));
+    GITS_ASSERT(ret != -1);
+    allocationInfo.ShadowMemory = nullptr;
+  }
+  allocationInfo.PageStates = {};
+  allocationInfo.AccessedBegin = 0;
+  allocationInfo.AccessedEnd = 0;
+}
+#endif
 
 void MapTrackingService::SnapshotAllMapped() {
   std::lock_guard<std::mutex> lock(m_Mutex);
@@ -319,74 +380,60 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
   regions.push_back({offset, currentSize, currentPage});
   RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
 #else
-  if (allocationInfo.TouchedPages.empty() && allocationInfo.ReadTriggeredPages.empty()) {
+  const size_t accessedBegin = allocationInfo.AccessedBegin;
+  const size_t accessedEnd = allocationInfo.AccessedEnd;
+  if (accessedBegin == accessedEnd) {
     return;
   }
 
-  if (!allocationInfo.TouchedPages.empty()) {
-    for (uintptr_t page : allocationInfo.TouchedPages) {
-      int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_READ);
-      GITS_ASSERT(ret != -1);
-    }
+  char* shadow = static_cast<char*>(allocationInfo.ShadowMemory);
+  std::vector<PageState>& pageStates = allocationInfo.PageStates;
 
-    std::vector<MemoryRegions::Region> regions;
-
-    std::vector<uintptr_t> sortedPages(allocationInfo.TouchedPages.begin(),
-                                       allocationInfo.TouchedPages.end());
-    std::sort(sortedPages.begin(), sortedPages.end());
-
-    char* baseAddress = static_cast<char*>(allocationInfo.ShadowMemory);
-    uintptr_t mapStart = reinterpret_cast<uintptr_t>(baseAddress);
-    uintptr_t mapEnd = mapStart + allocationInfo.MapSize;
-
-    uintptr_t regionStart = sortedPages[0];
-    uintptr_t regionEnd = regionStart + m_PageSize;
-
-    auto flushRegion = [&](uintptr_t start, uintptr_t end) {
-      if (start < mapStart) {
-        start = mapStart;
+  // Calls onRun(firstPage, pageCount) for every run of consecutive pages in the accessed range
+  // accepted by matches.
+  auto forEachPageRun = [&](auto matches, auto onRun) {
+    size_t first = accessedBegin;
+    while (first < accessedEnd) {
+      if (!matches(pageStates[first])) {
+        ++first;
+        continue;
       }
-      if (end > mapEnd) {
-        end = mapEnd;
+      size_t last = first + 1;
+      while (last < accessedEnd && matches(pageStates[last])) {
+        ++last;
       }
-      if (end > start) {
-        uint64_t offset = start - mapStart;
-        uint64_t size = end - start;
-        regions.push_back({offset, size, reinterpret_cast<char*>(start)});
-      }
-    };
-
-    for (size_t i = 1; i < sortedPages.size(); ++i) {
-      if (sortedPages[i] == regionEnd) {
-        regionEnd += m_PageSize;
-      } else {
-        flushRegion(regionStart, regionEnd);
-        regionStart = sortedPages[i];
-        regionEnd = regionStart + m_PageSize;
-      }
+      onRun(first, last - first);
+      first = last;
     }
-    flushRegion(regionStart, regionEnd);
+  };
 
-    for (const auto& region : regions) {
-      std::memcpy(static_cast<char*>(allocationInfo.MappedData) + region.Offset, region.Data,
-                  region.Size);
-    }
+  auto isWritten = [](PageState state) { return state == PageState::Written; };
+  auto isAccessed = [](PageState state) { return state != PageState::Protected; };
 
-    if (!regions.empty()) {
-      RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
-    }
-  }
-
-  std::unordered_set<uintptr_t> pagesToReprotect = allocationInfo.TouchedPages;
-  pagesToReprotect.insert(allocationInfo.ReadTriggeredPages.begin(),
-                          allocationInfo.ReadTriggeredPages.end());
-  for (uintptr_t page : pagesToReprotect) {
-    errno = 0;
-    int ret = mprotect(reinterpret_cast<void*>(page), m_PageSize, PROT_NONE);
+  // Written pages are made read-only before copying so concurrent writes fault and wait for the
+  // lock instead of being lost.
+  std::vector<MemoryRegions::Region> regions;
+  forEachPageRun(isWritten, [&](size_t firstPage, size_t pageCount) {
+    uint64_t offset = firstPage * m_PageSize;
+    int ret = mprotect(shadow + offset, pageCount * m_PageSize, PROT_READ);
     GITS_ASSERT(ret != -1);
+    uint64_t size = std::min<uint64_t>(pageCount * m_PageSize, allocationInfo.MapSize - offset);
+    std::memcpy(static_cast<char*>(allocationInfo.MappedData) + offset, shadow + offset, size);
+    regions.push_back({offset, size, shadow + offset});
+  });
+
+  if (!regions.empty()) {
+    RecordMappedDataMetaCommand(allocationInfo.DeviceKey, deviceMemoryKey, regions);
   }
-  allocationInfo.TouchedPages.clear();
-  allocationInfo.ReadTriggeredPages.clear();
+
+  forEachPageRun(isAccessed, [&](size_t firstPage, size_t pageCount) {
+    int ret = mprotect(shadow + firstPage * m_PageSize, pageCount * m_PageSize, PROT_NONE);
+    GITS_ASSERT(ret != -1);
+  });
+  std::fill(pageStates.begin() + accessedBegin, pageStates.begin() + accessedEnd,
+            PageState::Protected);
+  allocationInfo.AccessedBegin = 0;
+  allocationInfo.AccessedEnd = 0;
 #endif
 }
 
@@ -407,34 +454,48 @@ bool MapTrackingService::HandleAddress(void* address, bool isWrite) {
   uintptr_t pageAddr = addr - (addr % m_PageSize);
 
   std::lock_guard<std::mutex> lock(m_Mutex);
-  for (auto& [key, alloc] : m_Allocations) {
-    if (!alloc.IsMapped || alloc.ShadowMemory == nullptr) {
-      continue;
-    }
-
-    uintptr_t shadowBegin = reinterpret_cast<uintptr_t>(alloc.ShadowMemory);
-    uintptr_t shadowEnd = shadowBegin + alloc.MapSize;
-
-    if (pageAddr >= shadowBegin && pageAddr < shadowEnd) {
-      errno = 0;
-      int ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ | PROT_WRITE);
-      GITS_ASSERT(ret != -1);
-      if (isWrite) {
-        alloc.TouchedPages.insert(pageAddr);
-      } else {
-        uintptr_t pageOffset = pageAddr - shadowBegin;
-        size_t copySize = std::min(static_cast<size_t>(m_PageSize),
-                                   static_cast<size_t>(alloc.MapSize - pageOffset));
-        std::memcpy(reinterpret_cast<void*>(pageAddr),
-                    static_cast<char*>(alloc.MappedData) + pageOffset, copySize);
-        ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ);
-        GITS_ASSERT(ret != -1);
-        alloc.ReadTriggeredPages.insert(pageAddr);
-      }
-      return true;
-    }
+  // The last shadow starting at or below the address is the only one that can contain it.
+  auto it = m_ShadowAllocations.upper_bound(addr);
+  if (it == m_ShadowAllocations.begin()) {
+    return false;
   }
-  return false;
+  --it;
+  uintptr_t shadowBegin = it->first;
+  AllocationInfo& alloc = *it->second;
+  if (pageAddr >= shadowBegin + alloc.MapSize) {
+    return false;
+  }
+
+  uintptr_t pageOffset = pageAddr - shadowBegin;
+  size_t pageIndex = pageOffset / m_PageSize;
+  PageState& state = alloc.PageStates[pageIndex];
+  // Another thread may have unprotected the page while this one waited for the lock.
+  if (state == PageState::Written || (!isWrite && state == PageState::Read)) {
+    return true;
+  }
+
+  int ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ | PROT_WRITE);
+  GITS_ASSERT(ret != -1);
+  if (isWrite) {
+    state = PageState::Written;
+  } else {
+    size_t copySize =
+        std::min(static_cast<size_t>(m_PageSize), static_cast<size_t>(alloc.MapSize - pageOffset));
+    std::memcpy(reinterpret_cast<void*>(pageAddr),
+                static_cast<char*>(alloc.MappedData) + pageOffset, copySize);
+    ret = mprotect(reinterpret_cast<void*>(pageAddr), m_PageSize, PROT_READ);
+    GITS_ASSERT(ret != -1);
+    state = PageState::Read;
+  }
+
+  if (alloc.AccessedBegin == alloc.AccessedEnd) {
+    alloc.AccessedBegin = pageIndex;
+    alloc.AccessedEnd = pageIndex + 1;
+  } else {
+    alloc.AccessedBegin = std::min(alloc.AccessedBegin, pageIndex);
+    alloc.AccessedEnd = std::max(alloc.AccessedEnd, pageIndex + 1);
+  }
+  return true;
 }
 #endif
 
