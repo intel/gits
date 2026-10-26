@@ -11,26 +11,97 @@
 #include "commandSerializersCustom.h"
 
 #ifdef GITS_PLATFORM_LINUX
+#include <cerrno>
 #include <csignal>
+#include <pthread.h>
 #include <sys/mman.h>
 
-static void SigsegvHandler(int sig, siginfo_t* si, [[maybe_unused]] void* unused) {
-  void* faultAddr = si->si_addr;
-  bool isWrite = true;
+namespace {
+struct sigaction g_PreviousSigsegv = {};
+bool g_PreviousSigsegvValid = false;
 
-#if defined(__x86_64__) || defined(__i386__)
-  // On x86/x86_64, the CPU stores error code flags in the ucontext
-  ucontext_t* context = reinterpret_cast<ucontext_t*>(unused);
-  isWrite = (context->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+void SigsegvHandler(int sig, siginfo_t* si, void* context);
+
+bool IsWriteFault(void* context) {
+#if defined(__x86_64__)
+  // Bit 1 of the x86_64 page fault error code is set for write accesses.
+  const auto* ucontext = static_cast<const ucontext_t*>(context);
+  return (ucontext->uc_mcontext.gregs[REG_ERR] & 0x2) != 0;
+#else
+  return true;
 #endif
+}
 
-  if (!gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(faultAddr,
-                                                                                 isWrite)) {
-    LOG_ERROR << "MapTrackingService signal handler caught unhandled signal: "
-              << " errno: " << si->si_errno << " at address: " << si->si_addr;
-    exit(1);
+void FallBackToDefaultAction(int sig, siginfo_t* si) {
+  struct sigaction dfl = {};
+  dfl.sa_handler = SIG_DFL;
+  sigemptyset(&dfl.sa_mask);
+  sigaction(SIGSEGV, &dfl, nullptr);
+  // A kernel-generated fault re-triggers when the faulting instruction is re-executed after
+  // return, so the default action reports the original context. A sent signal must be re-raised.
+  if (si->si_code <= 0) {
+    raise(sig);
   }
 }
+
+void ForwardToPreviousHandler(int sig, siginfo_t* si, void* context) {
+  const struct sigaction& previous = g_PreviousSigsegv;
+  if ((previous.sa_flags & SA_SIGINFO) != 0) {
+    if (previous.sa_sigaction != nullptr && previous.sa_sigaction != SigsegvHandler) {
+      sigset_t oldMask;
+      pthread_sigmask(SIG_BLOCK, &previous.sa_mask, &oldMask);
+      previous.sa_sigaction(sig, si, context);
+      pthread_sigmask(SIG_SETMASK, &oldMask, nullptr);
+      return;
+    }
+  } else if (previous.sa_handler == SIG_IGN) {
+    // Only a sent signal can be ignored; ignoring a kernel-generated fault would re-execute the
+    // faulting instruction forever.
+    if (si->si_code <= 0) {
+      return;
+    }
+  } else if (previous.sa_handler != SIG_DFL) {
+    sigset_t oldMask;
+    pthread_sigmask(SIG_BLOCK, &previous.sa_mask, &oldMask);
+    previous.sa_handler(sig);
+    pthread_sigmask(SIG_SETMASK, &oldMask, nullptr);
+    return;
+  }
+
+  LOG_ERROR << "MapTrackingService signal handler caught unhandled signal:"
+            << " code: " << si->si_code << " errno: " << si->si_errno
+            << " at address: " << si->si_addr;
+  FallBackToDefaultAction(sig, si);
+}
+
+void SigsegvHandler(int sig, siginfo_t* si, void* context) {
+  const int savedErrno = errno;
+  // Shadowed map pages are PROT_NONE or PROT_READ, so tracked accesses always fault with
+  // SEGV_ACCERR. Anything else (including SIGSEGV sent by kill) belongs to the previous handler.
+  if (si->si_code != SEGV_ACCERR ||
+      !gits::vulkan::CaptureManager::Get().GetMapTrackingService().HandleAddress(
+          si->si_addr, IsWriteFault(context))) {
+    ForwardToPreviousHandler(sig, si, context);
+  }
+  errno = savedErrno;
+}
+
+void InstallSigsegvHandler() {
+  struct sigaction sa = {};
+  // SA_ONSTACK keeps stack overflow detection working for runtimes relying on sigaltstack.
+  sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+  sa.sa_sigaction = SigsegvHandler;
+  sigemptyset(&sa.sa_mask);
+  // Keep the first non-GITS handler; only capture it on the initial install.
+  struct sigaction previous = {};
+  int ret = sigaction(SIGSEGV, &sa, g_PreviousSigsegvValid ? nullptr : &previous);
+  GITS_ASSERT(ret != -1, "Sigaction setup for SIGSEGV failed.");
+  if (!g_PreviousSigsegvValid) {
+    g_PreviousSigsegv = previous;
+    g_PreviousSigsegvValid = true;
+  }
+}
+} // namespace
 
 #endif
 
@@ -45,12 +116,7 @@ MapTrackingService::MapTrackingService(CaptureManager& manager, stream::Ordering
   m_PageSize = si.dwPageSize;
 #else
   m_PageSize = static_cast<uint64_t>(sysconf(_SC_PAGESIZE));
-  struct sigaction sa = {};
-  sa.sa_flags = SA_SIGINFO;
-  sa.sa_sigaction = SigsegvHandler;
-  sigemptyset(&sa.sa_mask);
-  int ret = sigaction(SIGSEGV, &sa, nullptr);
-  GITS_ASSERT(ret != -1, "Sigaction setup for SIGSEGV failed.");
+  InstallSigsegvHandler();
 #endif
 }
 
