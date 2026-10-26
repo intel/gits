@@ -23,6 +23,10 @@ void SwapchainImageSyncService::TrackQueue(VkDevice device, VkQueue queue) {
   m_DeviceQueues.emplace(device, queue);
 }
 
+void SwapchainImageSyncService::UntrackDevice(VkDevice device) {
+  m_DeviceQueues.erase(device);
+}
+
 VkQueue SwapchainImageSyncService::GetQueueForDevice(VkDevice device) const {
   auto it = m_DeviceQueues.find(device);
   return it != m_DeviceQueues.end() ? it->second : VK_NULL_HANDLE;

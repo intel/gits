@@ -41,6 +41,10 @@ public:
   // Call this from Post(vkGetDeviceQueueCommand) and Post(vkGetDeviceQueue2Command).
   void TrackQueue(VkDevice device, VkQueue queue);
 
+  // Forget the queue tracked for a device. Call this from Pre(vkDestroyDevice): a later device
+  // can reuse the same handle value, and its queue must not resolve to the destroyed one.
+  void UntrackDevice(VkDevice device);
+
   // Fully handles vkAcquireNextImageKHR replay.
   // Sets command.m_Skip = true so the auto-generated runner does not issue a
   // redundant driver call.  command.m_Return.Value is set to the VkResult and

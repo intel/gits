@@ -74,6 +74,7 @@ void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
 }
 
 void ReplayCustomizationLayer::Pre(vkDestroyDeviceCommand& command) {
+  m_Manager.GetSwapchainImageSyncService().UntrackDevice(command.m_device.Value);
   m_Manager.GetDeviceDiagnosticService().UntrackDevice(command.m_device.Value);
   m_RayTracingService.OnPreDestroyDevice(command);
 }
