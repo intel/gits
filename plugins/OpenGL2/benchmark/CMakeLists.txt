@@ -7,7 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(OpenGL2_benchmark SHARED)
-set_target_properties(OpenGL2_benchmark PROPERTIES OUTPUT_NAME plugin)
+set_target_properties(OpenGL2_benchmark PROPERTIES OUTPUT_NAME plugin PREFIX "")
 
 target_sources(OpenGL2_benchmark
 PRIVATE

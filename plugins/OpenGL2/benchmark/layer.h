@@ -23,6 +23,10 @@ public:
   void Pre(wglCreateContextAttribsARBCommand& command) override;
   void Post(wglSwapBuffersCommand& command) override;
   void Post(wglSwapLayerBuffersCommand& command) override;
+  void Pre(glXCreateContextCommand& command) override;
+  void Pre(glXCreateNewContextCommand& command) override;
+  void Pre(glXCreateContextAttribsARBCommand& command) override;
+  void Post(glXSwapBuffersCommand& command) override;
 
 private:
   CpuFrameBenchmarkService m_CpuFrameBenchmarkService;

@@ -11,7 +11,25 @@
 #include "systemApi.h"
 #include "unsupportedCommandTypes.h"
 
+#if !defined(_WIN32)
+#include "messageBus.h"
+
+#include <cstdlib>
+#endif
+
 namespace gits::opengl2 {
+
+#if !defined(_WIN32)
+namespace {
+
+// Windows publishes the program exit from the ExitProcess hook in recorder/recorderDLL.cpp.
+void PublishProgramExit() {
+  MessageBus::get().publish({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                            std::make_shared<ProgramMessage>());
+}
+
+} // namespace
+#endif
 
 // See SetPendingPreHookKey()/TakePendingPreHookKey()'s own header comment (captureManager.h).
 thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
@@ -38,6 +56,12 @@ CaptureManager::CaptureManager() {
   // After the layers, so that plugins handle a close request before the recorder closes the
   // stream. Layer hooks run only after this, so a plugin may request closing from its first hook.
   m_Recorder = std::make_unique<stream::OrderingRecorder>();
+#if !defined(_WIN32)
+  // Exit handlers run in reverse order of registration, together with the destructors of static
+  // objects, so everything constructed before this outlives the handler: the plugins, and the
+  // services the recorder constructs at startup to subscribe to the program exit.
+  std::atexit(PublishProgramExit);
+#endif
 }
 
 stream::OrderingRecorder& CaptureManager::GetOrderingRecorder() {

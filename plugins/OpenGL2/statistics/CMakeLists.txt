@@ -7,7 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 add_library(OpenGL2_statistics SHARED)
-set_target_properties(OpenGL2_statistics PROPERTIES OUTPUT_NAME plugin)
+set_target_properties(OpenGL2_statistics PROPERTIES OUTPUT_NAME plugin PREFIX "")
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 

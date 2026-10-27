@@ -15,17 +15,66 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <dlfcn.h>
 #endif
 
 #include <algorithm>
 #include <cctype>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace gits::opengl2 {
 
-#ifdef _WIN32
 namespace {
+
+#ifdef _WIN32
+constexpr const char* PLUGIN_FILE_NAME = "plugin.dll";
+constexpr const char* LIBRARY_EXTENSION = ".dll";
+
+void* OpenLibrary(const std::filesystem::path& path) {
+  return LoadLibraryA(path.string().c_str());
+}
+
+void* FindSymbol(void* module, const char* name) {
+  return reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(module), name));
+}
+
+void CloseLibrary(void* module) {
+  FreeLibrary(static_cast<HMODULE>(module));
+}
+
+std::filesystem::path ExecutablePath() {
+  std::vector<char> moduleFilename(MAX_PATH + 1, 0);
+  GetModuleFileNameA(nullptr, moduleFilename.data(), static_cast<DWORD>(moduleFilename.size()));
+  return std::filesystem::absolute(moduleFilename.data());
+}
+#else
+constexpr const char* PLUGIN_FILE_NAME = "plugin.so";
+constexpr const char* LIBRARY_EXTENSION = ".so";
+
+void* OpenLibrary(const std::filesystem::path& path) {
+  void* module = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  if (module == nullptr) {
+    LOG_ERROR << "PluginService - " << dlerror();
+  }
+  return module;
+}
+
+void* FindSymbol(void* module, const char* name) {
+  return dlsym(module, name);
+}
+
+void CloseLibrary(void* module) {
+  dlclose(module);
+}
+
+std::filesystem::path ExecutablePath() {
+  std::error_code error;
+  return std::filesystem::read_symlink("/proc/self/exe", error);
+}
+#endif
 
 std::string ToLowerCase(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(),
@@ -44,9 +93,7 @@ std::filesystem::path FindPluginsPath(const Configuration& cfg) {
     return std::filesystem::absolute(cfg.common.recorder.installPath.parent_path() / "Plugins" /
                                      "OpenGL2");
   }
-  std::vector<char> moduleFilename(MAX_PATH + 1, 0);
-  GetModuleFileNameA(nullptr, moduleFilename.data(), static_cast<DWORD>(moduleFilename.size()));
-  const auto exePath = std::filesystem::absolute(moduleFilename.data());
+  const auto exePath = ExecutablePath();
   auto pluginsPath = exePath.parent_path() / "Plugins" / "OpenGL2";
   if (!IsDirectory(pluginsPath)) {
     pluginsPath = exePath.parent_path().parent_path() / "Plugins" / "OpenGL2";
@@ -55,7 +102,6 @@ std::filesystem::path FindPluginsPath(const Configuration& cfg) {
 }
 
 } // namespace
-#endif
 
 void PluginInfo::Free() {
   if (DestroyPlugin) {
@@ -63,15 +109,13 @@ void PluginInfo::Free() {
     DestroyPlugin = nullptr;
   }
   Impl = nullptr;
-#ifdef _WIN32
   if (Dll) {
-    FreeLibrary(static_cast<HMODULE>(Dll));
+    CloseLibrary(Dll);
     Dll = nullptr;
   }
   for (void* dependency : Dependencies) {
-    FreeLibrary(static_cast<HMODULE>(dependency));
+    CloseLibrary(dependency);
   }
-#endif
   Dependencies.clear();
 }
 
@@ -89,10 +133,6 @@ void PluginService::LoadPlugins() {
     return;
   }
 
-#ifndef _WIN32
-  // TODO: Load shared-object plugins once the internal plugins support GLX contexts.
-  LOG_INFO << "PluginService - OpenGL plugins are not yet supported on Linux. Skipping load...";
-#else
   const auto pluginsPath = FindPluginsPath(cfg);
   if (!IsDirectory(pluginsPath)) {
     LOG_ERROR << "PluginService - Plugin directory does not exist! Expected: "
@@ -113,7 +153,7 @@ void PluginService::LoadPlugins() {
     }
 
     PluginInfo plugin;
-    plugin.DllPath = entry.path() / "plugin.dll";
+    plugin.DllPath = entry.path() / PLUGIN_FILE_NAME;
     if (!std::filesystem::is_regular_file(plugin.DllPath)) {
       LOG_ERROR << "PluginService - Can't find: " << plugin.DllPath << ". The plugin will not load";
       continue;
@@ -122,29 +162,29 @@ void PluginService::LoadPlugins() {
     const auto dependenciesPath = entry.path() / "dependencies";
     if (IsDirectory(dependenciesPath)) {
       for (const auto& dependency : std::filesystem::directory_iterator(dependenciesPath)) {
-        if (!dependency.is_regular_file() || dependency.path().extension() != ".dll") {
+        if (!dependency.is_regular_file() || dependency.path().extension() != LIBRARY_EXTENSION) {
           continue;
         }
-        HMODULE dependencyDll = LoadLibraryA(dependency.path().string().c_str());
-        if (!dependencyDll) {
-          LOG_ERROR << "PluginService - Failed to load dependency DLL: " << dependency.path();
+        void* dependencyModule = OpenLibrary(dependency.path());
+        if (!dependencyModule) {
+          LOG_ERROR << "PluginService - Failed to load dependency library: " << dependency.path();
           continue;
         }
-        plugin.Dependencies.push_back(dependencyDll);
+        plugin.Dependencies.push_back(dependencyModule);
       }
     }
 
-    HMODULE dll = LoadLibraryA(plugin.DllPath.string().c_str());
+    void* dll = OpenLibrary(plugin.DllPath);
     if (!dll) {
-      LOG_ERROR << "PluginService - Failed to load Plugin DLL: " << plugin.DllPath;
+      LOG_ERROR << "PluginService - Failed to load plugin library: " << plugin.DllPath;
       plugin.Free();
       continue;
     }
     plugin.Dll = dll;
 
-    auto createPlugin = reinterpret_cast<CreatePluginPtr>(GetProcAddress(dll, "createPlugin"));
+    auto createPlugin = reinterpret_cast<CreatePluginPtr>(FindSymbol(dll, "createPlugin"));
     if (!createPlugin) {
-      LOG_ERROR << "PluginService - Failed to locate the 'createPlugin' function in DLL: "
+      LOG_ERROR << "PluginService - Failed to locate the 'createPlugin' function in: "
                 << plugin.DllPath;
       plugin.Free();
       continue;
@@ -157,11 +197,10 @@ void PluginService::LoadPlugins() {
     context.logAppender = plog::get();
     context.glGetRealFunction = m_GetRealFunction;
 
-    plugin.DestroyPlugin = reinterpret_cast<DestroyPluginPtr>(GetProcAddress(dll, "destroyPlugin"));
+    plugin.DestroyPlugin = reinterpret_cast<DestroyPluginPtr>(FindSymbol(dll, "destroyPlugin"));
     plugin.Impl = createPlugin(context, plugin.DllPath.string().c_str());
     if (!plugin.Impl) {
-      LOG_ERROR << "PluginService - Could not create the plugin instance for DLL: "
-                << plugin.DllPath;
+      LOG_ERROR << "PluginService - Could not create the plugin instance for: " << plugin.DllPath;
       plugin.Free();
       continue;
     }
@@ -183,7 +222,6 @@ void PluginService::LoadPlugins() {
               << pluginNames.size() << " requested";
     LOG_ERROR << "PluginService - Check the plugin names in the GITS config file";
   }
-#endif
 }
 
 } // namespace gits::opengl2

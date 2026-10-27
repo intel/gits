@@ -20,6 +20,11 @@ bool IsCountedFrame(const SwapCommand& command) {
          (command.m_Key & STATE_RESTORE_KEY_MASK) == 0;
 }
 
+// glXSwapBuffers returns nothing, so every one that ran ends a frame.
+bool IsCountedFrame(const glXSwapBuffersCommand& command) {
+  return !command.m_Skip && (command.m_Key & STATE_RESTORE_KEY_MASK) == 0;
+}
+
 } // namespace
 
 BenchmarkLayer::BenchmarkLayer(const BenchmarkConfig& cfg, gits::MessageBus& msgBus)
@@ -40,6 +45,24 @@ void BenchmarkLayer::Post(wglSwapBuffersCommand& command) {
 }
 
 void BenchmarkLayer::Post(wglSwapLayerBuffersCommand& command) {
+  if (IsCountedFrame(command)) {
+    m_CpuFrameBenchmarkService.OnFrameEnd();
+  }
+}
+
+void BenchmarkLayer::Pre(glXCreateContextCommand&) {
+  m_CpuFrameBenchmarkService.OnStart();
+}
+
+void BenchmarkLayer::Pre(glXCreateNewContextCommand&) {
+  m_CpuFrameBenchmarkService.OnStart();
+}
+
+void BenchmarkLayer::Pre(glXCreateContextAttribsARBCommand&) {
+  m_CpuFrameBenchmarkService.OnStart();
+}
+
+void BenchmarkLayer::Post(glXSwapBuffersCommand& command) {
   if (IsCountedFrame(command)) {
     m_CpuFrameBenchmarkService.OnFrameEnd();
   }
