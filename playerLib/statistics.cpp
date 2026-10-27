@@ -17,7 +17,7 @@
 #include "scheduler.h"
 #include "gits.h"
 #include "function.h"
-#include "../OpenGL/common/include/openglArguments.h"
+#include "../OpenGLLegacy/common/include/openglArguments.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
@@ -32,7 +32,7 @@ gits::CStatistics::CStatistics()
 
 void gits::CStatistics::AddToken(const gits::CToken& token) {
   // check if API call
-  if (token.Id() >= CToken::ID_OPENGL) {
+  if (token.Id() >= CToken::ID_OPENGL_LEGACY) {
     _callsNum++;
     if (_init) {
       _initCallsNum++;

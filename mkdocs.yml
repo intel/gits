@@ -113,6 +113,9 @@ nav:
       - OpenCL:
           - 'documentation/OpenCL/Generator.md'
           - 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
+      - OpenGL:
+        - 'documentation/OpenGL/Plugins.md'
+        - 'documentation/OpenGL/OpenGLLegacy.md'
     - 'documentation/lua_scripts.md'        
   - Development:
     - 'development/project.md'

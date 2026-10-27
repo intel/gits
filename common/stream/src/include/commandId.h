@@ -15,7 +15,7 @@ namespace stream {
 
 enum class ApiId {
   ID_COMMON = 0,
-  ID_OPENGL = 1,
+  ID_OPENGL_LEGACY = 1,
   ID_GL_HELPER_TOKENS = 2,
   ID_WGL = 3,
   ID_GLX = 5,
@@ -26,7 +26,7 @@ enum class ApiId {
   ID_OCLOC = 12,
   ID_DIRECTX = 13,
   ID_VULKAN = 14,
-  ID_OPENGL2 = 15,
+  ID_OPENGL = 15,
 };
 
 inline ApiId ExtractApiIdentifier(unsigned commandId) {

@@ -892,7 +892,7 @@ Configuration:
                   - is_compute: ZSTD
                   - is_directx: ZSTD
                   - is_vulkan: ZSTD
-                  - is_opengl2: ZSTD
+                  - is_opengl: ZSTD
               - Name: level
                 Type: uint32_t
                 Default: 10
@@ -900,7 +900,7 @@ Configuration:
                   - is_compute: 5
                   - is_directx: 3
                   - is_vulkan: 3
-                  - is_opengl2: 3
+                  - is_opengl: 3
               - Name: chunkSize
                 Type: uint32_t
                 Default: 2097152

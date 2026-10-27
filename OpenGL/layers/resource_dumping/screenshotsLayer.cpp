@@ -1,0 +1,175 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#include "screenshotsLayer.h"
+
+#include "configurator.h"
+#include "defaultFramebufferImage.h"
+#include "glxDrawableService.h"
+#include "hdcVirtualizationService.h"
+#include "log.h"
+#include "openglDriversAuto.h"
+#include "systemApi.h"
+#include "threadContextService.h"
+
+#include <vector>
+
+namespace gits::opengl {
+
+using screenshot_detail::Real;
+
+ScreenshotsLayer::ScreenshotsLayer()
+    : Layer("Screenshots"), m_Range(Configurator::Get().common.shared.screenshots.frames) {
+  const auto& config = Configurator::Get().common;
+  if (!config.player.captureFrames.empty()) {
+    m_Range = config.player.captureFrames;
+  }
+  m_DumpPath = config.player.outputDir;
+  if (m_DumpPath.empty()) {
+    m_DumpPath = config.player.streamDir / "gitsScreenshots/gitsPlayer";
+  }
+  std::filesystem::create_directories(m_DumpPath);
+  if (config.shared.screenshots.format == ImageFormat::DDS) {
+    LOG_WARNING << "ScreenshotsLayer: DDS is not supported, writing PNG";
+  }
+}
+
+// The runner overwrites m_Return with the replay result, so the captured one is read in Pre.
+void ScreenshotsLayer::Pre(wglSwapBuffersCommand& command) {
+  Swap(command.m_hdc.Value, command.m_Return.Value != 0);
+}
+
+void ScreenshotsLayer::Pre(wglSwapLayerBuffersCommand& command) {
+  Swap(command.m_hdc.Value, command.m_Return.Value != 0);
+}
+
+void ScreenshotsLayer::Pre(glXSwapBuffersCommand& command) {
+  ++m_Frame;
+  if (m_Range[m_Frame]) {
+    DumpGlx(GlxDrawableService::Get().Resolve(command.m_drawable.Value));
+  }
+}
+
+void ScreenshotsLayer::Post(wglMakeCurrentCommand& /*command*/) {
+  NoteCurrent();
+}
+
+void ScreenshotsLayer::Post(wglMakeContextCurrentARBCommand& /*command*/) {
+  NoteCurrent();
+}
+
+void ScreenshotsLayer::Post(wglMakeContextCurrentEXTCommand& /*command*/) {
+  NoteCurrent();
+}
+
+void ScreenshotsLayer::Post(wglDeleteContextCommand& command) {
+  if (!command.m_Return.Value) {
+    return;
+  }
+  std::erase_if(m_DcContexts,
+                [&](const auto& entry) { return entry.second == command.m_oldContext.Value; });
+}
+
+void ScreenshotsLayer::NoteCurrent() {
+  auto& table = player::g_DispatchTable;
+  if (const HGLRC context = Real(table.wglGetCurrentContext)()) {
+    m_DcContexts[Real(table.wglGetCurrentDC)()] = context;
+  }
+}
+
+void ScreenshotsLayer::Swap(HDC recordedDc, bool endsFrame) {
+  if (!endsFrame) {
+    return;
+  }
+  ++m_Frame;
+  if (m_Range[m_Frame]) {
+    Dump(HdcVirtualizationService::Get().Resolve(recordedDc));
+  }
+}
+
+void ScreenshotsLayer::Dump(HDC dc) {
+  int32_t width = 0;
+  int32_t height = 0;
+  if (!GetWindowClientSize(dc, width, height) || width <= 0 || height <= 0) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame << " swaps no visible window, skipped";
+    return;
+  }
+
+  // The swapped DC is read with the context last made current on it, since the current one may
+  // be made current on another DC, or read another DC.
+  auto& table = player::g_DispatchTable;
+  const auto entryPoint = ThreadContextService::Get().CurrentEntryPoint();
+  const HGLRC context = Real(table.wglGetCurrentContext)();
+  const HDC drawDc = context != nullptr ? Real(table.wglGetCurrentDC)() : nullptr;
+  const HDC readDc =
+      context != nullptr ? ThreadContextService::CurrentReadDc(entryPoint, drawDc) : nullptr;
+  HGLRC dumpContext = context;
+  if (drawDc != dc) {
+    const auto it = m_DcContexts.find(dc);
+    if (it != m_DcContexts.end()) {
+      dumpContext = it->second;
+    }
+  }
+  if (dumpContext == nullptr) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame << " has no context, skipped";
+    return;
+  }
+  const bool switchContext = drawDc != dc || readDc != dc;
+  if (switchContext && !Real(table.wglMakeCurrent)(dc, dumpContext)) {
+    LOG_WARNING << "ScreenshotsLayer: making a context current for frame " << m_Frame
+                << " failed, skipped";
+  } else {
+    std::vector<uint8_t> pixels = ReadDefaultFramebuffer(table, width, height);
+    WriteScreenshot(m_DumpPath, m_Frame, width, height, pixels);
+  }
+  if (!switchContext) {
+    return;
+  }
+  if (context == nullptr) {
+    Real(table.wglMakeCurrent)(nullptr, nullptr);
+  } else {
+    ThreadContextService::MakeCurrent(entryPoint, drawDc, readDc, context);
+  }
+}
+
+void ScreenshotsLayer::DumpGlx(GLXDrawable drawable) {
+  auto& table = player::g_DispatchTable;
+  // TODO: Read a drawable that is not current, as Dump() does for a DC, once a stream swaps one.
+  if (Real(table.glXGetCurrentDrawable)() != drawable) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame
+                << " swaps a drawable that is not current, skipped";
+    return;
+  }
+  Display* display = GlxDrawableService::Get().GetDisplay();
+  unsigned width = 0;
+  unsigned height = 0;
+  Real(table.glXQueryDrawable)(display, drawable, GLX_WIDTH, &width);
+  Real(table.glXQueryDrawable)(display, drawable, GLX_HEIGHT, &height);
+  if (width == 0 || height == 0) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame << " swaps an empty drawable, skipped";
+    return;
+  }
+  // The swapped drawable is read, not the read drawable of the context.
+  const GLXDrawable readDrawable = Real(table.glXGetCurrentReadDrawable)();
+  const GLXContext context = Real(table.glXGetCurrentContext)();
+  const bool switchRead = readDrawable != drawable;
+  if (switchRead && Real(table.glXMakeContextCurrent)(display, drawable, drawable, context) == 0) {
+    LOG_WARNING << "ScreenshotsLayer: reading the drawable of frame " << m_Frame
+                << " failed, skipped";
+    return;
+  }
+  std::vector<uint8_t> pixels =
+      ReadDefaultFramebuffer(table, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
+  if (switchRead) {
+    Real(table.glXMakeContextCurrent)(display, drawable, readDrawable, context);
+  }
+  WriteScreenshot(m_DumpPath, m_Frame, static_cast<int32_t>(width), static_cast<int32_t>(height),
+                  pixels);
+}
+
+} // namespace gits::opengl

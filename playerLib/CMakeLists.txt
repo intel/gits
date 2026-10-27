@@ -55,7 +55,7 @@ target_link_libraries(gits_player_lib PRIVATE
   common
   stream
   windowing
-  OpenGL_common
+  OpenGLLegacy_common
 )
 
 if(WITH_DIRECTX)
@@ -93,8 +93,8 @@ if(WITH_VULKAN)
   )
 endif()
 
-if(WITH_OPENGL2)
-  target_link_libraries(gits_player_lib PRIVATE OpenGL2_player)
+if(WITH_OPENGL)
+  target_link_libraries(gits_player_lib PRIVATE OpenGL_player)
 endif()
 
 if(WITH_OCLOC)

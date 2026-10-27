@@ -97,7 +97,7 @@ add_library(OpenCL_common
   common/openclHelperFunctions.cpp
 )
 
-target_link_libraries(OpenCL_common PRIVATE common configuration OpenGL_common)
+target_link_libraries(OpenCL_common PRIVATE common configuration OpenGLLegacy_common)
 
 add_library(OpenCL_recorder
   recorder/include/openclRecorderSubwrappers.h
@@ -154,7 +154,7 @@ if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 endif()
 
 # OCL depends on OGL's generated GLenum definitions and stringification code.
-add_dependencies(OpenCL_common common OpenCL_codegen OpenGL_codegen config_codegen)
+add_dependencies(OpenCL_common common OpenCL_codegen OpenGLLegacy_codegen config_codegen)
 add_dependencies(OpenCL_recorder OpenCL_codegen config_codegen)
 add_dependencies(OpenCL_interceptor OpenCL_codegen config_codegen)
 

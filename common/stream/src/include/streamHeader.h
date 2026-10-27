@@ -36,13 +36,13 @@ public:
 
   enum class Api : unsigned {
     API_NOT_SET,
-    API_OPENGL,
+    API_OPENGL_LEGACY,
     API_VULKAN_LEGACY,
     API_OPENCL,
     API_LEVELZERO,
     API_DIRECTX,
     API_VULKAN,
-    API_OPENGL2,
+    API_OPENGL,
   };
   Api GetApi() const;
   ApiBool GetApiBool() const;

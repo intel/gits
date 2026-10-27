@@ -182,14 +182,14 @@ StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
   switch (id) {
   case ApiId::ID_COMMON:
     return Api::API_NOT_SET;
-  case ApiId::ID_OPENGL:
+  case ApiId::ID_OPENGL_LEGACY:
   case ApiId::ID_GL_HELPER_TOKENS:
   case ApiId::ID_WGL:
   case ApiId::ID_GLX:
   case ApiId::ID_EGL:
+    return Api::API_OPENGL_LEGACY;
+  case ApiId::ID_OPENGL:
     return Api::API_OPENGL;
-  case ApiId::ID_OPENGL2:
-    return Api::API_OPENGL2;
   case ApiId::ID_OPENCL:
     return Api::API_OPENCL;
   case ApiId::ID_VULKAN_LEGACY:
@@ -212,8 +212,8 @@ StreamHeader::Api StreamHeader::GetApi() const {
 
 ApiBool StreamHeader::GetApiBool() const {
   switch (m_Api) {
+  case Api::API_OPENGL_LEGACY:
   case Api::API_OPENGL:
-  case Api::API_OPENGL2:
     return ApiBool::OGL;
   case Api::API_VULKAN_LEGACY:
   case Api::API_VULKAN:

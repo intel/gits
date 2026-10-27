@@ -27,8 +27,8 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | `DirectX/` | DirectX 12 recorder, player, layers (e.g. resource_dumping, subcapture, ccode), and common utilities. Windows x64 only. |
 | [`Vulkan/`](codebase-map-vulkan.md) | Vulkan implementation (current recording/replay backend). Streams are tagged `API_VULKAN` and replay through the Vulkan path. |
 | `VulkanLegacy/` | Legacy Vulkan implementation. Registered alongside `Vulkan/` by default (explicit layer; enable one at a time). Streams are tagged `API_VULKAN_LEGACY` and replay through the VulkanLegacy path. |
-| `OpenGL2/` | Work-in-progress new OpenGL implementation. |
-| `OpenGL/` | Existing OpenGL implementation. |
+| `OpenGL/` | Work-in-progress new OpenGL implementation. Streams are tagged `API_OPENGL` and replay through the OpenGL path. |
+| `OpenGLLegacy/` | Legacy OpenGL implementation. Streams are tagged `API_OPENGL_LEGACY` and replay through the OpenGLLegacy path. |
 | `OpenCL/` | OpenCL implementation. |
 | `LevelZero/` | Intel oneAPI Level Zero implementation. |
 | `ocloc/` | Intel offline shader compiler (OCLOC). |
@@ -38,7 +38,7 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | Directory | Contents |
 |-----------|----------|
 | `Scripts/` | Python scripts for code generation, docs (e.g. MkDocs), CI helpers, and other tooling. |
-| `docs/` | User and developer documentation (MkDocs). Key entries: `index.md`, `building.md`, `usage.md`, `documentation/terminology.md`, `development/project.md`, `development/codebase-map.md`. |
+| `docs/` | User and developer documentation (MkDocs). Key entries: `index.md`, `building.md`, `usingCLI.md`, `documentation/terminology.md`, `development/project.md`, `development/codebase-map.md`. |
 
 ## Build support
 

@@ -46,8 +46,8 @@ class CLibrary : private gits::noncopyable {
 public:
   typedef std::function<CState*()> state_creator_t;
   enum TId {
-    ID_OPENGL, /**< @brief identifier of OpenGL library */
-    ID_OPENCL, /**< @brief identifier of OpenCL library */
+    ID_OPENGL_LEGACY, /**< @brief identifier of legacy OpenGL library */
+    ID_OPENCL,        /**< @brief identifier of OpenCL library */
     ID_VULKAN_LEGACY,
     ID_LEVELZERO,
     ID_OCLOC,

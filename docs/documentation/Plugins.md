@@ -3,7 +3,7 @@ icon: material/puzzle
 title: Plugins
 ---
 
-GITS supports **plugins** for both capture and replay on DirectX 12 and Vulkan. Plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Each plugin implements `IPlugin` defined in `plugins/IPlugin.h` and exposes a layer or service hooked into the recorder or player.
+GITS supports **plugins** for both capture and replay on DirectX 12, Vulkan and OpenGL. Plugins are dynamic libraries loaded at runtime by `gitsPlayer.exe` or `gitsRecorder.dll`. Each plugin implements `IPlugin` defined in `plugins/IPlugin.h` and exposes a layer or service hooked into the recorder or player.
 
 Built plugins install under an API-specific tree:
 
@@ -11,11 +11,13 @@ Built plugins install under an API-specific tree:
 |-----|-------------------|
 | DirectX 12 | `Plugins/DirectX/` |
 | Vulkan | `Plugins/Vulkan/` |
+| OpenGL | `Plugins/OpenGL/` |
 
 See the per-API catalogs for the full plugin list and API-specific enablement:
 
 - [DirectX plugins](DirectX/Plugins.md)
 - [Vulkan plugins](Vulkan/Plugins.md)
+- [OpenGL plugins](OpenGL/Plugins.md)
 
 # On-disk layout
 
@@ -44,7 +46,7 @@ At runtime, plugins load this file through `gits::LoadPluginConfig` defined in `
 
 # Enabling plugins
 
-Both DirectX 12 and Vulkan share the same YAML keys:
+DirectX 12, Vulkan and OpenGL share the same YAML keys:
 
 | Recorder | Player |
 |----------|--------|
@@ -58,7 +60,7 @@ Each list entry must match `IPlugin::getName()` / `Info.Name`. See [DirectX plug
 
 # Environment overrides
 
-Plugin settings in each folder’s `config.yml` can be overridden with environment variables without editing the install tree. This applies to **DirectX and Vulkan** plugins the same way.
+Plugin settings in each folder’s `config.yml` can be overridden with environment variables without editing the install tree. This applies to **DirectX, Vulkan and OpenGL** plugins the same way.
 
 Variables use the form `GITS_PLUGIN_<PLUGIN>_<KEY>=<value>`:
 

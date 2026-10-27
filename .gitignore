@@ -71,28 +71,28 @@ venv/
 # GITS config
 recorder/gits_config.txt
 
-# OpenGL
-OpenGL/common/glEnumsAuto.cpp
-OpenGL/common/glFunctions.cpp
-OpenGL/common/include/glDrivers.h
-OpenGL/common/include/glEnumsAuto.h
-OpenGL/common/include/glFunctions.h
-OpenGL/common/include/glIDs.h
-OpenGL/common/include/glIDswitch.h
-OpenGL/recorder/include/openglRecorderWrapperAuto.h
-OpenGL/recorder/include/openglRecorderWrapperIfaceAuto.h
-OpenGL/recorder/openglRecorderWrapperAuto.cpp
-/OpenGL/GLIPlugin/gitsPluginPrePostAuto.cpp
-/OpenGL/GLIPlugin/GLIPlugin32.def
-/OpenGL/GLIPlugin/GLIPlugin64.def
-/OpenGL/GLIPlugin/include/gitsPluginPrePostAuto.h
+# OpenGLLegacy
+OpenGLLegacy/common/glEnumsAuto.cpp
+OpenGLLegacy/common/glFunctions.cpp
+OpenGLLegacy/common/include/glDrivers.h
+OpenGLLegacy/common/include/glEnumsAuto.h
+OpenGLLegacy/common/include/glFunctions.h
+OpenGLLegacy/common/include/glIDs.h
+OpenGLLegacy/common/include/glIDswitch.h
+OpenGLLegacy/recorder/include/openglRecorderWrapperAuto.h
+OpenGLLegacy/recorder/include/openglRecorderWrapperIfaceAuto.h
+OpenGLLegacy/recorder/openglRecorderWrapperAuto.cpp
+/OpenGLLegacy/GLIPlugin/gitsPluginPrePostAuto.cpp
+/OpenGLLegacy/GLIPlugin/GLIPlugin32.def
+/OpenGLLegacy/GLIPlugin/GLIPlugin64.def
+/OpenGLLegacy/GLIPlugin/include/gitsPluginPrePostAuto.h
 
-# OpenGL2
-OpenGL2/**/*Auto.cpp
-OpenGL2/**/*Auto.h
-OpenGL2/**/*Auto.def
-plugins/OpenGL2/**/*Auto.cpp
-plugins/OpenGL2/**/*Auto.h
+# OpenGL
+OpenGL/**/*Auto.cpp
+OpenGL/**/*Auto.h
+OpenGL/**/*Auto.def
+plugins/OpenGL/**/*Auto.cpp
+plugins/OpenGL/**/*Auto.h
 
 # VulkanLegacy
 VulkanLegacy/common/include/vulkanArgumentsAuto.h

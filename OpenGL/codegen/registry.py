@@ -11,7 +11,7 @@
 # Minimal OpenGL/WGL/GLX/EGL XML registry parser using the Python standard
 # library. Replaces the lxml-based reg.py from the Khronos OpenGL-Registry.
 #
-# Only the subset needed by metagenerator.py is implemented:
+# Only the subset needed by intermediates_creator.py is implemented:
 #   - Registry.loadFile(path)   -- parse an XML registry file
 #   - Registry.enumdict         -- {key: ET.Element} for each <enum>
 #   - Registry.cmddict          -- {key: ET.Element} for each <command>

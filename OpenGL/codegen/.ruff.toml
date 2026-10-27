@@ -6,15 +6,18 @@
 #
 # ===================== end_copyright_notice ==============================
 
-# To allow argument-less and inherited tokens to fit in a single line in
-# generator.py. Programmers should aim at 80-100 chars, unless there are
-# reasons to keep longer lines.
-# TODO: When per-file settings are supported, set this at 100 for other files.
-line-length = 120
+# Aim at 80-90 chars, unless there are reasons to keep longer lines.
+line-length = 100
 
 # Minimum supported Python version.
 target-version = "py310"
 
-[format]
-# We aim to have single quotes for data, double for for human-readable text.
-quote-style = "preserve"
+[lint]
+extend-select = [
+	"B",
+	"C4",
+	"PERF",
+	"PIE",
+	"RUF",
+	"UP",
+]

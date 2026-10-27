@@ -724,7 +724,7 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
         CGits::Instance().Library(gits::CLibrary::TId::ID_VULKAN_LEGACY).RegisterEvents();
       }
       if (api3D == ApisIface::TApi::OpenGL) {
-        CGits::Instance().Library(gits::CLibrary::TId::ID_OPENGL).RegisterEvents();
+        CGits::Instance().Library(gits::CLibrary::TId::ID_OPENGL_LEGACY).RegisterEvents();
       }
       Configurator::Instance().LogUnspportedConfigUsage(gits::ApisIface::ToApiBool(api3D));
     }

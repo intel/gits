@@ -16,7 +16,7 @@ from template_manager import TemplateManager, Step
 
 
 class GeneratorTask:
-    def __init__(self, step, metafile_config, metafile_enum, output_path, label = "", platform="", installpath="", compute=False, directx=False, vulkan=False, opengl2=False):
+    def __init__(self, step, metafile_config, metafile_enum, output_path, label = "", platform="", installpath="", compute=False, directx=False, vulkan=False, opengl=False):
         self.name = label
         self.step = step
         self.input_config = metafile_config
@@ -27,7 +27,7 @@ class GeneratorTask:
         self.compute = compute
         self.directx = directx
         self.vulkan = vulkan
-        self.opengl2 = opengl2
+        self.opengl = opengl
 
 
     def __str__(self) -> str:
@@ -76,7 +76,7 @@ def main():
     parser.add_argument('--compute', help='Internal build flag', action='store_true')
     parser.add_argument('--directx', help='Internal build flag', action='store_true')
     parser.add_argument('--vulkan', help='Internal build flag', action='store_true')
-    parser.add_argument('--opengl2', help='Internal build flag', action='store_true')
+    parser.add_argument('--opengl', help='Internal build flag', action='store_true')
 
     try:
       args = parser.parse_args()
@@ -107,7 +107,7 @@ def main():
     try:
       template_manager = TemplateManager(template_directory, root_directory)
 
-      task = GeneratorTask(args.step, args.configYML, args.enumYML, output_path, "", args.platform, install_path, args.compute, args.directx, args.vulkan, args.opengl2)
+      task = GeneratorTask(args.step, args.configYML, args.enumYML, output_path, "", args.platform, install_path, args.compute, args.directx, args.vulkan, args.opengl)
       print(f" Generator step `{task.step}` ==> {output_path}")
       generate(task, template_manager)
       print(f" done.")

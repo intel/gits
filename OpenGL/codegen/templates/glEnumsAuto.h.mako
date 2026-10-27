@@ -11,7 +11,7 @@ ${AUTO_GENERATED_HEADER.replace('#', '/')}
 #pragma once
 
 // For name string getters at the end of this file.
-#include "openglTypes.h"
+#include "glTypes.h"
 #include <string>
 #include <string_view>
 
@@ -42,42 +42,13 @@ ${AUTO_GENERATED_HEADER.replace('#', '/')}
 % endfor\
 
 
-// Macros for WGL's PIXELFORMATDESCRIPTOR bitflags and other constants.
-// For compatibility with the old, manually written glEnums.h.
-// TODO: A proper fix is to ensure that Linux never builds the related code.
-// Then those macros can be removed.
-#define PFD_TYPE_RGBA                   0
-#define PFD_TYPE_COLORINDEX             1
-#define PFD_MAIN_PLANE                  0
-#define PFD_OVERLAY_PLANE               1
-#define PFD_UNDERLAY_PLANE              (-1)
-#define PFD_DOUBLEBUFFER                0x00000001
-#define PFD_STEREO                      0x00000002
-#define PFD_DRAW_TO_WINDOW              0x00000004
-#define PFD_DRAW_TO_BITMAP              0x00000008
-#define PFD_SUPPORT_GDI                 0x00000010
-#define PFD_SUPPORT_OPENGL              0x00000020
-#define PFD_GENERIC_FORMAT              0x00000040
-#define PFD_NEED_PALETTE                0x00000080
-#define PFD_NEED_SYSTEM_PALETTE         0x00000100
-#define PFD_SWAP_EXCHANGE               0x00000200
-#define PFD_SWAP_COPY                   0x00000400
-#define PFD_SWAP_LAYER_BUFFERS          0x00000800
-#define PFD_GENERIC_ACCELERATED         0x00001000
-#define PFD_SUPPORT_DIRECTDRAW          0x00002000
-#define PFD_DIRECT3D_ACCELERATED        0x00004000
-#define PFD_SUPPORT_COMPOSITION         0x00008000
-#define PFD_DEPTH_DONTCARE              0x20000000
-#define PFD_DOUBLEBUFFER_DONTCARE       0x40000000
-#define PFD_STEREO_DONTCARE             0x80000000
-
-
 // ##### Name strings #####
+
+namespace gits::opengl {
 
 <%
     all_groups: list[str] = sorted({key.group for key in enum_name_map if key.group})
 %>\
-
 enum class GLenumApi : uint32_t {
   Unknown = 0,
   GL,
@@ -117,3 +88,5 @@ std::string GetBitmaskString(GLenumApi api, GLenum value, GLenumGroup group);
 // Dispatches to GetGLenumName or GetBitmaskString based on the group.
 // Always returns a non-empty string; falls back to hex if no name is found.
 std::string GetGLenumString(GLenumApi api, GLenum value, GLenumGroup group);
+
+} // namespace gits::opengl

@@ -17,14 +17,13 @@ ${AUTO_GENERATED_HEADER.replace('#', '/')}
 #include "glEnumsAuto.h"
 
 #include "exception.h"
+#include "glTypes.h"
 #include "log.h"
-#include "openglTypes.h"
 #include "platform.h"
 
 #include <array>
 #include <bit>
 #include <cstdint>
-#include <iostream>
 #include <sstream>
 #include <span>
 #include <unordered_map>
@@ -32,6 +31,8 @@ ${AUTO_GENERATED_HEADER.replace('#', '/')}
 <%
     sorted_bitmask_groups: list[str] = sorted(bitmask_groups)
 %>\
+
+namespace gits::opengl {
 
 namespace {
 
@@ -74,7 +75,7 @@ static constexpr std::array<EnumEntry, ${len(bitflag_entries_by_api[api])}> ${ap
 // Group and value are both 32-bit. We pack them into one 64-bit key.
 using GLenumNameMap = std::unordered_map<uint64_t, std::string_view>;
 
-GLenumNameMap buildMap(std::span<const EnumEntry> entries) {
+GLenumNameMap BuildMap(std::span<const EnumEntry> entries) {
   GLenumNameMap map;
   // Reserve twice the space: once for real entries, once for entries with
   // group set to GLenumGroup::Unknown, to allow group-agnostic value lookup.
@@ -83,17 +84,17 @@ GLenumNameMap buildMap(std::span<const EnumEntry> entries) {
   // Pre-shifted to avoid recomputing the shift for every insertion.
   const uint64_t unknownGroup = uint64_t(GLenumGroup::Unknown) << 32;
 
-  for (const auto& e : entries) {
-    map[(uint64_t(e.group) << 32) | e.value] = e.name;
+  for (const auto& entry : entries) {
+    map[(uint64_t(entry.group) << 32) | entry.value] = entry.name;
     // On collisions with GLenumGroup::Unknown: when enums from multiple groups
     // collide, the last insertion wins, which is arbitrary but acceptable.
-    map[unknownGroup | e.value] = e.name;
+    map[unknownGroup | entry.value] = entry.name;
   }
 
   return map;
 }
 
-std::string to_string(GLenumApi api) {
+std::string_view ApiName(GLenumApi api) {
   switch (api) {
   case GLenumApi::GL:      return "GL";
   case GLenumApi::WGL:     return "WGL";
@@ -106,11 +107,11 @@ std::string to_string(GLenumApi api) {
   }
 }
 
-const GLenumNameMap& getEnumMap(GLenumApi api) {
-  static const GLenumNameMap glMap  = buildMap(glEnums);
-  static const GLenumNameMap wglMap = buildMap(wglEnums);
-  static const GLenumNameMap eglMap = buildMap(eglEnums);
-  static const GLenumNameMap glxMap = buildMap(glxEnums);
+const GLenumNameMap& GetEnumMap(GLenumApi api) {
+  static const GLenumNameMap glMap = BuildMap(glEnums);
+  static const GLenumNameMap wglMap = BuildMap(wglEnums);
+  static const GLenumNameMap eglMap = BuildMap(eglEnums);
+  static const GLenumNameMap glxMap = BuildMap(glxEnums);
   switch (api) {
   case GLenumApi::GL:  return glMap;
   case GLenumApi::WGL: return wglMap;
@@ -120,11 +121,11 @@ const GLenumNameMap& getEnumMap(GLenumApi api) {
   }
 }
 
-const GLenumNameMap& getBitflagMap(GLenumApi api) {
-  static const GLenumNameMap glMap  = buildMap(glBitflags);
-  static const GLenumNameMap wglMap = buildMap(wglBitflags);
-  static const GLenumNameMap eglMap = buildMap(eglBitflags);
-  static const GLenumNameMap glxMap = buildMap(glxBitflags);
+const GLenumNameMap& GetBitflagMap(GLenumApi api) {
+  static const GLenumNameMap glMap = BuildMap(glBitflags);
+  static const GLenumNameMap wglMap = BuildMap(wglBitflags);
+  static const GLenumNameMap eglMap = BuildMap(eglBitflags);
+  static const GLenumNameMap glxMap = BuildMap(glxBitflags);
   switch (api) {
   case GLenumApi::GL:  return glMap;
   case GLenumApi::WGL: return wglMap;
@@ -151,7 +152,7 @@ std::string_view GetGLenumName(GLenumApi api, GLenum value, GLenumGroup group) {
   const uint64_t key = (uint64_t(group) << 32) | value;
 
   if (api != GLenumApi::Unknown) {
-    const GLenumNameMap& map = getEnumMap(api);
+    const GLenumNameMap& map = GetEnumMap(api);
     const auto it = map.find(key);
     if (it != map.end()) {
       return it->second;
@@ -164,17 +165,26 @@ std::string_view GetGLenumName(GLenumApi api, GLenum value, GLenumGroup group) {
 
 #if defined(GITS_PLATFORM_WINDOWS)
   constexpr std::array fallbackOrder = {
-    GLenumApi::GL, GLenumApi::WGL, GLenumApi::EGL, GLenumApi::GLX
+      GLenumApi::GL,
+      GLenumApi::WGL,
+      GLenumApi::EGL,
+      GLenumApi::GLX,
   };
 #elif defined(GITS_PLATFORM_LINUX)
   constexpr std::array fallbackOrder = {
-    GLenumApi::GL, GLenumApi::EGL, GLenumApi::GLX, GLenumApi::WGL
+      GLenumApi::GL,
+      GLenumApi::EGL,
+      GLenumApi::GLX,
+      GLenumApi::WGL,
   };
 #else
   // Unknown platform; defaulting to Linux/EGL order.
-  #warning "Unknown platform in GetGLenumName fallback order. Defaulting to Linux order."
+#warning "Unknown platform in GetGLenumName fallback order. Defaulting to Linux order."
   constexpr std::array fallbackOrder = {
-    GLenumApi::GL, GLenumApi::EGL, GLenumApi::GLX, GLenumApi::WGL
+      GLenumApi::GL,
+      GLenumApi::EGL,
+      GLenumApi::GLX,
+      GLenumApi::WGL,
   };
 #endif
 
@@ -182,14 +192,14 @@ std::string_view GetGLenumName(GLenumApi api, GLenum value, GLenumGroup group) {
     if (fallback == api) {
       continue;
     }
-    const GLenumNameMap& map = getEnumMap(fallback);
+    const GLenumNameMap& map = GetEnumMap(fallback);
     const auto it = map.find(key);
     if (it != map.end()) {
       if (api != GLenumApi::Unknown) {
         LOG_WARNING << "GLenum 0x" << std::hex << value
                     << " (group " << static_cast<uint32_t>(group) << ")"
-                    << " not found in " << to_string(api)
-                    << ", found in " << to_string(fallback) << " instead.\n";
+                    << " not found in " << ApiName(api)
+                    << ", found in " << ApiName(fallback) << " instead.";
       }
       return it->second;
     }
@@ -216,7 +226,7 @@ std::string GetBitmaskString(GLenumApi api, GLenum value, GLenumGroup group) {
   // Currently only GL has group annotations on <enum> XML elements, so we
   // don't do any cross-API fallback here. Not sure if there even are any
   // bitmasks with cross-API bitflags.
-  const GLenumNameMap& bitflagMap = getBitflagMap(api);
+  const GLenumNameMap& bitflagMap = GetBitflagMap(api);
   std::string result;
   uint32_t unknownBits = 0u;
   uint32_t remaining = static_cast<uint32_t>(value);
@@ -263,3 +273,5 @@ std::string GetGLenumString(GLenumApi api, GLenum value, GLenumGroup group) {
   oss << "0x" << std::hex << std::uppercase << value;
   return oss.str();
 }
+
+} // namespace gits::opengl

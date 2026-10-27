@@ -46,7 +46,7 @@ public:
     ID_CCODE_FINISH = 11, // DEPRECATED: Kept for backward compatibility only
     ID_MARKER_UINT64 = 12,
 
-    ID_OPENGL = 1 * 0x10000,
+    ID_OPENGL_LEGACY = 1 * 0x10000,
     ID_GL_HELPER_TOKENS = 2 * 0x10000,
     ID_WGL = 3 * 0x10000,
     ID_GLX = 5 * 0x10000,
@@ -57,6 +57,7 @@ public:
     ID_OCLOC = 12 * 0x10000,
     ID_DirectX = 13 * 0x10000,
     ID_VULKAN = 14 * 0x10000,
+    ID_OPENGL = 15 * 0x10000,
   };
   virtual ~CToken() = 0;
 

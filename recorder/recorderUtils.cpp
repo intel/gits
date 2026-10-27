@@ -25,7 +25,7 @@
 #include "imGuiHUD.h"
 #endif
 #if defined GITS_PLATFORM_WINDOWS &&                                                               \
-    (defined(WITH_DIRECTX) || defined(WITH_VULKAN) || defined(WITH_OPENGL2))
+    (defined(WITH_DIRECTX) || defined(WITH_VULKAN) || defined(WITH_OPENGL))
 #include <windows.h>
 #endif
 

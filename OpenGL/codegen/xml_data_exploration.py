@@ -7,14 +7,14 @@
 # ===================== end_copyright_notice ==============================
 
 # This file exists to research the OpenGL registry files (XML) and decide what
-# kind of data structures and processing logic are needed in the metagenerator.
+# kind of data structures and processing logic are needed in the generator.
 
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 
-from generate_gl import strip_suffix
-from generator import Api, EnumValue, Token
+from intermediates import Api, Command, EnumValue
+from intermediates_creator import strip_suffix
 
 # ---------------------------------------------------------------------------
 # Helpers for find_duplicate_enum_values
@@ -132,6 +132,12 @@ def find_duplicate_enum_values(enums: list[EnumValue]) -> list[BucketAnalysis]:
 # ---------------------------------------------------------------------------
 # Printer (thin wrapper for research output)
 # ---------------------------------------------------------------------------
+
+def detect_duplicate_enum_values(enums: list[EnumValue]) -> None:
+    """Find enums that are not uniquely identified by a (value, group) tuple."""
+    analysis: list[BucketAnalysis] = find_duplicate_enum_values(enums)
+    print_duplicate_analysis(analysis)
+
 
 def print_duplicate_analysis(
     buckets: list[BucketAnalysis],
@@ -285,45 +291,45 @@ def _classify_len(len_str: str, param_names: set[str]) -> str:
 # Function (command) inspection
 # ---------------------------------------------------------------------------
 
-def inspect_functions(label: str, tokens: list[Token]) -> None:
+def inspect_functions(label: str, commands: list[Command]) -> None:
     """Print stats and assumption checks for functions from a single registry.
 
     Checks:
     - Alias structure: count, mutual aliases (expect 0), alias chains (expect 0),
       locally-unresolved aliases (targets not in this registry, expect 0).
-    - Return-type integrity: tokens whose return_value.type is empty (expect 0).
+    - Return-type integrity: commands whose return_value.type is empty (expect 0).
     - Name prefix: each name should start with the registry's canonical prefix
       (gl/wgl/glX/egl). Violations are informational; WGL legitimately includes
       a handful of unprefixed GDI functions.
     """
-    print(f'\n=== {label} ({len(tokens)} functions) ===')
+    print(f'\n=== {label} ({len(commands)} functions) ===')
 
     # Alias structure.
-    name_to_token: dict[str, Token] = {t.name: t for t in tokens}
-    with_alias = [t for t in tokens if t.alias is not None]
+    name_to_command: dict[str, Command] = {t.name: t for t in commands}
+    with_alias = [t for t in commands if t.alias is not None]
     print(f'  Functions with alias: {len(with_alias)}')
 
     mutual = [
         t.name for t in with_alias
-        if t.alias in name_to_token and name_to_token[t.alias].alias == t.name
+        if t.alias in name_to_command and name_to_command[t.alias].alias == t.name
     ]
     print(f'  Mutual aliases: {len(mutual)}' + (f': {mutual}' if mutual else ''))
 
     chains = [
         t.name for t in with_alias
-        if t.alias in name_to_token and name_to_token[t.alias].alias is not None
+        if t.alias in name_to_command and name_to_command[t.alias].alias is not None
     ]
     print(f'  Alias chains (target is itself an alias): {len(chains)}'
           + (f': {chains}' if chains else ''))
 
-    unresolved = [t.name for t in with_alias if t.alias not in name_to_token]
+    unresolved = [t.name for t in with_alias if t.alias not in name_to_command]
     if unresolved:
         print(f'  Aliases pointing outside this registry ({len(unresolved)}): {unresolved}')
     else:
         print('  All aliases resolve within this registry.')
 
     # Return-type integrity.
-    empty_return = [t.name for t in tokens if not t.return_value.type]
+    empty_return = [t.name for t in commands if not t.return_value.type]
     if empty_return:
         print(f'  WARNING: Empty return type ({len(empty_return)}): {empty_return}')
     else:
@@ -334,59 +340,58 @@ def inspect_functions(label: str, tokens: list[Token]) -> None:
     # (e.g. ChoosePixelFormat), so violations aren't necessarily errors.
     expected_prefix = _API_PREFIX.get(Api(label), '')
     if expected_prefix:
-        wrong_prefix = [t.name for t in tokens if not t.name.startswith(expected_prefix)]
+        wrong_prefix = [t.name for t in commands if not t.name.startswith(expected_prefix)]
         if wrong_prefix:
             print(f'  Names without expected prefix {expected_prefix!r} ({len(wrong_prefix)}): {wrong_prefix}')
         else:
             print(f'  All names have expected prefix {expected_prefix!r}.')
 
 
-def inspect_function_params(label: str, tokens: list[Token]) -> None:
-    """Inspect argument and annotation quality for functions from a single registry.
+def inspect_function_params(label: str, commands: list[Command]) -> None:
+    """Inspect parameter and annotation quality for functions from a single registry.
 
     Checks:
-    - Signature integrity: warns on every argument with an empty name or type.
+    - Signature integrity: warns on every parameter with an empty name or type.
     - Annotation coverage: counts and distinct values for group, class_, kind
-      across all arguments and return values.
+      across all parameters and return values.
     - len automatability: classifies non-empty len annotations into
       integer / param-name / COMPSIZE / other, with samples of 'other'.
     """
     print(f'\n=== {label} function parameters ===')
 
-    total_args = sum(len(t.args) for t in tokens)
-    print(f'  Total arguments: {total_args}')
+    total_params = sum(len(t.params) for t in commands)
+    print(f'  Total parameters: {total_params}')
 
-    # Signature integrity: warn on every bad argument.
-    for token in tokens:
-        for arg in token.args:
-            if not arg.name:
-                print(f'  WARNING: {token.name}: argument has empty name (type={arg.type!r})')
-            if not arg.type:
-                print(f'  WARNING: {token.name}: argument {arg.name!r} has empty type')
+    # Signature integrity: warn on every bad parameter.
+    for cmd in commands:
+        for param in cmd.params:
+            if not param.name:
+                print(f'  WARNING: {cmd.name}: parameter has empty name (type={param.type!r})')
+            if not param.type:
+                print(f'  WARNING: {cmd.name}: parameter {param.name!r} has empty type')
 
-    # Annotation coverage over return values and arguments.
-    all_annotated = [token.return_value for token in tokens] + [
-        arg for token in tokens for arg in token.args
+    # Annotation coverage over return values and parameters.
+    all_annotated = [command.return_value for command in commands] + [
+        param for command in commands for param in command.params
     ]
     groups  = [a.group  for a in all_annotated if a.group  is not None]
     classes = [a.class_ for a in all_annotated if a.class_ is not None]
     kinds   = [k for a in all_annotated for k in a.kinds]
-    print(f'  Annotation coverage (return values + arguments):')
+    print('  Annotation coverage (return values + parameters):')
     print(f'    group:  {len(groups)} present, {len(set(groups))} distinct')
     print(f'    class_: {len(classes)} present, {len(set(classes))} distinct')
     print(f'    kind:   {len(kinds)} present, {len(set(kinds))} distinct')
-
-    # len automatability breakdown (arguments only).
+    # len automatability breakdown (parameters only).
     len_counts: Counter[str] = Counter()
     other_samples: list[str] = []
-    for token in tokens:
-        param_names = {arg.name for arg in token.args}
-        for arg in token.args:
-            if arg.len is not None:
-                category = _classify_len(arg.len, param_names)
+    for cmd in commands:
+        param_names = {param.name for param in cmd.params}
+        for param in cmd.params:
+            if param.len is not None:
+                category = _classify_len(param.len, param_names)
                 len_counts[category] += 1
                 if category == 'other' and len(other_samples) < 8:
-                    other_samples.append(f'{token.name}: {arg.name} len={arg.len!r}')
+                    other_samples.append(f'{cmd.name}: {param.name} len={param.len!r}')
     if len_counts:
         print(f'  len annotations: {dict(len_counts)}')
         if other_samples:
@@ -398,10 +403,10 @@ def inspect_function_params(label: str, tokens: list[Token]) -> None:
 
 
 def check_function_groups_against_enums(
-    labeled_tokens: dict[Api, list[Token]],
+    labeled_commands: dict[Api, list[Command]],
     labeled_enums: dict[Api, list[EnumValue]],
 ) -> None:
-    """Verify that every group annotation on a function argument or return value
+    """Verify that every group annotation on a function parameter or return value
     names a group that exists in the enum data.
 
     The documented semantic is that function group annotations restrict allowed
@@ -411,17 +416,18 @@ def check_function_groups_against_enums(
     """
     print('\n=== Function group annotations vs enum groups ===')
 
-    for api in labeled_tokens:
-        tokens = labeled_tokens[api]
+    for api, commands in labeled_commands.items():
         enums  = labeled_enums.get(api, [])
 
         enum_groups: set[str] = {g for e in enums for g in e.groups}
 
         unknown: list[tuple[str, str, str]] = []  # (function, param, group)
-        for token in tokens:
-            for annotated in [token.return_value, *token.args]:
+        for command in commands:
+            for annotated in (command.return_value, *command.params):
                 if annotated.group is not None and annotated.group not in enum_groups:
-                    unknown.append((token.name, annotated.name, annotated.group))
+                    # Perf doesn't matter here, this is an exceptional case.
+                    # ruff: ignore[PERF401]
+                    unknown.append((command.name, annotated.name, annotated.group))
 
         if unknown:
             print(f'  [{api}] {len(unknown)} group annotation(s) not found in enum groups:')

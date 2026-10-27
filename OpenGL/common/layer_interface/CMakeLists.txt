@@ -1,0 +1,69 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2026 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+# Real STATIC library (not header-only/INTERFACE): commandCodersAuto.cpp is generated,
+# non-template code (see OpenGL/codegen/generator_layer_interface.py) with a genuine
+# translation unit to compile, unlike the earlier header-only Command/CommandSerializer
+# classes it replaces.
+set(GENERATED_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandIdsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/layerAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandCodersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandSerializersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/glEnumsAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pnameValueCountsAuto.cpp
+)
+set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
+source_group("Generated Files" FILES ${GENERATED_SRC})
+
+add_library(OpenGL_layer_interface STATIC
+  ${GENERATED_SRC}
+  arguments.h
+  argumentCoders.h
+  clientArraysMetaTypes.h
+  command.h
+  layerBase.h
+  mappedDataMetaTypes.h
+  mappedTextureDataMetaTypes.h
+  pixelFormatMetaTypes.h
+  uniformArrayMetaTypes.h
+  unsupportedCommandTypes.h
+  windowGeometryMetaTypes.h
+  glVersionString.h
+  glVersionString.cpp
+  pixelTransferSize.h
+  pixelTransferSize.cpp
+)
+
+add_dependencies(OpenGL_layer_interface OpenGL_codegen)
+
+target_include_directories(OpenGL_layer_interface PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  # commandsAuto.h uses GLenum/GLfloat/etc. from glTypes.h, which is hand-declared in
+  # OpenGL/interceptor (see that header's own comment) instead of pulling in <GL/gl.h>.
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../interceptor
+)
+
+target_link_libraries(OpenGL_layer_interface PUBLIC
+  stream
+  log
+)
+target_link_libraries(OpenGL_layer_interface PRIVATE
+  # Ensures "platform.h" resolves to the GITS header, not MurmurHash's Platform.h on Windows.
+  common_interface
+)
+
+# Groups this target under an "OpenGL_common" virtual folder in the IDE, matching how
+# Vulkan's equivalent common/* targets group under "Vulkan/Vulkan_common" (e.g.
+# Vulkan/common/layer_interface/CMakeLists.txt) - purely a Solution Explorer grouping, not
+# a separate library/project.
+set_target_properties(OpenGL_layer_interface PROPERTIES FOLDER OpenGL/OpenGL_common)

@@ -36,8 +36,8 @@
 #if defined WITH_VULKAN
 #include "vulkanCommandFactory.h"
 #endif
-#if defined WITH_OPENGL2
-#include "openGL2CommandFactory.h"
+#if defined WITH_OPENGL
+#include "openGLCommandFactory.h"
 #endif
 #include "windowManager.h"
 
@@ -345,10 +345,10 @@ void PlayStream(const std::filesystem::path& streamPath) {
     commandFactories.push_back(&vulkanCommandFactory);
   }
 #endif
-#if defined WITH_OPENGL2
-  opengl2::OpenGL2CommandFactory openGL2CommandFactory;
-  if (header.GetApi() == stream::StreamHeader::Api::API_OPENGL2) {
-    commandFactories.push_back(&openGL2CommandFactory);
+#if defined WITH_OPENGL
+  opengl::OpenGLCommandFactory openGLCommandFactory;
+  if (header.GetApi() == stream::StreamHeader::Api::API_OPENGL) {
+    commandFactories.push_back(&openGLCommandFactory);
   }
 #endif
 
@@ -452,33 +452,30 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
     // path, which reinterprets the Api field using the unrelated ApisIface::TApi enum and
     // throws ENotImplemented from ApisIface::ToApiBool() on the mismatched value.
     //
-    // The API_OPENGL2 term is only correct to exclude when this binary was actually built with
-    // an OpenGL2CommandFactory to route to - see the identical "WITH_OPENGL2" guard around
-    // PlayStream()'s own OpenGL2CommandFactory registration above. WITH_OPENGL2 is a normal,
+    // The API_OPENGL term is only correct to exclude when this binary was actually built with
+    // an OpenGLCommandFactory to route to - see the identical "WITH_OPENGL" guard around
+    // PlayStream()'s own OpenGLCommandFactory registration above. WITH_OPENGL is a normal,
     // independently togglable CMake option (see the root CMakeLists.txt) - a build with
-    // WITH_OPENGL2=OFF compiles out that factory entirely. Without this guard, such a binary
-    // would still take THIS function's "not legacy" branch for an OpenGL2 stream, route it into
+    // WITH_OPENGL=OFF compiles out that factory entirely. Without this guard, such a binary
+    // would still take THIS function's "not legacy" branch for an OpenGL stream, route it into
     // PlayStream()'s modern StreamReader path anyway, and have StreamReader::DecodeBlock()
-    // silently skip every unrecognized OpenGL2 command ID (no factory claims them) - completing
+    // silently skip every unrecognized OpenGL command ID (no factory claims them) - completing
     // "successfully" having replayed zero GL calls, rather than the loud ENotImplemented failure
     // this same exclusion already produces today for a DIRECTX/VULKAN stream handed to a player
     // binary missing that backend (see this method's own review fix - reported as a real,
-    // reachable gap specific to OpenGL2's own opt-out-capable build option, not fixed here for
+    // reachable gap specific to OpenGL's own opt-out-capable build option, not fixed here for
     // DIRECTX/VULKAN's pattern-identical WITH_DIRECTX/WITH_VULKAN options, which are outside
-    // this fix's OpenGL2-backend scope).
+    // this fix's OpenGL-backend scope).
     //
-    // Deliberately just `defined WITH_OPENGL2`, with no additional platform/architecture term:
-    // the root CMakeLists.txt already restricts WITH_OPENGL2 to Windows x64 (see commit
-    // c16c8e18a) - re-checking GITS_PLATFORM_WINDOWS_X64 here would be redundant on every build
-    // where WITH_OPENGL2 can be defined at all, and would need undoing the moment this backend
-    // gains Linux support the same way Vulkan already has (WITH_OPENGL2 becoming definable on a
-    // non-Windows-x64 build too). Let CMake own platform/architecture gating; keep this
-    // C++-level guard checking only the one thing it actually cares about - whether the
-    // OpenGL2CommandFactory this branch routes to was compiled in.
+    // Deliberately just `defined WITH_OPENGL`, with no additional platform/architecture term:
+    // the root CMakeLists.txt owns platform/architecture gating (WITH_OPENGL is 64-bit-only and
+    // defaults ON on Windows x64 and x86-64 Linux). Keep this C++-level guard checking only the
+    // one thing it actually cares about - whether the OpenGLCommandFactory this branch routes to
+    // was compiled in.
     return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX &&
            header.GetApi() != stream::StreamHeader::Api::API_VULKAN
-#if defined WITH_OPENGL2
-           && header.GetApi() != stream::StreamHeader::Api::API_OPENGL2
+#if defined WITH_OPENGL
+           && header.GetApi() != stream::StreamHeader::Api::API_OPENGL
 #endif
         ;
   }

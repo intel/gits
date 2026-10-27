@@ -54,8 +54,8 @@ def generate_default_configuration(task, template_manager):
         conditions = ['is_directx']
     if task.vulkan:
         conditions = ['is_vulkan']
-    if task.opengl2:
-        conditions = ['is_opengl2']
+    if task.opengl:
+        conditions = ['is_opengl']
     context = {'data': configuration, 'platform': task.platform, 'installpath': task.installpath, 'conditions': conditions}
     template_manager.render_task(task, context)
 

@@ -14,7 +14,7 @@ GITS recorder consists of:
 
 Details regarding the configuration options can be found in the documentation's [configuration section](../configuration/how_to.md).
 
-For information about the [Vulkan legacy](Vulkan/VulkanLegacy.md) backend, please see the documentation.
+For information about the [Vulkan legacy](Vulkan/VulkanLegacy.md) and [OpenGL legacy](OpenGL/OpenGLLegacy.md) backends, please see the documentation.
 
 # Example usage
 
