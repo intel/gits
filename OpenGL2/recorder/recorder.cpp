@@ -8,6 +8,8 @@
 
 #include "recorderInterface.h"
 
+#include "clientArraysService.h"
+#include "mapTrackingService.h"
 #include "openglDriversAuto.h"
 #include "realDriver.h"
 #include "recorderWrappers.h"
@@ -20,6 +22,10 @@ class Recorder final : public IRecorder {
 public:
   Recorder() {
     InitializeRealDriver();
+    // Register both services' exit callbacks during serialized startup.
+    // Lazy construction on separate GL threads would race in MessageBus::subscribe().
+    ClientArraysService::Get();
+    MapTrackingService::Get();
   }
 
   void* GetWrapper(const char* name) override {
