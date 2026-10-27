@@ -37,6 +37,8 @@ In-repo documentation under `docs/` is the source of truth when external links a
    - Do not start commit messages with BOM.
    
 
+6. **Avoid stream-degrading fallbacks.** GITS streams support functional and GPU-driver performance testing. Do not silently switch to a capture path that degrades stream correctness or performance. If the current system cannot record a suitable stream because of resource limits, fail clearly and recommend recording on a capable system. Consider a degrading fallback only when no suitable system can record a working stream; require explicit user opt-in and document the tradeoff. Do not add speculative fallbacks.
+
 ## Tech Stack
 
 - **Build:** CMake
