@@ -255,14 +255,79 @@ GLenum MapTrackingService::MapAccessBitsToEnum(GLbitfield access) {
 
 void MapTrackingService::StoreWholeBufferMap(
     uint64_t shareGroup, GLuint buffer, GLenum access, void* mappedPointer, GLsizeiptr length) {
-  StoreMappedRange(shareGroup, buffer,
-                   MappedRange{mappedPointer,
-                               mappedPointer,
-                               {},
-                               /*offset=*/0,
-                               length,
-                               MapAccessEnumToBits(access),
-                               false});
+  StoreMappedRange(
+      shareGroup, buffer,
+      MappedRange{ByteSource{ByteSource::Kind::DriverPointer, mappedPointer, mappedPointer},
+                  /*offset=*/0, length, MapAccessEnumToBits(access), false});
+}
+
+std::optional<MapTrackingService::MapRelativeRange> MapTrackingService::CaptureRangePolicy::
+    SelectFlushRange(GLintptr offset, GLsizeiptr length) const {
+  GITS_ASSERT(Type != Mode::DirtyPages, "Dirty-page detection requires a byte-source backend");
+  if (Type == Mode::DeclaredFlush && length > 0) {
+    return MapRelativeRange{offset, length};
+  }
+  return std::nullopt;
+}
+
+std::optional<MapTrackingService::MapRelativeRange> MapTrackingService::CaptureRangePolicy::
+    SelectUnmapRange(GLsizeiptr length) const {
+  GITS_ASSERT(Type != Mode::DirtyPages, "Dirty-page detection requires a byte-source backend");
+  if (Type == Mode::FullRange) {
+    return MapRelativeRange{0, length};
+  }
+  return std::nullopt;
+}
+
+void MapTrackingService::ByteSource::PrepareOwnedShadow(GLintptr offset,
+                                                        GLsizeiptr length,
+                                                        GLint alignment,
+                                                        std::span<const uint8_t> initialBytes,
+                                                        bool initialize) {
+  GITS_ASSERT(!initialize || initialBytes.size() == static_cast<size_t>(length),
+              "Non-invalidating write-only explicit-flush map has no initial bytes");
+  GITS_ASSERT(static_cast<size_t>(alignment) <= Shadow.max_size() &&
+                  static_cast<size_t>(length) <= Shadow.max_size() - static_cast<size_t>(alignment),
+              "Cannot allocate aligned shadow for buffer map");
+  try {
+    Shadow.resize(static_cast<size_t>(length) + static_cast<size_t>(alignment));
+  } catch (const std::bad_alloc&) {
+    GITS_ASSERT(false, "Cannot allocate shadow for buffer map");
+  }
+  const auto base = reinterpret_cast<uintptr_t>(Shadow.data());
+  const auto residue = static_cast<size_t>(offset) % static_cast<size_t>(alignment);
+  const auto padding =
+      (residue + static_cast<size_t>(alignment) - base % static_cast<size_t>(alignment)) %
+      static_cast<size_t>(alignment);
+  ApplicationPointer = Shadow.data() + padding;
+  Type = Kind::OwnedShadow;
+  if (initialize) {
+    std::memcpy(ApplicationPointer, initialBytes.data(), static_cast<size_t>(length));
+  }
+}
+
+void* MapTrackingService::ByteSource::TranslatePointer(void* pointer) const {
+  if (Type == Kind::DriverPointer) {
+    return pointer;
+  }
+  GITS_ASSERT(pointer == DriverPointer,
+              "Buffer map pointer query does not match the tracked driver mapping");
+  return ApplicationPointer;
+}
+
+std::vector<uint8_t> MapTrackingService::ByteSource::Snapshot(size_t offset, size_t length) const {
+  if (length == 0) {
+    return {};
+  }
+  const auto* begin = static_cast<const uint8_t*>(ApplicationPointer) + offset;
+  return std::vector<uint8_t>(begin, begin + length);
+}
+
+void MapTrackingService::ByteSource::WriteBack(size_t offset,
+                                               std::span<const uint8_t> bytes) const {
+  if (Type == Kind::OwnedShadow && !bytes.empty()) {
+    std::memcpy(static_cast<uint8_t*>(DriverPointer) + offset, bytes.data(), bytes.size());
+  }
 }
 
 void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedPointer) {
@@ -328,14 +393,13 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
         GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')';
     GITS_ASSERT(false, message);
   }
-  MappedRange range{driverPointer, driverPointer, {}, offset, length, access, true};
+  MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
+                    offset, length, access, true};
   if (access & GL_MAP_FLUSH_EXPLICIT_BIT) {
+    range.RangePolicy.Type = CaptureRangePolicy::Mode::DeclaredFlush;
     GITS_ASSERT((access & GL_MAP_WRITE_BIT) != 0,
                 "Explicit-flush buffer map has no writable byte source");
     if ((access & GL_MAP_READ_BIT) == 0) {
-      GITS_ASSERT(!NeedsInitialShadowContents(access) ||
-                      initialBytes.size() == static_cast<size_t>(length),
-                  "Non-invalidating write-only explicit-flush map has no initial bytes");
       const auto [major, minor] = CurrentContextGLVersion();
       GITS_ASSERT(major > 4 || (major == 4 && minor >= 2) ||
                       CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment"),
@@ -344,27 +408,11 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
       g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
                                                                     &alignment);
       GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
-      GITS_ASSERT(static_cast<size_t>(alignment) <= range.Shadow.max_size() &&
-                      static_cast<size_t>(length) <=
-                          range.Shadow.max_size() - static_cast<size_t>(alignment),
-                  "Cannot allocate aligned shadow for buffer map");
-      try {
-        range.Shadow.resize(static_cast<size_t>(length) + static_cast<size_t>(alignment));
-      } catch (const std::bad_alloc&) {
-        GITS_ASSERT(false, "Cannot allocate shadow for buffer map");
-      }
-      const auto base = reinterpret_cast<uintptr_t>(range.Shadow.data());
-      const auto residue = static_cast<size_t>(offset) % static_cast<size_t>(alignment);
-      const auto padding =
-          (residue + static_cast<size_t>(alignment) - base % static_cast<size_t>(alignment)) %
-          static_cast<size_t>(alignment);
-      range.ApplicationPointer = range.Shadow.data() + padding;
-      if (NeedsInitialShadowContents(access)) {
-        std::memcpy(range.ApplicationPointer, initialBytes.data(), static_cast<size_t>(length));
-      }
+      range.Source.PrepareOwnedShadow(offset, length, alignment, initialBytes,
+                                      NeedsInitialShadowContents(access));
     }
   }
-  void* applicationPointer = range.ApplicationPointer;
+  void* applicationPointer = range.Source.ApplicationPointer;
   StoreMappedRange(CurrentShareGroup(), buffer, std::move(range));
   return applicationPointer;
 }
@@ -375,12 +423,38 @@ void* MapTrackingService::TranslateShadowPointerQuery(GLuint buffer, void* point
   }
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   const auto it = m_MappedBuffers.find(Key{CurrentShareGroup(), buffer});
-  if (it == m_MappedBuffers.end() || it->second.Shadow.empty()) {
+  if (it == m_MappedBuffers.end()) {
     return pointer;
   }
-  GITS_ASSERT(pointer == it->second.DriverPointer,
-              "Buffer map pointer query does not match the tracked driver mapping");
-  return it->second.ApplicationPointer;
+  return it->second.Source.TranslatePointer(pointer);
+}
+
+MapTrackingService::MappedBufferUpdate MapTrackingService::MakeMappedUpdate(
+    const MappedRange& range, MapRelativeRange interval, std::vector<uint8_t> bytes) {
+  return MappedBufferUpdate{range.Map,       range.Offset + interval.Offset,
+                            interval.Length, range.IsRange,
+                            range.Access,    std::move(bytes)};
+}
+
+MapTrackingService::MappedBufferUpdate MapTrackingService::PrepareFlushMappedUpdate(
+    const MappedRange& range, MapRelativeRange interval) {
+  const auto start = static_cast<size_t>(interval.Offset);
+  const auto count = static_cast<size_t>(interval.Length);
+  auto bytes = range.Source.Snapshot(start, count);
+  // Shadow-backed bytes must reach the real mapping before the caller flushes it.
+  range.Source.WriteBack(start, bytes);
+  return MakeMappedUpdate(range, interval, std::move(bytes));
+}
+
+void MapTrackingService::RecordOrSkipMappedUpdate(uint64_t key,
+                                                  const std::optional<MappedBufferUpdate>& update) {
+  if (!update) {
+    CaptureManager::Get().SkipCommandKey(key);
+    return;
+  }
+  RecordMappedDataMetaCommand(key, update->Map.ShareGroup, update->Map.Buffer, update->Offset,
+                              update->Length, update->Bytes);
+  NoteUpdate(update->IsRange, update->Access, update->Length);
 }
 
 void MapTrackingService::FlushMappedRange(GLuint buffer,
@@ -390,21 +464,18 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
                                           const std::function<void()>& realFlush) {
   if (offset < 0 || length < 0) {
     realFlush();
-    CaptureManager::Get().SkipCommandKey(key);
+    RecordOrSkipMappedUpdate(key, std::nullopt);
     return;
   }
   const uint64_t shareGroup = CurrentShareGroup();
-  std::vector<uint8_t> bytes;
-  GLintptr absoluteOffset = 0;
-  bool rangeMap = true;
-  GLbitfield access = 0;
+  std::optional<MappedBufferUpdate> update;
   {
     std::unique_lock<std::mutex> lock(m_MappedBuffersMutex);
     const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
-    if (it == m_MappedBuffers.end() || (it->second.Access & GL_MAP_FLUSH_EXPLICIT_BIT) == 0) {
+    if (it == m_MappedBuffers.end()) {
       lock.unlock();
       realFlush();
-      CaptureManager::Get().SkipCommandKey(key);
+      RecordOrSkipMappedUpdate(key, std::nullopt);
       return;
     }
     const MappedRange& range = it->second;
@@ -412,30 +483,16 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
         range.Offset > std::numeric_limits<GLintptr>::max() - offset) {
       lock.unlock();
       realFlush();
-      CaptureManager::Get().SkipCommandKey(key);
+      RecordOrSkipMappedUpdate(key, std::nullopt);
       return;
     }
-    absoluteOffset = range.Offset + offset;
-    rangeMap = range.IsRange;
-    access = range.Access;
-    const auto start = static_cast<size_t>(offset);
-    const auto count = static_cast<size_t>(length);
-    bytes.resize(count);
-    if (count != 0) {
-      std::memcpy(bytes.data(), static_cast<const uint8_t*>(range.ApplicationPointer) + start,
-                  count);
-      if (!range.Shadow.empty()) {
-        std::memcpy(static_cast<uint8_t*>(range.DriverPointer) + start, bytes.data(), count);
-      }
+    const auto interval = range.RangePolicy.SelectFlushRange(offset, length);
+    if (interval) {
+      update = PrepareFlushMappedUpdate(range, *interval);
     }
   }
   realFlush();
-  if (length > 0) {
-    RecordMappedDataMetaCommand(key, shareGroup, buffer, absoluteOffset, length, bytes);
-    NoteUpdate(rangeMap, access, length);
-  } else {
-    CaptureManager::Get().SkipCommandKey(key);
-  }
+  RecordOrSkipMappedUpdate(key, update);
 }
 
 GLboolean MapTrackingService::SnapshotBufferAndUnmap(
@@ -453,7 +510,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
   }
-  if (range->Access & GL_MAP_FLUSH_EXPLICIT_BIT) {
+  const auto interval = range->RangePolicy.SelectUnmapRange(range->Length);
+  if (!interval) {
     // Capture only flushed ranges. Writes after the final flush and before unmap leave the
     // corresponding buffer contents undefined, so unmap must not snapshot those bytes.
     return realUnmap();
@@ -461,29 +519,28 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   // Reserve before the real unmap, then record or release on every path; otherwise another
   // thread can claim a later key and stall the ordering recorder on this one.
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
-  std::vector<uint8_t> bytes(static_cast<size_t>(range->Length));
   if (range->Access & GL_MAP_READ_BIT) {
     // Readable mappings can be copied before the application-visible unmap invalidates them.
-    std::memcpy(bytes.data(), range->ApplicationPointer, bytes.size());
+    auto bytes = range->Source.Snapshot(0, static_cast<size_t>(interval->Length));
     const GLboolean result = realUnmap();
     if (result == GL_TRUE) {
-      RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
-      NoteUpdate(range->IsRange, range->Access, range->Length);
+      RecordOrSkipMappedUpdate(key, MakeMappedUpdate(*range, *interval, std::move(bytes)));
     } else {
       LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
                      "MappedDataMetaCommand recorded for this unmap";
-      CaptureManager::Get().SkipCommandKey(key);
+      RecordOrSkipMappedUpdate(key, std::nullopt);
     }
     return result;
   }
   // Write-only pointers cannot be read safely. Unmap first, then read the resulting buffer.
+  std::vector<uint8_t> bytes(static_cast<size_t>(interval->Length));
   const GLboolean result = realUnmap();
   if (result != GL_TRUE) {
     LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                 << " returned GL_FALSE (data store contents corrupted per spec) - no "
                    "MappedDataMetaCommand recorded for this unmap";
-    CaptureManager::Get().SkipCommandKey(key);
+    RecordOrSkipMappedUpdate(key, std::nullopt);
     return result;
   }
   void* readPointer = CanRemapForRead(queryStorageFlags)
@@ -492,7 +549,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (readPointer != nullptr) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
     if (realInternalUnmap() != GL_TRUE) {
-      CaptureManager::Get().SkipCommandKey(key);
+      RecordOrSkipMappedUpdate(key, std::nullopt);
       std::ostringstream message;
       message << "MapTrackingService (" << callerName << "): internal unmap of buffer " << buffer
               << " returned GL_FALSE after the application unmap succeeded; "
@@ -502,11 +559,10 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   } else if (!realReadSubData(range->Offset, range->Length, bytes.data())) {
     LOG_WARNING << "MapTrackingService (" << callerName << "): no readback function for buffer "
                 << buffer << " - no MappedDataMetaCommand recorded for this unmap";
-    CaptureManager::Get().SkipCommandKey(key);
+    RecordOrSkipMappedUpdate(key, std::nullopt);
     return result;
   }
-  RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
-  NoteUpdate(range->IsRange, range->Access, range->Length);
+  RecordOrSkipMappedUpdate(key, MakeMappedUpdate(*range, *interval, std::move(bytes)));
   return result;
 }
 
@@ -596,6 +652,7 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
     BufferShadowService::Get().OnMapWrite(shareGroup, buffer, range.Access);
   }
   const Key key{shareGroup, buffer};
+  range.Map = key;
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   m_MappedBuffers[key] = std::move(range);
 }

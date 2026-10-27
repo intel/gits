@@ -135,23 +135,7 @@ private:
   std::mutex m_StatisticsMutex;
   std::map<std::pair<bool, uint32_t>, MapStatistics> m_Statistics;
 
-  // For write-only explicit maps, ApplicationPointer points into GITS-owned shadow memory
-  // while DriverPointer retains the real GL mapping. Otherwise they are equal.
-  struct MappedRange {
-    void* DriverPointer{nullptr};
-    void* ApplicationPointer{nullptr};
-    std::vector<uint8_t> Shadow;
-    GLintptr Offset{0};
-    GLsizeiptr Length{0};
-    GLbitfield Access{0};
-    bool IsRange{true}; // Whether it is a range mapping or a whole-buffer mapping.
-  };
-
-  // A GLuint buffer name is unique only within a share group, not process-globally: two
-  // independent, non-sharing contexts can each have a buffer named 1, and without the share
-  // group here one context's unmap could consume the other's tracked range. Reuses the same
-  // ShareGroupService identity as ObjectNameMapService (see shareGroupService.h and
-  // modern-opengl-backend-architecture.md's share-group decision record).
+  // Buffer names are unique within a share group, not process-globally.
   struct Key {
     uint64_t ShareGroup;
     GLuint Buffer;
@@ -164,6 +148,70 @@ private:
       return std::hash<uint64_t>()(key.ShareGroup) ^ (std::hash<GLuint>()(key.Buffer) << 1);
     }
   };
+
+  // This offset is relative to the mapped pointer; MappedBufferUpdate uses a buffer-relative
+  // offset. MakeMappedUpdate converts the former to the latter.
+  struct MapRelativeRange {
+    GLintptr Offset;
+    GLsizeiptr Length;
+  };
+
+  struct CaptureRangePolicy {
+    enum class Mode {
+      FullRange,
+      DeclaredFlush,
+      DirtyPages
+    };
+    Mode Type{Mode::FullRange};
+    std::optional<MapRelativeRange> SelectFlushRange(GLintptr offset, GLsizeiptr length) const;
+    std::optional<MapRelativeRange> SelectUnmapRange(GLsizeiptr length) const;
+  };
+
+  struct ByteSource {
+    enum class Kind {
+      DriverPointer,
+      OwnedShadow
+    };
+    Kind Type{Kind::DriverPointer};
+    void* DriverPointer{nullptr};
+    void* ApplicationPointer{nullptr};
+    std::vector<uint8_t> Shadow;
+
+    void PrepareOwnedShadow(GLintptr offset,
+                            GLsizeiptr length,
+                            GLint alignment,
+                            std::span<const uint8_t> initialBytes,
+                            bool initialize);
+    void* TranslatePointer(void* pointer) const;
+    std::vector<uint8_t> Snapshot(size_t offset, size_t length) const;
+    void WriteBack(size_t offset, std::span<const uint8_t> bytes) const;
+  };
+
+  struct MappedRange {
+    ByteSource Source;
+    GLintptr Offset{0};
+    GLsizeiptr Length{0};
+    GLbitfield Access{0};
+    bool IsRange{true}; // Whether it is a range mapping or a whole-buffer mapping.
+    CaptureRangePolicy RangePolicy;
+    Key Map{0, 0};
+  };
+
+  struct MappedBufferUpdate {
+    Key Map;
+    GLintptr Offset{0};
+    GLsizeiptr Length{0};
+    bool IsRange{true};
+    GLbitfield Access{0};
+    std::vector<uint8_t> Bytes;
+  };
+
+  MappedBufferUpdate MakeMappedUpdate(const MappedRange& range,
+                                      MapRelativeRange interval,
+                                      std::vector<uint8_t> bytes);
+  MappedBufferUpdate PrepareFlushMappedUpdate(const MappedRange& range, MapRelativeRange interval);
+  // After the real GL call, record the captured update at the reserved key or skip that key.
+  void RecordOrSkipMappedUpdate(uint64_t key, const std::optional<MappedBufferUpdate>& update);
 
   void* RegisterRange(GLuint buffer,
                       GLintptr offset,
