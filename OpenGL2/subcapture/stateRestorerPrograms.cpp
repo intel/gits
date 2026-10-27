@@ -317,6 +317,13 @@ void StateRestorer::RestoreSubroutines(GLuint program) {
     stages.push_back(GL_COMPUTE_SHADER);
   }
   for (GLenum stage : stages) {
+    // The locations query can fail for a stage the program has no shader for, which has no
+    // subroutine uniforms.
+    GLint uniforms = 0;
+    GL_FN(glGetProgramStageiv)(program, stage, GL_ACTIVE_SUBROUTINE_UNIFORMS, &uniforms);
+    if (uniforms <= 0) {
+      continue;
+    }
     GLint locations = 0;
     GL_FN(glGetProgramStageiv)(program, stage, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, &locations);
     if (locations <= 0) {
