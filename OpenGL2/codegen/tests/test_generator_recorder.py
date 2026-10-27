@@ -103,7 +103,7 @@ class PreHookKeyPairCommandsTableTests(unittest.TestCase):
                        'glXMakeCurrent', 'glXMakeContextCurrent', 'glXMakeCurrentReadSGI',
                        'glXSwapBuffers', 'glXGetVisualFromFBConfig', 'glXCreateWindow',
                        'glXCreatePbuffer', 'glXCreateContext', 'glXCreateNewContext',
-                       'glXCreateContextAttribsARB'}))
+                       'glXCreateContextAttribsARB', 'glXCreatePixmap', 'glXCreateGLXPixmap'}))
 
 
 class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
@@ -181,7 +181,9 @@ class PreHookExtraKeyTests(unittest.TestCase):
                           'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
                           'glXSwapBuffers': 'SetPendingMappedTextureKey',
                           'wglSetPixelFormat': 'SetPendingPixelFormatKey',
-                          'glXCreateWindow': 'SetPendingPixelFormatKey'})
+                          'glXCreateWindow': 'SetPendingPixelFormatKey',
+                          'glXCreatePixmap': 'SetPendingPixelFormatKey',
+                          'glXCreateGLXPixmap': 'SetPendingPixelFormatKey'})
 
     def test_extra_key_precedes_the_pre_hook_pair_in_one_reservation(self) -> None:
         rendered = render_wrappers(('wglSwapBuffers', 'wglSetPixelFormat', 'wglMakeCurrent'),

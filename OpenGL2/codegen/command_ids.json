@@ -3,7 +3,7 @@
         "GL": 2839,
         "WGL": 69,
         "EGL": 0,
-        "GLX": 65
+        "GLX": 69
     },
     "command_ids": {
         "GL": {
@@ -2984,7 +2984,11 @@
             "ID_GLXGETVISUALFROMFBCONFIG": 994621,
             "ID_GLXQUERYCONTEXT": 994622,
             "ID_GLXQUERYEXTENSION": 994623,
-            "ID_GLXQUERYVERSION": 994624
+            "ID_GLXQUERYVERSION": 994624,
+            "ID_GLXCREATEGLXPIXMAP": 994625,
+            "ID_GLXCREATEPIXMAP": 994626,
+            "ID_GLXDESTROYGLXPIXMAP": 994627,
+            "ID_GLXDESTROYPIXMAP": 994628
         }
     }
 }

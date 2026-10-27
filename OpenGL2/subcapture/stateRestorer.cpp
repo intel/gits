@@ -988,8 +988,8 @@ void StateRestorer::EndReadback() {
 // back buffer and swapped to the front rather than drawn to the front buffer, which applications
 // that only swap never draw to. A GLX window's is drawn to the front buffer, as glXSwapBuffers
 // leaves the back buffer undefined, and has no result a swap could be recorded as failed with, so
-// a swap would end a frame. A GLX pbuffer's is not restored, as drawing to it can raise X errors
-// when the context is released, and it is never presented.
+// a swap would end a frame. A GLX pbuffer's or pixmap's is not restored, as drawing to it can
+// raise X errors when the context is released, and it is never presented.
 void StateRestorer::RestoreDefaultFramebuffer() {
   const bool glx = m_RecordedDisplay != nullptr;
   GLsizei width = 0;

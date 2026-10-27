@@ -55,11 +55,15 @@ public:
   void Post(glXMakeContextCurrentCommand& command) override;
   void Post(glXMakeCurrentReadSGICommand& command) override;
 
-  // ---- GLX windows and pbuffers -----------------------------------------
+  // ---- GLX windows, pbuffers and pixmaps --------------------------------
   void Post(glXCreateWindowCommand& command) override;
   void Post(glXDestroyWindowCommand& command) override;
   void Post(glXCreatePbufferCommand& command) override;
   void Post(glXDestroyPbufferCommand& command) override;
+  void Post(glXCreatePixmapCommand& command) override;
+  void Post(glXDestroyPixmapCommand& command) override;
+  void Post(glXCreateGLXPixmapCommand& command) override;
+  void Post(glXDestroyGLXPixmapCommand& command) override;
 
   // ---- Pbuffers ---------------------------------------------------------
   void Post(wglCreatePbufferARBCommand& command) override;

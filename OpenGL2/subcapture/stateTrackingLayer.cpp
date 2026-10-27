@@ -241,7 +241,7 @@ void StateTrackingLayer::Post(glXMakeCurrentReadSGICommand& command) {
                         Sampled<glXMakeCurrentReadSGICommandSerializer>(m_State, command));
 }
 
-// ---- GLX windows and pbuffers -------------------------------------------
+// ---- GLX windows, pbuffers and pixmaps ----------------------------------
 
 void StateTrackingLayer::Post(glXCreateWindowCommand& command) {
   m_State.AddTopology(Sampled<glXCreateWindowCommandSerializer>(m_State, command));
@@ -259,6 +259,24 @@ void StateTrackingLayer::Post(glXCreatePbufferCommand& command) {
 void StateTrackingLayer::Post(glXDestroyPbufferCommand& command) {
   m_State.DestroyGlxDrawable(command.m_pbuf.Value,
                              Unsampled<glXDestroyPbufferCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXCreatePixmapCommand& command) {
+  m_State.AddTopology(Sampled<glXCreatePixmapCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXDestroyPixmapCommand& command) {
+  m_State.DestroyGlxDrawable(command.m_pixmap.Value,
+                             Unsampled<glXDestroyPixmapCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXCreateGLXPixmapCommand& command) {
+  m_State.AddTopology(Sampled<glXCreateGLXPixmapCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXDestroyGLXPixmapCommand& command) {
+  m_State.DestroyGlxDrawable(command.m_pixmap.Value,
+                             Unsampled<glXDestroyGLXPixmapCommandSerializer>(command));
 }
 
 // ---- Pbuffers -----------------------------------------------------------

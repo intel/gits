@@ -229,9 +229,9 @@ _OPAQUE_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     # An X window or pixmap of the recorded X connection, recorded with its X server (see
     # generator_recorder.py's GLX_DRAWABLE_BASE_TYPES); the player substitutes its own.
     'GLXDrawable',
-    # GLX windows and pbuffers, and the X windows GLX windows are created for, are drawables
-    # the player substitutes the same way.
-    'GLXWindow', 'GLXPbuffer', 'Window',
+    # GLX windows, pbuffers and pixmaps, and the X windows and pixmaps they are created for, are
+    # drawables the player substitutes the same way.
+    'GLXWindow', 'GLXPbuffer', 'GLXPixmap', 'Window', 'Pixmap',
     # A framebuffer configuration of the recorded X connection. The player chooses its own from
     # the attributes recorded right before each command taking one.
     'GLXFBConfig',

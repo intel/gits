@@ -662,6 +662,105 @@ void GlxDestroyPbufferRunner::Run() {
     layer->Post(command);
   }
 }
+
+void GlxCreatePixmapRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId, true);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    Display* display = drawables.GetDisplay();
+    auto getVisual =
+        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
+    const Pixmap pixmap = drawables.CreatePixmap(command.m_pixmap.Value, visual);
+    GlxDrawableService::Free(visual);
+    if (pixmap != 0) {
+      auto realFunction = player::g_DispatchTable.glXCreatePixmap.load(std::memory_order_acquire);
+      const GLXPixmap live = realFunction(
+          display, config, pixmap,
+          command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
+      drawables.SetPixmapSubstitute(command.m_Return.Value, live, pixmap);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxDestroyPixmapRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXPixmap real_pixmap = drawables.Resolve(command.m_pixmap.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    const uint64_t recorded = command.m_pixmap.Value;
+    ThreadContextService::Get().DestroyDrawable(real_pixmap, [&drawables, real_pixmap, recorded] {
+      auto realFunction = player::g_DispatchTable.glXDestroyPixmap.load(std::memory_order_acquire);
+      realFunction(drawables.GetDisplay(), real_pixmap);
+      drawables.RemoveSubstitute(recorded);
+    });
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxCreateGLXPixmapRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId, true);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    Display* display = drawables.GetDisplay();
+    auto getVisual =
+        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
+    const Pixmap pixmap =
+        visual != nullptr ? drawables.CreatePixmap(command.m_pixmap.Value, visual) : 0;
+    if (pixmap != 0) {
+      auto realFunction =
+          player::g_DispatchTable.glXCreateGLXPixmap.load(std::memory_order_acquire);
+      const GLXPixmap live = realFunction(display, visual, pixmap);
+      drawables.SetPixmapSubstitute(command.m_Return.Value, live, pixmap);
+    }
+    GlxDrawableService::Free(visual);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxDestroyGLXPixmapRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXPixmap real_pixmap = drawables.Resolve(command.m_pixmap.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    const uint64_t recorded = command.m_pixmap.Value;
+    ThreadContextService::Get().DestroyDrawable(real_pixmap, [&drawables, real_pixmap, recorded] {
+      auto realFunction =
+          player::g_DispatchTable.glXDestroyGLXPixmap.load(std::memory_order_acquire);
+      realFunction(drawables.GetDisplay(), real_pixmap);
+      drawables.RemoveSubstitute(recorded);
+    });
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
 #endif
 
 } // namespace gits::opengl2

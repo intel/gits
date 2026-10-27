@@ -217,6 +217,12 @@ void PixelFormatCaptureLayer::Pre(glXCreateWindowCommand& command) {
   Pre(static_cast<Command&>(command));
 }
 
+void PixelFormatCaptureLayer::Pre(glXCreatePixmapCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPixelFormatKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
 void PixelFormatCaptureLayer::Pre(glXCreatePbufferCommand& command) {
   RecordGlxFBConfig(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
                     command.m_dpy.Value, command.m_config.Value);
@@ -238,6 +244,12 @@ void PixelFormatCaptureLayer::Pre(glXCreateContextAttribsARBCommand& command) {
 void PixelFormatCaptureLayer::Pre(glXCreateContextCommand& command) {
   RecordGlxVisual(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
                   command.m_dpy.Value, command.m_vis.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreateGLXPixmapCommand& command) {
+  RecordGlxVisual(CaptureManager::Get().TakePendingPixelFormatKey(), command.m_ThreadId,
+                  command.m_dpy.Value, command.m_visual.Value);
   Pre(static_cast<Command&>(command));
 }
 

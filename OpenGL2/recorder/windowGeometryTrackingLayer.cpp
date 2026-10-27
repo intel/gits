@@ -108,6 +108,20 @@ void WindowGeometryTrackingLayer::Pre(glXCreateWindowCommand& command) {
   Pre(static_cast<Command&>(command));
 }
 
+void WindowGeometryTrackingLayer::Pre(glXCreatePixmapCommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  {command.m_pixmap.Value},
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(glXCreateGLXPixmapCommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  {command.m_pixmap.Value},
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
 void WindowGeometryTrackingLayer::Pre(glXMakeCurrentCommand& command) {
   WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
                                                   {command.m_drawable.Value},

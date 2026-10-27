@@ -230,8 +230,8 @@ public:
     s_PendingMappedTextureKey = 0;
     return key;
   }
-  // The same for the pixel format attributes of wglSetPixelFormat and glXCreateWindow, which
-  // PixelFormatCaptureLayer records before the call.
+  // The same for the pixel format attributes of wglSetPixelFormat, glXCreateWindow and
+  // glXCreatePixmap, which PixelFormatCaptureLayer records before the call.
   void SetPendingPixelFormatKey(uint64_t key) {
     GITS_ASSERT(s_PendingPixelFormatKey == 0);
     s_PendingPixelFormatKey = key;

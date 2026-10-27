@@ -425,6 +425,61 @@ protected:
 private:
   glXDestroyPbufferCommand command;
 };
+
+// glXCreatePixmap's and glXCreateGLXPixmap's Run() - create a GLX pixmap the same way, for an X
+// pixmap GlxDrawableService creates with the depth of the chosen configuration's visual, which
+// glXCreateGLXPixmap takes. Their destroy runners remove the substitute, which frees the X pixmap.
+class GlxCreatePixmapRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreatePixmapCommand command;
+};
+
+class GlxDestroyPixmapRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXDestroyPixmapCommand command;
+};
+
+class GlxCreateGLXPixmapRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreateGLXPixmapCommand command;
+};
+
+class GlxDestroyGLXPixmapRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXDestroyGLXPixmapCommand command;
+};
 #endif
 
 } // namespace gits::opengl2

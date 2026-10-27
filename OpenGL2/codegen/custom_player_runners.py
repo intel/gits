@@ -73,13 +73,18 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     # Defers destroying a context a recorded thread still has current to its release, which
     # ThreadContextService's switches between recorded threads would otherwise do.
     'glXDestroyContext': 'GlxDestroyContextRunner',
-    # Register the player's GLX window or pbuffer as the recorded one's substitute in
+    # Register the player's GLX window, pbuffer or pixmap as the recorded one's substitute in
     # GlxDrawableService, and forget it once destroyed. Destroying one a recorded thread still has
-    # current is deferred to its release, as for contexts.
+    # current is deferred to its release, as for contexts. A GLX pixmap's X pixmap is the player's
+    # own, of the recorded size.
     'glXCreateWindow': 'GlxCreateWindowRunner',
     'glXDestroyWindow': 'GlxDestroyWindowRunner',
     'glXCreatePbuffer': 'GlxCreatePbufferRunner',
     'glXDestroyPbuffer': 'GlxDestroyPbufferRunner',
+    'glXCreatePixmap': 'GlxCreatePixmapRunner',
+    'glXDestroyPixmap': 'GlxDestroyPixmapRunner',
+    'glXCreateGLXPixmap': 'GlxCreateGLXPixmapRunner',
+    'glXDestroyGLXPixmap': 'GlxDestroyGLXPixmapRunner',
 }
 
 # Queries whose generated runner runs its layers but not the real call. Their framebuffer

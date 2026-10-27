@@ -198,8 +198,8 @@ public:
   // is still current is kept, and `destroy` is added to the topology and the context deleted
   // once no thread has it current any more.
   void DestroyGlxContext(GITSKey context, SampledCommand destroy);
-  // The same for a GLX window or pbuffer: `destroy` is added to the topology once no thread has
-  // `drawable` current any more.
+  // The same for a GLX window, pbuffer or pixmap: `destroy` is added to the topology once no thread
+  // has `drawable` current any more.
   void DestroyGlxDrawable(GLXDrawable drawable, SampledCommand destroy);
   void SetCurrent(uint32_t threadId, GITSKey context, HDC dc, HDC readDc, SampledCommand call);
   void SetCurrentGlx(uint32_t threadId,

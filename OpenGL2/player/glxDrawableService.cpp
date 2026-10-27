@@ -105,9 +105,64 @@ void GlxDrawableService::SetSubstitute(uint64_t recordedDrawable,
   m_Substitutes[recordedDrawable] = {liveDrawable, recordedWindow};
 }
 
-void GlxDrawableService::RemoveSubstitute(uint64_t recordedDrawable) {
+uint64_t GlxDrawableService::CreatePixmap(uint64_t recordedPixmap, const void* visualInfo) {
+#if defined GITS_PLATFORM_X11
+  int width = 0;
+  int height = 0;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    const auto it = m_Windows.find(recordedPixmap);
+    if (it != m_Windows.end() && it->second.HasGeometry && it->second.Drawable == 0) {
+      width = it->second.Width;
+      height = it->second.Height;
+      m_Windows.erase(it);
+    }
+  }
+  if (width == 0) {
+    LOG_ERROR << "GLX replay: no size was recorded for X pixmap 0x" << std::hex << recordedPixmap
+              << std::dec;
+    return 0;
+  }
+  Display* display = GetDisplay();
+  const int screen = DefaultScreen(display);
+  const int depth = visualInfo != nullptr ? static_cast<const XVisualInfo*>(visualInfo)->depth
+                                          : DefaultDepth(display, screen);
+  return XCreatePixmap(display, RootWindow(display, screen), static_cast<unsigned>(width),
+                       static_cast<unsigned>(height), static_cast<unsigned>(depth));
+#else
+  return 0;
+#endif
+}
+
+void GlxDrawableService::SetPixmapSubstitute(uint64_t recordedGlxPixmap,
+                                             uint64_t liveGlxPixmap,
+                                             uint64_t pixmap) {
+  if (liveGlxPixmap == 0) {
+    FreePixmap(pixmap);
+    return;
+  }
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_Substitutes.erase(recordedDrawable);
+  m_Substitutes[recordedGlxPixmap] = {liveGlxPixmap, 0, pixmap};
+}
+
+void GlxDrawableService::RemoveSubstitute(uint64_t recordedDrawable) {
+  uint64_t pixmap = 0;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (const auto it = m_Substitutes.find(recordedDrawable); it != m_Substitutes.end()) {
+      pixmap = it->second.Pixmap;
+      m_Substitutes.erase(it);
+    }
+  }
+  FreePixmap(pixmap);
+}
+
+void GlxDrawableService::FreePixmap(uint64_t pixmap) {
+#if defined GITS_PLATFORM_X11
+  if (pixmap != 0) {
+    XFreePixmap(GetDisplay(), pixmap);
+  }
+#endif
 }
 
 void GlxDrawableService::FitViewport(uint64_t liveDrawable, int width, int height) {

@@ -213,8 +213,8 @@ WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanO
 
 WindowGeometryTrackingService::Sample WindowGeometryTrackingService::QueryGlx(Display* display,
                                                                               uint64_t drawable) {
-  // The replies carry the errors, so a drawable that is not a window, such as a GLX pixmap or
-  // pbuffer, never reaches the application's X error handler.
+  // The replies carry the errors, so a drawable that is not an X drawable, such as a GLX pixmap
+  // or pbuffer, or not a window, never reaches the application's X error handler.
   xcb_connection_t* connection = XGetXCBConnection(display);
   const auto window = static_cast<xcb_window_t>(drawable);
   const xcb_get_geometry_cookie_t geometryCookie = xcb_get_geometry(connection, window);
@@ -229,7 +229,12 @@ WindowGeometryTrackingService::Sample WindowGeometryTrackingService::QueryGlx(Di
   std::free(error);
   error = nullptr;
   Sample sample;
-  if (geometry != nullptr && attributes != nullptr) {
+  if (geometry != nullptr && attributes == nullptr) {
+    // An X pixmap, of which the player creates one of the same size.
+    sample.Window = drawable;
+    sample.Width = geometry->width;
+    sample.Height = geometry->height;
+  } else if (geometry != nullptr) {
     // The root coordinates of the window itself, not of a window manager's frame, whose extents
     // differ between window managers. The player places its window there, see
     // GlxDrawableService.

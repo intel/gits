@@ -99,8 +99,11 @@ public:
   void Pre(wglSwapLayerBuffersCommand& command) override;
   // The GLX counterparts: the draw and read drawables are sampled when made current, a drawable at
   // every swap, and an X window when a GLX window is created for it, which creates the player's
-  // window.
+  // window. An X pixmap is sampled when a GLX pixmap is created for it, for the size of the
+  // player's pixmap.
   void Pre(glXCreateWindowCommand& command) override;
+  void Pre(glXCreatePixmapCommand& command) override;
+  void Pre(glXCreateGLXPixmapCommand& command) override;
   void Pre(glXMakeCurrentCommand& command) override;
   void Pre(glXMakeContextCurrentCommand& command) override;
   void Pre(glXMakeCurrentReadSGICommand& command) override;

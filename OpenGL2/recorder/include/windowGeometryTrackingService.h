@@ -103,9 +103,10 @@ public:
   // Records a WindowGeometryMetaCommand under `geometryKey` with a sample of each distinct
   // non-zero drawable of `drawables` (GLXDrawables on the application's `display`: the draw
   // drawable first, then the read one), identified by its GlxDrawableIdentityService identity. A
-  // GLX window is sampled as the X window it was created for. A sample has window 0 when its
-  // drawable is not an X window, e.g. a GLX pixmap or pbuffer. Releases `geometryKey` when every
-  // drawable is 0, as a context detach has no drawable to sample.
+  // GLX window is sampled as the X window it was created for. An X pixmap is sampled as an
+  // invisible window at the origin, of the pixmap's size. A sample has window 0 when its drawable
+  // is neither, e.g. a GLX pixmap or pbuffer. Releases `geometryKey` when every drawable is 0, as
+  // a context detach has no drawable to sample.
   //
   // Sampled X windows of `display`'s server found destroyed are reported as Capture() reports
   // them.
@@ -149,7 +150,7 @@ private:
   // or its lifetime changed meanwhile. Takes no lock.
   std::optional<Sample> Measure(void* window, uint64_t identity);
 
-  // The sample of `drawable`, with window 0 when it is not an X window.
+  // The sample of `drawable`, with window 0 when it is neither an X window nor an X pixmap.
   Sample QueryGlx(Display* display, uint64_t drawable);
 
   // The sampled X windows of `display`'s server other than `sampled` destroyed since the previous

@@ -530,6 +530,8 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
     ('glXCreatePbuffer', 'attrib_list'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('glXCreatePixmap', 'attrib_list'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
     ('glXCreateContextAttribsARB', 'attrib_list'): PointerParamOverride(
         direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
     ('glXChooseFBConfig', 'nelements'): PointerParamOverride(
