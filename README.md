@@ -25,7 +25,7 @@ To replay the stream, pass it as an argument to the `gitsPlayer` executable. See
 
 **GITS** also allows recording streams containing only a subset of API calls made by the application (e.g., only select frames). We call them substreams or subcaptures.
 
-More information can be found in the [Usage section](docs/usage.md) of the documentation.
+More information can be found in the [Usage section](docs/usingCLI.md) of the documentation.
 
 ## Contributing
 

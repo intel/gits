@@ -15,7 +15,7 @@ GITS is a capture-replay tool for Vulkan, OpenCL, Intel oneAPI Level Zero, OpenG
 | **Build instructions** | [docs/building.md](docs/building.md), [README.md](README.md) |
 | **Codebase layout** | [docs/development/codebase-map.md](docs/development/codebase-map.md) |
 | **Contributing** (PRs, commits, DCO) | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| **Usage** (record/replay, interceptor, layer) | [docs/usage.md](docs/usage.md) |
+| **Usage** (record/replay, interceptor, layer) | [docs/usingCLI.md](docs/usingCLI.md) |
 
 In-repo documentation under `docs/` is the source of truth when external links are unavailable.
 
