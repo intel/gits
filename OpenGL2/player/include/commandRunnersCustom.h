@@ -355,6 +355,20 @@ private:
   glXMakeCurrentReadSGICommand command;
 };
 
+// glXDestroyContext's Run() - see ThreadContextService::Destroy.
+class GlxDestroyContextRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXDestroyContextCommand command;
+};
+
 // glXCreateWindow's and glXCreatePbuffer's Run() - create the drawable with the configuration
 // GlxFBConfigService chooses, and make it the recorded one's substitute in GlxDrawableService. A
 // player window glXCreateWindow creates has the configuration's visual. Their destroy runners

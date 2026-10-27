@@ -18,8 +18,11 @@
 #include "layerAuto.h"
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 namespace gits::opengl2 {
 
@@ -34,15 +37,18 @@ public:
   void SwitchTo(uint32_t threadId);
 
   // The entry point that made a context current, and so the one that restores it: the
-  // make-context-current ones keep a separate read DC, such as a pbuffer's.
+  // make-context-current ones keep a separate read DC, such as a pbuffer's. Every GLX one is
+  // restored with glXMakeContextCurrent, which keeps the read drawable.
   enum class MakeCurrentEntryPoint {
     Core,
     ARB,
-    EXT
+    EXT,
+    Glx
   };
 
-  // Records the context current now, and its draw and read DCs, as `threadId`'s. A make-current
-  // through `entryPoint` that failed leaves the entry point of the current context.
+  // Records the context current now, and its draw and read DCs or drawables, as `threadId`'s. A
+  // WGL make-current through `entryPoint` that failed leaves the entry point of the current
+  // context.
   void NoteCurrent(uint32_t threadId, MakeCurrentEntryPoint entryPoint, bool succeeded);
 
   // The entry point that made the current context current.
@@ -58,6 +64,13 @@ public:
   // Detaches deleted `context` from every thread, so a later context reusing its handle is never
   // made current in its place.
   void Forget(HGLRC context);
+  // A destroyed GLX context stays usable until the thread it is current on releases it, so
+  // glXDestroyContext destroys a context a recorded thread has current only once no recorded
+  // thread does. Switching to another recorded thread's context would release and so destroy it.
+  void Destroy(GLXContext context);
+  // The same for a GLX drawable: `destroy` destroys `drawable` and forgets its substitute once no
+  // recorded thread has it current, so switching back to a thread that has can restore it.
+  void DestroyDrawable(GLXDrawable drawable, std::function<void()> destroy);
 
 private:
   ThreadContextService() = default;
@@ -66,9 +79,19 @@ private:
     HDC Dc{};
     HDC ReadDc{};
     HGLRC Context{};
+    GLXDrawable Drawable{};
+    GLXDrawable ReadDrawable{};
+    GLXContext GlxContext{};
     MakeCurrentEntryPoint EntryPoint{MakeCurrentEntryPoint::Core};
   };
+  static bool IsCurrent(const Current& current);
+  static bool MakeCurrent(const Current& current);
+  bool IsBound(GLXContext context) const;
+  bool IsDrawableBound(GLXDrawable drawable) const;
+  void DestroyReleased();
   std::unordered_map<uint32_t, Current> m_Current;
+  std::vector<GLXContext> m_DestroyPending;
+  std::vector<std::pair<GLXDrawable, std::function<void()>>> m_DrawableDestroyPending;
   std::optional<uint32_t> m_ThreadId;
   MakeCurrentEntryPoint m_EntryPoint{MakeCurrentEntryPoint::Core};
 };
@@ -82,6 +105,9 @@ public:
   void Post(wglMakeContextCurrentARBCommand& command) override;
   void Post(wglMakeContextCurrentEXTCommand& command) override;
   void Post(wglDeleteContextCommand& command) override;
+  void Post(glXMakeCurrentCommand& command) override;
+  void Post(glXMakeContextCurrentCommand& command) override;
+  void Post(glXMakeCurrentReadSGICommand& command) override;
 };
 
 } // namespace gits::opengl2

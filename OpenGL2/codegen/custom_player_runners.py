@@ -70,8 +70,12 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'glXMakeCurrent': 'GlxMakeCurrentRunner',
     'glXMakeContextCurrent': 'GlxMakeContextCurrentRunner',
     'glXMakeCurrentReadSGI': 'GlxMakeCurrentReadSGIRunner',
+    # Defers destroying a context a recorded thread still has current to its release, which
+    # ThreadContextService's switches between recorded threads would otherwise do.
+    'glXDestroyContext': 'GlxDestroyContextRunner',
     # Register the player's GLX window or pbuffer as the recorded one's substitute in
-    # GlxDrawableService, and forget it once destroyed.
+    # GlxDrawableService, and forget it once destroyed. Destroying one a recorded thread still has
+    # current is deferred to its release, as for contexts.
     'glXCreateWindow': 'GlxCreateWindowRunner',
     'glXDestroyWindow': 'GlxDestroyWindowRunner',
     'glXCreatePbuffer': 'GlxCreatePbufferRunner',

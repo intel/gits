@@ -560,6 +560,21 @@ void GlxMakeCurrentReadSGIRunner::Run() {
   }
 }
 
+void GlxDestroyContextRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_ctx);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    ThreadContextService::Get().Destroy(command.m_ctx.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
 void GlxCreateWindowRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
@@ -594,9 +609,12 @@ void GlxDestroyWindowRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXDestroyWindow.load(std::memory_order_acquire);
-    realFunction(drawables.GetDisplay(), real_win);
-    drawables.RemoveSubstitute(command.m_win.Value);
+    const uint64_t recorded = command.m_win.Value;
+    ThreadContextService::Get().DestroyDrawable(real_win, [&drawables, real_win, recorded] {
+      auto realFunction = player::g_DispatchTable.glXDestroyWindow.load(std::memory_order_acquire);
+      realFunction(drawables.GetDisplay(), real_win);
+      drawables.RemoveSubstitute(recorded);
+    });
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
@@ -635,9 +653,12 @@ void GlxDestroyPbufferRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXDestroyPbuffer.load(std::memory_order_acquire);
-    realFunction(drawables.GetDisplay(), real_pbuf);
-    drawables.RemoveSubstitute(command.m_pbuf.Value);
+    const uint64_t recorded = command.m_pbuf.Value;
+    ThreadContextService::Get().DestroyDrawable(real_pbuf, [&drawables, real_pbuf, recorded] {
+      auto realFunction = player::g_DispatchTable.glXDestroyPbuffer.load(std::memory_order_acquire);
+      realFunction(drawables.GetDisplay(), real_pbuf);
+      drawables.RemoveSubstitute(recorded);
+    });
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
