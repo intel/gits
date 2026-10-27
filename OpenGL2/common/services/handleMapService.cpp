@@ -101,5 +101,7 @@ template class HandleMapService<HGLRC>;
 template class HandleMapService<GLsync>;
 template class HandleMapService<HPBUFFERARB>;
 template class HandleMapService<HPBUFFEREXT>;
+template class HandleMapService<GLXContext>;
+template class HandleMapService<XVisualInfo*>;
 
 } // namespace gits::opengl2

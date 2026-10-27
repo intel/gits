@@ -116,6 +116,10 @@ inline constexpr NullTerminatedTag NullTerminated{};
 struct KeyValueListTag {};
 inline constexpr KeyValueListTag KeyValueList{};
 
+// Tag type selecting the glXChooseVisual attribute-list scan constructor overload below.
+struct GlxVisualAttribListTag {};
+inline constexpr GlxVisualAttribListTag GlxVisualAttribList{};
+
 // Tag type selecting the constructor overload below for an array whose sibling length is a
 // negative value when the array is null-terminated instead (glObjectLabel's `label`).
 struct LengthOrNullTerminatedTag {};
@@ -207,6 +211,21 @@ struct ArrayArgument {
       const T* end = v;
       while (!(*end == T{})) {
         end += 2; // Skip this pair's key and value; land on the next pair's key.
+      }
+      Data.assign(v, end + 1);
+    }
+  }
+
+  // A glXChooseVisual attribute list: keys with a value each, except for the boolean
+  // GLX_USE_GL (1), GLX_RGBA (4), GLX_DOUBLEBUFFER (5) and GLX_STEREO (6), terminated by a zero
+  // key.
+  ArrayArgument(const T* v, GlxVisualAttribListTag) {
+    if (v) {
+      HasValue = true;
+      const T* end = v;
+      while (!(*end == T{})) {
+        const bool boolean = *end == 1 || *end == 4 || *end == 5 || *end == 6;
+        end += boolean ? 1 : 2;
       }
       Data.assign(v, end + 1);
     }

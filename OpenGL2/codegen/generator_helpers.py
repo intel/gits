@@ -173,6 +173,10 @@ def member_cpp_type(
         return 'uintptr_t'
     if param.type_facts.is_array_element_eligible:
         return array_element_cpp_type(param.type_facts.base_type)
+    if param.type_facts.is_mapped_handle and param.type_facts.pointer_depth == 0:
+        # Drops a top-level const (glXGetContextIDEXT's `const GLXContext`): the player
+        # substitutes the live handle into the member.
+        return param.type_facts.base_type
     return param.type
 
 

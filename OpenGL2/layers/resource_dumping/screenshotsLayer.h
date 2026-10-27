@@ -29,11 +29,13 @@ public:
   void Post(wglMakeContextCurrentARBCommand& command) override;
   void Post(wglMakeContextCurrentEXTCommand& command) override;
   void Post(wglDeleteContextCommand& command) override;
+  void Pre(glXSwapBuffersCommand& command) override;
 
 private:
   void Swap(HDC recordedDc, bool endsFrame);
   void NoteCurrent();
   void Dump(HDC dc);
+  void DumpGlx(GLXDrawable drawable);
 
   BitRange m_Range;
   std::filesystem::path m_DumpPath;

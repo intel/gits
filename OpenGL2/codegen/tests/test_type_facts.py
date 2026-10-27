@@ -182,11 +182,23 @@ class TypeFactsTests(unittest.TestCase):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_scalar)
 
     def test_is_scalar_accepts_glx_x11_resource_ids(self) -> None:
-        # GLXContextID/GLXDrawable/Font are all `typedef XID ...`, and XID itself is
-        # `unsigned long` on X11 - a resource number, not a pointer.
-        for base_type in ('int', 'unsigned int', 'Bool', 'GLXContextID', 'GLXDrawable', 'Font'):
+        # GLXContextID/Font are both `typedef XID ...`, and XID itself is `unsigned long` on
+        # X11 - a resource number, not a pointer.
+        for base_type in ('int', 'unsigned int', 'Bool', 'GLXContextID', 'Font'):
             with self.subTest(base_type=base_type):
                 self.assertTrue(TypeFacts(base_type=base_type, pointer_depth=0).is_scalar)
+
+    def test_glx_drawable_and_display_are_opaque_handles(self) -> None:
+        # The player substitutes its own X connection and windows for both.
+        self.assertTrue(TypeFacts(base_type='GLXDrawable', pointer_depth=0).is_opaque_handle)
+        self.assertFalse(TypeFacts(base_type='GLXDrawable', pointer_depth=0).is_scalar)
+        self.assertTrue(TypeFacts(base_type='Display', pointer_depth=1).is_opaque_handle)
+        self.assertFalse(TypeFacts(base_type='Display', pointer_depth=0).is_opaque_handle)
+
+    def test_glx_context_and_visual_are_mapped_handles(self) -> None:
+        self.assertTrue(TypeFacts(base_type='GLXContext', pointer_depth=0).is_mapped_handle)
+        self.assertTrue(TypeFacts(base_type='XVisualInfo', pointer_depth=1).is_mapped_handle)
+        self.assertFalse(TypeFacts(base_type='XVisualInfo', pointer_depth=0).is_mapped_handle)
 
     def test_is_scalar_rejects_glx_context_pointer(self) -> None:
         # GLXContext is `typedef struct __GLXcontextRec *GLXContext`, unlike its
@@ -208,9 +220,9 @@ class TypeFactsTests(unittest.TestCase):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_scalar)
 
     def test_enabled_gate_restricted_to_intercepted_apis(self) -> None:
-        # Zero-pointer commands from GL/WGL (the only APIs the Windows interceptor forwards
-        # today - see _INTERCEPTED_APIS) become enabled; equally scalar-shaped commands from
-        # GLX/EGL do not, since nothing would ever construct their typed Command yet.
+        # Zero-pointer commands from GL/WGL/GLX (the APIs the interceptor forwards - see
+        # _INTERCEPTED_APIS) become enabled; equally scalar-shaped commands from EGL do not,
+        # since EGL is not intercepted.
         cases = (
             (Api.WGL, 'wglSwapIntervalEXT', True),
             (Api.GLX, 'glXSwapIntervalSGI', True),
@@ -229,7 +241,8 @@ class TypeFactsTests(unittest.TestCase):
                 is_scalar = (command.return_value.type_facts.is_scalar
                              and all(p.type_facts.is_scalar for p in command.params))
                 self.assertEqual(is_scalar, expected_is_scalar)
-                self.assertEqual(command.enabled, expected_is_scalar and api == Api.WGL)
+                self.assertEqual(command.enabled,
+                                 expected_is_scalar and api in (Api.WGL, Api.GLX))
 
     def test_is_opaque_handle_accepts_hdc(self) -> None:
         facts = TypeFacts(base_type='HDC', pointer_depth=0)
@@ -281,7 +294,8 @@ class TypeFactsTests(unittest.TestCase):
     def test_is_mapped_handle_rejects_pointers_and_other_types(self) -> None:
         self.assertFalse(TypeFacts(base_type='HGLRC', pointer_depth=1).is_mapped_handle)
         self.assertFalse(TypeFacts(base_type='GLsync', pointer_depth=1).is_mapped_handle)
-        for base_type in ('HDC', 'HANDLE', 'HPVIDEODEV', 'GLenum', 'GLXContext', 'EGLContext'):
+        self.assertFalse(TypeFacts(base_type='GLXContext', pointer_depth=1).is_mapped_handle)
+        for base_type in ('HDC', 'HANDLE', 'HPVIDEODEV', 'GLenum', 'EGLContext'):
             with self.subTest(base_type=base_type):
                 self.assertFalse(TypeFacts(base_type=base_type, pointer_depth=0).is_mapped_handle)
 

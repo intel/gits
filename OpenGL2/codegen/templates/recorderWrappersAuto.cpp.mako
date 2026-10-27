@@ -551,16 +551,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % if cmd.return_value.type_facts.is_mapped_handle:
 % if cmd.name in handle_creating_commands:
     UpdateOutputHandle(command->m_Return);
-% if cmd.return_value.type_facts.base_type == 'HGLRC':
+% if cmd.name in context_share_param:
 <%
     share_param = context_share_param.get(cmd.name)
 %>\
     // See common/services/shareGroupService.h's own header comment and
     // codegen/handle_lifecycle.py's CONTEXT_SHARE_PARAM for why a newly-created context must
     // join its share context's group (if any) right away, using the real, recorder-process
-    // HGLRC values (ShareGroupService is process-local, unserialized bookkeeping - see that
-    // class's header comment). Guarded to HGLRC only: handle_creating_commands is a combined
-    // set also covering glFenceSync's GLsync return (see handle_lifecycle.py's
+    // context values (ShareGroupService is process-local, unserialized bookkeeping - see that
+    // class's header comment). Guarded to context-creating commands: handle_creating_commands
+    // is a combined set also covering glFenceSync's GLsync return (see handle_lifecycle.py's
     // MAPPED_HANDLE_LIFECYCLES), and a GLsync is never part of any share group.
     ShareGroupService::Get().RegisterNewContext(
         command->m_Return.Value, ${f'command->m_{share_param}.Value' if share_param is not None else 'nullptr'});

@@ -8,6 +8,7 @@
 
 #include "commandRunnersCustom.h"
 #include "glEnumsAuto.h"
+#include "glxDrawableService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -396,5 +397,53 @@ void WglDestroyPbufferEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   RunDestroyPbuffer(command, player::g_DispatchTable.wglDestroyPbufferEXT);
 }
+
+#if !defined(_WIN32)
+void GlxCreateContextRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_vis);
+  UpdateHandle(command.m_shareList);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXCreateContext.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(GlxDrawableService::Get().GetDisplay(), command.m_vis.Value,
+                     command.m_shareList.Value, command.m_direct.Value);
+    UpdateOutputHandle(command.m_Return);
+    ShareGroupService::Get().RegisterNewContext(command.m_Return.Value, command.m_shareList.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxMakeCurrentRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_ctx);
+  const GLXDrawable real_drawable = GlxDrawableService::Get().Resolve(command.m_drawable.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXMakeCurrent.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(GlxDrawableService::Get().GetDisplay(), real_drawable, command.m_ctx.Value);
+    if (command.m_Return.Value != 0) {
+      InvalidateReplayContextCaps();
+    }
+    // See WglMakeCurrentRunner::Run().
+    if (command.m_Return.Value != 0 && command.m_ctx.Value != nullptr) {
+      player::WarmUpResolvableFunctions(command.m_ctx.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+#endif
 
 } // namespace gits::opengl2

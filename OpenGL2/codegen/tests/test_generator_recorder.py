@@ -27,7 +27,8 @@ sys.path.insert(0, str(CODEGEN_DIR))
 
 from generator_helpers import mako_render
 from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
-                                PRE_HOOK_KEY_PAIR_COMMANDS)
+                                PRE_HOOK_KEY_PAIR_COMMANDS, DrawableIdentities,
+                                drawable_identities)
 from handle_lifecycle import FRAME_END_COMMANDS
 from intermediates import Api, CmdType, Command, ReturnValue
 from intermediates_creator import (
@@ -85,8 +86,8 @@ def extract_wrapper_body(rendered: str, name: str) -> str:
 
 
 class PreHookKeyPairCommandsTableTests(unittest.TestCase):
-    """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's hooked WGL
-    commands (see that layer's own header comment) plus PixelFormatCaptureLayer's
+    """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's hooked WGL and
+    GLX commands (see that layer's own header comment) plus PixelFormatCaptureLayer's
     wglCreatePbufferARB/EXT - any other membership silently breaks the
     SetPendingPreHookKey()/TakePendingPreHookKey() 1:1 contract at runtime, not at compile time,
     so this table's exact contents must be pinned rather than merely smoke-tested."""
@@ -97,7 +98,8 @@ class PreHookKeyPairCommandsTableTests(unittest.TestCase):
             frozenset({'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB',
                        'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
                        'wglCreatePbufferARB', 'wglCreatePbufferEXT',
-                       'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT'}))
+                       'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT',
+                       'glXMakeCurrent', 'glXSwapBuffers'}))
 
 
 class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
@@ -173,6 +175,7 @@ class PreHookExtraKeyTests(unittest.TestCase):
         self.assertEqual(PRE_HOOK_EXTRA_KEY_COMMANDS,
                          {'wglSwapBuffers': 'SetPendingMappedTextureKey',
                           'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
+                          'glXSwapBuffers': 'SetPendingMappedTextureKey',
                           'wglSetPixelFormat': 'SetPendingPixelFormatKey'})
 
     def test_extra_key_precedes_the_pre_hook_pair_in_one_reservation(self) -> None:
@@ -211,13 +214,13 @@ class PreHookExtraKeyTests(unittest.TestCase):
         self.assertLess(pre_layers, ran)
         self.assertLess(ran, call)
 
-def registry_command(name: str) -> Command:
-    path = next(path for path, api in FILE_TO_API.items() if api == Api.GL)
+def registry_command(name: str, api: Api = Api.GL) -> Command:
+    path = next(path for path, file_api in FILE_TO_API.items() if file_api == api)
     registry = Registry()
     registry.loadFile(path)
     raw = next(c for c in extract_commands_from_registry(registry)
                if c['command_attribs']['name'] == name)
-    return get_commands_from_xml_data({Api.GL: [raw]})[Api.GL][0]
+    return get_commands_from_xml_data({api: [raw]})[api][0]
 
 
 class ExistenceQueryWrapperTests(unittest.TestCase):
@@ -285,13 +288,65 @@ class EncoderLayerSkipRecordingTests(unittest.TestCase):
     def test_skip_recording_releases_the_key(self) -> None:
         rendered = mako_render(
             str(CODEGEN_DIR / 'templates' / 'encoderLayerAuto.cpp.mako'),
-            commands=[registry_command('glProgramBinary')], frame_end_commands=frozenset())
+            commands=[registry_command('glProgramBinary')], frame_end_commands=frozenset(),
+            drawable_identities={})
         self.assertIsNotNone(rendered)
         self.assertIn('  if (command.m_SkipRecording) {\n'
                       '    CaptureManager::Get().SkipCommandKey(command.m_Key);\n'
                       '    return;\n'
                       '  }\n'
                       '  CaptureManager::Get().RecordCommand(', rendered)
+
+
+class DrawableIdentityTests(unittest.TestCase):
+    """Two X servers can give different drawables the same XID, so every drawable a GLX command
+    names is recorded with its server, and a drawable recorded as a bare XID would be replayed as
+    a drawable of the first server."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.commands = [registry_command(name, Api.GLX) for name in (
+            'glXSwapBuffers', 'glXMakeContextCurrent', 'glXCreateWindow',
+            'glXGetCurrentDrawable', 'glXCreateContext')]
+        for command in cls.commands:
+            command.enabled = True
+        cls.identities = drawable_identities(cls.commands)
+
+    def test_drawable_params_and_returns_are_identities_on_the_command_display(self) -> None:
+        self.assertEqual(self.identities['glXMakeContextCurrent'],
+                         DrawableIdentities('command.m_dpy.Value', ('draw', 'read'), False))
+        self.assertEqual(self.identities['glXCreateWindow'],
+                         DrawableIdentities('command.m_dpy.Value', ('win',), True))
+
+    def test_a_command_without_a_display_uses_the_current_one(self) -> None:
+        self.assertEqual(
+            self.identities['glXGetCurrentDrawable'],
+            DrawableIdentities(
+                'g_DispatchTable.glXGetCurrentDisplay.load(std::memory_order_acquire)()', (), True))
+
+    def test_commands_naming_no_drawable_are_recorded_unchanged(self) -> None:
+        self.assertNotIn('glXCreateContext', self.identities)
+
+    def test_disabled_commands_are_ignored(self) -> None:
+        command = registry_command('glXSwapBuffers', Api.GLX)
+        command.enabled = False
+        self.assertEqual(drawable_identities([command]), {})
+
+    def test_the_encoder_records_a_copy_with_identities(self) -> None:
+        rendered = mako_render(
+            str(CODEGEN_DIR / 'templates' / 'encoderLayerAuto.cpp.mako'),
+            commands=self.commands, frame_end_commands=frozenset(),
+            drawable_identities=self.identities)
+        self.assertIsNotNone(rendered)
+        self.assertIn(
+            '  glXSwapBuffersCommand recorded = command;\n'
+            '  Display* display = command.m_dpy.Value;\n'
+            '  recorded.m_drawable.Value =\n'
+            '      GlxDrawableIdentityService::Get().Identity(display, command.m_drawable.Value);\n'
+            '  CaptureManager::Get().RecordCommand(recorded, '
+            'new glXSwapBuffersCommandSerializer(recorded));\n', rendered)
+        self.assertIn('  CaptureManager::Get().RecordCommand(command, '
+                      'new glXCreateContextCommandSerializer(command));\n', rendered)
 
 
 if __name__ == '__main__':

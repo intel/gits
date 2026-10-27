@@ -17,6 +17,8 @@ ${AUTO_GENERATED_HEADER}
 //     see docs/development/opengl2-layer-architecture-alignment-plan.md's Phase A).
 //   - Argument<HDC>: HdcVirtualizationService::Resolve() substitutes a player-owned window's
 //     real HDC for the recorded, process-foreign value.
+//   - Argument<Display*>/Argument<GLXDrawable>: GlxDrawableService substitutes the player's X
+//     connection and a player-owned window for the recorded values.
 //   - HandleArgument<GLuint>/HandleArrayArgument<GLuint> (see object_name_lifecycle.py): a
 //     LOOKUP/DELETE-role field resolves its decoded Key(s) to live, player-local name(s) via
 //     UpdateHandle()/UpdateHandleArray() immediately before the call; a CREATE-role array
@@ -70,6 +72,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandRunnersAuto.h"
 #include "bindlessHandleMapService.h"
 #include "discardedOutputElements.h"
+#include "glxDrawableService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -116,6 +119,17 @@ T* DiscardedOutputScratch(size_t listElements) {
   hdc_params = [p for p in cmd.params
                 if p.type_facts.is_opaque_handle and p.type_facts.base_type == 'HDC']
   hdc_names = {p.name for p in hdc_params}
+  # The recorded X connection and drawables are replaced with the player's own. A screen of the
+  # connection is replaced with its default screen, which the player's windows are on.
+  display_names = {p.name for p in cmd.params
+                   if p.type_facts.is_opaque_handle and p.type_facts.base_type == 'Display'}
+  screen_names = {p.name for p in cmd.params
+                  if display_names and p.name == 'screen' and p.type_facts.base_type == 'int' and
+                  p.type_facts.is_scalar}
+  drawable_params = [p for p in cmd.params
+                     if p.type_facts.is_opaque_handle and p.type_facts.base_type == 'GLXDrawable']
+  drawable_names = {p.name for p in drawable_params}
+  guard = platform_guards.get(cmd.api)
   is_handle_creating = (not is_void and cmd.return_value.type_facts.is_mapped_handle and
                          cmd.name in handle_creating_commands)
   return_obj_override = object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_)
@@ -237,8 +251,12 @@ T* DiscardedOutputScratch(size_t listElements) {
                   f'command.m_{p.name}.Value)')
       if is_bindless_handle_param(p):
           return f'BindlessHandleMapService::Get().Resolve(command.m_{p.name}.Value)'
-      if p.name in hdc_names:
+      if p.name in hdc_names or p.name in drawable_names:
           return f'real_{p.name}'
+      if p.name in display_names:
+          return 'GlxDrawableService::Get().GetDisplay()'
+      if p.name in screen_names:
+          return 'GlxDrawableService::Get().GetDefaultScreen()'
       owner = consumed_param_owner(cmd.name, p.name)
       if owner is not None:
           return f'command.m_{owner}.Lengths.data()'
@@ -308,6 +326,9 @@ T* DiscardedOutputScratch(size_t listElements) {
   call_args = ', '.join(call_arg(p) for p in cmd.params)
   call_indent = ' ' * 6 if pixel_transfer_size_params else ' ' * 4
 %>\
+% if guard:
+#if ${guard}
+% endif
 void ${cmd.name}Runner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
@@ -366,6 +387,9 @@ void ${cmd.name}Runner::Run() {
 % endfor
 % for p in hdc_params:
   HDC real_${p.name} = HdcVirtualizationService::Get().Resolve(command.m_${p.name}.Value);
+% endfor
+% for p in drawable_params:
+  GLXDrawable real_${p.name} = GlxDrawableService::Get().Resolve(command.m_${p.name}.Value);
 % endfor
 % if returns_bindless_handle:
   const GLuint64 capturedHandle = command.m_Return.Value;
@@ -530,6 +554,9 @@ ${call_indent}realFunction(${call_args});
     layer->Post(command);
   }
 }
+% if guard:
+#endif
+% endif
 
 % endif
 % endfor

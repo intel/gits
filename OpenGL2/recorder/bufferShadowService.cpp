@@ -315,9 +315,7 @@ bool BufferShadowService::ReadThroughStaging(uint64_t shareGroup,
                                              uint64_t offset,
                                              uint64_t size,
                                              std::vector<uint8_t>& out) {
-  auto currentContextFn = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
-  const StagingKey stagingKey{
-      shareGroup, reinterpret_cast<uintptr_t>(currentContextFn ? currentContextFn() : nullptr)};
+  const StagingKey stagingKey{shareGroup, reinterpret_cast<uintptr_t>(CurrentContext())};
   // ARB_copy_buffer can come with only ARB_vertex_buffer_object before GL 1.5, whose context
   // resolves only the ARB-suffixed buffer entry points.
   const auto [major, minor] = CurrentContextGLVersion();

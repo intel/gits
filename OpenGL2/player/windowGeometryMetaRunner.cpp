@@ -8,6 +8,7 @@
 
 #include "windowGeometryMetaRunner.h"
 
+#include "glxDrawableService.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
 #include "playerManager.h"
@@ -29,6 +30,7 @@ void WindowGeometryMetaRunner::Run() {
     const size_t count = (std::min)({command.m_Windows.Data.size(), command.m_X.Data.size(),
                                      command.m_Y.Data.size(), command.m_Width.Data.size(),
                                      command.m_Height.Data.size(), command.m_Visible.Data.size()});
+#if defined(_WIN32)
     std::vector<HdcVirtualizationService::WindowSample> samples(count);
     for (size_t i = 0; i < count; ++i) {
       samples[i] = {command.m_Windows.Data[i], command.m_X.Data[i],
@@ -37,6 +39,14 @@ void WindowGeometryMetaRunner::Run() {
     }
     HdcVirtualizationService::Get().SetGeometry(samples, command.m_CallSamples.Value,
                                                 command.m_DestroyedWindows.Data);
+#else
+    for (size_t i = 0; i < count; ++i) {
+      GlxDrawableService::Get().SetGeometry(
+          command.m_Windows.Data[i], command.m_X.Data[i], command.m_Y.Data[i],
+          command.m_Width.Data[i], command.m_Height.Data[i], command.m_Visible.Data[i] != 0);
+    }
+    GlxDrawableService::Get().RemoveWindows(command.m_DestroyedWindows.Data);
+#endif
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

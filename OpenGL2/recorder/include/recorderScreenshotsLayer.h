@@ -41,6 +41,8 @@ public:
   void Post(wglMakeContextCurrentARBCommand& command) override;
   void Post(wglMakeContextCurrentEXTCommand& command) override;
   void Post(wglDeleteContextCommand& command) override;
+  void Pre(glXSwapBuffersCommand& command) override;
+  void Post(glXSwapBuffersCommand& command) override;
 
 private:
   struct Image {
@@ -54,7 +56,11 @@ private:
     std::optional<Image> Screenshot;
   };
 
+  // Records the swap with `key` as pending, and returns the first frame it can become if any of
+  // the frames it can become is selected.
+  std::optional<unsigned> BeginSwap(uint64_t key);
   void Read(uint64_t key, HDC dc);
+  void ReadGlx(uint64_t key, Display* display, GLXDrawable drawable);
   void EndFrame(uint64_t key, bool succeeded);
   void NoteCurrent();
 

@@ -10,6 +10,7 @@
 
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
+#include "handleArgumentUpdaters.h"
 #include "openglDriversAuto.h"
 
 #include <cstring>
@@ -20,7 +21,7 @@ namespace {
 
 struct CachedCaps {
   bool Valid{false};
-  HGLRC Context{nullptr};
+  const void* Context{nullptr};
   ReplayContextCaps Caps;
 };
 
@@ -131,7 +132,7 @@ ReplayContextCaps QueryCaps() {
 } // namespace
 
 const ReplayContextCaps& CurrentReplayContextCaps() {
-  HGLRC context = player::g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire)();
+  const void* context = CurrentContext();
   if (!t_Cached.Valid || t_Cached.Context != context) {
     t_Cached.Caps = context != nullptr ? QueryCaps() : ReplayContextCaps{};
     t_Cached.Context = context;

@@ -9,8 +9,8 @@
 #include "capabilitySuppressionService.h"
 
 #include "configurator.h"
+#include "currentContext.h"
 #include "glEnumsAuto.h"
-#include "handleMapService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "systemApi.h"
@@ -110,13 +110,7 @@ const CapabilitySuppressionService::ContextExtensions* CapabilitySuppressionServ
   if (SuppressedExtensions().empty()) {
     return nullptr;
   }
-  const auto getCurrentContext =
-      g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
-  const HGLRC context = getCurrentContext != nullptr ? getCurrentContext() : nullptr;
-  if (context == nullptr) {
-    return nullptr;
-  }
-  const GITSKey contextKey = ContextHandleMapService::Get().GetKey(context);
+  const GITSKey contextKey = CurrentContextKey();
   if (contextKey == 0) {
     return nullptr;
   }

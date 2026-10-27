@@ -57,19 +57,26 @@
 
 namespace gits::opengl2 {
 
-// Returns the real, replay-time HGLRC current on this thread, by calling the real
-// wglGetCurrentContext() directly rather than reading any decoded Command state - player-side
-// counterpart of recorder/include/handleArgumentUpdaters.h's CurrentShareGroup() (see that
-// function's own comment for why calling the real driver directly, instead of tracking this
-// backend's own notion of "current context", is safe and current at any point a wrapper/Run()
-// executes). Used by UniformLocationMapService's callers (commandRunnersAuto.cpp.mako's
+// Returns the real, replay-time HGLRC (GLXContext elsewhere) current on this thread, by calling
+// the real wglGetCurrentContext() (glXGetCurrentContext()) directly rather than reading any
+// decoded Command state - player-side counterpart of recorder/include/handleArgumentUpdaters.h's
+// CurrentShareGroup() (see that function's own comment for why calling the real driver directly,
+// instead of tracking this backend's own notion of "current context", is safe and current at any
+// point a wrapper/Run() executes). Used by UniformLocationMapService's callers (commandRunnersAuto.cpp.mako's
 // glUseProgram hook and its generic is_uniform_location_param resolve hook) to key "current
 // program" per real context instead of process-globally - see that service's own header
 // comment for why program-in-use is per-context GL state, not per-share-group or process-wide.
+#if defined(_WIN32)
 inline HGLRC CurrentContext() {
   auto realFunction = player::g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
   return realFunction ? realFunction() : nullptr;
 }
+#else
+inline GLXContext CurrentContext() {
+  auto realFunction = player::g_DispatchTable.glXGetCurrentContext.load(std::memory_order_acquire);
+  return realFunction ? realFunction() : nullptr;
+}
+#endif
 
 // Existing-handle resolution before a real call: substitute the decoded Key's live handle for
 // Value (still whatever Decode() zero-initialized it to) - wglMakeCurrent, wglDeleteContext,

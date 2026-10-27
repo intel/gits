@@ -15,6 +15,9 @@
 #include <unordered_map>
 #include <vector>
 
+struct _XDisplay;
+typedef struct _XDisplay Display;
+
 namespace gits::opengl2 {
 
 // Captures the application's real Win32 window geometry (see WindowGeometryMetaCommand's own
@@ -97,6 +100,15 @@ public:
   // for why a dropped key would stall OrderingRecorder forever).
   void Capture(uint32_t threadId, std::initializer_list<void*> hdcs, uint64_t geometryKey);
 
+  // Records a WindowGeometryMetaCommand under `geometryKey` with one sample of `drawable` (a
+  // GLXDrawable on the application's `display`), identified by its GlxDrawableIdentityService
+  // identity. The sample has window 0 when the drawable is not an X window, e.g. a GLX pixmap or
+  // pbuffer. Releases `geometryKey` for drawable 0, as a context detach has no drawable to sample.
+  //
+  // Sampled X windows of `display`'s server found destroyed are reported as Capture() reports
+  // them.
+  void CaptureGlx(uint32_t threadId, Display* display, uint64_t drawable, uint64_t geometryKey);
+
 private:
   WindowGeometryTrackingService() = default;
 
@@ -107,6 +119,8 @@ private:
     int32_t Width{};
     int32_t Height{};
     bool Visible{};
+    // Set for an X window, whose destruction is reported.
+    bool XWindow{};
   };
   struct OtherWindows {
     std::vector<Sample> Samples;
@@ -127,6 +141,15 @@ private:
   // or its lifetime changed meanwhile. Takes no lock.
   std::optional<Sample> Measure(void* window, uint64_t identity);
 
+  // The sample of `drawable`, with window 0 when it is not an X window.
+  Sample QueryGlx(Display* display, uint64_t drawable);
+
+  // The sampled X windows of `display`'s server other than `sampled` destroyed since the previous
+  // scan, which are forgotten.
+  std::vector<uint64_t> ScanGlxWindows(Display* display, const std::vector<uint64_t>& sampled);
+
+  void RecordDestroyed(uint32_t threadId, std::vector<uint64_t> destroyed);
+
   // Samples of the sampled windows other than `sampled`, and those destroyed since the previous
   // scan, which are forgotten. Captures reach the mutex out of key order, so a sample replayed out
   // of real-time order is corrected by the next capture. Destruction is final, and is reported
@@ -134,7 +157,7 @@ private:
   OtherWindows ScanOtherWindows(const std::vector<uint64_t>& sampled);
 
   std::mutex m_WindowsMutex;
-  // Capture-time HWND of every sampled window not yet reported destroyed, by identity.
+  // Capture-time HWND or XID of every sampled window not yet reported destroyed, by identity.
   std::unordered_map<uint64_t, uint64_t> m_Windows;
   uint32_t m_LastLifetime{0};
 };

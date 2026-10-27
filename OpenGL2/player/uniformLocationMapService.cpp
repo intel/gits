@@ -31,7 +31,7 @@ void UniformLocationMapService::Register(GITSKey programKey,
   m_WarnedMissing.erase(key);
 }
 
-GLint UniformLocationMapService::Resolve(HGLRC context, GLint capturedLocation) {
+GLint UniformLocationMapService::Resolve(const void* context, GLint capturedLocation) {
   return ResolveForProgram(GetUniformProgram(context), capturedLocation);
 }
 
@@ -74,7 +74,7 @@ std::unordered_map<GLint, std::vector<GLint>> UniformLocationMapService::Capture
   return locations;
 }
 
-void UniformLocationMapService::SetCurrentProgram(HGLRC context, GITSKey programKey) {
+void UniformLocationMapService::SetCurrentProgram(const void* context, GITSKey programKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_CurrentProgramByContext.find(context);
   const GITSKey outgoing = (it != m_CurrentProgramByContext.end()) ? it->second : 0;
@@ -90,13 +90,13 @@ void UniformLocationMapService::SetCurrentProgram(HGLRC context, GITSKey program
   }
 }
 
-GITSKey UniformLocationMapService::GetCurrentProgram(HGLRC context) const {
+GITSKey UniformLocationMapService::GetCurrentProgram(const void* context) const {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_CurrentProgramByContext.find(context);
   return it != m_CurrentProgramByContext.end() ? it->second : 0;
 }
 
-void UniformLocationMapService::BindProgramPipeline(HGLRC context, GITSKey pipelineKey) {
+void UniformLocationMapService::BindProgramPipeline(const void* context, GITSKey pipelineKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_PipelineByContext[context] = pipelineKey;
 }
@@ -123,7 +123,7 @@ void UniformLocationMapService::DeleteProgramPipeline(GITSKey pipelineKey) {
   ReleaseProgramLocked(active);
 }
 
-GITSKey UniformLocationMapService::GetUniformProgram(HGLRC context) const {
+GITSKey UniformLocationMapService::GetUniformProgram(const void* context) const {
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (const auto program = m_CurrentProgramByContext.find(context);
       program != m_CurrentProgramByContext.end() && program->second != 0) {

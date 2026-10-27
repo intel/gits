@@ -21,6 +21,10 @@ void MappedTextureLayer::Pre(wglSwapLayerBuffersCommand& command) {
   MappedTextureService::Get().CaptureOnSwap(CaptureManager::Get().TakePendingMappedTextureKey());
 }
 
+void MappedTextureLayer::Pre(glXSwapBuffersCommand& command) {
+  MappedTextureService::Get().CaptureOnSwap(CaptureManager::Get().TakePendingMappedTextureKey());
+}
+
 void MappedTextureLayer::Pre(glDeleteTexturesCommand& command) {
   MappedTextureService::Get().OnDelete(static_cast<GLsizei>(command.m_textures.Value.size()),
                                        command.m_textures.Value.data());

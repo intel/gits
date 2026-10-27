@@ -24,6 +24,10 @@ namespace gits::opengl2 {
 
 % for cmd in commands:
 % if cmd.enabled:
+<% guard = platform_guards.get(cmd.api) %>\
+% if guard:
+#if ${guard}
+% endif
 class ${cmd.name}Runner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -36,6 +40,9 @@ protected:
 private:
   ${cmd.name}Command command;
 };
+% if guard:
+#endif
+% endif
 
 % endif
 % endfor

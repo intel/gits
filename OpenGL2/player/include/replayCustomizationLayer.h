@@ -41,7 +41,8 @@ public:
   void Post(glUseProgramStagesCommand& command) override;
 
   // An origin-anchored viewport grows the player's fallback window to fit, for a stream without
-  // window geometry samples. See HdcVirtualizationService::GrowToFit().
+  // window geometry samples. See HdcVirtualizationService::GrowToFit() and
+  // GlxDrawableService::FitViewport().
   void Post(glViewportCommand& command) override;
 
   // A wait that reached the sync object in the recording waits again while replay times out.

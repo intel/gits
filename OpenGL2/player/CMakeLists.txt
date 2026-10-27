@@ -25,6 +25,7 @@ add_library(OpenGL2_player STATIC
   include/bindlessHandleMapService.h
   include/clientArraysMetaRunner.h
   include/discardedOutputElements.h
+  include/glxDrawableService.h
   include/hdcVirtualizationService.h
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
@@ -46,6 +47,7 @@ add_library(OpenGL2_player STATIC
   bindlessHandleMapService.cpp
   clientArraysMetaRunner.cpp
   discardedOutputElements.cpp
+  glxDrawableService.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   mappedTextureDataMetaRunner.cpp
@@ -76,6 +78,8 @@ target_link_libraries(OpenGL2_player
 )
 if(WIN32)
   target_link_libraries(OpenGL2_player PRIVATE gdi32)
+else()
+  target_link_libraries(OpenGL2_player PRIVATE X11)
 endif()
 
 set_target_properties(OpenGL2_player PROPERTIES FOLDER OpenGL2)

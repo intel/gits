@@ -10,6 +10,7 @@
 
 #include "configurator.h"
 #include "defaultFramebufferImage.h"
+#include "glxDrawableService.h"
 #include "hdcVirtualizationService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
@@ -45,6 +46,13 @@ void ScreenshotsLayer::Pre(wglSwapBuffersCommand& command) {
 
 void ScreenshotsLayer::Pre(wglSwapLayerBuffersCommand& command) {
   Swap(command.m_hdc.Value, command.m_Return.Value != 0);
+}
+
+void ScreenshotsLayer::Pre(glXSwapBuffersCommand& command) {
+  ++m_Frame;
+  if (m_Range[m_Frame]) {
+    DumpGlx(GlxDrawableService::Get().Resolve(command.m_drawable.Value));
+  }
 }
 
 void ScreenshotsLayer::Post(wglMakeCurrentCommand& /*command*/) {
@@ -127,6 +135,41 @@ void ScreenshotsLayer::Dump(HDC dc) {
   } else {
     ThreadContextService::MakeCurrent(entryPoint, drawDc, readDc, context);
   }
+}
+
+void ScreenshotsLayer::DumpGlx(GLXDrawable drawable) {
+  auto& table = player::g_DispatchTable;
+  // TODO: Read a drawable that is not current, as Dump() does for a DC, once a stream swaps one.
+  if (Real(table.glXGetCurrentDrawable)() != drawable) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame
+                << " swaps a drawable that is not current, skipped";
+    return;
+  }
+  Display* display = GlxDrawableService::Get().GetDisplay();
+  unsigned width = 0;
+  unsigned height = 0;
+  Real(table.glXQueryDrawable)(display, drawable, GLX_WIDTH, &width);
+  Real(table.glXQueryDrawable)(display, drawable, GLX_HEIGHT, &height);
+  if (width == 0 || height == 0) {
+    LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame << " swaps an empty drawable, skipped";
+    return;
+  }
+  // The swapped drawable is read, not the read drawable of the context.
+  const GLXDrawable readDrawable = Real(table.glXGetCurrentReadDrawable)();
+  const GLXContext context = Real(table.glXGetCurrentContext)();
+  const bool switchRead = readDrawable != drawable;
+  if (switchRead && Real(table.glXMakeContextCurrent)(display, drawable, drawable, context) == 0) {
+    LOG_WARNING << "ScreenshotsLayer: reading the drawable of frame " << m_Frame
+                << " failed, skipped";
+    return;
+  }
+  std::vector<uint8_t> pixels =
+      ReadDefaultFramebuffer(table, static_cast<GLsizei>(width), static_cast<GLsizei>(height));
+  if (switchRead) {
+    Real(table.glXMakeContextCurrent)(display, drawable, readDrawable, context);
+  }
+  WriteScreenshot(m_DumpPath, m_Frame, static_cast<int32_t>(width), static_cast<int32_t>(height),
+                  pixels);
 }
 
 } // namespace gits::opengl2

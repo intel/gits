@@ -91,6 +91,10 @@ class LengthSourceKind(StrEnum):
         # instead of the real terminating zero KEY two elements later, silently truncating the
         # list - see arguments.h's KeyValueListTag-based ArrayArgument<T> constructor for the
         # actual pairs-aware scan this drives.
+    GLX_VISUAL_ATTRIB_LIST = 'glx_visual_attrib_list'  # glXChooseVisual's attribute list:
+        # KEY_VALUE_LIST, except that GLX_USE_GL, GLX_RGBA, GLX_DOUBLEBUFFER and GLX_STEREO
+        # take no value - see arguments.h's GlxVisualAttribListTag. length_source_value is
+        # unused (None).
     OPAQUE_BIT_PATTERN = 'opaque_bit_pattern'  # not an array at all - capture the pointer's own
         # numeric value (as a uintptr_t) and never dereference it. See
         # docs/development/opengl2-rendering-pipeline-pointer-support-plan.md's offset-vs-pointer
@@ -511,6 +515,13 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.DISCARDED_OUTPUT, length_source_value='nMaxFormats'),
     ('wglChoosePixelFormatARB', 'nNumFormats'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    # glx.xml gives neither a len=.
+    ('glXChooseVisual', 'attribList'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.GLX_VISUAL_ATTRIB_LIST),
+    ('glXQueryDrawable', 'value'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
     # glCallLists' `lists`: n list offsets of the ListNameType `type` (1 to 4 bytes each), added

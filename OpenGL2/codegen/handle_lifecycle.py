@@ -159,6 +159,28 @@ HPBUFFEREXT_LIFECYCLE = MappedHandleLifecycle(
     },
 )
 
+# GLX contexts. glXCreateNewContext and glXCreateContextAttribsARB stay disabled until GLXFBConfig
+# is captured. Unlike wglDeleteContext, glXDestroyContext leaves a current context current until
+# it is released, and glXGetCurrentContext still returns it, so its key is never erased. A later
+# context with the same address registers a key of its own.
+GLXCONTEXT_LIFECYCLE = MappedHandleLifecycle(
+    cpp_type='GLXContext',
+    service_name='GlxContextHandleMapService',
+    creating_commands=frozenset({
+        'glXCreateContext', 'glXCreateNewContext', 'glXCreateContextAttribsARB',
+    }),
+    param_to_erase_on_success={},
+)
+
+# The visuals glXChooseVisual returns. The application frees one with XFree, which is not
+# intercepted, so a key is never erased.
+XVISUALINFO_LIFECYCLE = MappedHandleLifecycle(
+    cpp_type='XVisualInfo',
+    service_name='VisualInfoHandleMapService',
+    creating_commands=frozenset({'glXChooseVisual'}),
+    param_to_erase_on_success={},
+)
+
 # Every mapped-handle type's lifecycle entry - the ONE table a new mapped-handle type joins
 # (see MappedHandleLifecycle's own docstring for the full checklist). Order does not matter to
 # any consumer below; listed in the order each type was added.
@@ -167,6 +189,8 @@ MAPPED_HANDLE_LIFECYCLES: tuple[MappedHandleLifecycle, ...] = (
     GLSYNC_LIFECYCLE,
     HPBUFFERARB_LIFECYCLE,
     HPBUFFEREXT_LIFECYCLE,
+    GLXCONTEXT_LIFECYCLE,
+    XVISUALINFO_LIFECYCLE,
 )
 
 # Derived, pre-unioned views for generator_recorder.py/generator_player.py, so neither consumer
@@ -198,9 +222,10 @@ MAPPED_HANDLE_SERVICE_NAMES: dict[str, str] = {
 # of uniformity. See ShareGroupService's own header comment (common/services/
 # shareGroupService.h) for the GL spec rule this exists to satisfy.
 
-# Every key here must also be a key of HGLRC_LIFECYCLE.creating_commands above - name of the
-# "share context" parameter a context-creating command takes (wglCreateContextAttribsARB's
-# hShareContext), or None if the command never shares a new context at creation time
+# Every key here must also be a creating command of HGLRC_LIFECYCLE or GLXCONTEXT_LIFECYCLE above -
+# name of the "share context" parameter a context-creating command takes
+# (wglCreateContextAttribsARB's hShareContext), or None if the command never shares a new context
+# at creation time
 # (wglCreateContext has no such parameter). Consulted by recorderWrappersAuto.cpp.mako/
 # commandRunnersCustom.cpp to tell ShareGroupService::RegisterNewContext() which existing
 # context (if any) the newly-created one should join - see
@@ -210,6 +235,9 @@ MAPPED_HANDLE_SERVICE_NAMES: dict[str, str] = {
 CONTEXT_SHARE_PARAM: dict[str, str | None] = {
     'wglCreateContext': None,
     'wglCreateContextAttribsARB': 'hShareContext',
+    'glXCreateContext': 'shareList',
+    'glXCreateNewContext': 'share_list',
+    'glXCreateContextAttribsARB': 'share_context',
 }
 
 # Commands that merge two already-existing contexts' share groups after a successful call (see
@@ -231,5 +259,5 @@ SHARE_LISTS_COMMANDS: dict[str, tuple[str, str]] = {
 # consumer, generator_recorder.py, already needed a small hand-maintained WGL command table, and
 # this is another one).
 FRAME_END_COMMANDS: frozenset[str] = frozenset({
-    'wglSwapBuffers', 'wglSwapLayerBuffers',
+    'wglSwapBuffers', 'wglSwapLayerBuffers', 'glXSwapBuffers',
 })

@@ -148,6 +148,12 @@ class WrapperForAndMemberCppTypeTests(unittest.TestCase):
         param = Parameter(name='string', type='const GLchar *const *')
         self.assertEqual(member_cpp_type(param, None, override), 'GLchar')
 
+    def test_mapped_handle_member_cpp_type_drops_top_level_const(self) -> None:
+        param = Parameter(name='context', type='const GLXContext')
+        self.assertEqual(member_cpp_type(param), 'GLXContext')
+        self.assertEqual(member_cpp_type(Parameter(name='vis', type='XVisualInfo *')),
+                         'XVisualInfo *')
+
     def test_no_override_is_unaffected_by_new_parameters(self) -> None:
         # wrapper_for()'s pre-existing callers (three positional args) must behave exactly as
         # before now that it takes two more optional parameters.

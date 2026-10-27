@@ -34,6 +34,9 @@ namespace gits::opengl2 {
 // ObjectNameMapService/MapTrackingService only by kind would let a second, non-sharing
 // context's name 1 silently overwrite the first context's mapping.
 //
+// Contexts are the real HGLRC or GLXContext values, passed as `const void*` so one service serves
+// both window systems.
+//
 // Process-local, real-HGLRC-keyed bookkeeping - deliberately NOT stream-serialized, unlike
 // ContextHandleMapService's GITSKey. Scoped to the HGLRC values of the process it runs in -
 // nothing here needs to match numerically between the recorder's and the player's contexts: the
@@ -68,34 +71,34 @@ public:
   // (e.g. an app that shares against a context created before recording/replay attached its
   // hooks), `newContext` starts a fresh group of its own; otherwise it joins `shareContext`'s
   // existing group.
-  void RegisterNewContext(HGLRC newContext, HGLRC shareContext);
+  void RegisterNewContext(const void* newContext, const void* shareContext);
 
   // Call after a successful wglShareLists(hglrc1, hglrc2) - see
   // codegen/handle_lifecycle.py's SHARE_LISTS_COMMANDS. Merges hglrc2's group into hglrc1's
   // (each is lazily registered as a fresh, singleton group first if never seen). Does not
   // retroactively reconcile objects either context already registered independently before
   // this call - see this class's own header comment.
-  void MergeGroups(HGLRC hglrc1, HGLRC hglrc2);
+  void MergeGroups(const void* hglrc1, const void* hglrc2);
 
   // Returns the share-group identity for `context` (typically the current thread's real
   // wglGetCurrentContext()), lazily registering it as a new, singleton group if never seen. A
   // null context returns 0 (a degraded-fidelity fallback bucket for the "no current context"
   // case, which is itself undefined behavior at the GL application level - not something this
   // service can meaningfully partition further).
-  uint64_t GroupFor(HGLRC context);
+  uint64_t GroupFor(const void* context);
 
   // True if `context` was passed to RegisterNewContext(), i.e. its creation was captured, so
   // every object created on it went through a captured command.
-  bool IsCreationCaptured(HGLRC context);
+  bool IsCreationCaptured(const void* context);
 
 private:
   ShareGroupService() = default;
 
-  uint64_t GroupForLocked(HGLRC context);
+  uint64_t GroupForLocked(const void* context);
 
   std::mutex m_Mutex;
-  std::unordered_map<HGLRC, uint64_t> m_ContextToGroup;
-  std::unordered_set<HGLRC> m_CapturedContexts;
+  std::unordered_map<const void*, uint64_t> m_ContextToGroup;
+  std::unordered_set<const void*> m_CapturedContexts;
   uint64_t m_NextGroup{1};
 };
 

@@ -8,9 +8,9 @@
 
 #include "clientMemoryCapture.h"
 
+#include "currentContext.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
-#include "handleMapService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
@@ -161,9 +161,7 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
                               int coreSinceMajor,
                               int coreSinceMinor,
                               const char* extensionNameAlias = nullptr) {
-  auto currentContextFn = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
-  const HGLRC currentContext = currentContextFn ? currentContextFn() : nullptr;
-  const GITSKey contextKey = ContextHandleMapService::Get().GetKey(currentContext);
+  const GITSKey contextKey = CurrentContextKey();
   const bool cacheable = contextKey != 0;
   if (cacheable) {
     std::lock_guard<std::mutex> lock(cacheMutex);

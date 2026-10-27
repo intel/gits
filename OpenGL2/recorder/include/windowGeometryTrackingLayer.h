@@ -97,6 +97,9 @@ public:
   // first-capture hooks above - see this class's own header comment.
   void Pre(wglSwapBuffersCommand& command) override;
   void Pre(wglSwapLayerBuffersCommand& command) override;
+  // The GLX counterparts: a drawable is sampled when made current and at every swap.
+  void Pre(glXMakeCurrentCommand& command) override;
+  void Pre(glXSwapBuffersCommand& command) override;
 };
 
 } // namespace gits::opengl2

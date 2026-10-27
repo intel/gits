@@ -85,6 +85,9 @@ def display_list_commands(commands: list[Command]) -> frozenset[str]:
 # Commands AnalyzerLayer handles by hand: display list compilation and frame ends.
 ANALYZER_LAYER_CUSTOM_COMMANDS: frozenset[str] = frozenset({'glNewList', 'glEndList'}) | FRAME_END_COMMANDS
 
+# TODO: End subcapture frames at glXSwapBuffers once subcapture restores GLX state.
+_SUBCAPTURE_FRAME_END_COMMANDS: list[str] = sorted(FRAME_END_COMMANDS - {'glXSwapBuffers'})
+
 
 def analyzed_object_params(commands: list[Command]) -> dict[str, list[str]]:
     """Per enabled command, the parameters naming existing objects, whose keys the subcapture
@@ -138,28 +141,31 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
                warmup_commands=warmup_commands, platform_guards=PLATFORM_GUARDS,
                namespace='gits::opengl2::player')
     mako_write('templates/commandRunnersAuto.h.mako',
-               'player/include/commandRunnersAuto.h', commands=commands)
+               'player/include/commandRunnersAuto.h', commands=commands,
+               platform_guards=PLATFORM_GUARDS)
     mako_write('templates/commandRunnersAuto.cpp.mako',
                'player/commandRunnersAuto.cpp', commands=commands,
                handle_creating_commands=HANDLE_CREATING_COMMANDS,
-               share_lists_commands=SHARE_LISTS_COMMANDS)
+               share_lists_commands=SHARE_LISTS_COMMANDS,
+               platform_guards=PLATFORM_GUARDS)
     mako_write('templates/openGL2CommandFactoryAuto.cpp.mako',
                'player/openGL2CommandFactoryAuto.cpp', commands=commands,
-               custom_player_runners=CUSTOM_PLAYER_RUNNERS)
+               custom_player_runners=CUSTOM_PLAYER_RUNNERS,
+               platform_guards=PLATFORM_GUARDS)
     mako_write('templates/traceLayerAuto.h.mako',
                'layers/trace/traceLayerAuto.h', commands=commands)
     mako_write('templates/traceLayerAuto.cpp.mako',
                'layers/trace/traceLayerAuto.cpp', commands=commands, enum_groups=enum_groups)
     mako_write('templates/recordingLayerAuto.h.mako',
                'subcapture/recordingLayerAuto.h', commands=commands,
-               frame_end_commands=sorted(FRAME_END_COMMANDS))
+               frame_end_commands=_SUBCAPTURE_FRAME_END_COMMANDS)
     mako_write('templates/recordingLayerAuto.cpp.mako',
                'subcapture/recordingLayerAuto.cpp', commands=commands,
-               frame_end_commands=sorted(FRAME_END_COMMANDS),
+               frame_end_commands=_SUBCAPTURE_FRAME_END_COMMANDS,
                list_commands=display_list_commands(commands))
     analyzed = analyzed_object_params(commands)
     mako_write('templates/analyzerLayerAuto.h.mako',
                'subcapture/analyzerLayerAuto.h', analyzed=analyzed,
-               frame_end_commands=sorted(FRAME_END_COMMANDS))
+               frame_end_commands=_SUBCAPTURE_FRAME_END_COMMANDS)
     mako_write('templates/analyzerLayerAuto.cpp.mako',
                'subcapture/analyzerLayerAuto.cpp', analyzed=analyzed)

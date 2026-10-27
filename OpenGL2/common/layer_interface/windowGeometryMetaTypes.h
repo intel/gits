@@ -77,6 +77,12 @@ public:
   // handles as opaque scalar values"), so the player can tell the recorded windows apart. 0 when
   // the HDC had no window, or its geometry could not be queried for that window's lifetime; its
   // other fields are then 0, and the sample only tells the player the call's window is unknown.
+  //
+  // A command recorded before a GLX call has the one sample of its drawable, and no others
+  // (see WindowGeometryTrackingService::CaptureGlx). A GLX sample is identified as the GLX
+  // calls record drawables: by the XID qualified by its X server (see
+  // GlxDrawableIdentityService). When a new X window reuses the XID of one whose destruction the
+  // recorder did not see, the player keeps the same player window for both.
   Argument<uint32_t> m_CallSamples{};
   ArrayArgument<uint64_t> m_Windows{};
   ArrayArgument<int32_t> m_X{};
@@ -85,8 +91,9 @@ public:
   ArrayArgument<int32_t> m_Height{};
   ArrayArgument<uint8_t> m_Visible{};
   // Sampled windows found destroyed, each reported once, in a command of its own keyed after the
-  // destruction was seen and so after every recorded use of those windows. A destroyed identity
-  // never comes back, so the player hides its player window for good.
+  // destruction was seen and so after every recorded use of those windows. The player hides their
+  // player windows. A destroyed WGL identity never comes back; a destroyed X window's XID can be
+  // reused, and gets a new player window.
   ArrayArgument<uint64_t> m_DestroyedWindows{};
 };
 

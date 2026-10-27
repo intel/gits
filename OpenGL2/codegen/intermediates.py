@@ -203,7 +203,7 @@ _SCALAR_BASE_TYPES: frozenset[str] = frozenset({
     # WGL (Win32)
     'BOOL', 'INT', 'INT32', 'INT64', 'UINT', 'DWORD', 'FLOAT', 'VOID',
     # GLX (X11)
-    'int', 'unsigned int', 'Bool', 'GLXContextID', 'GLXDrawable', 'Font',
+    'int', 'unsigned int', 'Bool', 'GLXContextID', 'Font',
     # EGL
     'EGLBoolean', 'EGLenum', 'EGLint', 'EGLAttrib', 'EGLAttribKHR',
     'EGLTime', 'EGLTimeKHR', 'EGLTimeNV', 'EGLuint64NV', 'EGLuint64KHR',
@@ -226,6 +226,15 @@ _SCALAR_BASE_TYPES: frozenset[str] = frozenset({
 # handle type (HGLRC) GITS *does* own the full lifecycle of.
 _OPAQUE_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     'HDC',
+    # An X window or pixmap of the recorded X connection, recorded with its X server (see
+    # generator_recorder.py's GLX_DRAWABLE_BASE_TYPES); the player substitutes its own.
+    'GLXDrawable',
+})
+
+# Opaque handles an application only ever holds a pointer to: the X connection (`Display*`), which
+# the player substitutes with its own.
+_OPAQUE_POINTER_BASE_TYPES: frozenset[str] = frozenset({
+    'Display',
 })
 
 # Native OS/GL handles GITS owns the full lifecycle of: HGLRC is created by an intercepted call
@@ -262,6 +271,13 @@ _MAPPED_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     'GLsync',
     'HPBUFFERARB',
     'HPBUFFEREXT',
+    'GLXContext',
+})
+
+# Mapped handles an application only ever holds a pointer to: the `XVisualInfo*` glXChooseVisual
+# returns and a GLX context is created with. The player maps it to the one it chose itself.
+_MAPPED_POINTER_BASE_TYPES: frozenset[str] = frozenset({
+    'XVisualInfo',
 })
 
 # Fixed-size POD structs (not scalars - pointer_depth == 0 never applies to a whole-struct
@@ -307,7 +323,8 @@ class TypeFacts:
         key-based translation, no replay-time reconstruction yet). Mutually exclusive with
         is_mapped_handle - see that property for the handle types GITS does remap.
         """
-        return self.pointer_depth == 0 and self.base_type in _OPAQUE_HANDLE_BASE_TYPES
+        return ((self.pointer_depth == 0 and self.base_type in _OPAQUE_HANDLE_BASE_TYPES) or
+                (self.pointer_depth == 1 and self.base_type in _OPAQUE_POINTER_BASE_TYPES))
 
     @property
     def is_mapped_handle(self) -> bool:
@@ -315,7 +332,8 @@ class TypeFacts:
         GITSKey-based mapping (see _MAPPED_HANDLE_BASE_TYPES and arguments.h's
         HandleArgument<T>), as opposed to a raw, unremapped opaque value (is_opaque_handle).
         """
-        return self.pointer_depth == 0 and self.base_type in _MAPPED_HANDLE_BASE_TYPES
+        return ((self.pointer_depth == 0 and self.base_type in _MAPPED_HANDLE_BASE_TYPES) or
+                (self.pointer_depth == 1 and self.base_type in _MAPPED_POINTER_BASE_TYPES))
 
     @property
     def is_array_element_eligible(self) -> bool:

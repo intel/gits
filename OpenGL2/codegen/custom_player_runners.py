@@ -61,4 +61,8 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'wglGetPbufferDCEXT': 'WglGetPbufferDCEXTRunner',
     'wglReleasePbufferDCEXT': 'WglReleasePbufferDCEXTRunner',
     'wglDestroyPbufferEXT': 'WglDestroyPbufferEXTRunner',
+    # Register the new context in its share group, and warm up extension functions after
+    # make-current, as the WGL runners above do.
+    'glXCreateContext': 'GlxCreateContextRunner',
+    'glXMakeCurrent': 'GlxMakeCurrentRunner',
 }

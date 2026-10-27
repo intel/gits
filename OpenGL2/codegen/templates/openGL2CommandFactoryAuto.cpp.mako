@@ -49,16 +49,33 @@ stream::CommandRunner* OpenGL2CommandFactory::CreateCommand(unsigned id) {
     return new MappedTextureDataMetaRunner();
   case CommandId::ID_META_PIXEL_FORMAT:
     return new PixelFormatMetaRunner();
+<%
+  # A platform's window-system commands replay only on that platform; elsewhere the factory skips
+  # them.
+  guards = {cmd.name: platform_guards.get(cmd.api) for cmd in commands}
+%>\
 % for name, runner_class in custom_player_runners.items():
+% if guards[name]:
+#if ${guards[name]}
+% endif
   // Hand-written case, overriding the generated (but unused for this one name - see
   // custom_player_runners.py) ${name}Runner below - see player/include/commandRunnersCustom.h.
   case CommandId::ID_${name.upper()}:
     return new ${runner_class}();
+% if guards[name]:
+#endif
+% endif
 % endfor
 % for cmd in commands:
 % if cmd.enabled and cmd.name not in custom_player_runners:
+% if guards[cmd.name]:
+#if ${guards[cmd.name]}
+% endif
   case CommandId::ID_${cmd.name.upper()}:
     return new ${cmd.name}Runner();
+% if guards[cmd.name]:
+#endif
+% endif
 % endif
 % endfor
   default:

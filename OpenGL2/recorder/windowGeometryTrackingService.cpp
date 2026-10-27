@@ -9,6 +9,7 @@
 #include "windowGeometryTrackingService.h"
 
 #include "captureManager.h"
+#include "glxDrawableIdentityService.h"
 #include "log.h"
 #include "systemApi.h"
 #include "windowGeometryMetaTypes.h"
@@ -24,6 +25,12 @@
 // pass their glTypes.h HDC values across this boundary as a plain `void*`, which is where the
 // avoidance actually happens.
 #include <windows.h>
+#else
+// For the same reason, Xlib is safe here too.
+#include <X11/Xlib-xcb.h>
+#include <xcb/xcb.h>
+
+#include <cstdlib>
 #endif
 
 #include <algorithm>
@@ -175,8 +182,17 @@ WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanO
   }
   return others;
 }
+
+WindowGeometryTrackingService::Sample WindowGeometryTrackingService::QueryGlx(Display*, uint64_t) {
+  return {};
+}
+
+std::vector<uint64_t> WindowGeometryTrackingService::ScanGlxWindows(Display*,
+                                                                    const std::vector<uint64_t>&) {
+  return {};
+}
 #else
-// TODO: Track GLX drawables once GLX commands are captured.
+// WGL windows exist only on Windows.
 uint64_t WindowGeometryTrackingService::Track(void*) {
   return 0;
 }
@@ -194,7 +210,135 @@ WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanO
     const std::vector<uint64_t>&) {
   return {};
 }
+
+WindowGeometryTrackingService::Sample WindowGeometryTrackingService::QueryGlx(Display* display,
+                                                                              uint64_t drawable) {
+  // The replies carry the errors, so a drawable that is not a window, such as a GLX pixmap or
+  // pbuffer, never reaches the application's X error handler.
+  xcb_connection_t* connection = XGetXCBConnection(display);
+  const auto window = static_cast<xcb_window_t>(drawable);
+  const xcb_get_geometry_cookie_t geometryCookie = xcb_get_geometry(connection, window);
+  const xcb_get_window_attributes_cookie_t attributesCookie =
+      xcb_get_window_attributes(connection, window);
+  xcb_generic_error_t* error = nullptr;
+  xcb_get_geometry_reply_t* geometry = xcb_get_geometry_reply(connection, geometryCookie, &error);
+  std::free(error);
+  error = nullptr;
+  xcb_get_window_attributes_reply_t* attributes =
+      xcb_get_window_attributes_reply(connection, attributesCookie, &error);
+  std::free(error);
+  error = nullptr;
+  Sample sample;
+  if (geometry != nullptr && attributes != nullptr) {
+    // The root coordinates of the window itself, not of a window manager's frame, whose extents
+    // differ between window managers. The player places its window there, see
+    // GlxDrawableService.
+    xcb_translate_coordinates_reply_t* origin = xcb_translate_coordinates_reply(
+        connection, xcb_translate_coordinates(connection, window, geometry->root, 0, 0), &error);
+    std::free(error);
+    if (origin != nullptr) {
+      sample.Window = drawable;
+      sample.X = origin->dst_x;
+      sample.Y = origin->dst_y;
+      sample.Width = geometry->width;
+      sample.Height = geometry->height;
+      sample.Visible = attributes->map_state == XCB_MAP_STATE_VIEWABLE;
+      sample.XWindow = true;
+    }
+    std::free(origin);
+  }
+  std::free(geometry);
+  std::free(attributes);
+  return sample;
+}
+
+std::vector<uint64_t> WindowGeometryTrackingService::ScanGlxWindows(
+    Display* display, const std::vector<uint64_t>& sampled) {
+  const uint32_t server = GlxDrawableIdentityService::Get().Server(display);
+  std::vector<std::pair<uint64_t, uint64_t>> windows;
+  {
+    std::lock_guard<std::mutex> lock(m_WindowsMutex);
+    for (const auto& [identity, window] : m_Windows) {
+      if (identity >> 32 == server &&
+          std::find(sampled.begin(), sampled.end(), identity) == sampled.end()) {
+        windows.emplace_back(identity, window);
+      }
+    }
+  }
+  if (windows.empty()) {
+    return {};
+  }
+
+  // Window attributes, unlike geometry, are not found for a pixmap that reuses a window's XID.
+  xcb_connection_t* connection = XGetXCBConnection(display);
+  std::vector<xcb_get_window_attributes_cookie_t> cookies;
+  cookies.reserve(windows.size());
+  for (const auto& [identity, window] : windows) {
+    cookies.push_back(xcb_get_window_attributes(connection, static_cast<xcb_window_t>(window)));
+  }
+  std::vector<uint64_t> destroyed;
+  for (size_t index = 0; index < windows.size(); ++index) {
+    xcb_generic_error_t* error = nullptr;
+    xcb_get_window_attributes_reply_t* attributes =
+        xcb_get_window_attributes_reply(connection, cookies[index], &error);
+    if (error != nullptr && error->error_code == XCB_WINDOW) {
+      destroyed.push_back(windows[index].first);
+    }
+    std::free(attributes);
+    std::free(error);
+  }
+
+  std::lock_guard<std::mutex> lock(m_WindowsMutex);
+  std::erase_if(destroyed, [this](uint64_t identity) { return m_Windows.erase(identity) == 0; });
+  return destroyed;
+}
 #endif
+
+void WindowGeometryTrackingService::CaptureGlx(uint32_t threadId,
+                                               Display* display,
+                                               uint64_t drawable,
+                                               uint64_t geometryKey) {
+  auto& captureManager = CaptureManager::Get();
+  if (drawable == 0) {
+    captureManager.SkipCommandKey(geometryKey);
+    return;
+  }
+  const LastSystemErrorGuard lastErrorGuard;
+  auto& identities = GlxDrawableIdentityService::Get();
+  Sample sample = QueryGlx(display, drawable);
+  sample.Window = identities.Identity(display, sample.Window);
+  if (sample.XWindow) {
+    std::lock_guard<std::mutex> lock(m_WindowsMutex);
+    m_Windows.try_emplace(sample.Window, drawable);
+  }
+  WindowGeometryMetaCommand command(threadId);
+  command.m_Key = geometryKey;
+  SetPresent(command);
+  command.m_CallSamples.Value = 1;
+  command.m_Windows.Data.push_back(sample.Window);
+  command.m_X.Data.push_back(sample.X);
+  command.m_Y.Data.push_back(sample.Y);
+  command.m_Width.Data.push_back(sample.Width);
+  command.m_Height.Data.push_back(sample.Height);
+  command.m_Visible.Data.push_back(sample.Visible ? 1 : 0);
+  captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
+  RecordDestroyed(threadId, ScanGlxWindows(display, command.m_Windows.Data));
+}
+
+void WindowGeometryTrackingService::RecordDestroyed(uint32_t threadId,
+                                                    std::vector<uint64_t> destroyed) {
+  if (destroyed.empty()) {
+    return;
+  }
+  // The capture's key may predate uses of these windows recorded by other threads; a key reserved
+  // now, after their destruction was seen, follows every such use.
+  auto& captureManager = CaptureManager::Get();
+  WindowGeometryMetaCommand command(threadId);
+  command.m_Key = captureManager.CreateCommandKey();
+  SetPresent(command);
+  command.m_DestroyedWindows.Data = std::move(destroyed);
+  captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
+}
 
 void WindowGeometryTrackingService::Capture(uint32_t threadId,
                                             std::initializer_list<void*> hdcs,
@@ -224,18 +368,8 @@ void WindowGeometryTrackingService::Capture(uint32_t threadId,
   for (const Sample& sample : others.Samples) {
     add(sample);
   }
-  auto& captureManager = CaptureManager::Get();
-  captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
-
-  if (!others.Destroyed.empty()) {
-    // geometryKey may predate uses of these windows recorded by other threads; a key reserved now,
-    // after their destruction was seen, follows every such use.
-    WindowGeometryMetaCommand destroyed(threadId);
-    destroyed.m_Key = captureManager.CreateCommandKey();
-    SetPresent(destroyed);
-    destroyed.m_DestroyedWindows.Data = std::move(others.Destroyed);
-    captureManager.RecordCommand(destroyed, new WindowGeometryMetaSerializer(destroyed));
-  }
+  CaptureManager::Get().RecordCommand(command, new WindowGeometryMetaSerializer(command));
+  RecordDestroyed(threadId, std::move(others.Destroyed));
 }
 
 } // namespace gits::opengl2

@@ -267,4 +267,35 @@ private:
   wglDestroyPbufferEXTCommand command;
 };
 
+#if !defined(_WIN32)
+// glXCreateContext's Run() - registers the context in its share group, as
+// WglCreateContextAttribsARBRunner does.
+class GlxCreateContextRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreateContextCommand command;
+};
+
+// glXMakeCurrent's Run() - warms up extension functions as WglMakeCurrentRunner does.
+class GlxMakeCurrentRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXMakeCurrentCommand command;
+};
+#endif
+
 } // namespace gits::opengl2

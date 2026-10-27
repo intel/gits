@@ -24,6 +24,7 @@ from handle_lifecycle import (
     CONTEXT_SHARE_PARAM,
     FRAME_END_COMMANDS,
     GLSYNC_LIFECYCLE,
+    GLXCONTEXT_LIFECYCLE,
     HANDLE_CREATING_COMMANDS,
     HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
     HGLRC_LIFECYCLE,
@@ -181,19 +182,24 @@ class ContextShareTablesTests(unittest.TestCase):
     def test_context_share_param(self) -> None:
         self.assertEqual(
             CONTEXT_SHARE_PARAM,
-            {'wglCreateContext': None, 'wglCreateContextAttribsARB': 'hShareContext'})
+            {'wglCreateContext': None, 'wglCreateContextAttribsARB': 'hShareContext',
+             'glXCreateContext': 'shareList', 'glXCreateNewContext': 'share_list',
+             'glXCreateContextAttribsARB': 'share_context'})
 
     def test_every_context_share_param_key_is_a_creating_command(self) -> None:
+        context_creating = (HGLRC_LIFECYCLE.creating_commands |
+                            GLXCONTEXT_LIFECYCLE.creating_commands)
         for command_name in CONTEXT_SHARE_PARAM:
             with self.subTest(command=command_name):
-                self.assertIn(command_name, HGLRC_LIFECYCLE.creating_commands)
+                self.assertIn(command_name, context_creating)
 
     def test_share_lists_commands(self) -> None:
         self.assertEqual(
             SHARE_LISTS_COMMANDS, {'wglShareLists': ('hrcSrvShare', 'hrcSrvSource')})
 
     def test_frame_end_commands(self) -> None:
-        self.assertEqual(FRAME_END_COMMANDS, frozenset({'wglSwapBuffers', 'wglSwapLayerBuffers'}))
+        self.assertEqual(FRAME_END_COMMANDS,
+                         frozenset({'wglSwapBuffers', 'wglSwapLayerBuffers', 'glXSwapBuffers'}))
 
 
 class HypotheticalThirdHandleTypeTests(unittest.TestCase):

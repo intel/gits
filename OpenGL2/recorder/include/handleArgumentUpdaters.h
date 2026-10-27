@@ -37,6 +37,7 @@
 
 #include "arguments.h"
 #include "captureManager.h"
+#include "currentContext.h"
 #include "glTypes.h"
 #include "handleMapService.h"
 #include "log.h"
@@ -59,8 +60,7 @@ namespace gits::opengl2 {
 // current until that thread's own next wglMakeCurrent call, so this always reflects the
 // context the in-flight wrapped call is actually being made against.
 inline uint64_t CurrentShareGroup() {
-  auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
-  return ShareGroupService::Get().GroupFor(realFunction ? realFunction() : nullptr);
+  return ShareGroupService::Get().GroupFor(CurrentContext());
 }
 
 // The `shareGroup` argument HandleMapService<HandleT>::Register/GetKey/Erase should use for
@@ -118,8 +118,7 @@ inline bool IsPerContextObjectKind(GLObjectKind kind) {
 
 inline uint64_t GroupIdentityFor(GLObjectKind kind) {
   if (IsPerContextObjectKind(kind)) {
-    auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
-    return reinterpret_cast<uint64_t>(realFunction ? realFunction() : nullptr);
+    return reinterpret_cast<uint64_t>(CurrentContext());
   }
   return CurrentShareGroup();
 }
@@ -267,14 +266,15 @@ inline void ConfirmImplicitCreate(HandleArgument<GLuint>& arg,
   const uint64_t groupIdentity = GroupIdentityFor(kind);
   ObjectNameMapService& service = ObjectNameMapService::Get();
   if (existedBefore && IsPerContextObjectKind(kind) &&
-      ShareGroupService::Get().IsCreationCaptured(reinterpret_cast<HGLRC>(groupIdentity))) {
+      ShareGroupService::Get().IsCreationCaptured(reinterpret_cast<const void*>(groupIdentity))) {
     // Not shared by spec, but some drivers share these objects within a share group. Every
     // object created on this context was captured and has no key for this name, so the object
     // came from another context of the group.
     const uint64_t shareGroup = CurrentShareGroup();
     arg.Key = service.FindKeyInOtherIdentity(
         kind, groupIdentity, arg.Value, [shareGroup](uint64_t context) {
-          return ShareGroupService::Get().GroupFor(reinterpret_cast<HGLRC>(context)) == shareGroup;
+          return ShareGroupService::Get().GroupFor(reinterpret_cast<const void*>(context)) ==
+                 shareGroup;
         });
     if (arg.Key != 0) {
       static std::array<std::atomic<bool>, static_cast<size_t>(GLObjectKind::kCount)> logged{};

@@ -291,6 +291,21 @@ class EndToEndSystemicGateTests(unittest.TestCase):
         self.assertFalse(get_command(Api.WGL, 'wglReleaseVideoImageNV').enabled)
         self.assertFalse(get_command(Api.WGL, 'wglBindVideoImageNV').enabled)
 
+    def test_glx_context_creation_without_key_stays_disabled(self) -> None:
+        for cmd_name in ('glXCreateAssociatedContextAMD', 'glXImportContextEXT',
+                         'glXDeleteAssociatedContextAMD', 'glXFreeContextEXT',
+                         'glXGetCurrentAssociatedContextAMD',
+                         'glXMakeAssociatedContextCurrentAMD'):
+            with self.subTest(command=cmd_name):
+                self.assertFalse(get_command(Api.GLX, cmd_name).enabled)
+
+    def test_glx_commands_with_unmapped_ids_stay_disabled(self) -> None:
+        for cmd_name in ('glXCopyImageSubDataNV', 'glXNamedCopyBufferSubDataNV', 'glXUseXFont',
+                         'glXReleaseTexImageEXT', 'glXChannelRectSGIX', 'glXChannelRectSyncSGIX',
+                         'glXBindHyperpipeSGIX', 'glXDestroyHyperpipeConfigSGIX'):
+            with self.subTest(command=cmd_name):
+                self.assertFalse(get_command(Api.GLX, cmd_name).enabled)
+
     def test_return_value_object_name_gate(self) -> None:
         # glCreateShaderProgramv's return value (class="program", CREATE-shaped name) auto-
         # derives fine on its own - the object-name gate is satisfied. The command USED TO stay

@@ -11,7 +11,11 @@ ${AUTO_GENERATED_HEADER}
 
 #include "captureManager.h"
 #include "commandSerializersAuto.h"
+#include "glxDrawableIdentityService.h"
+#include "openglDriversAuto.h"
 #include "unsupportedCommandTypes.h"
+
+#include <atomic>
 
 namespace gits::opengl2 {
 
@@ -22,7 +26,23 @@ void EncoderLayer::Post(${cmd.name}Command& command) {
     CaptureManager::Get().SkipCommandKey(command.m_Key);
     return;
   }
+% if cmd.name in drawable_identities:
+<% identities = drawable_identities[cmd.name] %>\
+  // The later Post layers get the XIDs.
+  ${cmd.name}Command recorded = command;
+  Display* display = ${identities.display};
+% for name in identities.params:
+  recorded.m_${name}.Value =
+      GlxDrawableIdentityService::Get().Identity(display, command.m_${name}.Value);
+% endfor
+% if identities.returns:
+  recorded.m_Return.Value =
+      GlxDrawableIdentityService::Get().Identity(display, command.m_Return.Value);
+% endif
+  CaptureManager::Get().RecordCommand(recorded, new ${cmd.name}CommandSerializer(recorded));
+% else:
   CaptureManager::Get().RecordCommand(command, new ${cmd.name}CommandSerializer(command));
+% endif
 % if cmd.name in frame_end_commands:
 <%
     ret = cmd.return_value.type.strip()

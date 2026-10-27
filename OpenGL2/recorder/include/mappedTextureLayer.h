@@ -27,6 +27,7 @@ public:
 
   void Pre(wglSwapBuffersCommand& command) override;
   void Pre(wglSwapLayerBuffersCommand& command) override;
+  void Pre(glXSwapBuffersCommand& command) override;
   void Pre(glDeleteTexturesCommand& command) override;
   void Pre(glDeleteTexturesEXTCommand& command) override;
 };

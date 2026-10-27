@@ -27,6 +27,8 @@ add_library(OpenGL2_recorder STATIC
   include/captureManager.h
   include/clientArraysService.h
   include/clientMemoryCapture.h
+  include/currentContext.h
+  include/glxDrawableIdentityService.h
   include/handleArgumentUpdaters.h
   include/mapTrackingService.h
   include/mapTrackingWrappers.h
@@ -50,6 +52,7 @@ add_library(OpenGL2_recorder STATIC
   captureManager.cpp
   clientArraysService.cpp
   clientMemoryCapture.cpp
+  glxDrawableIdentityService.cpp
   mapTrackingService.cpp
   mapTrackingWrappers.cpp
   mappedTextureLayer.cpp
@@ -91,6 +94,10 @@ if(WIN32)
   # than relying on some other dependency injecting it implicitly, mirroring
   # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
   target_link_libraries(OpenGL2_recorder PRIVATE gdi32 user32)
+else()
+  # windowGeometryTrackingService.cpp and glxDrawableIdentityService.cpp query GLX drawables and
+  # X servers through the application's X connections.
+  target_link_libraries(OpenGL2_recorder PRIVATE xcb X11-xcb)
 endif()
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)

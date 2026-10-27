@@ -123,30 +123,45 @@ void RecorderScreenshotsLayer::NoteCurrent() {
   }
 }
 
+void RecorderScreenshotsLayer::Pre(glXSwapBuffersCommand& command) {
+  ReadGlx(command.m_Key, command.m_dpy.Value, command.m_drawable.Value);
+}
+
+void RecorderScreenshotsLayer::Post(glXSwapBuffersCommand& command) {
+  EndFrame(command.m_Key, true);
+}
+
+std::optional<unsigned> RecorderScreenshotsLayer::BeginSwap(uint64_t key) {
+  const std::lock_guard<std::mutex> lock(m_Mutex);
+  // Swaps before this one still in flight on other threads may fail, so the swap is read if
+  // any frame it can become is selected.
+  unsigned frame = m_Frame + 1;
+  auto inFlight = static_cast<unsigned>(CaptureManager::Get().FrameEndsPendingBefore(key));
+  for (auto it = m_Swaps.begin(); it != m_Swaps.end() && it->first < key; ++it) {
+    if (!it->second.Ended) {
+      ++inFlight;
+    } else if (it->second.Succeeded) {
+      ++frame;
+    }
+  }
+  m_Swaps.emplace(key, Swap{});
+  for (unsigned candidate = frame; candidate <= frame + inFlight; ++candidate) {
+    if (m_Range[candidate]) {
+      return frame;
+    }
+  }
+  return std::nullopt;
+}
+
 void RecorderScreenshotsLayer::Read(uint64_t key, HDC dc) {
-  unsigned frame = 0;
+  const std::optional<unsigned> selectedFrame = BeginSwap(key);
+  if (!selectedFrame) {
+    return;
+  }
+  const unsigned frame = *selectedFrame;
   HGLRC dcContext = nullptr;
   {
     const std::lock_guard<std::mutex> lock(m_Mutex);
-    // Swaps before this one still in flight on other threads may fail, so the swap is read if
-    // any frame it can become is selected.
-    frame = m_Frame + 1;
-    auto inFlight = static_cast<unsigned>(CaptureManager::Get().FrameEndsPendingBefore(key));
-    for (auto it = m_Swaps.begin(); it != m_Swaps.end() && it->first < key; ++it) {
-      if (!it->second.Ended) {
-        ++inFlight;
-      } else if (it->second.Succeeded) {
-        ++frame;
-      }
-    }
-    m_Swaps.emplace(key, Swap{});
-    bool selected = false;
-    for (unsigned candidate = frame; candidate <= frame + inFlight && !selected; ++candidate) {
-      selected = m_Range[candidate];
-    }
-    if (!selected) {
-      return;
-    }
     if (const auto it = m_DcContexts.find(dc); it != m_DcContexts.end()) {
       dcContext = it->second;
     }
@@ -186,6 +201,46 @@ void RecorderScreenshotsLayer::Read(uint64_t key, HDC dc) {
   } else {
     MakeCurrent(drawDc, readDc, context);
   }
+}
+
+void RecorderScreenshotsLayer::ReadGlx(uint64_t key, Display* display, GLXDrawable drawable) {
+  const std::optional<unsigned> frame = BeginSwap(key);
+  if (!frame) {
+    return;
+  }
+  const LastSystemErrorGuard lastErrorGuard;
+  // TODO: Read a drawable that is not current, as Read() does for a DC, once an application
+  // swaps one.
+  if (Real(g_DispatchTable.glXGetCurrentDrawable)() != drawable) {
+    LOG_WARNING << "Screenshots: frame " << *frame << " swaps a drawable that is not current, "
+                << "skipped";
+    return;
+  }
+  unsigned width = 0;
+  unsigned height = 0;
+  Real(g_DispatchTable.glXQueryDrawable)(display, drawable, GLX_WIDTH, &width);
+  Real(g_DispatchTable.glXQueryDrawable)(display, drawable, GLX_HEIGHT, &height);
+  if (width == 0 || height == 0) {
+    LOG_WARNING << "Screenshots: frame " << *frame << " swaps an empty drawable, skipped";
+    return;
+  }
+  // The swapped drawable is read, not the read drawable of the context.
+  const GLXDrawable readDrawable = Real(g_DispatchTable.glXGetCurrentReadDrawable)();
+  const GLXContext context = Real(g_DispatchTable.glXGetCurrentContext)();
+  const bool switchRead = readDrawable != drawable;
+  if (switchRead &&
+      Real(g_DispatchTable.glXMakeContextCurrent)(display, drawable, drawable, context) == 0) {
+    LOG_WARNING << "Screenshots: reading the drawable of frame " << *frame << " failed, skipped";
+    return;
+  }
+  Image image{static_cast<int>(width), static_cast<int>(height),
+              ReadDefaultFramebuffer(g_DispatchTable, static_cast<GLsizei>(width),
+                                     static_cast<GLsizei>(height))};
+  if (switchRead) {
+    Real(g_DispatchTable.glXMakeContextCurrent)(display, drawable, readDrawable, context);
+  }
+  const std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Swaps[key].Screenshot = std::move(image);
 }
 
 void RecorderScreenshotsLayer::EndFrame(uint64_t key, bool succeeded) {

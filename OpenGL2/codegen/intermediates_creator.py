@@ -659,8 +659,8 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: LENGTH_OR_NULL_TERMINATED's length_source_value "
                 f"must name a plain scalar sibling (got {override.length_source_value!r})"
             )
-    # NULL_TERMINATED/KEY_VALUE_LIST need no structural validation - neither has a sibling to
-    # cross-check.
+    # NULL_TERMINATED/KEY_VALUE_LIST/GLX_VISUAL_ATTRIB_LIST need no structural validation - none
+    # has a sibling to cross-check.
 
 
 def _validate_array_of_arrays_override(
@@ -922,6 +922,35 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # EXISTING GLsync, never mint one from external state, so none of them share this problem.
     'glImportSyncEXT',
 
+    # Return a context that GLXCONTEXT_LIFECYCLE registers no key for, so the commands using it
+    # would record key 0 and replay with a null context. glXImportContextEXT also takes the ID of
+    # a context on the recorded X server, which the player's server does not know.
+    'glXCreateAssociatedContextAMD',
+    'glXImportContextEXT',
+    # Use only the contexts these two return, which replay as null.
+    'glXDeleteAssociatedContextAMD',
+    'glXFreeContextEXT',
+    'glXGetCurrentAssociatedContextAMD',
+    'glXMakeAssociatedContextCurrentAMD',
+
+    # Take GL object names of the contexts they name, which are replayed unmapped.
+    'glXCopyImageSubDataNV',
+    'glXNamedCopyBufferSubDataNV',
+
+    # Takes a font of the recorded X server, which the player's server does not know, so its
+    # display lists would not get the font's glyphs.
+    'glXUseXFont',
+
+    # Releases what glXBindTexImageEXT bound, which stays unsupported.
+    'glXReleaseTexImageEXT',
+
+    # Take video channels and hyperpipes of the recorded display, which are hardware the player
+    # cannot substitute.
+    'glXBindHyperpipeSGIX',
+    'glXChannelRectSGIX',
+    'glXChannelRectSyncSGIX',
+    'glXDestroyHyperpipeConfigSGIX',
+
     # wglReleaseVideoImageNV(hPbuffer, iVideoBuffer) releases what wglBindVideoImageNV bound,
     # but that bind stays unsupported (its HPVIDEODEV is no mapped handle), so the release
     # alone has nothing to undo on replay.
@@ -929,14 +958,16 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
 })
 
 
-_STRING_QUERY_RE = re.compile(r'^(?:glGetString|wglGetExtensionsString)')
+_STRING_QUERY_RE = re.compile(
+    r'^(?:glGetString|wglGetExtensionsString'
+    r'|glXQueryExtensionsString$|glXGetClientString$|glXQueryServerString$)')
 
 
 def is_discarded_string_return(command_name: str, return_value: ReturnValue) -> bool:
     """Whether the return value is a driver-owned string from a pure query (glGetString,
-    glGetStringi, wglGetExtensionsStringARB/EXT). The call is recorded and replayed, but the
-    returned pointer is not captured: its address is meaningless in another process and nothing
-    on replay reads its contents."""
+    glGetStringi, wglGetExtensionsStringARB/EXT, the glX*String queries). The call is recorded
+    and replayed, but the returned pointer is not captured: its address is meaningless in another
+    process and nothing on replay reads its contents."""
     facts = return_value.type_facts
     return (_STRING_QUERY_RE.match(command_name) is not None
             and facts.pointer_depth == 1
@@ -1068,15 +1099,11 @@ def _validate_object_name_overrides(
             _validate_object_name_override(command_name, field.name, facts, override, alias)
 
 
-# APIs the Windows interceptor actually forwards today (see generator_interceptor.py's
-# build_interceptor_command_list and modern-opengl-backend-architecture.md, "Only Windows GL
-# and WGL are in the initial runtime scope. EGL and GLX remain represented in the
-# code-generator intermediate representation so future platform support does not require
-# redesigning..."). GLX (X11-only) and EGL (would need a separate libEGL.dll interceptor)
-# have no trampoline, dispatch-table slot, or .def export yet, so marking one of their
-# commands `enabled` would generate a typed Command/Serializer that nothing ever constructs.
-# Revisit alongside that doc's "Revisit when: Runtime support is added for EGL or GLX".
-_INTERCEPTED_APIS: frozenset[Api] = frozenset({Api.GL, Api.WGL})
+# APIs the interceptor forwards (see generator_interceptor.py's build_interceptor_command_list):
+# GL everywhere, WGL on Windows and GLX elsewhere. EGL commands have no trampoline or
+# dispatch-table slot, so marking one `enabled` would generate a typed Command/Serializer that
+# nothing ever constructs.
+_INTERCEPTED_APIS: frozenset[Api] = frozenset({Api.GL, Api.WGL, Api.GLX})
 
 
 def _inherit_handle_arb_classes(commands: list[Command]) -> None:

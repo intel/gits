@@ -99,6 +99,8 @@ ${aoa_override.element_length_param if aoa_override.element_length_param else 'n
 ## a WGL {key, value, ..., 0} attribute list, terminated on a zero KEY, not just any zero
 ## element.
 , m_${p.name}(${arg_expr}, KeyValueList)\
+% elif override.length_source_kind == LengthSourceKind.GLX_VISUAL_ATTRIB_LIST:
+, m_${p.name}(${arg_expr}, GlxVisualAttribList)\
 % elif override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE:
 ## COMPSIZE(format,type,width[,height[,depth]]) has no single sibling to read directly - see
 ## that LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. This

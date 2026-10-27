@@ -101,4 +101,19 @@ void WindowGeometryTrackingLayer::Pre(wglSwapLayerBuffersCommand& command) {
   Pre(static_cast<Command&>(command));
 }
 
+void WindowGeometryTrackingLayer::Pre(glXMakeCurrentCommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  command.m_drawable.Value,
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(glXSwapBuffersCommand& command) {
+  // See Pre(wglSwapBuffersCommand&) above.
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  command.m_drawable.Value,
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
 } // namespace gits::opengl2

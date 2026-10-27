@@ -13,7 +13,7 @@
 // same reason in the opposite direction: every method below is only ever called from player-
 // side code (ReplayCustomizationLayer/commandRunnersAuto.cpp.mako - see this class's own
 // method comments for each call site) and only ever needs player-side identity
-// (CurrentContext()'s live, replay-time HGLRC - player/include/handleArgumentUpdaters.h). The
+// (CurrentContext()'s live, replay-time context - player/include/handleArgumentUpdaters.h). The
 // recorder has no counterpart: a captured stream already records whichever location the
 // recording-time driver returned, so there is nothing for the recorder itself to remap.
 
@@ -96,7 +96,7 @@ namespace gits::opengl2 {
 // glUseProgram *binding point* is per-context even for two contexts in the same share group,
 // since program/shader objects are shareable but which one is bound for use is not (see the
 // GL spec's "Shared Objects and Multiple Contexts" - program/shader objects are shared,
-// GL_CURRENT_PROGRAM is not). Tracked here keyed by the real, replay-time HGLRC (see
+// GL_CURRENT_PROGRAM is not). Tracked here keyed by the real, replay-time context (see
 // player/include/handleArgumentUpdaters.h's CurrentContext()) rather than a single
 // process-global value, so a replay that runs multiple GL contexts - sharing or not,
 // concurrently on different threads or serially on one - resolves each glUniform*() call
@@ -130,7 +130,7 @@ public:
   // to `capturedLocation` unchanged - with a one-time warning per (program, location) pair - if
   // this exact location was never registered via Register() (see this class's own header
   // comment for when that happens).
-  GLint Resolve(HGLRC context, GLint capturedLocation);
+  GLint Resolve(const void* context, GLint capturedLocation);
 
   // Called by the generic per-command Run() for every enabled glProgramUniform*(program,
   // location, ...) DSA command's `location` parameter instead of Resolve() above - these take
@@ -169,12 +169,12 @@ public:
   // call, not inferred from the call's own success/failure) - glUseProgram leaves
   // GL_CURRENT_PROGRAM unchanged on a failed link/validate, and tracking the requested program
   // regardless of outcome would desynchronize this map from the driver's real state.
-  void SetCurrentProgram(HGLRC context, GITSKey programKey);
+  void SetCurrentProgram(const void* context, GITSKey programKey);
 
-  GITSKey GetCurrentProgram(HGLRC context) const;
+  GITSKey GetCurrentProgram(const void* context) const;
 
   // Called by ReplayCustomizationLayer after GL bound `pipelineKey` on `context`.
-  void BindProgramPipeline(HGLRC context, GITSKey pipelineKey);
+  void BindProgramPipeline(const void* context, GITSKey pipelineKey);
   // Called by ReplayCustomizationLayer after GL made `programKey` the active program of
   // `pipelineKey`.
   void SetActiveProgram(GITSKey pipelineKey, GITSKey programKey);
@@ -183,7 +183,7 @@ public:
   void DeleteProgramPipeline(GITSKey pipelineKey);
   // The program classic glUniform*() calls on `context` set uniforms of: its current program, or
   // with none, the active program of its bound program pipeline. Resolve() resolves against it.
-  GITSKey GetUniformProgram(HGLRC context) const;
+  GITSKey GetUniformProgram(const void* context) const;
 
   // Called by glDeleteProgramRunner's Run() (commandRunnersAuto.cpp.mako, generated from
   // any resolve_object_name_params entry whose ObjectNameOverride is
@@ -259,9 +259,9 @@ private:
   // in the map) has no current program - GetCurrentProgram() returns key 0 (mirrors
   // GL_CURRENT_PROGRAM's own "no program in use" value 0, and object_name_lifecycle.py's
   // "zero name -> zero key" convention) for it, same as a fresh real GL context would report.
-  std::unordered_map<HGLRC, GITSKey> m_CurrentProgramByContext;
+  std::unordered_map<const void*, GITSKey> m_CurrentProgramByContext;
   // Per-context program pipeline binding, and the active program of each pipeline, by GITSKey.
-  std::unordered_map<HGLRC, GITSKey> m_PipelineByContext;
+  std::unordered_map<const void*, GITSKey> m_PipelineByContext;
   std::unordered_map<GITSKey, GITSKey> m_ActiveProgramByPipeline;
   // Programs glDeleteProgram has already run against but that were still current in at least
   // one context or active in a pipeline at that point - see PurgeProgram()'s own comment.

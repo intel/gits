@@ -8,6 +8,8 @@
 #
 # ===================== end_copyright_notice ==============================
 
+from dataclasses import dataclass
+
 from buffer_content_hooks import buffer_content_hooks
 from client_array_draws import client_array_draws, client_array_setters
 from generator_helpers import mako_write
@@ -57,6 +59,7 @@ PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
     'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB', 'wglMakeCurrent',
     'wglSwapBuffers', 'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT',
     'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT',
+    'glXMakeCurrent', 'glXSwapBuffers',
 })
 
 
@@ -80,6 +83,7 @@ POST_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
 PRE_HOOK_EXTRA_KEY_COMMANDS: dict[str, str] = {
     'wglSwapBuffers': 'SetPendingMappedTextureKey',
     'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
+    'glXSwapBuffers': 'SetPendingMappedTextureKey',
     'wglSetPixelFormat': 'SetPendingPixelFormatKey',
 }
 assert PRE_HOOK_EXTRA_KEY_COMMANDS.keys() <= PRE_HOOK_KEY_PAIR_COMMANDS
@@ -101,6 +105,50 @@ def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
         raise ValueError("commands with both a pre-hook and a post-hook key pair: "
                          f"{sorted(pre_hook & POST_HOOK_KEY_PAIR_COMMANDS)}")
     return pre_hook
+
+
+# GLX drawables and the X windows and pixmaps they are created for, which EncoderLayer records as
+# their GlxDrawableIdentityService identities (recorder/include/glxDrawableIdentityService.h).
+GLX_DRAWABLE_BASE_TYPES: frozenset[str] = frozenset({
+    'GLXDrawable', 'GLXWindow', 'GLXPbuffer', 'GLXPixmap', 'Window', 'Pixmap',
+})
+
+
+@dataclass(frozen=True)
+class DrawableIdentities:
+    """The drawable params and return value EncoderLayer records as identities, and the
+    expression of the display they are on."""
+    display: str
+    params: tuple[str, ...]
+    returns: bool
+
+
+def drawable_identities(commands: list[Command]) -> dict[str, DrawableIdentities]:
+    """The enabled commands naming a drawable. A command without a display, such as
+    glXGetCurrentDrawable, names a drawable on the display of the current context."""
+    result: dict[str, DrawableIdentities] = {}
+    for cmd in commands:
+        if not cmd.enabled:
+            continue
+        arguments = [*cmd.params, cmd.return_value]
+        pointers = [p.name for p in arguments if p.type_facts.pointer_depth > 0 and
+                    p.type_facts.base_type in GLX_DRAWABLE_BASE_TYPES]
+        if pointers:
+            raise ValueError(f"{cmd.name}: drawable pointers are not recorded as identities: "
+                             f"{pointers}")
+        params = tuple(p.name for p in cmd.params
+                       if p.type_facts.base_type in GLX_DRAWABLE_BASE_TYPES)
+        returns = cmd.return_value.type_facts.base_type in GLX_DRAWABLE_BASE_TYPES
+        if not params and not returns:
+            continue
+        displays = [p.name for p in cmd.params
+                    if p.type_facts.base_type == 'Display' and p.type_facts.pointer_depth == 1]
+        if len(displays) > 1:
+            raise ValueError(f"{cmd.name}: drawables of more than one display: {displays}")
+        display = (f'command.m_{displays[0]}.Value' if displays else
+                   'g_DispatchTable.glXGetCurrentDisplay.load(std::memory_order_acquire)()')
+        result[cmd.name] = DrawableIdentities(display, params, returns)
+    return result
 
 
 def generate_recorder_files(commands: list[Command]) -> None:
@@ -134,4 +182,5 @@ def generate_recorder_files(commands: list[Command]) -> None:
                'recorder/encoderLayerAuto.h', commands=commands)
     mako_write('templates/encoderLayerAuto.cpp.mako',
                'recorder/encoderLayerAuto.cpp', commands=commands,
-               frame_end_commands=FRAME_END_COMMANDS)
+               frame_end_commands=FRAME_END_COMMANDS,
+               drawable_identities=drawable_identities(commands))

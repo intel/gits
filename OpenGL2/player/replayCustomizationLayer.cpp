@@ -9,6 +9,7 @@
 #include "replayCustomizationLayer.h"
 
 #include "glEnumsAuto.h"
+#include "glxDrawableService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "openglDriversAuto.h"
@@ -161,9 +162,15 @@ void ReplayCustomizationLayer::Post(glViewportCommand& command) {
   // binding is not checked: growing the window for a framebuffer object's viewport only leaves
   // the default framebuffer larger than the application draws into.
   if (Executed(command) && command.m_x.Value == 0 && command.m_y.Value == 0) {
+#if defined(_WIN32)
     HdcVirtualizationService::Get().GrowToFit(
         player::g_DispatchTable.wglGetCurrentDC.load(std::memory_order_acquire)(),
         command.m_width.Value, command.m_height.Value);
+#else
+    GlxDrawableService::Get().FitViewport(
+        player::g_DispatchTable.glXGetCurrentDrawable.load(std::memory_order_acquire)(),
+        command.m_width.Value, command.m_height.Value);
+#endif
   }
 }
 

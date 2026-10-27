@@ -18,7 +18,7 @@ ShareGroupService& ShareGroupService::Get() {
   return instance;
 }
 
-uint64_t ShareGroupService::GroupForLocked(HGLRC context) {
+uint64_t ShareGroupService::GroupForLocked(const void* context) {
   if (!context) {
     return 0;
   }
@@ -31,7 +31,7 @@ uint64_t ShareGroupService::GroupForLocked(HGLRC context) {
   return group;
 }
 
-void ShareGroupService::RegisterNewContext(HGLRC newContext, HGLRC shareContext) {
+void ShareGroupService::RegisterNewContext(const void* newContext, const void* shareContext) {
   if (!newContext) {
     return;
   }
@@ -41,7 +41,7 @@ void ShareGroupService::RegisterNewContext(HGLRC newContext, HGLRC shareContext)
   m_CapturedContexts.insert(newContext);
 }
 
-void ShareGroupService::MergeGroups(HGLRC hglrc1, HGLRC hglrc2) {
+void ShareGroupService::MergeGroups(const void* hglrc1, const void* hglrc2) {
   if (!hglrc1 || !hglrc2) {
     return;
   }
@@ -63,12 +63,12 @@ void ShareGroupService::MergeGroups(HGLRC hglrc1, HGLRC hglrc2) {
   }
 }
 
-uint64_t ShareGroupService::GroupFor(HGLRC context) {
+uint64_t ShareGroupService::GroupFor(const void* context) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   return GroupForLocked(context);
 }
 
-bool ShareGroupService::IsCreationCaptured(HGLRC context) {
+bool ShareGroupService::IsCreationCaptured(const void* context) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   return m_CapturedContexts.count(context) != 0;
 }
