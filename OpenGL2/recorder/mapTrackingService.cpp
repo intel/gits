@@ -281,29 +281,33 @@ std::optional<MapTrackingService::MapRelativeRange> MapTrackingService::CaptureR
 
 void MapTrackingService::ByteSource::PrepareOwnedShadow(GLintptr offset,
                                                         GLsizeiptr length,
-                                                        GLint alignment,
+                                                        size_t alignment,
                                                         std::span<const uint8_t> initialBytes,
                                                         bool initialize) {
   GITS_ASSERT(!initialize || initialBytes.size() == static_cast<size_t>(length),
               "Non-invalidating write-only explicit-flush map has no initial bytes");
-  GITS_ASSERT(static_cast<size_t>(alignment) <= Shadow.max_size() &&
-                  static_cast<size_t>(length) <= Shadow.max_size() - static_cast<size_t>(alignment),
+  GITS_ASSERT(alignment <= std::numeric_limits<size_t>::max() - static_cast<size_t>(length),
               "Cannot allocate aligned shadow for buffer map");
+  const auto allocationSize = static_cast<size_t>(length) + alignment;
   try {
-    Shadow.resize(static_cast<size_t>(length) + static_cast<size_t>(alignment));
+    Shadow = std::make_unique<WatchedShadow>(allocationSize);
   } catch (const std::bad_alloc&) {
-    GITS_ASSERT(false, "Cannot allocate shadow for buffer map");
+    GITS_ASSERT(false, "Cannot allocate write watch for buffer map");
   }
-  const auto base = reinterpret_cast<uintptr_t>(Shadow.data());
-  const auto residue = static_cast<size_t>(offset) % static_cast<size_t>(alignment);
-  const auto padding =
-      (residue + static_cast<size_t>(alignment) - base % static_cast<size_t>(alignment)) %
-      static_cast<size_t>(alignment);
-  ApplicationPointer = Shadow.data() + padding;
-  Type = Kind::OwnedShadow;
+  // Keep the application pointer aligned relative to the buffer offset.
+  const auto alignedPointer = [offset, alignment](uint8_t* data) {
+    const auto base = reinterpret_cast<uintptr_t>(data);
+    const auto offsetRemainder = static_cast<size_t>(offset) % alignment;
+    const auto baseRemainder = base % alignment;
+    const auto padding = (offsetRemainder + alignment - baseRemainder) % alignment;
+    return data + padding;
+  };
+  ApplicationPointer = alignedPointer(static_cast<uint8_t*>(Shadow->Data()));
   if (initialize) {
     std::memcpy(ApplicationPointer, initialBytes.data(), static_cast<size_t>(length));
   }
+  Shadow->ResetWriteWatch();
+  Type = Kind::WatchedShadow;
 }
 
 void* MapTrackingService::ByteSource::TranslatePointer(void* pointer) const {
@@ -325,7 +329,7 @@ std::vector<uint8_t> MapTrackingService::ByteSource::Snapshot(size_t offset, siz
 
 void MapTrackingService::ByteSource::WriteBack(size_t offset,
                                                std::span<const uint8_t> bytes) const {
-  if (Type == Kind::OwnedShadow && !bytes.empty()) {
+  if (Type == Kind::WatchedShadow && !bytes.empty()) {
     std::memcpy(static_cast<uint8_t*>(DriverPointer) + offset, bytes.data(), bytes.size());
   }
 }
@@ -408,7 +412,7 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
       g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
                                                                     &alignment);
       GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
-      range.Source.PrepareOwnedShadow(offset, length, alignment, initialBytes,
+      range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
                                       NeedsInitialShadowContents(access));
     }
   }

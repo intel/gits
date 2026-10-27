@@ -18,10 +18,12 @@
 // never tracks an in-progress mapping.
 
 #include "glTypes.h"
+#include "watchedShadow.h"
 
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <span>
@@ -170,16 +172,16 @@ private:
   struct ByteSource {
     enum class Kind {
       DriverPointer,
-      OwnedShadow
+      WatchedShadow
     };
     Kind Type{Kind::DriverPointer};
     void* DriverPointer{nullptr};
     void* ApplicationPointer{nullptr};
-    std::vector<uint8_t> Shadow;
+    std::unique_ptr<WatchedShadow> Shadow;
 
     void PrepareOwnedShadow(GLintptr offset,
                             GLsizeiptr length,
-                            GLint alignment,
+                            size_t alignment,
                             std::span<const uint8_t> initialBytes,
                             bool initialize);
     void* TranslatePointer(void* pointer) const;
