@@ -46,16 +46,19 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
   void* pointer =
       realMapBufferRange(GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(command.m_Offset.Value),
                          static_cast<GLsizeiptr>(command.m_Length.Value), GL_MAP_WRITE_BIT);
+  GLboolean unmapResult = GL_TRUE;
   if (pointer != nullptr) {
     std::memcpy(pointer, command.m_Data.Data.data(), command.m_Data.Data.size());
     auto realUnmapBuffer = player::g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
-    realUnmapBuffer(GL_COPY_WRITE_BUFFER);
+    unmapResult = realUnmapBuffer(GL_COPY_WRITE_BUFFER);
   } else {
     LOG_WARNING << "MappedDataMetaRunner: glMapBufferRange failed for buffer " << buffer
                 << " - skipping this buffer-map update";
   }
 
   realBindBuffer(GL_COPY_WRITE_BUFFER, static_cast<GLuint>(previousBinding));
+  GITS_ASSERT(unmapResult == GL_TRUE, "Internal buffer unmap failed during mapped-data replay; "
+                                      "buffer contents are undefined and replay cannot continue");
 }
 } // namespace
 
