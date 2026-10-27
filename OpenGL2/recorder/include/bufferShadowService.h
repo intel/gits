@@ -41,6 +41,9 @@ struct BufferRef {
 // arrays through indices in a buffer can find its vertex range without reading the buffer back
 // from the driver. Reading back a buffer the GPU still uses synchronizes with the application's
 // in-flight work, and the recorder should not touch the application's buffers.
+// This is buffer-content state tracking, not storage returned to the application by a map.
+// MapTrackingService owns mapped pointers (including any application-visible shadow), mapping
+// lifetime, and publication; it notifies this service when mapped writes affect its copy.
 //
 // A buffer gets a copy when data is uploaded to GL_ELEMENT_ARRAY_BUFFER, or when a draw first
 // reads it (seeded through a staging copy). Contexts without GL 3.1 / ARB_copy_buffer cannot
@@ -64,8 +67,8 @@ public:
   void OnBindIndexed(GLenum target, GLsizei count, const GLuint* buffers);
   void OnDelete(GLsizei n, const GLuint* buffers);
 
-  // From MapTrackingService: a write-capable mapping with `access` began, and its written bytes
-  // at unmap. GL_MAP_INVALIDATE_BUFFER_BIT leaves only the mapped range known.
+  // MapTrackingService reports writable map creation and published mapped bytes here.
+  // GL_MAP_INVALIDATE_BUFFER_BIT leaves only the mapped range known.
   void OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfield access);
   void OnMappedBytes(uint64_t shareGroup,
                      GLuint buffer,
