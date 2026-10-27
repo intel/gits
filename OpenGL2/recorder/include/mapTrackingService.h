@@ -94,6 +94,7 @@ public:
                               const BufferParameterCallback& parameter,
                               std::span<const uint8_t> initialBytes = {});
 
+  void OnBufferData(GLuint buffer, const std::function<bool(GLint&)>& queryMapped);
   void OnDelete(GLsizei count, const GLuint* buffers);
   void AssertNoWritablePersistentMap(uint64_t shareGroup, GLuint buffer);
 

@@ -376,6 +376,25 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   if (${hook_condition}) {
 % if cmd.name in ('glDeleteBuffers', 'glDeleteBuffersARB'):
     MapTrackingService::Get().OnDelete(n, buffers);
+% elif cmd.name in ('glBufferData', 'glBufferDataARB'):
+    MapTrackingService::Get().OnBufferData(
+        MapTrackingService::Get().ResolveBoundBuffer(target),
+        [target](GLint& mapped) {
+          return GetBoundBufferParameter(target, GL_BUFFER_MAPPED, mapped);
+        });
+% elif cmd.name in ('glNamedBufferData', 'glNamedBufferDataEXT'):
+<%
+    parameter_getter = ('glGetNamedBufferParameterivEXT' if cmd.name.endswith('EXT')
+                        else 'glGetNamedBufferParameteriv')
+%>\
+    MapTrackingService::Get().OnBufferData(buffer, [buffer](GLint& mapped) {
+      if (!TryResolveRealFunction("${parameter_getter}")) {
+        return false;
+      }
+      g_DispatchTable.${parameter_getter}.load(std::memory_order_acquire)(
+          buffer, GL_BUFFER_MAPPED, &mapped);
+      return true;
+    });
 % endif
     BufferShadowService::Get().${hook.call};
   }

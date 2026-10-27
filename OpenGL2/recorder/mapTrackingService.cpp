@@ -729,6 +729,22 @@ GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
   return buffer;
 }
 
+void MapTrackingService::OnBufferData(GLuint buffer,
+                                      const std::function<bool(GLint&)>& queryMapped) {
+  std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+  const auto mapped = m_MappedBuffers.find(Key{CurrentShareGroup(), buffer});
+  if (mapped == m_MappedBuffers.end()) {
+    return;
+  }
+  GLint driverMapped = -1;
+  GITS_ASSERT(queryMapped(driverMapped), "Cannot query GL_BUFFER_MAPPED after storage replacement");
+  GITS_ASSERT(driverMapped == GL_FALSE || driverMapped == GL_TRUE,
+              "GL_BUFFER_MAPPED query left its output unchanged or returned an invalid boolean");
+  if (driverMapped == GL_FALSE) {
+    m_MappedBuffers.erase(mapped);
+  }
+}
+
 void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
   if (buffers == nullptr) {
     return;
