@@ -19,6 +19,6 @@ target_include_directories(OpenGL2_resource_dumping
 )
 target_link_libraries(OpenGL2_resource_dumping
   PUBLIC OpenGL2_layer_interface
-  PRIVATE stb_implementation log common_interface
+  PRIVATE stb_implementation log common_interface OpenGL2_platform
 )
 set_target_properties(OpenGL2_resource_dumping PROPERTIES FOLDER OpenGL2)

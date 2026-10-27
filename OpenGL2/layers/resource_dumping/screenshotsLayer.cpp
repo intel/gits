@@ -13,14 +13,10 @@
 #include "hdcVirtualizationService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
+#include "systemApi.h"
 #include "threadContextService.h"
 
 #include <vector>
-
-// Hand-declared instead of including <windows.h>, which conflicts with glTypes.h.
-typedef struct HWND__* HWND;
-extern "C" __declspec(dllimport) HWND __stdcall WindowFromDC(HDC hDC);
-extern "C" __declspec(dllimport) BOOL __stdcall GetClientRect(HWND hWnd, RECT* lpRect);
 
 namespace gits::opengl2 {
 
@@ -89,9 +85,9 @@ void ScreenshotsLayer::Swap(HDC recordedDc, bool endsFrame) {
 }
 
 void ScreenshotsLayer::Dump(HDC dc) {
-  RECT rect{};
-  const HWND window = WindowFromDC(dc);
-  if (window == nullptr || !GetClientRect(window, &rect) || rect.right <= 0 || rect.bottom <= 0) {
+  int32_t width = 0;
+  int32_t height = 0;
+  if (!GetWindowClientSize(dc, width, height) || width <= 0 || height <= 0) {
     LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame << " swaps no visible window, skipped";
     return;
   }
@@ -120,8 +116,8 @@ void ScreenshotsLayer::Dump(HDC dc) {
     LOG_WARNING << "ScreenshotsLayer: making a context current for frame " << m_Frame
                 << " failed, skipped";
   } else {
-    std::vector<uint8_t> pixels = ReadDefaultFramebuffer(table, rect.right, rect.bottom);
-    WriteScreenshot(m_DumpPath, m_Frame, rect.right, rect.bottom, pixels);
+    std::vector<uint8_t> pixels = ReadDefaultFramebuffer(table, width, height);
+    WriteScreenshot(m_DumpPath, m_Frame, width, height, pixels);
   }
   if (!switchContext) {
     return;

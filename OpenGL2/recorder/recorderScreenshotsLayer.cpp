@@ -13,18 +13,11 @@
 #include "defaultFramebufferImage.h"
 #include "log.h"
 #include "openglDriversAuto.h"
+#include "systemApi.h"
 
 #include <optional>
 #include <utility>
 #include <vector>
-
-// Hand-declared instead of including <windows.h>, which conflicts with glTypes.h.
-typedef struct HWND__* HWND;
-typedef unsigned long DWORD;
-extern "C" __declspec(dllimport) HWND __stdcall WindowFromDC(HDC hDC);
-extern "C" __declspec(dllimport) BOOL __stdcall GetClientRect(HWND hWnd, RECT* lpRect);
-extern "C" __declspec(dllimport) DWORD __stdcall GetLastError();
-extern "C" __declspec(dllimport) void __stdcall SetLastError(DWORD dwErrCode);
 
 namespace gits::opengl2 {
 
@@ -40,19 +33,6 @@ enum class MakeCurrentEntryPoint {
 
 // How the thread made its context current, which tells how to query and restore its read DC.
 thread_local MakeCurrentEntryPoint t_EntryPoint = MakeCurrentEntryPoint::Core;
-
-class LastErrorGuard {
-public:
-  LastErrorGuard() = default;
-  ~LastErrorGuard() {
-    SetLastError(m_Error);
-  }
-  LastErrorGuard(const LastErrorGuard&) = delete;
-  LastErrorGuard& operator=(const LastErrorGuard&) = delete;
-
-private:
-  DWORD m_Error = GetLastError();
-};
 
 HDC CurrentReadDc(HDC drawDc) {
   switch (t_EntryPoint) {
@@ -135,7 +115,7 @@ void RecorderScreenshotsLayer::Post(wglDeleteContextCommand& command) {
 }
 
 void RecorderScreenshotsLayer::NoteCurrent() {
-  const LastErrorGuard lastErrorGuard;
+  const LastSystemErrorGuard lastErrorGuard;
   if (const HGLRC context = Real(g_DispatchTable.wglGetCurrentContext)()) {
     const HDC dc = Real(g_DispatchTable.wglGetCurrentDC)();
     const std::lock_guard<std::mutex> lock(m_Mutex);
@@ -171,10 +151,10 @@ void RecorderScreenshotsLayer::Read(uint64_t key, HDC dc) {
       dcContext = it->second;
     }
   }
-  const LastErrorGuard lastErrorGuard;
-  RECT rect{};
-  const HWND window = WindowFromDC(dc);
-  if (window == nullptr || !GetClientRect(window, &rect) || rect.right <= 0 || rect.bottom <= 0) {
+  const LastSystemErrorGuard lastErrorGuard;
+  int32_t width = 0;
+  int32_t height = 0;
+  if (!GetWindowClientSize(dc, width, height) || width <= 0 || height <= 0) {
     LOG_WARNING << "Screenshots: frame " << frame << " swaps no visible window, skipped";
     return;
   }
@@ -194,8 +174,7 @@ void RecorderScreenshotsLayer::Read(uint64_t key, HDC dc) {
     LOG_WARNING << "Screenshots: making a context current for frame " << frame
                 << " failed, skipped";
   } else {
-    Image image{rect.right, rect.bottom,
-                ReadDefaultFramebuffer(g_DispatchTable, rect.right, rect.bottom)};
+    Image image{width, height, ReadDefaultFramebuffer(g_DispatchTable, width, height)};
     const std::lock_guard<std::mutex> lock(m_Mutex);
     m_Swaps[key].Screenshot = std::move(image);
   }
@@ -220,8 +199,8 @@ void RecorderScreenshotsLayer::EndFrame(uint64_t key, bool succeeded) {
     // numbered first.
     while (!m_Swaps.empty() && m_Swaps.begin()->second.Ended &&
            CaptureManager::Get().FrameEndsPendingBefore(m_Swaps.begin()->first) == 0) {
-      Swap ended = std::move(m_Swaps.begin()->second);
-      m_Swaps.erase(m_Swaps.begin());
+      auto node = m_Swaps.extract(m_Swaps.begin());
+      Swap& ended = node.mapped();
       if (!ended.Succeeded) {
         continue;
       }
@@ -234,7 +213,7 @@ void RecorderScreenshotsLayer::EndFrame(uint64_t key, bool succeeded) {
   if (screenshots.empty()) {
     return;
   }
-  const LastErrorGuard lastErrorGuard;
+  const LastSystemErrorGuard lastErrorGuard;
   for (auto& [frame, image] : screenshots) {
     WriteScreenshot(m_DumpPath, frame, image.Width, image.Height, image.Pixels);
   }

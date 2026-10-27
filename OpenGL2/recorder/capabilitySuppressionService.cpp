@@ -13,22 +13,19 @@
 #include "handleMapService.h"
 #include "log.h"
 #include "openglDriversAuto.h"
+#include "systemApi.h"
 
 #include <algorithm>
 #include <iterator>
 #include <type_traits>
-
-extern "C" __declspec(dllimport) DWORD __stdcall GetLastError();
-extern "C" __declspec(dllimport) void __stdcall SetLastError(DWORD dwErrCode);
 
 namespace gits::opengl2 {
 
 namespace {
 
 void LogInfo(std::string_view message, const char* option) {
-  const DWORD lastError = GetLastError();
+  const LastSystemErrorGuard lastErrorGuard;
   LOG_INFO << message << " (OpenGL.Recorder." << option << ")";
-  SetLastError(lastError);
 }
 
 void LogOnce(std::atomic<bool>& logged, const char* message) {

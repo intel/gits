@@ -8,19 +8,31 @@
 
 #include "realDriver.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include "configurator.h"
+
+#include <dlfcn.h>
+#endif
 
 #include <mutex>
 #include <stdexcept>
+#include <string>
 
 namespace gits::opengl2::player {
 
 namespace {
 
+#ifdef _WIN32
 HMODULE g_RealDriverLibrary = nullptr;
+#else
+void* g_RealDriverLibrary = nullptr;
+#endif
 
 } // namespace
 
+#ifdef _WIN32
 void InitializeRealDriver() {
   // The player is a normal, unhooked process - unlike the recorder, which LoadLibraryA's a
   // private handle specifically to bypass its own import-table hook on opengl32.dll (see
@@ -34,6 +46,15 @@ void InitializeRealDriver() {
     throw std::runtime_error("Could not load opengl32.dll");
   }
 }
+#else
+void InitializeRealDriver() {
+  const std::string path = Configurator::Get().common.shared.libGL.string();
+  g_RealDriverLibrary = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
+  if (g_RealDriverLibrary == nullptr) {
+    throw std::runtime_error("Could not load \"" + path + "\": " + dlerror());
+  }
+}
+#endif
 
 void FinalizeRealDriver() {
   // Deliberately a no-op: GetModuleHandleA above does not take out a reference, so
@@ -48,7 +69,11 @@ void* GetRealProcAddress(const char* name) {
   // resolution request lazily loads the driver instead.
   static std::once_flag initFlag;
   std::call_once(initFlag, &InitializeRealDriver);
+#ifdef _WIN32
   return reinterpret_cast<void*>(GetProcAddress(g_RealDriverLibrary, name));
+#else
+  return dlsym(g_RealDriverLibrary, name);
+#endif
 }
 
 } // namespace gits::opengl2::player

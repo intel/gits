@@ -14,9 +14,16 @@
 #include <cstdint>
 #include <new>
 #include <vector>
+#if defined(_WIN32)
 #include <windows.h>
+#else
+#include <cerrno>
+#include <sys/mman.h>
+#endif
 
 namespace gits::opengl2 {
+
+#if defined(_WIN32)
 
 namespace {
 
@@ -103,5 +110,32 @@ std::optional<WatchedShadow::ByteRange> WatchedShadow::DirtyRange(
   }
   return ByteRange{first, last - first};
 }
+
+#else
+
+WatchedShadow::WatchedShadow(size_t size) : m_Size(size) {
+  void* data = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (data == MAP_FAILED) {
+    GITS_ASSERT(false,
+                "Cannot allocate shadow for buffer map (errno " + std::to_string(errno) + ")");
+  }
+  m_Data = data;
+}
+
+WatchedShadow::~WatchedShadow() {
+  if (m_Data != nullptr) {
+    munmap(m_Data, m_Size);
+  }
+}
+
+void WatchedShadow::ResetWriteWatch() const {}
+
+std::optional<WatchedShadow::ByteRange> WatchedShadow::DirtyRange(
+    const void* /*data*/, size_t /*size*/, std::span<const uint8_t> /*baseline*/) const {
+  GITS_ASSERT(false, "Buffer map shadows do not track writes on this platform");
+  return std::nullopt;
+}
+
+#endif
 
 } // namespace gits::opengl2

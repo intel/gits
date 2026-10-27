@@ -13,6 +13,7 @@
 #include "hdcVirtualizationService.h"
 #include "liveGl.h"
 #include "log.h"
+#include "systemApi.h"
 #include "threadContextService.h"
 
 #include <algorithm>
@@ -21,11 +22,6 @@
 #include <map>
 #include <sstream>
 #include <tuple>
-
-// Hand-declared instead of including <windows.h>, which conflicts with glTypes.h.
-typedef struct HWND__* HWND;
-extern "C" __declspec(dllimport) HWND __stdcall WindowFromDC(HDC hDC);
-extern "C" __declspec(dllimport) BOOL __stdcall GetClientRect(HWND hWnd, RECT* lpRect);
 
 namespace gits::opengl2 {
 
@@ -930,14 +926,8 @@ void StateRestorer::RestoreDefaultFramebuffer() {
   GLsizei height = 0;
   if (const auto pbuffer = m_State.PbufferSize(m_RecordedDc)) {
     std::tie(width, height) = *pbuffer;
-  } else {
-    const HWND window = WindowFromDC(m_LiveDc);
-    RECT rect{};
-    if (window == nullptr || !GetClientRect(window, &rect)) {
-      return;
-    }
-    width = rect.right - rect.left;
-    height = rect.bottom - rect.top;
+  } else if (!GetWindowClientSize(m_LiveDc, width, height)) {
+    return;
   }
   if (width <= 0 || height <= 0) {
     return;

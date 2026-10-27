@@ -15,11 +15,9 @@
 #include "log.h"
 #include "mappedTextureDataMetaTypes.h"
 #include "openglDriversAuto.h"
+#include "systemApi.h"
 
 #include "xxhash.h"
-
-// Hand-declared instead of including <windows.h> - see mapTrackingService.cpp.
-extern "C" __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId(void);
 
 namespace gits::opengl2 {
 
@@ -187,7 +185,7 @@ void MappedTextureService::CaptureChanged(const std::vector<Entry*>& entries, ui
     return;
   }
 
-  MappedTextureDataMetaCommand command(static_cast<uint32_t>(GetCurrentThreadId()));
+  MappedTextureDataMetaCommand command(CurrentThreadId());
   command.m_Textures = HandleArrayArgument<GLuint>(textures.data(), textures.size());
   UpdateHandleArray(command.m_Textures, GLObjectKind::Texture);
   command.m_Levels = ArrayArgument<GLint>(levels.data(), levels.size());

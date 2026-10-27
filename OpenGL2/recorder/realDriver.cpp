@@ -8,12 +8,20 @@
 
 #include "realDriver.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include "configurator.h"
+
+#include <dlfcn.h>
+#endif
 
 #include <stdexcept>
 #include <string>
 
 namespace gits::opengl2 {
+
+#ifdef _WIN32
 
 namespace {
 
@@ -44,5 +52,36 @@ void FinalizeRealDriver() {
 void* GetRealProcAddress(const char* name) {
   return reinterpret_cast<void*>(GetProcAddress(g_RealDriverLibrary, name));
 }
+
+#else
+
+namespace {
+
+void* g_RealDriverLibrary = nullptr;
+
+} // namespace
+
+void InitializeRealDriver() {
+  // The path must be absolute: the interceptor itself is loaded under the driver's soname.
+  const std::string realPath = Configurator::Get().common.shared.libGL.string();
+  g_RealDriverLibrary = dlopen(realPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+  if (g_RealDriverLibrary == nullptr) {
+    throw std::runtime_error("Could not load the real OpenGL library from \"" + realPath +
+                             "\": " + dlerror());
+  }
+}
+
+void FinalizeRealDriver() {
+  if (g_RealDriverLibrary != nullptr) {
+    dlclose(g_RealDriverLibrary);
+    g_RealDriverLibrary = nullptr;
+  }
+}
+
+void* GetRealProcAddress(const char* name) {
+  return dlsym(g_RealDriverLibrary, name);
+}
+
+#endif
 
 } // namespace gits::opengl2

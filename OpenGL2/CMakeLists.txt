@@ -11,6 +11,7 @@ if(MSVC)
 endif()
 
 add_subdirectory(codegen)
+add_subdirectory(common/platform)
 add_subdirectory(common/layer_interface)
 add_subdirectory(common/services)
 add_subdirectory(recorder)

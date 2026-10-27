@@ -8,31 +8,10 @@
 
 #include "captureManager.h"
 
+#include "systemApi.h"
 #include "unsupportedCommandTypes.h"
 
-// Hand-declared instead of including <windows.h>, which conflicts with glTypes.h.
-typedef unsigned long DWORD;
-extern "C" __declspec(dllimport) DWORD __stdcall GetLastError();
-extern "C" __declspec(dllimport) void __stdcall SetLastError(DWORD dwErrCode);
-
 namespace gits::opengl2 {
-
-namespace {
-
-class LastErrorGuard {
-public:
-  LastErrorGuard() = default;
-  ~LastErrorGuard() {
-    SetLastError(m_Error);
-  }
-  LastErrorGuard(const LastErrorGuard&) = delete;
-  LastErrorGuard& operator=(const LastErrorGuard&) = delete;
-
-private:
-  DWORD m_Error = GetLastError();
-};
-
-} // namespace
 
 // See SetPendingPreHookKey()/TakePendingPreHookKey()'s own header comment (captureManager.h).
 thread_local uint64_t CaptureManager::s_PendingPreHookKey = 0;
@@ -54,7 +33,7 @@ CaptureManager& CaptureManager::Get() {
 
 CaptureManager::CaptureManager() {
   // Runs inside the application's first OpenGL call.
-  const LastErrorGuard lastErrorGuard;
+  const LastSystemErrorGuard lastErrorGuard;
   m_LayerManager.LoadLayers();
   // After the layers, so that plugins handle a close request before the recorder closes the
   // stream. Layer hooks run only after this, so a plugin may request closing from its first hook.

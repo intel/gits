@@ -22,6 +22,15 @@ public:
     size_t Length;
   };
 
+  // Whether the shadow tracks the pages written to it, for DirtyRange().
+  // TODO: Track writes on Linux once dirty-page capture is prototyped there, see
+  // docs/development/opengl2-buffer-map-tracking-plan.md.
+#if defined(_WIN32)
+  static constexpr bool kTracksWrites = true;
+#else
+  static constexpr bool kTracksWrites = false;
+#endif
+
   explicit WatchedShadow(size_t size);
   ~WatchedShadow();
 

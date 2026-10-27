@@ -20,10 +20,10 @@
 #include <stdexcept>
 #include <utility>
 
+#ifdef _WIN32
 // Hand-declared instead of including <windows.h>, which would redeclare RECT/PROC/etc.
 // against glTypes.h's own self-contained declarations of those same names - see glTypes.h's
-// header comment, and recorderWrappersAuto.cpp.mako's identical GetCurrentThreadId
-// precedent for why this backend avoids <windows.h> in any translation unit that also needs
+// header comment for why this backend avoids <windows.h> in any translation unit that also needs
 // glTypes.h. PIXELFORMATDESCRIPTOR itself is already declared by glTypes.h (WGL needs it too).
 typedef struct HWND__* HWND;
 extern "C" __declspec(dllimport) HDC __stdcall GetDC(HWND hWnd);
@@ -34,6 +34,7 @@ extern "C" __declspec(dllimport) BOOL
 extern "C" __declspec(dllimport) int __stdcall GetPixelFormat(HDC hdc);
 extern "C" __declspec(dllimport) BOOL __stdcall GetWindowRect(HWND hWnd, RECT* lpRect);
 extern "C" __declspec(dllimport) BOOL __stdcall GetClientRect(HWND hWnd, RECT* lpRect);
+#endif
 
 namespace gits::opengl2 {
 
@@ -138,6 +139,11 @@ HdcVirtualizationService::PlayerWindow& HdcVirtualizationService::WindowFor(HDC 
 }
 
 void HdcVirtualizationService::Create(PlayerWindow& window) {
+#ifndef _WIN32
+  // TODO: Create X11 player windows once GLX replay is supported.
+  throw std::runtime_error(
+      "HdcVirtualizationService: replay of WGL windows is not supported on this platform");
+#else
   const auto& config = PlayerConfig();
   const bool shown = window.Shown || config.showWindowsWA;
   const int x =
@@ -169,9 +175,11 @@ void HdcVirtualizationService::Create(PlayerWindow& window) {
   window.NativeDisplay = handles.first;
   window.NativeWindow = handles.second;
   MeasureBorder(window);
+#endif
 }
 
 void HdcVirtualizationService::MeasureBorder(PlayerWindow& window) {
+#ifdef _WIN32
   const HWND hwnd = reinterpret_cast<HWND>(window.NativeWindow);
   RECT windowRect{};
   RECT clientRect{};
@@ -181,6 +189,9 @@ void HdcVirtualizationService::MeasureBorder(PlayerWindow& window) {
     window.BorderExtraHeight =
         (windowRect.bottom - windowRect.top) - (clientRect.bottom - clientRect.top);
   }
+#else
+  (void)window;
+#endif
 }
 
 void HdcVirtualizationService::Resize(PlayerWindow& window, int clientWidth, int clientHeight) {
@@ -364,6 +375,7 @@ bool HdcVirtualizationService::EnsurePixelFormatSet(HDC recordedValue,
   if (pfd.iPixelType != kPfdTypeRgba && pfd.iPixelType != kPfdTypeColorIndex) {
     pfd.iPixelType = kPfdTypeRgba;
   }
+#ifdef _WIN32
   int format = ChooseCapturedPixelFormat(window.RealHdc, attributes);
   if (format == 0) {
     format = ChoosePixelFormat(window.RealHdc, &pfd);
@@ -372,6 +384,9 @@ bool HdcVirtualizationService::EnsurePixelFormatSet(HDC recordedValue,
     window.PixelFormatSet = true;
   }
   return GetPixelFormat(window.RealHdc) != 0;
+#else
+  return false;
+#endif
 }
 
 } // namespace gits::opengl2

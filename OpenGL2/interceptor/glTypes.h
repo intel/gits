@@ -38,10 +38,19 @@ typedef int64_t INT64;
 typedef unsigned int UINT;
 typedef unsigned short USHORT;
 typedef unsigned short WORD;
+#if defined(_WIN32)
 typedef unsigned long DWORD;
+#else
+// 32-bit like on Windows, so that WGL commands serialize identically.
+typedef uint32_t DWORD;
+#endif
 typedef unsigned char BYTE;
 typedef char CHAR;
+#if defined(_WIN32)
 typedef long LONG;
+#else
+typedef int32_t LONG;
+#endif
 typedef float FLOAT;
 typedef void VOID;
 typedef VOID* LPVOID;
@@ -178,17 +187,10 @@ typedef int64_t GLint64;
 typedef int64_t GLint64EXT;
 typedef uint64_t GLuint64;
 typedef uint64_t GLuint64EXT;
-#if defined(_WIN64)
-typedef int64_t GLintptr;
-typedef int64_t GLintptrARB;
-typedef int64_t GLsizeiptr;
-typedef int64_t GLsizeiptrARB;
-#else
-typedef int32_t GLintptr;
-typedef int32_t GLintptrARB;
-typedef int32_t GLsizeiptr;
-typedef int32_t GLsizeiptrARB;
-#endif
+typedef intptr_t GLintptr;
+typedef intptr_t GLintptrARB;
+typedef intptr_t GLsizeiptr;
+typedef intptr_t GLsizeiptrARB;
 typedef GLintptr GLvdpauSurfaceNV;
 typedef struct __GLsync* GLsync;
 typedef void* GLeglImageOES;

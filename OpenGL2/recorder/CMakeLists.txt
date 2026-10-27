@@ -75,6 +75,13 @@ target_include_directories(OpenGL2_recorder
 
 target_link_libraries(OpenGL2_recorder
   PUBLIC OpenGL2_layer_interface
+  # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
+  # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
+  # OpenGL2_resource_dumping: the screenshot readback and image writing shared with the player.
+  PRIVATE OpenGL2_services OpenGL2_resource_dumping OpenGL2_platform common_interface log tbb
+          xxhash
+)
+if(WIN32)
   # gdi32: PixelFormatCaptureLayer calls the real GetPixelFormat()/DescribePixelFormat() GDI
   # exports directly (see pixelFormatCaptureLayer.cpp) - mirrors OpenGL2_player's identical
   # gdi32 dependency for HdcVirtualizationService's own ChoosePixelFormat/SetPixelFormat/
@@ -83,10 +90,7 @@ target_link_libraries(OpenGL2_recorder
   # GetWindowRect()/IsWindowVisible() User32 exports directly - declared explicitly rather
   # than relying on some other dependency injecting it implicitly, mirroring
   # common/windowing/CMakeLists.txt's own explicit `user32` link on Win32.
-  # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
-  # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
-  # OpenGL2_resource_dumping: the screenshot readback and image writing shared with the player.
-  PRIVATE OpenGL2_services OpenGL2_resource_dumping common_interface log tbb gdi32 user32 xxhash
-)
+  target_link_libraries(OpenGL2_recorder PRIVATE gdi32 user32)
+endif()
 
 set_target_properties(OpenGL2_recorder PROPERTIES FOLDER OpenGL2)

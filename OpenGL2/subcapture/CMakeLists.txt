@@ -47,6 +47,6 @@ target_include_directories(OpenGL2_subcapture
 )
 target_link_libraries(OpenGL2_subcapture
   PUBLIC OpenGL2_layer_interface OpenGL2_services stream
-  PRIVATE log common_interface yamlcpp
+  PRIVATE log common_interface yamlcpp OpenGL2_platform
 )
 set_target_properties(OpenGL2_subcapture PROPERTIES FOLDER OpenGL2)

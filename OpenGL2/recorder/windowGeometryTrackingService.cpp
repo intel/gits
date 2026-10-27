@@ -10,8 +10,10 @@
 
 #include "captureManager.h"
 #include "log.h"
+#include "systemApi.h"
 #include "windowGeometryMetaTypes.h"
 
+#ifdef _WIN32
 // Real <windows.h> is safe in this translation unit (unlike hdcVirtualizationService.cpp/
 // mapTrackingWrappers.cpp, which hand-declare instead): this file only includes
 // captureManager.h (deliberately glTypes.h-free, see that header's own comment) and
@@ -22,6 +24,7 @@
 // pass their glTypes.h HDC values across this boundary as a plain `void*`, which is where the
 // avoidance actually happens.
 #include <windows.h>
+#endif
 
 #include <algorithm>
 #include <utility>
@@ -29,6 +32,7 @@
 namespace gits::opengl2 {
 
 namespace {
+#ifdef _WIN32
 std::mutex g_WarnOnceMutex;
 bool g_WarnedWindowFromDcFailure = false;
 bool g_WarnedGeometryQueryFailure = false;
@@ -46,19 +50,7 @@ uint64_t Identity(HWND hwnd, uint32_t lifetime) {
   return (static_cast<uint64_t>(lifetime) << 32) |
          static_cast<uint32_t>(reinterpret_cast<uintptr_t>(hwnd));
 }
-
-class LastErrorGuard {
-public:
-  LastErrorGuard() = default;
-  ~LastErrorGuard() {
-    SetLastError(m_Error);
-  }
-  LastErrorGuard(const LastErrorGuard&) = delete;
-  LastErrorGuard& operator=(const LastErrorGuard&) = delete;
-
-private:
-  DWORD m_Error = GetLastError();
-};
+#endif
 
 void SetPresent(WindowGeometryMetaCommand& command) {
   command.m_Windows.HasValue = true;
@@ -76,6 +68,7 @@ WindowGeometryTrackingService& WindowGeometryTrackingService::Get() {
   return instance;
 }
 
+#ifdef _WIN32
 uint64_t WindowGeometryTrackingService::Track(void* window) {
   const HWND hwnd = static_cast<HWND>(window);
   std::lock_guard<std::mutex> lock(m_WindowsMutex);
@@ -182,11 +175,31 @@ WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanO
   }
   return others;
 }
+#else
+// TODO: Track GLX drawables once GLX commands are captured.
+uint64_t WindowGeometryTrackingService::Track(void*) {
+  return 0;
+}
+
+WindowGeometryTrackingService::Sample WindowGeometryTrackingService::Query(void*) {
+  return {};
+}
+
+std::optional<WindowGeometryTrackingService::Sample> WindowGeometryTrackingService::Measure(
+    void*, uint64_t) {
+  return std::nullopt;
+}
+
+WindowGeometryTrackingService::OtherWindows WindowGeometryTrackingService::ScanOtherWindows(
+    const std::vector<uint64_t>&) {
+  return {};
+}
+#endif
 
 void WindowGeometryTrackingService::Capture(uint32_t threadId,
                                             std::initializer_list<void*> hdcs,
                                             uint64_t geometryKey) {
-  const LastErrorGuard lastErrorGuard;
+  const LastSystemErrorGuard lastErrorGuard;
   WindowGeometryMetaCommand command(threadId);
   command.m_Key = geometryKey;
   SetPresent(command);

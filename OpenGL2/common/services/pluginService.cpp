@@ -13,7 +13,9 @@
 #include "log.h"
 #include "messageBus.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 #include <algorithm>
 #include <cctype>
@@ -22,6 +24,7 @@
 
 namespace gits::opengl2 {
 
+#ifdef _WIN32
 namespace {
 
 std::string ToLowerCase(std::string str) {
@@ -52,6 +55,7 @@ std::filesystem::path FindPluginsPath(const Configuration& cfg) {
 }
 
 } // namespace
+#endif
 
 void PluginInfo::Free() {
   if (DestroyPlugin) {
@@ -59,6 +63,7 @@ void PluginInfo::Free() {
     DestroyPlugin = nullptr;
   }
   Impl = nullptr;
+#ifdef _WIN32
   if (Dll) {
     FreeLibrary(static_cast<HMODULE>(Dll));
     Dll = nullptr;
@@ -66,6 +71,7 @@ void PluginInfo::Free() {
   for (void* dependency : Dependencies) {
     FreeLibrary(static_cast<HMODULE>(dependency));
   }
+#endif
   Dependencies.clear();
 }
 
@@ -83,6 +89,10 @@ void PluginService::LoadPlugins() {
     return;
   }
 
+#ifndef _WIN32
+  // TODO: Load shared-object plugins once the internal plugins support GLX contexts.
+  LOG_INFO << "PluginService - OpenGL plugins are not yet supported on Linux. Skipping load...";
+#else
   const auto pluginsPath = FindPluginsPath(cfg);
   if (!IsDirectory(pluginsPath)) {
     LOG_ERROR << "PluginService - Plugin directory does not exist! Expected: "
@@ -173,6 +183,7 @@ void PluginService::LoadPlugins() {
               << pluginNames.size() << " requested";
     LOG_ERROR << "PluginService - Check the plugin names in the GITS config file";
   }
+#endif
 }
 
 } // namespace gits::opengl2

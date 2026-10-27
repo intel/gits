@@ -17,6 +17,7 @@
 #include "mappedDataMetaTypes.h"
 #include "messageBus.h"
 #include "openglDriversAuto.h"
+#include "systemApi.h"
 
 #include <cstring>
 #include <functional>
@@ -26,11 +27,6 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
-
-// Hand-declared instead of including <windows.h> - see recorderWrappersAuto.cpp.mako's
-// identical GetCurrentThreadId precedent (that header comment explains why this backend
-// avoids <windows.h> in any translation unit that also needs glTypes.h's own declarations).
-extern "C" __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId(void);
 
 namespace gits::opengl2 {
 
@@ -56,7 +52,7 @@ void RecordMappedDataMetaCommand(uint64_t key,
                                  const std::vector<uint8_t>& bytes) {
   BufferShadowService::Get().OnMappedBytes(shareGroup, buffer, static_cast<uint64_t>(offset),
                                            bytes);
-  MappedDataMetaCommand command(static_cast<uint32_t>(GetCurrentThreadId()));
+  MappedDataMetaCommand command(CurrentThreadId());
   command.m_Buffer.Value = buffer;
   UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
   command.m_Offset.Value = static_cast<uint64_t>(offset);
@@ -205,7 +201,7 @@ bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
   const bool explicitFlush = (access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0;
   const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
   return (access & required) == required && (access & excluded) == 0 &&
-         (explicitFlush || !unsynchronized);
+         (explicitFlush || (WatchedShadow::kTracksWrites && !unsynchronized));
 }
 
 std::vector<uint8_t> MapTrackingService::PrepareInitialBytes(
@@ -457,7 +453,8 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   }
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
                     offset, length, access, true};
-  const bool dirtyPageCandidate = !explicitFlush && writable && !readable && !unsynchronized;
+  const bool dirtyPageCandidate =
+      WatchedShadow::kTracksWrites && !explicitFlush && writable && !readable && !unsynchronized;
   if (dirtyPageCandidate || (explicitFlush && !readable)) {
     RequireShadowMapAlignment();
   }

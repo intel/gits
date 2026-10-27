@@ -10,12 +10,11 @@
 
 #include "captureManager.h"
 #include "log.h"
+#include "systemApi.h"
 
 #include "tbb/concurrent_unordered_set.h"
 
 #include <string>
-
-#include <windows.h>
 
 namespace gits::opengl2 {
 
@@ -35,8 +34,7 @@ void ReportUnsupportedCommand(const char* name, uint64_t key) {
   // see "Intercept every known runtime command, support commands incrementally". `key` was
   // already reserved by the caller before the real driver dispatch - see this function's own
   // declaration comment.
-  CaptureManager::Get().RecordUnsupportedCommand(name, key,
-                                                 static_cast<uint32_t>(GetCurrentThreadId()));
+  CaptureManager::Get().RecordUnsupportedCommand(name, key, CurrentThreadId());
 }
 
 } // namespace gits::opengl2

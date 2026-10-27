@@ -13,10 +13,12 @@
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelFormatMetaTypes.h"
+#include "systemApi.h"
 
 #include <atomic>
 #include <span>
 
+#ifdef _WIN32
 // Hand-declared instead of including <windows.h>, which would redeclare HDC/PIXELFORMATDESCRIPTOR
 // etc. against glTypes.h's own self-contained declarations of those same names (pulled in here
 // transitively via layerAuto.h -> commandsAuto.h) - see glTypes.h's own header comment and
@@ -30,8 +32,7 @@ extern "C" __declspec(dllimport) int __stdcall DescribePixelFormat(HDC hdc,
                                                                    int format,
                                                                    UINT nBytes,
                                                                    PIXELFORMATDESCRIPTOR* ppfd);
-extern "C" __declspec(dllimport) DWORD __stdcall GetLastError();
-extern "C" __declspec(dllimport) void __stdcall SetLastError(DWORD dwErrCode);
+#endif
 
 namespace gits::opengl2 {
 
@@ -65,7 +66,7 @@ void RecordPixelFormat(uint64_t key,
                        bool pbuffer) {
   // The queries, logging and recording below may set the thread's last error, which the
   // application may read after its own call.
-  const DWORD lastError = GetLastError();
+  const LastSystemErrorGuard lastErrorGuard;
   PixelFormatMetaCommand meta(threadId);
   meta.m_Key = key;
   meta.m_Attributes.HasValue = true;
@@ -91,7 +92,6 @@ void RecordPixelFormat(uint64_t key,
     }
   }
   CaptureManager::Get().RecordCommand(meta, new PixelFormatMetaSerializer(meta));
-  SetLastError(lastError);
 }
 
 // Resolves wglGetPixelFormatAttribivARB while the context a make-current call attached is
@@ -102,12 +102,11 @@ void ResolveAttributeQuery(bool succeeded, HGLRC context, HDC dc) {
       getAttributes != &ResolveAndCall_wglGetPixelFormatAttribivARB) {
     return;
   }
-  const DWORD lastError = GetLastError();
+  const LastSystemErrorGuard lastErrorGuard;
   // The format index is ignored for this attribute.
   const int attribute = WGL_NUMBER_PIXEL_FORMATS_ARB;
   int value = 0;
   getAttributes(dc, 1, 0, 1, &attribute, &value);
-  SetLastError(lastError);
 }
 } // namespace
 
@@ -187,6 +186,7 @@ void PixelFormatCaptureLayer::Post(wglMakeContextCurrentEXTCommand& command) {
 // this player's own single always-visible window genuinely requires regardless of capture (see
 // EnsurePixelFormatSet's own updated comment).
 void PixelFormatCaptureLayer::Post(wglSetPixelFormatCommand& command) {
+#ifdef _WIN32
   if (command.m_Return.Value != 0 && command.m_ppfd.HasValue) {
     const int realFormat = GetPixelFormat(command.m_hdc.Value);
     if (realFormat != 0) {
@@ -208,6 +208,7 @@ void PixelFormatCaptureLayer::Post(wglSetPixelFormatCommand& command) {
                      "captured PIXELFORMATDESCRIPTOR, which may be sparse/incomplete";
     }
   }
+#endif
   Post(static_cast<Command&>(command));
 }
 

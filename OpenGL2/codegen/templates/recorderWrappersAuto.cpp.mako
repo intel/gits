@@ -56,6 +56,7 @@ ${AUTO_GENERATED_HEADER}
 #include "recorderWrappers.h"
 #include "recursionGuard.h"
 #include "shareGroupService.h"
+#include "systemApi.h"
 #include "unsupportedCommand.h"
 
 #include <cstdint>
@@ -63,11 +64,6 @@ ${AUTO_GENERATED_HEADER}
 #include <string>
 #include <string_view>
 #include <unordered_map>
-
-// Hand-declared instead of including <windows.h>, which would redeclare PROC/tagRECT/etc.
-// against glTypes.h's own self-contained declarations of those same names (see
-// glTypes.h's header comment). DWORD is `unsigned long` there too.
-extern "C" __declspec(dllimport) unsigned long __stdcall GetCurrentThreadId(void);
 
 namespace gits::opengl2 {
 
@@ -175,7 +171,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endfor
   if (record) {
-    command.emplace(static_cast<uint32_t>(GetCurrentThreadId())\
+    command.emplace(CurrentThreadId()\
 % for p in cmd.params:
 <%
     in_override = pointer_override_for(cmd, p.name)

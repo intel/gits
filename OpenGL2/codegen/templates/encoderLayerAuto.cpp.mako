@@ -34,8 +34,8 @@ void EncoderLayer::Post(${cmd.name}Command& command) {
   // call this replaces moved here from recorderWrappersAuto.cpp.mako's Wrapper_${cmd.name} - see
   // command.m_Return.Value, set from that same `result` before this Post hook ever ran), so an
   // unsuccessful swap does not advance the shared player infrastructure's frame count. Reuses
-  // command.m_ThreadId (identical to the recording thread's GetCurrentThreadId() at the point
-  // the wrapper constructed `command`) instead of calling GetCurrentThreadId() again here.
+  // command.m_ThreadId (identical to the recording thread's CurrentThreadId() at the point
+  // the wrapper constructed `command`) instead of calling CurrentThreadId() again here.
 % if is_void:
   FrameEndCommand frameEndCommand(command.m_ThreadId);
   frameEndCommand.m_Key = CaptureManager::Get().CreateCommandKey();
