@@ -401,11 +401,7 @@ void MapTrackingService::OnMapNamedBuffer(GLuint buffer,
     return;
   }
   const GLint64 size = querySize(buffer);
-  if (size <= 0) {
-    LOG_WARNING << "MapTrackingService: GL_BUFFER_SIZE of buffer " << buffer
-                << " could not be queried - buffer-map tracking skipped for this map";
-    return;
-  }
+  GITS_ASSERT(size > 0, "Successful named buffer map has an invalid GL_BUFFER_SIZE");
   StoreWholeBufferMap(CurrentShareGroup(), buffer, access, mappedPointer,
                       static_cast<GLsizeiptr>(size));
 }

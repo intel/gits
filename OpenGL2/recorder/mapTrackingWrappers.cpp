@@ -18,7 +18,6 @@
 #include "recursionGuard.h"
 
 #include <cstring>
-#include <limits>
 #include <type_traits>
 #include <vector>
 
@@ -187,43 +186,18 @@ GLboolean APIENTRY CustomWrapper_glUnmapBufferARB(GLenum target) {
 // Core and EXT entry points share one implementation, instantiated per dispatch-table entry so
 // each still calls its own driver export.
 
-// GL_BUFFER_SIZE through `GetEntry`, whose result type is `T` (the core family has a 64-bit
-// getter, the EXT family only a GLint one). 0 if the getter is not resolved.
-template <typename T, auto GetEntry>
 GLint64 NamedBufferSize(GLuint buffer) {
-  auto get = (g_DispatchTable.*GetEntry).load(std::memory_order_acquire);
-  if (get == nullptr) {
-    return 0;
-  }
-  T size = 0;
+  GITS_ASSERT(ContextSupportsDirectStateAccess() &&
+                  TryResolveRealFunction("glGetNamedBufferParameteri64v"),
+              "Named buffer size queries require glGetNamedBufferParameteri64v "
+              "(OpenGL 4.5 or ARB_direct_state_access); alternative size queries are unsupported");
+  auto get = g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire);
+  GLint64 size = 0;
   get(buffer, GL_BUFFER_SIZE, &size);
   return size;
 }
 
-// The EXT family has no 64-bit getter and GL_BUFFER_SIZE is a GLsizeiptr, so the core (GL 4.5 or
-// ARB_direct_state_access) glGetNamedBufferParameteri64v is preferred on a context that has it.
-// The dispatch entry is process-wide, so being resolved says nothing about the current context;
-// it is still resolved silently, since a driver may not export it for that context yet.
-GLint64 ExtNamedBufferSize(GLuint buffer) {
-  const bool hasCoreGetter =
-      ContextSupportsDirectStateAccess() &&
-      (g_DispatchTable.glGetNamedBufferParameteri64v.load(std::memory_order_acquire) !=
-           &ResolveAndCall_glGetNamedBufferParameteri64v ||
-       TryResolveRealFunction("glGetNamedBufferParameteri64v"));
-  if (hasCoreGetter) {
-    if (const GLint64 size =
-            NamedBufferSize<GLint64, &OpenGLDispatchTable::glGetNamedBufferParameteri64v>(buffer);
-        size != 0) {
-      return size;
-    }
-  }
-  const GLint64 size =
-      NamedBufferSize<GLint, &OpenGLDispatchTable::glGetNamedBufferParameterivEXT>(buffer);
-  // A 32-bit maximum may be a clamped larger size; zero means the size is unknown.
-  return size == std::numeric_limits<GLint>::max() ? 0 : size;
-}
-
-template <auto MapEntry, MapTrackingService::NamedBufferSizeFn QuerySize>
+template <auto MapEntry>
 void* APIENTRY CustomWrapper_MapNamedBuffer(GLuint buffer, GLenum access) {
   const RecursionGuard guard;
   const bool record = !guard.IsNested();
@@ -232,7 +206,7 @@ void* APIENTRY CustomWrapper_MapNamedBuffer(GLuint buffer, GLenum access) {
     MapTrackingService::Get().NoteMap(false, access, result != nullptr);
   }
   if (record && result != nullptr) {
-    MapTrackingService::Get().OnMapNamedBuffer(buffer, access, result, QuerySize);
+    MapTrackingService::Get().OnMapNamedBuffer(buffer, access, result, NamedBufferSize);
   }
   return result;
 }
@@ -244,20 +218,15 @@ enum class NamedBufferFamily {
 
 template <NamedBufferFamily Family, auto ParameterEntry>
 bool QueryNamedBufferParameter(GLuint buffer, GLenum pname, GLint64& value) {
+  if (pname == GL_BUFFER_SIZE) {
+    value = NamedBufferSize(buffer);
+    return value > 0;
+  }
   constexpr bool ext = Family == NamedBufferFamily::EXT;
   const char* parameterName =
       ext ? "glGetNamedBufferParameterivEXT" : "glGetNamedBufferParameteri64v";
   if (!TryResolveRealFunction(parameterName)) {
     return false;
-  }
-  if (pname == GL_BUFFER_SIZE) {
-    if constexpr (ext) {
-      value = ExtNamedBufferSize(buffer);
-      return value > 0;
-    } else {
-      value = NamedBufferSize<GLint64, ParameterEntry>(buffer);
-      return true;
-    }
   }
   using ParameterType = std::conditional_t<ext, GLint, GLint64>;
   ParameterType result = 0;
@@ -281,12 +250,10 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
     const bool supported = ext ? CurrentContextHasExtension(major, "GL_EXT_direct_state_access")
                                : ContextSupportsDirectStateAccess();
     const char* getterName = ext ? "glGetNamedBufferSubDataEXT" : "glGetNamedBufferSubData";
-    const char* parameterName =
-        ext ? "glGetNamedBufferParameterivEXT" : "glGetNamedBufferParameteri64v";
     const bool getterAvailable =
         buffer != 0 && supported && TryResolveRealFunction("glIsBuffer") &&
         g_DispatchTable.glIsBuffer.load(std::memory_order_acquire)(buffer) == GL_TRUE &&
-        TryResolveRealFunction(parameterName) && TryResolveRealFunction(getterName);
+        TryResolveRealFunction(getterName);
     initialBytes = MapTrackingService::Get().PrepareInitialBytes(
         offset, length, access, getterAvailable,
         /*parameter=*/
@@ -568,13 +535,10 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
     {"glUnmapBufferARB", reinterpret_cast<void*>(&CustomWrapper_glUnmapBufferARB)},
     {"glMapNamedBuffer",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBuffer<
-             &OpenGLDispatchTable::glMapNamedBuffer,
-             &NamedBufferSize<GLint64, &OpenGLDispatchTable::glGetNamedBufferParameteri64v>>)},
+         &CustomWrapper_MapNamedBuffer<&OpenGLDispatchTable::glMapNamedBuffer>)},
     {"glMapNamedBufferEXT",
      reinterpret_cast<void*>(
-         &CustomWrapper_MapNamedBuffer<&OpenGLDispatchTable::glMapNamedBufferEXT,
-                                       &ExtNamedBufferSize>)},
+         &CustomWrapper_MapNamedBuffer<&OpenGLDispatchTable::glMapNamedBufferEXT>)},
     {"glMapNamedBufferRange",
      reinterpret_cast<void*>(
          &CustomWrapper_MapNamedBufferRange<NamedBufferFamily::Core,
