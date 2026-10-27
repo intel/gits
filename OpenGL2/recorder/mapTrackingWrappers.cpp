@@ -439,13 +439,27 @@ bool ReadNamedBufferSubData(GLuint buffer, GLintptr offset, GLsizeiptr length, v
   return (g_DispatchTable.*GetEntry).load(std::memory_order_acquire) != ResolveThunk;
 }
 
+template <NamedBufferFamily Family, auto GetEntry>
+bool QueryNamedStorageFlags(GLuint buffer, GLint& flags) {
+  const char* name = Family == NamedBufferFamily::Core ? "glGetNamedBufferParameteriv"
+                                                       : "glGetNamedBufferParameterivEXT";
+  if (!TryResolveRealFunction(name)) {
+    return false;
+  }
+  (g_DispatchTable.*GetEntry)
+      .load(std::memory_order_acquire)(buffer, GL_BUFFER_STORAGE_FLAGS, &flags);
+  return true;
+}
+
 template <const char* Name,
+          NamedBufferFamily Family,
           auto UnmapEntry,
           auto MapRangeEntry,
           auto MapEntry,
           auto ResolveThunk,
           auto GetSubDataEntry,
-          auto ResolveGetSubDataThunk>
+          auto ResolveGetSubDataThunk,
+          auto GetStorageFlagsEntry>
 GLboolean APIENTRY CustomWrapper_UnmapNamedBuffer(GLuint buffer) {
   const RecursionGuard guard;
   auto unmap = (g_DispatchTable.*UnmapEntry).load(std::memory_order_acquire);
@@ -454,7 +468,8 @@ GLboolean APIENTRY CustomWrapper_UnmapNamedBuffer(GLuint buffer) {
   }
   return MapTrackingService::Get().UnmapNamedBufferAndCapture(
       Name, buffer, unmap, &ReadOnlyNamedBuffer<MapRangeEntry, MapEntry, ResolveThunk>,
-      &ReadNamedBufferSubData<GetSubDataEntry, ResolveGetSubDataThunk>);
+      &ReadNamedBufferSubData<GetSubDataEntry, ResolveGetSubDataThunk>,
+      &QueryNamedStorageFlags<Family, GetStorageFlagsEntry>);
 }
 
 // GL_INTEL_map_texture: the calls themselves are not recorded - MappedTextureService captures
@@ -561,21 +576,25 @@ const CustomWrapper CUSTOM_WRAPPERS[] = {
     {"glUnmapNamedBuffer",
      reinterpret_cast<void*>(
          &CustomWrapper_UnmapNamedBuffer<UNMAP_NAMED_BUFFER,
+                                         NamedBufferFamily::Core,
                                          &OpenGLDispatchTable::glUnmapNamedBuffer,
                                          &OpenGLDispatchTable::glMapNamedBufferRange,
                                          &OpenGLDispatchTable::glMapNamedBuffer,
                                          &ResolveAndCall_glMapNamedBufferRange,
                                          &OpenGLDispatchTable::glGetNamedBufferSubData,
-                                         &ResolveAndCall_glGetNamedBufferSubData>)},
+                                         &ResolveAndCall_glGetNamedBufferSubData,
+                                         &OpenGLDispatchTable::glGetNamedBufferParameteriv>)},
     {"glUnmapNamedBufferEXT",
      reinterpret_cast<void*>(
          &CustomWrapper_UnmapNamedBuffer<UNMAP_NAMED_BUFFER_EXT,
+                                         NamedBufferFamily::EXT,
                                          &OpenGLDispatchTable::glUnmapNamedBufferEXT,
                                          &OpenGLDispatchTable::glMapNamedBufferRangeEXT,
                                          &OpenGLDispatchTable::glMapNamedBufferEXT,
                                          &ResolveAndCall_glMapNamedBufferRangeEXT,
                                          &OpenGLDispatchTable::glGetNamedBufferSubDataEXT,
-                                         &ResolveAndCall_glGetNamedBufferSubDataEXT>)},
+                                         &ResolveAndCall_glGetNamedBufferSubDataEXT,
+                                         &OpenGLDispatchTable::glGetNamedBufferParameterivEXT>)},
     {"glMapTexture2DINTEL", reinterpret_cast<void*>(&CustomWrapper_glMapTexture2DINTEL)},
     {"glUnmapTexture2DINTEL", reinterpret_cast<void*>(&CustomWrapper_glUnmapTexture2DINTEL)},
     {"glSyncTextureINTEL", reinterpret_cast<void*>(&CustomWrapper_glSyncTextureINTEL)},

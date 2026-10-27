@@ -112,11 +112,13 @@ public:
   using NamedUnmapFn = GLboolean(APIENTRY*)(GLuint);
   using NamedReadOnlyRemapFn = void* (*)(GLuint, GLintptr, GLsizeiptr);
   using NamedReadSubDataFn = bool (*)(GLuint, GLintptr, GLsizeiptr, void*);
+  using NamedStorageFlagsFn = bool (*)(GLuint, GLint&);
   GLboolean UnmapNamedBufferAndCapture(const char* callerName,
                                        GLuint buffer,
                                        NamedUnmapFn unmap,
                                        NamedReadOnlyRemapFn readOnlyRemap,
-                                       NamedReadSubDataFn readSubData);
+                                       NamedReadSubDataFn readSubData,
+                                       NamedStorageFlagsFn queryStorageFlags);
 
 private:
   MapTrackingService();
@@ -205,7 +207,8 @@ private:
   // read-only re-map of [offset, offset+length) and returns the mapped pointer, or nullptr on
   // failure; `realInternalUnmap` performs the second, purely-internal unmap that follows a
   // successful remap. Its result is checked, but never propagated to the app. `realReadSubData`
-  // reads the same range after a failed remap, returning false if the getter is unavailable.
+  // reads the same range if a read remap is forbidden or fails; `queryStorageFlags` checks
+  // whether buffer storage permits a read remap.
   GLboolean SnapshotBufferAndUnmap(
       const char* callerName,
       GLuint buffer,
@@ -213,7 +216,8 @@ private:
       const std::function<GLboolean()>& realUnmap,
       const std::function<void*(GLintptr, GLsizeiptr)>& realReadOnlyRemap,
       const std::function<GLboolean()>& realInternalUnmap,
-      const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData);
+      const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData,
+      const std::function<bool(GLint&)>& queryStorageFlags);
 
   std::mutex m_MappedBuffersMutex;
   std::unordered_map<Key, MappedRange, KeyHash> m_MappedBuffers;

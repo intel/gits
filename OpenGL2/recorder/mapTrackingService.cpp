@@ -89,6 +89,17 @@ bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* 
          &ResolveAndCall_glGetBufferSubData;
 }
 
+bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
+  const auto [major, minor] = CurrentContextGLVersion();
+  if ((major < 4 || (major == 4 && minor < 4)) &&
+      !CurrentContextHasExtension(major, "GL_ARB_buffer_storage") &&
+      !CurrentContextHasExtension(major, "GL_EXT_buffer_storage")) {
+    return true;
+  }
+  GLint flags = 0;
+  return queryStorageFlags(flags) && (flags & GL_MAP_READ_BIT) != 0;
+}
+
 } // namespace
 
 MapTrackingService& MapTrackingService::Get() {
@@ -204,6 +215,11 @@ GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
       /*realReadSubData=*/
       [target](GLintptr offset, GLsizeiptr length, void* data) {
         return ReadBufferSubData(target, offset, length, data);
+      },
+      /*queryStorageFlags=*/
+      [target](GLint& flags) {
+        return TryResolveRealFunction("glGetBufferParameteriv") &&
+               GetBoundBufferParameter(target, GL_BUFFER_STORAGE_FLAGS, flags);
       });
 }
 
@@ -429,7 +445,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     const std::function<GLboolean()>& realUnmap,
     const std::function<void*(GLintptr, GLsizeiptr)>& realReadOnlyRemap,
     const std::function<GLboolean()>& realInternalUnmap,
-    const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData) {
+    const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData,
+    const std::function<bool(GLint&)>& queryStorageFlags) {
   std::optional<MappedRange> range =
       buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
   // Untracked or read-only maps need no snapshot and no ordering key.
@@ -469,9 +486,9 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     CaptureManager::Get().SkipCommandKey(key);
     return result;
   }
-  // TODO: Track immutable storage permissions to skip a read remap forbidden by its flags;
-  // the failed probe may leave an application-visible GL error before subdata readback.
-  void* readPointer = realReadOnlyRemap(range->Offset, range->Length);
+  void* readPointer = CanRemapForRead(queryStorageFlags)
+                          ? realReadOnlyRemap(range->Offset, range->Length)
+                          : nullptr;
   if (readPointer != nullptr) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
     if (realInternalUnmap() != GL_TRUE) {
@@ -505,6 +522,11 @@ GLboolean MapTrackingService::UnmapBufferARBAndCapture(GLenum target) {
       /*realReadSubData=*/
       [target](GLintptr offset, GLsizeiptr length, void* data) {
         return ReadBufferSubData(target, offset, length, data);
+      },
+      /*queryStorageFlags=*/
+      [target](GLint& flags) {
+        return TryResolveRealFunction("glGetBufferParameteriv") &&
+               GetBoundBufferParameter(target, GL_BUFFER_STORAGE_FLAGS, flags);
       });
 }
 
@@ -512,7 +534,8 @@ GLboolean MapTrackingService::UnmapNamedBufferAndCapture(const char* callerName,
                                                          GLuint buffer,
                                                          NamedUnmapFn unmap,
                                                          NamedReadOnlyRemapFn readOnlyRemap,
-                                                         NamedReadSubDataFn readSubData) {
+                                                         NamedReadSubDataFn readSubData,
+                                                         NamedStorageFlagsFn queryStorageFlags) {
   return SnapshotBufferAndUnmap(
       callerName, buffer, CurrentShareGroup(),
       /*realUnmap=*/[unmap, buffer] { return unmap(buffer); },
@@ -524,7 +547,9 @@ GLboolean MapTrackingService::UnmapNamedBufferAndCapture(const char* callerName,
       /*realReadSubData=*/
       [buffer, readSubData](GLintptr offset, GLsizeiptr length, void* data) {
         return readSubData(buffer, offset, length, data);
-      });
+      },
+      /*queryStorageFlags=*/
+      [buffer, queryStorageFlags](GLint& flags) { return queryStorageFlags(buffer, flags); });
 }
 
 GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
