@@ -100,6 +100,38 @@ bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
   return queryStorageFlags(flags) && (flags & GL_MAP_READ_BIT) != 0;
 }
 
+void PersistentMapSanityCheck(GLintptr offset,
+                              GLsizeiptr length,
+                              GLbitfield access,
+                              const MapTrackingService::BufferParameterCallback& parameter) {
+  const auto [major, minor] = CurrentContextGLVersion();
+  GITS_ASSERT(major > 4 || (major == 4 && minor >= 4) ||
+                  CurrentContextHasExtension(major, "GL_ARB_buffer_storage") ||
+                  CurrentContextHasExtension(major, "GL_EXT_buffer_storage"),
+              "Persistent buffer mapping requires buffer storage support");
+  GLint64 size = 0;
+  GLint64 storageFlags = 0;
+  GLint64 mapped = 0;
+  GLint64 mapAccess = 0;
+  GITS_ASSERT(parameter(GL_BUFFER_SIZE, size),
+              "Cannot query GL_BUFFER_SIZE for persistent buffer mapping");
+  GITS_ASSERT(parameter(GL_BUFFER_STORAGE_FLAGS, storageFlags),
+              "Cannot query GL_BUFFER_STORAGE_FLAGS for persistent buffer mapping");
+  GITS_ASSERT(parameter(GL_BUFFER_MAPPED, mapped),
+              "Cannot query GL_BUFFER_MAPPED for persistent buffer mapping");
+  GITS_ASSERT(parameter(GL_BUFFER_ACCESS_FLAGS, mapAccess),
+              "Cannot query GL_BUFFER_ACCESS_FLAGS for persistent buffer mapping");
+  GITS_ASSERT(size >= 0 && offset <= size && length <= size - offset,
+              "Persistent buffer mapping range exceeds buffer storage");
+  GITS_ASSERT(mapped == GL_TRUE, "Persistent buffer mapping is not reported as mapped");
+  GITS_ASSERT(mapAccess == access,
+              "Persistent buffer mapping access flags differ from requested access");
+  const GLbitfield requiredStorageFlags =
+      access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+  GITS_ASSERT((storageFlags & requiredStorageFlags) == requiredStorageFlags,
+              "Persistent buffer storage flags do not permit requested mapping access");
+}
+
 } // namespace
 
 MapTrackingService& MapTrackingService::Get() {
@@ -160,13 +192,13 @@ void MapTrackingService::LogStatistics() {
 
 bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
   constexpr GLbitfield required = GL_MAP_WRITE_BIT;
-  constexpr GLbitfield excluded =
-      GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+  constexpr GLbitfield excluded = GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
+                                  GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT |
+                                  GL_MAP_COHERENT_BIT;
   const bool explicitFlush = (access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0;
-  const bool hasExcludedImplicitFlushAccess =
-      (access & (GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_UNSYNCHRONIZED_BIT)) != 0;
+  const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
   return (access & required) == required && (access & excluded) == 0 &&
-         (explicitFlush || !hasExcludedImplicitFlushAccess);
+         (explicitFlush || !unsynchronized);
 }
 
 std::vector<uint8_t> MapTrackingService::PrepareInitialBytes(
@@ -202,7 +234,12 @@ void* MapTrackingService::OnMapBufferRange(GLenum target,
                                            std::span<const uint8_t> initialBytes) {
   const GLuint buffer = ResolveBoundBuffer(target);
   GITS_ASSERT(buffer != 0, "Successful buffer range map has no resolvable buffer");
-  return RegisterRange(buffer, offset, length, access, mappedPointer, initialBytes);
+  return RegisterRange(
+      buffer, offset, length, access, mappedPointer,
+      [target](GLenum pname, GLint64& value) {
+        return GetBoundBufferParameter(target, pname, value);
+      },
+      initialBytes);
 }
 
 GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
@@ -378,9 +415,10 @@ void* MapTrackingService::OnMapNamedBufferRange(GLuint buffer,
                                                 GLsizeiptr length,
                                                 GLbitfield access,
                                                 void* mappedPointer,
+                                                const BufferParameterCallback& parameter,
                                                 std::span<const uint8_t> initialBytes) {
   GITS_ASSERT(buffer != 0, "Successful named buffer range map has no buffer name");
-  return RegisterRange(buffer, offset, length, access, mappedPointer, initialBytes);
+  return RegisterRange(buffer, offset, length, access, mappedPointer, parameter, initialBytes);
 }
 
 void* MapTrackingService::RegisterRange(GLuint buffer,
@@ -388,26 +426,31 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
                                         GLsizeiptr length,
                                         GLbitfield access,
                                         void* driverPointer,
+                                        const BufferParameterCallback& parameter,
                                         std::span<const uint8_t> initialBytes) {
   GITS_ASSERT(driverPointer != nullptr && offset >= 0 && length > 0,
               "Successful buffer range map has invalid tracking parameters");
-  if (access & (GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT)) {
-    const std::string message =
-        (access & GL_MAP_COHERENT_BIT
-             ? "Coherent persistent buffer maps are not supported by mapped-data capture"
-             : "Non-coherent persistent buffer maps are not supported by mapped-data capture") +
-        std::string(" (access: ") +
-        GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')';
-    GITS_ASSERT(false, message);
-  }
-  MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
-                    offset, length, access, true};
   const bool readable = (access & GL_MAP_READ_BIT) != 0;
   const bool writable = (access & GL_MAP_WRITE_BIT) != 0;
+  const bool persistent = (access & GL_MAP_PERSISTENT_BIT) != 0;
+  const bool coherent = (access & GL_MAP_COHERENT_BIT) != 0;
   const bool explicitFlush = (access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0;
   const bool invalidated =
       (access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0;
   const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
+  if (coherent || (persistent && !readable)) {
+    const std::string message =
+        (coherent ? "Coherent persistent buffer maps are unsupported"
+                  : "Write-only persistent noncoherent buffer maps are unsupported") +
+        std::string(" (access: ") +
+        GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')';
+    GITS_ASSERT(false, message);
+  }
+  if (persistent) {
+    PersistentMapSanityCheck(offset, length, access, parameter);
+  }
+  MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
+                    offset, length, access, true};
   const bool dirtyPageCandidate = !explicitFlush && writable && !readable && !unsynchronized;
   bool shadowAlignmentAvailable = false;
   if (dirtyPageCandidate || (explicitFlush && !readable)) {
@@ -527,6 +570,11 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     const std::function<GLboolean()>& realInternalUnmap,
     const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData,
     const std::function<bool(GLint&)>& queryStorageFlags) {
+  // TODO: Check whether another thread can legally write to this buffer through a shared GL
+  // context while this thread is unmapping it. We remove the mapping from m_MappedBuffers before
+  // copying its bytes or calling the driver's unmap function. During that time,
+  // AssertNoWritablePersistentMap cannot detect that the buffer is still mapped. If such writes
+  // are legal, keep the check working until the driver's unmap function returns.
   std::optional<MappedRange> range =
       buffer != 0 ? TakeMappedRange(shareGroup, buffer) : std::nullopt;
   // Untracked or read-only maps need no snapshot and no ordering key.
@@ -699,13 +747,28 @@ void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
 }
 
 void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, MappedRange range) {
-  if (range.Access & GL_MAP_WRITE_BIT) {
-    BufferShadowService::Get().OnMapWrite(shareGroup, buffer, range.Access);
-  }
+  const GLbitfield access = range.Access;
   const Key key{shareGroup, buffer};
   range.Map = key;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    m_MappedBuffers[key] = std::move(range);
+  }
+  // Do not hold the map mutex while calling BufferShadowService. Its GPU-write hooks
+  // hold the shadow mutex while acquiring the map mutex; reversing that order could deadlock.
+  if (access & GL_MAP_WRITE_BIT) {
+    BufferShadowService::Get().OnMapWrite(shareGroup, buffer, access);
+  }
+}
+
+void MapTrackingService::AssertNoWritablePersistentMap(uint64_t shareGroup, GLuint buffer) {
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
-  m_MappedBuffers[key] = std::move(range);
+  const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
+  constexpr GLbitfield unsupported = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
+  GITS_ASSERT(it == m_MappedBuffers.end() || (it->second.Access & unsupported) != unsupported,
+              "GPU or GL buffer updates during a writable persistent mapping are unsupported: "
+              "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
+              "replayed GPU results with stale bytes");
 }
 
 std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRange(

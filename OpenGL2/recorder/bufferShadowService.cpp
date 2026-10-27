@@ -11,6 +11,8 @@
 #include "clientMemoryCapture.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
+#include "log.h"
+#include "mapTrackingService.h"
 #include "openglDriversAuto.h"
 
 #include <cstring>
@@ -81,10 +83,12 @@ BufferShadowService::Key BufferShadowService::Resolve(BufferRef ref) {
     return {shareGroup, ref.Name};
   }
   const GLenum pname = BufferBindingPname(ref.Target);
-  return {shareGroup, pname != 0 ? static_cast<GLuint>(GetInteger(pname)) : 0u};
+  const GLuint buffer = pname != 0 ? static_cast<GLuint>(GetInteger(pname)) : 0u;
+  return {shareGroup, buffer};
 }
 
 void BufferShadowService::MarkUntrusted(const Key& key) {
+  MapTrackingService::Get().AssertNoWritablePersistentMap(key.ShareGroup, key.Buffer);
   m_Untrusted.insert(key);
   m_Shadows.erase(key);
 }
@@ -136,13 +140,8 @@ void BufferShadowService::OnSubData(BufferRef ref,
                                     uint64_t offset,
                                     uint64_t size,
                                     const void* data) {
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    if (m_Shadows.empty()) {
-      return;
-    }
-  }
   const Key key = Resolve(ref);
+  MapTrackingService::Get().AssertNoWritablePersistentMap(key.ShareGroup, key.Buffer);
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Shadows.find(key);
   if (it == m_Shadows.end()) {
@@ -226,6 +225,10 @@ void BufferShadowService::OnDelete(GLsizei n, const GLuint* buffers) {
 
 void BufferShadowService::OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfield access) {
   std::lock_guard<std::mutex> lock(m_Mutex);
+  GITS_ASSERT((access & GL_MAP_PERSISTENT_BIT) == 0 || m_Untrusted.count({shareGroup, buffer}) == 0,
+              "Writable persistent mappings of GPU-write-capable buffers are unsupported: "
+              "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
+              "replayed GPU results with stale bytes");
   auto it = m_Shadows.find({shareGroup, buffer});
   if (it != m_Shadows.end()) {
     it->second.KnownBeforeMap =

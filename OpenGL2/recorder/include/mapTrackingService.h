@@ -9,7 +9,7 @@
 #pragma once
 
 // Recorder-side buffer-map tracking: captures implicit writes at unmap and explicit writes at
-// flush as MappedDataMetaCommands. It does not track writes continuously or persistent mappings.
+// flush as MappedDataMetaCommands.
 //
 // Lives under recorder/ rather than common/services/, mirroring Vulkan and DirectX: capturing a
 // mapped range needs the recorder's own real-driver dispatch table and CaptureManager, neither of
@@ -91,9 +91,11 @@ public:
                               GLsizeiptr length,
                               GLbitfield access,
                               void* mappedPointer,
+                              const BufferParameterCallback& parameter,
                               std::span<const uint8_t> initialBytes = {});
 
   void OnDelete(GLsizei count, const GLuint* buffers);
+  void AssertNoWritablePersistentMap(uint64_t shareGroup, GLuint buffer);
 
   // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
   // target, for an untracked target or one with nothing bound.
@@ -221,6 +223,7 @@ private:
                       GLsizeiptr length,
                       GLbitfield access,
                       void* driverPointer,
+                      const BufferParameterCallback& parameter,
                       std::span<const uint8_t> initialBytes);
 
   // Overwrites any previous entry for the same (share group, buffer) without warning: GL

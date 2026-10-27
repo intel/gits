@@ -464,6 +464,18 @@ bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
   return true;
 }
 
+bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value) {
+  if (pname == GL_BUFFER_SIZE) {
+    return GetBoundBufferSize(target, value);
+  }
+  GLint result = 0;
+  if (!GetBoundBufferParameter(target, pname, result)) {
+    return false;
+  }
+  value = result;
+  return true;
+}
+
 bool GetBoundBufferSize(GLenum target, GLint64& size) {
   const auto [major, minor] = CurrentContextGLVersion();
   if (major > 3 || (major == 3 && minor >= 2)) {

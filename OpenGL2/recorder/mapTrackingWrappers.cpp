@@ -87,15 +87,7 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
         offset, length, access, getterAvailable,
         /*parameter=*/
         [target](GLenum pname, GLint64& value) {
-          if (pname == GL_BUFFER_SIZE) {
-            return GetBoundBufferSize(target, value);
-          }
-          GLint mapped = 0;
-          if (!GetBoundBufferParameter(target, pname, mapped)) {
-            return false;
-          }
-          value = mapped;
-          return true;
+          return GetBoundBufferParameter(target, pname, value);
         },
         /*read=*/
         [target](GLintptr start, GLsizeiptr count, void* data) {
@@ -225,7 +217,10 @@ GLint64 ExtNamedBufferSize(GLuint buffer) {
       return size;
     }
   }
-  return NamedBufferSize<GLint, &OpenGLDispatchTable::glGetNamedBufferParameterivEXT>(buffer);
+  const GLint64 size =
+      NamedBufferSize<GLint, &OpenGLDispatchTable::glGetNamedBufferParameterivEXT>(buffer);
+  // A 32-bit maximum may be a clamped larger size; zero means the size is unknown.
+  return size == std::numeric_limits<GLint>::max() ? 0 : size;
 }
 
 template <auto MapEntry, MapTrackingService::NamedBufferSizeFn QuerySize>
@@ -246,6 +241,30 @@ enum class NamedBufferFamily {
   Core,
   EXT
 };
+
+template <NamedBufferFamily Family, auto ParameterEntry>
+bool QueryNamedBufferParameter(GLuint buffer, GLenum pname, GLint64& value) {
+  constexpr bool ext = Family == NamedBufferFamily::EXT;
+  const char* parameterName =
+      ext ? "glGetNamedBufferParameterivEXT" : "glGetNamedBufferParameteri64v";
+  if (!TryResolveRealFunction(parameterName)) {
+    return false;
+  }
+  if (pname == GL_BUFFER_SIZE) {
+    if constexpr (ext) {
+      value = ExtNamedBufferSize(buffer);
+      return value > 0;
+    } else {
+      value = NamedBufferSize<GLint64, ParameterEntry>(buffer);
+      return true;
+    }
+  }
+  using ParameterType = std::conditional_t<ext, GLint, GLint64>;
+  ParameterType result = 0;
+  (g_DispatchTable.*ParameterEntry).load(std::memory_order_acquire)(buffer, pname, &result);
+  value = result;
+  return true;
+}
 
 template <NamedBufferFamily Family, auto MapRangeEntry, auto ParameterEntry, auto SubDataEntry>
 void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
@@ -272,16 +291,7 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
         offset, length, access, getterAvailable,
         /*parameter=*/
         [buffer](GLenum pname, GLint64& value) {
-          using ParameterType = std::conditional_t<ext, GLint, GLint64>;
-          ParameterType result = 0;
-          (g_DispatchTable.*ParameterEntry).load(std::memory_order_acquire)(buffer, pname, &result);
-          if constexpr (ext) {
-            if (pname == GL_BUFFER_SIZE && result == std::numeric_limits<GLint>::max()) {
-              return false;
-            }
-          }
-          value = result;
-          return true;
+          return QueryNamedBufferParameter<Family, ParameterEntry>(buffer, pname, value);
         },
         /*read=*/
         [buffer](GLintptr start, GLsizeiptr count, void* data) {
@@ -295,8 +305,12 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
     MapTrackingService::Get().NoteMap(true, access, result != nullptr);
   }
   if (record && result != nullptr) {
-    return MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result,
-                                                           initialBytes);
+    return MapTrackingService::Get().OnMapNamedBufferRange(
+        buffer, offset, length, access, result,
+        [buffer](GLenum pname, GLint64& value) {
+          return QueryNamedBufferParameter<Family, ParameterEntry>(buffer, pname, value);
+        },
+        initialBytes);
   }
   return result;
 }
