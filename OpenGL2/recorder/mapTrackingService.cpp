@@ -36,6 +36,13 @@ namespace gits::opengl2 {
 
 namespace {
 
+void RequireShadowMapAlignment() {
+  const auto [major, minor] = CurrentContextGLVersion();
+  GITS_ASSERT(major > 4 || (major == 4 && minor >= 2) ||
+                  CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment"),
+              "Shadow mapping requires OpenGL 4.2 or GL_ARB_map_buffer_alignment");
+}
+
 // Builds and records a MappedDataMetaCommand from the snapshot.
 // `bytes.size()` reaches ArrayArgument<uint8_t>'s own size_t-based constructor with no narrowing
 // cast: a mapped range can legitimately approach or exceed 4 GiB on this x64-only backend, and
@@ -219,6 +226,9 @@ std::vector<uint8_t> MapTrackingService::PrepareInitialBytes(
   if (mapped != 0 || size < 0 || offset > size || length > size - offset ||
       static_cast<uint64_t>(length) > std::vector<uint8_t>().max_size()) {
     return {};
+  }
+  if ((access & GL_MAP_FLUSH_EXPLICIT_BIT) == 0) {
+    RequireShadowMapAlignment();
   }
   std::vector<uint8_t> bytes(static_cast<size_t>(length));
   // Readback may synchronize even when the subsequent map requests GL_MAP_UNSYNCHRONIZED_BIT.
@@ -448,23 +458,17 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
                     offset, length, access, true};
   const bool dirtyPageCandidate = !explicitFlush && writable && !readable && !unsynchronized;
-  bool shadowAlignmentAvailable = false;
   if (dirtyPageCandidate || (explicitFlush && !readable)) {
-    const auto [major, minor] = CurrentContextGLVersion();
-    shadowAlignmentAvailable = major > 4 || (major == 4 && minor >= 2) ||
-                               CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment");
+    RequireShadowMapAlignment();
   }
   // Invalidated maps copy touched pages as-is; other maps need a full baseline for comparison.
   const bool useDirtyPageCapture =
-      dirtyPageCandidate && shadowAlignmentAvailable &&
-      (invalidated || initialBytes.size() == static_cast<size_t>(length));
+      dirtyPageCandidate && (invalidated || initialBytes.size() == static_cast<size_t>(length));
   if (explicitFlush || useDirtyPageCapture) {
     range.RangePolicy.Type = explicitFlush ? CaptureRangePolicy::Mode::DeclaredFlush
                                            : CaptureRangePolicy::Mode::DirtyPages;
     GITS_ASSERT(writable, "Explicit-flush buffer map has no writable byte source");
     if (!readable) {
-      GITS_ASSERT(shadowAlignmentAvailable,
-                  "GL_MIN_MAP_BUFFER_ALIGNMENT is unavailable for shadow mapping");
       GLint alignment = 0;
       g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
                                                                     &alignment);
