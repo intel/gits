@@ -38,7 +38,7 @@ HWND WindowService::CreatePlayerWindow(HWND captureHwnd, int width, int height) 
   int posY = forceWindowPos.enabled ? forceWindowPos.y : 10;
 
   auto handles = windowing::WindowManager::Get().CreatePlayerWindow(
-      windowing::WindowProtocol::Win, posX, posY, wndWidth, wndHeight, true);
+      windowing::WindowProtocol::Win, posX, posY, wndWidth, wndHeight, true, 0, false);
   HWND newWindow = reinterpret_cast<HWND>(handles.second);
   windowing::WindowManager::Get().SetTitle("DX12-GITS");
   m_WindowMap[captureHwnd] = newWindow;

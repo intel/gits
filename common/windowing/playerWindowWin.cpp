@@ -30,7 +30,7 @@ constexpr const char* kPlayerWindowClassName = "gits_player_window_class";
 
 class PlayerWindowWin final : public PlayerWindow {
 public:
-  PlayerWindowWin(int x, int y, int width, int height, bool visible) {
+  PlayerWindowWin(int x, int y, int width, int height, bool visible, bool changeDisplayMode) {
     m_HInstance = GetModuleHandle(nullptr);
 
     static bool classRegistered = false;
@@ -59,23 +59,28 @@ public:
 
     m_ExclusiveFullscreen =
         Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN;
+    m_ChangeDisplayMode = m_ExclusiveFullscreen && changeDisplayMode;
     if (m_ExclusiveFullscreen) {
       style = WS_POPUP;
       exStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
       posX = 0;
       posY = 0;
 
-      DEVMODE devMode = {};
-      devMode.dmSize = sizeof(devMode);
-      devMode.dmPelsWidth = width;
-      devMode.dmPelsHeight = height;
-      devMode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
-      if (ChangeDisplaySettings(&devMode, CDS_TEST) == DISP_CHANGE_SUCCESSFUL) {
-        ChangeDisplaySettings(&devMode, CDS_FULLSCREEN);
-        ShowCursor(FALSE);
+      if (m_ChangeDisplayMode) {
+        DEVMODE devMode = {};
+        devMode.dmSize = sizeof(devMode);
+        devMode.dmPelsWidth = width;
+        devMode.dmPelsHeight = height;
+        devMode.dmFields = DM_PELSWIDTH | DM_PELSHEIGHT;
+        if (ChangeDisplaySettings(&devMode, CDS_TEST) == DISP_CHANGE_SUCCESSFUL) {
+          ChangeDisplaySettings(&devMode, CDS_FULLSCREEN);
+          ShowCursor(FALSE);
+        } else {
+          LOG_WARNING << "Cannot adjust screen resolution to match dimensions of " << width << " x "
+                      << height << " pixels for a window.";
+        }
       } else {
-        LOG_WARNING << "Cannot adjust screen resolution to match dimensions of " << width << " x "
-                    << height << " pixels for a window.";
+        ShowCursor(FALSE);
       }
     } else if (Configurator::Get().common.player.showWindowBorder) {
       style = WS_POPUP | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_OVERLAPPEDWINDOW;
@@ -105,6 +110,8 @@ public:
     if (m_Hwnd != nullptr) {
       if (m_ExclusiveFullscreen) {
         ShowCursor(TRUE);
+      }
+      if (m_ChangeDisplayMode) {
         ChangeDisplaySettings(nullptr, 0);
       }
       DestroyWindow(m_Hwnd);
@@ -140,7 +147,7 @@ public:
       GITS_ASSERT(false, "SetWindowPos failed");
     }
 
-    if (Configurator::Get().common.player.windowMode == gits::WindowMode::EXCLUSIVE_FULLSCREEN) {
+    if (m_ChangeDisplayMode) {
       DEVMODE devMode = {};
       devMode.dmSize = sizeof(devMode);
       devMode.dmPelsWidth = static_cast<DWORD>(width);
@@ -260,6 +267,7 @@ public:
   HINSTANCE m_HInstance{};
   HWND m_Hwnd{};
   bool m_ExclusiveFullscreen{};
+  bool m_ChangeDisplayMode{};
   std::vector<WindowEvent> m_PendingEvents;
 };
 #endif
@@ -267,15 +275,16 @@ public:
 } // namespace
 
 std::unique_ptr<PlayerWindow> CreatePlayerWindowWin(
-    int x, int y, int width, int height, bool visible) {
+    int x, int y, int width, int height, bool visible, bool changeDisplayMode) {
 #if defined GITS_PLATFORM_WINDOWS
-  return std::make_unique<PlayerWindowWin>(x, y, width, height, visible);
+  return std::make_unique<PlayerWindowWin>(x, y, width, height, visible, changeDisplayMode);
 #else
   (void)x;
   (void)y;
   (void)width;
   (void)height;
   (void)visible;
+  (void)changeDisplayMode;
   return {};
 #endif
 }

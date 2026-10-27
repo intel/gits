@@ -151,11 +151,17 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
       m_Manager.GetWindowService().GetCurrentHwnd(c.m_pDesc.Value->OutputWindow);
   if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
     c.m_pDesc.Value->Windowed = false;
-    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
     LOG_INFO << "CreateSwapChain - Force exclusive fullscreen due to 'fullscreen'";
   } else if (Configurator::Get().common.player.showWindowBorder) {
     c.m_pDesc.Value->Windowed = true;
     LOG_INFO << "CreateSwapChain - Force windowed mode due to 'showWindowBorder'";
+  }
+}
+
+void ReplayCustomizationLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
+  if (!c.Skip && c.m_Result.Value == S_OK &&
+      Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
   }
 }
 
@@ -170,11 +176,17 @@ void ReplayCustomizationLayer::Pre(IDXGIFactory2CreateSwapChainForHwndCommand& c
       c.m_pFullscreenDesc.Value = &fullscreenDesc;
     }
     c.m_pFullscreenDesc.Value->Windowed = false;
-    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
     LOG_INFO << "CreateSwapChainForHwnd - Force exclusive fullscreen due to 'fullscreen'";
   } else if (c.m_pFullscreenDesc.Value && Configurator::Get().common.player.showWindowBorder) {
     c.m_pFullscreenDesc.Value->Windowed = true;
     LOG_INFO << "CreateSwapChainForHwnd - Force windowed mode due to 'showWindowBorder'";
+  }
+}
+
+void ReplayCustomizationLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
+  if (!c.Skip && c.m_Result.Value == S_OK &&
+      Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
+    m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
   }
 }
 
@@ -205,7 +217,8 @@ void ReplayCustomizationLayer::Post(CreateWindowMetaCommand& c) {
 }
 
 void ReplayCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
-  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr ||
+      m_ExclusiveFullscreenSwapChains.count(c.m_Object.Key)) {
     return;
   }
   m_Manager.GetWindowService().ResizePlayerWindow(m_Hwnd, static_cast<int>(c.m_Width.Value),
@@ -213,7 +226,8 @@ void ReplayCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
 }
 
 void ReplayCustomizationLayer::Post(IDXGISwapChain3ResizeBuffers1Command& c) {
-  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_Hwnd == nullptr ||
+      m_ExclusiveFullscreenSwapChains.count(c.m_Object.Key)) {
     return;
   }
   m_Manager.GetWindowService().ResizePlayerWindow(m_Hwnd, static_cast<int>(c.m_Width.Value),

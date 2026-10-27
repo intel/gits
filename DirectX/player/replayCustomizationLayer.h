@@ -35,7 +35,9 @@ public:
   void Pre(IDXGISwapChainSetFullscreenStateCommand& command) override;
   void Pre(IDXGISwapChainGetFullscreenStateCommand& command) override;
   void Pre(IDXGIFactoryCreateSwapChainCommand& command) override;
+  void Post(IDXGIFactoryCreateSwapChainCommand& command) override;
   void Pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
+  void Post(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
   void Pre(IDXGISwapChainPresentCommand& command) override;
   void Pre(IDXGISwapChain1Present1Command& command) override;
   void Post(IDXGISwapChainResizeBuffersCommand& command) override;

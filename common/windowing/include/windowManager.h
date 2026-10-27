@@ -39,7 +39,8 @@ public:
                                                    int width,
                                                    int height,
                                                    bool visible,
-                                                   uint64_t visualId = 0);
+                                                   uint64_t visualId = 0,
+                                                   bool changeDisplayMode = true);
   void ResizeWindow(WindowProtocol protocol,
                     uint64_t nativeDisplay,
                     uint64_t nativeWindow,

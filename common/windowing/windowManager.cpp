@@ -25,7 +25,7 @@ std::unique_ptr<PlayerWindow> CreatePlayerWindowXcb(
 std::unique_ptr<PlayerWindow> CreatePlayerWindowWayland(
     int x, int y, int width, int height, bool visible);
 std::unique_ptr<PlayerWindow> CreatePlayerWindowWin(
-    int x, int y, int width, int height, bool visible);
+    int x, int y, int width, int height, bool visible, bool changeDisplayMode);
 
 namespace {
 
@@ -64,13 +64,19 @@ PlayerWindow* WindowManager::FindPlayerWindow(WindowProtocol protocol,
   return it != m_Windows.end() ? it->window.get() : nullptr;
 }
 
-std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
-    WindowProtocol protocol, int x, int y, int width, int height, bool visible, uint64_t visualId) {
+std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(WindowProtocol protocol,
+                                                                int x,
+                                                                int y,
+                                                                int width,
+                                                                int height,
+                                                                bool visible,
+                                                                uint64_t visualId,
+                                                                bool changeDisplayMode) {
   std::unique_ptr<PlayerWindow> window;
   switch (protocol) {
 #if defined GITS_PLATFORM_WINDOWS
   case WindowProtocol::Win:
-    window = CreatePlayerWindowWin(x, y, width, height, visible);
+    window = CreatePlayerWindowWin(x, y, width, height, visible, changeDisplayMode);
     break;
 #endif
 #if defined GITS_PLATFORM_X11
