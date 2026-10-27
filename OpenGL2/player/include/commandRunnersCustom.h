@@ -371,8 +371,9 @@ private:
 
 // glXCreateWindow's and glXCreatePbuffer's Run() - create the drawable with the configuration
 // GlxFBConfigService chooses, and make it the recorded one's substitute in GlxDrawableService. A
-// player window glXCreateWindow creates has the configuration's visual. Their destroy runners
-// remove the substitute.
+// player window glXCreateWindow creates has the configuration's visual.
+// The command keeps returning the recorded drawable, which a subcapture records, as the commands
+// using it name the recorded one. Their destroy runners remove the substitute.
 class GlxCreateWindowRunner : public stream::CommandRunner {
 public:
   void Run() override;

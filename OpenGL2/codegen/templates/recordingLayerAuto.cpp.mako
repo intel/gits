@@ -19,7 +19,12 @@ void RecordingLayer::Pre(${cmd.name}Command& command) {
   if (m_Range.InRange()) {
     m_Recorder.Record(${cmd.name}CommandSerializer(command));
 % if cmd.name in frame_end_commands:
+% if has_return_member(cmd):
     m_RecordedFrameEndingSwap = command.m_Return.Value != 0;
+% else:
+    // A swap without a result always ends a frame.
+    m_RecordedFrameEndingSwap = true;
+% endif
 % endif
 % if cmd.name in list_commands:
   } else if (CompilingList(command.m_ThreadId)) {

@@ -39,6 +39,8 @@ public:
   void Post(wglSwapBuffersCommand& command) override;
   void Pre(wglSwapLayerBuffersCommand& command) override;
   void Post(wglSwapLayerBuffersCommand& command) override;
+  void Pre(glXSwapBuffersCommand& command) override;
+  void Post(glXSwapBuffersCommand& command) override;
 
 private:
   void EndFrame();

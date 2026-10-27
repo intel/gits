@@ -32,6 +32,14 @@ void SubcaptureLayer::Post(wglSwapLayerBuffersCommand& /*command*/) {
   EndFrame();
 }
 
+void SubcaptureLayer::Pre(glXSwapBuffersCommand& /*command*/) {
+  m_SwapEndsFrame = true;
+}
+
+void SubcaptureLayer::Post(glXSwapBuffersCommand& /*command*/) {
+  EndFrame();
+}
+
 void SubcaptureLayer::EndFrame() {
   if (m_SwapEndsFrame) {
     m_SwapEndsFrame = false;

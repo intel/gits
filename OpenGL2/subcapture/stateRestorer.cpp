@@ -9,6 +9,7 @@
 #include "stateRestorer.h"
 
 #include "commandSerializersAuto.h"
+#include "glxDrawableService.h"
 #include "handleMapService.h"
 #include "hdcVirtualizationService.h"
 #include "liveGl.h"
@@ -173,12 +174,7 @@ int DrainErrors() {
 
 void StateRestorer::Restore() {
   LOG_INFO << "Subcapture: restoring state";
-  const auto liveEntryPoint = ThreadContextService::Get().CurrentEntryPoint();
-  const HGLRC liveContext = GL_FN(wglGetCurrentContext)();
-  const HDC liveDc = liveContext != nullptr ? GL_FN(wglGetCurrentDC)() : nullptr;
-  const HDC liveReadDc = liveContext != nullptr
-                             ? ThreadContextService::CurrentReadDc(liveEntryPoint, liveDc)
-                             : nullptr;
+  const auto live = ThreadContextService::Capture(ThreadContextService::Get().CurrentEntryPoint());
 
   for (const SampledCommand& command : m_State.Topology()) {
     Emit(command);
@@ -217,7 +213,7 @@ void StateRestorer::Restore() {
     MapNames(context.ShareGroup, key);
     BeginReadback();
     RestoreContainers(key);
-    if (m_Version.AtLeast(3, 0) && m_RestoredDrawables.insert(m_LiveDc).second) {
+    if (m_Version.AtLeast(3, 0) && m_RestoredDrawables.insert(LiveDrawable()).second) {
       RestoreDefaultFramebuffer();
     }
     RestoreReadDrawable(*context.LastMakeCurrent);
@@ -239,37 +235,58 @@ void StateRestorer::Restore() {
 
   DeletePendingObjects(shareGroups);
 
-  for (uint32_t threadId : m_UsedThreads) {
+  for (const auto& [threadId, display] : m_UsedThreads) {
     m_ThreadId = threadId;
-    wglMakeCurrentCommand release;
-    Emit<wglMakeCurrentCommandSerializer>(release);
+    if (display != nullptr) {
+      glXMakeCurrentCommand release;
+      release.m_dpy.Value = display;
+      release.m_Return.Value = 1;
+      Emit<glXMakeCurrentCommandSerializer>(release);
+    } else {
+      wglMakeCurrentCommand release;
+      Emit<wglMakeCurrentCommandSerializer>(release);
+    }
   }
   for (const auto& [threadId, current] : m_State.Threads()) {
     if (current->Context != 0 && m_State.Contexts().contains(current->Context)) {
       Emit(current->Call);
     }
   }
-
-  if (liveContext == nullptr) {
-    GL_FN(wglMakeCurrent)(nullptr, nullptr);
-  } else {
-    ThreadContextService::MakeCurrent(liveEntryPoint, liveDc, liveReadDc, liveContext);
+  // After the make-current of the thread that still has the context or drawable current.
+  for (const auto& [context, destroy] : m_State.PendingGlxDestroys()) {
+    Emit(destroy);
   }
+  for (const auto& [drawable, destroy] : m_State.PendingGlxDrawableDestroys()) {
+    Emit(destroy);
+  }
+
+  ThreadContextService::MakeCurrent(live);
+}
+
+uint64_t StateRestorer::LiveDrawable() const {
+  return m_RecordedDisplay != nullptr ? m_LiveDrawable : reinterpret_cast<uintptr_t>(m_LiveDc);
 }
 
 // A make-context-current call can read another window or pbuffer than the one it draws to. That
 // drawable is restored as the draw one of a wglMakeCurrent, then the recorded call is made again.
 void StateRestorer::RestoreReadDrawable(const MakeCurrent& current) {
-  if (!m_Version.AtLeast(3, 0) || current.ReadDc == nullptr || current.ReadDc == current.Dc) {
+  if (!m_Version.AtLeast(3, 0)) {
+    return;
+  }
+  if (current.GlxDisplay != nullptr) {
+    RestoreGlxReadDrawable(current);
+    return;
+  }
+  if (current.ReadDc == nullptr || current.ReadDc == current.Dc) {
     return;
   }
   const HDC readDc = HdcVirtualizationService::Get().Resolve(current.ReadDc);
   const HGLRC context = ContextHandleMapService::Get().GetHandle(current.Context);
-  if (readDc == nullptr || m_RestoredDrawables.contains(readDc) ||
+  if (readDc == nullptr || m_RestoredDrawables.contains(reinterpret_cast<uintptr_t>(readDc)) ||
       !GL_FN(wglMakeCurrent)(readDc, context)) {
     return;
   }
-  m_RestoredDrawables.insert(readDc);
+  m_RestoredDrawables.insert(reinterpret_cast<uintptr_t>(readDc));
   wglMakeCurrentCommand makeCurrent;
   makeCurrent.m_hDc.Value = current.ReadDc;
   makeCurrent.m_newContext.Key = current.Context;
@@ -283,6 +300,38 @@ void StateRestorer::RestoreReadDrawable(const MakeCurrent& current) {
 
   Emit(current.Call);
   GL_FN(wglMakeCurrent)(drawDc, context);
+}
+
+// The GLX counterpart of RestoreReadDrawable, through glXMakeContextCurrent with the read drawable
+// as both drawables.
+void StateRestorer::RestoreGlxReadDrawable(const MakeCurrent& current) {
+  if (current.ReadDrawable == 0 || current.ReadDrawable == current.Drawable) {
+    return;
+  }
+  Display* display = GlxDrawableService::Get().GetDisplay();
+  const GLXDrawable read = GlxDrawableService::Get().Resolve(current.ReadDrawable);
+  const GLXContext context = GlxContextHandleMapService::Get().GetHandle(current.Context);
+  if (read == 0 || m_RestoredDrawables.contains(read) ||
+      !GL_FN(glXMakeContextCurrent)(display, read, read, context)) {
+    return;
+  }
+  m_RestoredDrawables.insert(read);
+  glXMakeContextCurrentCommand makeCurrent;
+  makeCurrent.m_dpy.Value = current.GlxDisplay;
+  makeCurrent.m_draw.Value = current.ReadDrawable;
+  makeCurrent.m_read.Value = current.ReadDrawable;
+  makeCurrent.m_ctx.Key = current.Context;
+  makeCurrent.m_Return.Value = 1;
+  Emit<glXMakeContextCurrentCommandSerializer>(makeCurrent);
+
+  const GLXDrawable drawDrawable = std::exchange(m_LiveDrawable, read);
+  const GLXDrawable recordedDrawDrawable = std::exchange(m_RecordedDrawable, current.ReadDrawable);
+  RestoreDefaultFramebuffer();
+  m_LiveDrawable = drawDrawable;
+  m_RecordedDrawable = recordedDrawDrawable;
+
+  Emit(current.Call);
+  GL_FN(glXMakeContextCurrent)(display, drawDrawable, drawDrawable, context);
 }
 
 // Programs deleted while in use are deleted again once the restored contexts use them. Deleted
@@ -609,19 +658,36 @@ ListCompileState StateRestorer::ResetListCompileState() {
 }
 
 bool StateRestorer::SwitchTo(const MakeCurrent& current) {
-  const HGLRC context = ContextHandleMapService::Get().GetHandle(current.Context);
-  const HDC dc = HdcVirtualizationService::Get().Resolve(current.Dc);
-  if (context == nullptr || !GL_FN(wglMakeCurrent)(dc, context)) {
+  bool switched = false;
+  if (current.GlxDisplay != nullptr) {
+    const GLXContext context = GlxContextHandleMapService::Get().GetHandle(current.Context);
+    const GLXDrawable drawable = GlxDrawableService::Get().Resolve(current.Drawable);
+    switched =
+        context != nullptr && GL_FN(glXMakeContextCurrent)(GlxDrawableService::Get().GetDisplay(),
+                                                           drawable, drawable, context) != 0;
+    if (switched) {
+      m_LiveDrawable = drawable;
+      m_RecordedDrawable = current.Drawable;
+    }
+  } else {
+    const HGLRC context = ContextHandleMapService::Get().GetHandle(current.Context);
+    const HDC dc = HdcVirtualizationService::Get().Resolve(current.Dc);
+    switched = context != nullptr && GL_FN(wglMakeCurrent)(dc, context) != 0;
+    if (switched) {
+      m_LiveDc = dc;
+      m_RecordedDc = current.Dc;
+    }
+  }
+  if (!switched) {
     LOG_WARNING << "Subcapture: cannot make context " << current.Context
                 << " current, its state is not restored";
     return false;
   }
+  m_RecordedDisplay = current.GlxDisplay;
   DrainErrors();
   Emit(current.Call);
   m_ThreadId = current.ThreadId;
-  m_UsedThreads.insert(current.ThreadId);
-  m_LiveDc = dc;
-  m_RecordedDc = current.Dc;
+  m_UsedThreads[current.ThreadId] = current.GlxDisplay;
 
   ReadVersion();
   ReadExtensions();
@@ -918,13 +984,24 @@ void StateRestorer::EndReadback() {
 // Contents of the window or pbuffer the current context draws to. Color and depth-stencil are
 // blitted separately, so a depth-stencil format the drawable does not match loses only
 // depth-stencil. The front color of a double-buffered drawable is restored too, since a swap
-// that exchanges the buffers shows it again after the next swap. It is drawn to the back buffer
-// and swapped to the front rather than drawn to the front buffer, which applications that only
-// swap never draw to.
+// that exchanges the buffers shows it again after the next swap. A WGL drawable's is drawn to the
+// back buffer and swapped to the front rather than drawn to the front buffer, which applications
+// that only swap never draw to. A GLX window's is drawn to the front buffer, as glXSwapBuffers
+// leaves the back buffer undefined, and has no result a swap could be recorded as failed with, so
+// a swap would end a frame. A GLX pbuffer's is not restored, as drawing to it can raise X errors
+// when the context is released, and it is never presented.
 void StateRestorer::RestoreDefaultFramebuffer() {
+  const bool glx = m_RecordedDisplay != nullptr;
   GLsizei width = 0;
   GLsizei height = 0;
-  if (const auto pbuffer = m_State.PbufferSize(m_RecordedDc)) {
+  if (glx) {
+    unsigned int value[2] = {};
+    Display* display = GlxDrawableService::Get().GetDisplay();
+    GL_FN(glXQueryDrawable)(display, m_LiveDrawable, GLX_WIDTH, &value[0]);
+    GL_FN(glXQueryDrawable)(display, m_LiveDrawable, GLX_HEIGHT, &value[1]);
+    width = static_cast<GLsizei>(value[0]);
+    height = static_cast<GLsizei>(value[1]);
+  } else if (const auto pbuffer = m_State.PbufferSize(m_RecordedDc)) {
     std::tie(width, height) = *pbuffer;
   } else if (!GetWindowClientSize(m_LiveDc, width, height)) {
     return;
@@ -981,7 +1058,8 @@ void StateRestorer::RestoreDefaultFramebuffer() {
     GL_FN(glReadPixels)(0, 0, width, height, depthFormat.Format, depthFormat.Type, depth.data());
   }
   std::vector<uint8_t> frontColor;
-  if (doubleBuffered != GL_FALSE) {
+  if (doubleBuffered != GL_FALSE &&
+      (!glx || GlxDrawableService::Get().IsWindow(m_RecordedDrawable))) {
     GL_FN(glReadBuffer)(GL_FRONT);
     frontColor.resize(pixelCount * colorFormat.PixelSize);
     GL_FN(glReadPixels)
@@ -1005,9 +1083,14 @@ void StateRestorer::RestoreDefaultFramebuffer() {
   bindDraw.m_target.Value = GL_DRAW_FRAMEBUFFER;
   Emit<glBindFramebufferCommandSerializer>(bindDraw);
   glDrawBufferCommand drawBuffer;
+  if (!frontColor.empty() && glx) {
+    drawBuffer.m_buf.Value = GL_FRONT;
+    Emit<glDrawBufferCommandSerializer>(drawBuffer);
+    EmitBlit(GL_COLOR_ATTACHMENT0, GL_RGBA8, width, height, colorFormat, std::move(frontColor));
+  }
   drawBuffer.m_buf.Value = buffer;
   Emit<glDrawBufferCommandSerializer>(drawBuffer);
-  if (!frontColor.empty()) {
+  if (!frontColor.empty() && !glx) {
     EmitBlit(GL_COLOR_ATTACHMENT0, GL_RGBA8, width, height, colorFormat, std::move(frontColor));
     // A swap recorded as failed does not end a frame.
     wglSwapBuffersCommand swap;

@@ -36,6 +36,8 @@ public:
   void Post(WindowGeometryMetaCommand& command) override;
   void Post(PixelFormatMetaCommand& command) override;
   void Post(wglSetPixelFormatCommand& command) override;
+  void Post(glXChooseVisualCommand& command) override;
+  void Post(glXGetVisualFromFBConfigCommand& command) override;
 
   // ---- Contexts ---------------------------------------------------------
   void Post(wglCreateContextCommand& command) override;
@@ -45,6 +47,19 @@ public:
   void Post(wglMakeCurrentCommand& command) override;
   void Post(wglMakeContextCurrentARBCommand& command) override;
   void Post(wglMakeContextCurrentEXTCommand& command) override;
+  void Post(glXCreateContextCommand& command) override;
+  void Post(glXCreateNewContextCommand& command) override;
+  void Post(glXCreateContextAttribsARBCommand& command) override;
+  void Post(glXDestroyContextCommand& command) override;
+  void Post(glXMakeCurrentCommand& command) override;
+  void Post(glXMakeContextCurrentCommand& command) override;
+  void Post(glXMakeCurrentReadSGICommand& command) override;
+
+  // ---- GLX windows and pbuffers -----------------------------------------
+  void Post(glXCreateWindowCommand& command) override;
+  void Post(glXDestroyWindowCommand& command) override;
+  void Post(glXCreatePbufferCommand& command) override;
+  void Post(glXDestroyPbufferCommand& command) override;
 
   // ---- Pbuffers ---------------------------------------------------------
   void Post(wglCreatePbufferARBCommand& command) override;
@@ -59,6 +74,7 @@ public:
   // ---- Frames -----------------------------------------------------------
   void Post(wglSwapBuffersCommand& command) override;
   void Post(wglSwapLayerBuffersCommand& command) override;
+  void Post(glXSwapBuffersCommand& command) override;
 
   // ---- Buffers ----------------------------------------------------------
   void Post(glGenBuffersCommand& command) override;

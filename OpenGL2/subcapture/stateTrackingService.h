@@ -74,6 +74,10 @@ struct MakeCurrent {
   HDC Dc{};
   // The draw DC, except for a make-context-current call that reads another drawable.
   HDC ReadDc{};
+  // The recorded display, draw drawable and read drawable of a GLX make-current call.
+  Display* GlxDisplay{};
+  GLXDrawable Drawable{};
+  GLXDrawable ReadDrawable{};
 };
 
 struct ContextState {
@@ -190,7 +194,20 @@ public:
   void CreateContext(GITSKey context, GITSKey shareContext);
   void ShareLists(GITSKey context, GITSKey otherContext);
   void DeleteContext(GITSKey context);
+  // A destroyed GLX context stays usable until the thread it is current on releases it. One that
+  // is still current is kept, and `destroy` is added to the topology and the context deleted
+  // once no thread has it current any more.
+  void DestroyGlxContext(GITSKey context, SampledCommand destroy);
+  // The same for a GLX window or pbuffer: `destroy` is added to the topology once no thread has
+  // `drawable` current any more.
+  void DestroyGlxDrawable(GLXDrawable drawable, SampledCommand destroy);
   void SetCurrent(uint32_t threadId, GITSKey context, HDC dc, HDC readDc, SampledCommand call);
+  void SetCurrentGlx(uint32_t threadId,
+                     GITSKey context,
+                     Display* display,
+                     GLXDrawable drawable,
+                     GLXDrawable readDrawable,
+                     SampledCommand call);
   void CreatePbuffer(GITSKey pbuffer, GLsizei width, GLsizei height);
   void GetPbufferDc(GITSKey pbuffer, HDC dc);
   void ReleasePbufferDc(HDC dc);
@@ -272,6 +289,14 @@ public:
   const std::map<uint32_t, std::shared_ptr<MakeCurrent>>& Threads() const {
     return m_Threads;
   }
+  // The destroy commands of the GLX contexts still current on a thread, by context.
+  const std::map<GITSKey, SampledCommand>& PendingGlxDestroys() const {
+    return m_PendingGlxDestroys;
+  }
+  // The destroy commands of the GLX drawables still current on a thread, by drawable.
+  const std::map<GLXDrawable, SampledCommand>& PendingGlxDrawableDestroys() const {
+    return m_PendingGlxDrawableDestroys;
+  }
   const std::map<GITSKey, ObjectState>& Objects() const {
     return m_Objects;
   }
@@ -303,6 +328,8 @@ public:
   }
 
 private:
+  void SetCurrent(std::shared_ptr<MakeCurrent> current);
+  bool IsGlxDrawableCurrent(GLXDrawable drawable) const;
   GITSKey CurrentContext(uint32_t threadId) const;
   GITSKey OwnerFor(GLObjectKind kind, uint32_t threadId) const;
   GITSKey ShareGroupOf(GITSKey context) const;
@@ -314,6 +341,8 @@ private:
   std::vector<SampledCommand> m_Topology;
   std::map<GITSKey, ContextState> m_Contexts;
   std::map<uint32_t, std::shared_ptr<MakeCurrent>> m_Threads;
+  std::map<GITSKey, SampledCommand> m_PendingGlxDestroys;
+  std::map<GLXDrawable, SampledCommand> m_PendingGlxDrawableDestroys;
   std::map<GITSKey, std::pair<GLsizei, GLsizei>> m_PbufferSizes;
   // Recorded pbuffer DC to its pbuffer.
   std::map<HDC, GITSKey> m_PbufferDcs;

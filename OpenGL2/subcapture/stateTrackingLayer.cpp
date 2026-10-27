@@ -131,6 +131,14 @@ void StateTrackingLayer::Post(wglSetPixelFormatCommand& command) {
   m_State.AddTopology(Sampled<wglSetPixelFormatCommandSerializer>(m_State, command));
 }
 
+void StateTrackingLayer::Post(glXChooseVisualCommand& command) {
+  m_State.AddTopology(Unsampled<glXChooseVisualCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXGetVisualFromFBConfigCommand& command) {
+  m_State.AddTopology(Unsampled<glXGetVisualFromFBConfigCommandSerializer>(command));
+}
+
 // ---- Contexts -----------------------------------------------------------
 
 void StateTrackingLayer::Post(wglCreateContextCommand& command) {
@@ -184,6 +192,73 @@ void StateTrackingLayer::Post(wglMakeContextCurrentEXTCommand& command) {
   m_State.SetCurrent(command.m_ThreadId, command.m_hglrc.Key, command.m_hDrawDC.Value,
                      command.m_hReadDC.Value,
                      Sampled<wglMakeContextCurrentEXTCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXCreateContextCommand& command) {
+  m_State.AddTopology(Unsampled<glXCreateContextCommandSerializer>(command));
+  m_State.CreateContext(command.m_Return.Key, command.m_shareList.Key);
+}
+
+void StateTrackingLayer::Post(glXCreateNewContextCommand& command) {
+  m_State.AddTopology(Unsampled<glXCreateNewContextCommandSerializer>(command));
+  m_State.CreateContext(command.m_Return.Key, command.m_share_list.Key);
+}
+
+void StateTrackingLayer::Post(glXCreateContextAttribsARBCommand& command) {
+  m_State.AddTopology(Unsampled<glXCreateContextAttribsARBCommandSerializer>(command));
+  m_State.CreateContext(command.m_Return.Key, command.m_share_context.Key);
+}
+
+void StateTrackingLayer::Post(glXDestroyContextCommand& command) {
+  m_State.DestroyGlxContext(command.m_ctx.Key,
+                            Unsampled<glXDestroyContextCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXMakeCurrentCommand& command) {
+  if (!command.m_Return.Value) {
+    return;
+  }
+  m_State.SetCurrentGlx(command.m_ThreadId, command.m_ctx.Key, command.m_dpy.Value,
+                        command.m_drawable.Value, command.m_drawable.Value,
+                        Sampled<glXMakeCurrentCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXMakeContextCurrentCommand& command) {
+  if (!command.m_Return.Value) {
+    return;
+  }
+  m_State.SetCurrentGlx(command.m_ThreadId, command.m_ctx.Key, command.m_dpy.Value,
+                        command.m_draw.Value, command.m_read.Value,
+                        Sampled<glXMakeContextCurrentCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXMakeCurrentReadSGICommand& command) {
+  if (!command.m_Return.Value) {
+    return;
+  }
+  m_State.SetCurrentGlx(command.m_ThreadId, command.m_ctx.Key, command.m_dpy.Value,
+                        command.m_draw.Value, command.m_read.Value,
+                        Sampled<glXMakeCurrentReadSGICommandSerializer>(m_State, command));
+}
+
+// ---- GLX windows and pbuffers -------------------------------------------
+
+void StateTrackingLayer::Post(glXCreateWindowCommand& command) {
+  m_State.AddTopology(Sampled<glXCreateWindowCommandSerializer>(m_State, command));
+}
+
+void StateTrackingLayer::Post(glXDestroyWindowCommand& command) {
+  m_State.DestroyGlxDrawable(command.m_win.Value,
+                             Unsampled<glXDestroyWindowCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXCreatePbufferCommand& command) {
+  m_State.AddTopology(Unsampled<glXCreatePbufferCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glXDestroyPbufferCommand& command) {
+  m_State.DestroyGlxDrawable(command.m_pbuf.Value,
+                             Unsampled<glXDestroyPbufferCommandSerializer>(command));
 }
 
 // ---- Pbuffers -----------------------------------------------------------
@@ -302,6 +377,10 @@ void StateTrackingLayer::Post(wglSwapBuffersCommand& command) {
 }
 
 void StateTrackingLayer::Post(wglSwapLayerBuffersCommand& command) {
+  ForgetDetached(command.m_ThreadId);
+}
+
+void StateTrackingLayer::Post(glXSwapBuffersCommand& command) {
   ForgetDetached(command.m_ThreadId);
 }
 

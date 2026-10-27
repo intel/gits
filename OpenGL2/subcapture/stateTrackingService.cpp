@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <utility>
 
 namespace gits::opengl2 {
 
@@ -121,8 +122,74 @@ void StateTrackingService::SetCurrent(
   current->Context = context;
   current->Dc = dc;
   current->ReadDc = readDc;
-  m_Threads[threadId] = current;
-  const auto state = m_Contexts.find(context);
+  SetCurrent(std::move(current));
+}
+
+void StateTrackingService::SetCurrentGlx(uint32_t threadId,
+                                         GITSKey context,
+                                         Display* display,
+                                         GLXDrawable drawable,
+                                         GLXDrawable readDrawable,
+                                         SampledCommand call) {
+  auto current = std::make_shared<MakeCurrent>();
+  current->Call = std::move(call);
+  current->ThreadId = threadId;
+  current->Context = context;
+  current->GlxDisplay = display;
+  current->Drawable = drawable;
+  current->ReadDrawable = readDrawable;
+  SetCurrent(std::move(current));
+}
+
+void StateTrackingService::DestroyGlxContext(GITSKey context, SampledCommand destroy) {
+  const bool current =
+      std::any_of(m_Threads.begin(), m_Threads.end(),
+                  [context](const auto& entry) { return entry.second->Context == context; });
+  if (context != 0 && current) {
+    m_PendingGlxDestroys[context] = std::move(destroy);
+    return;
+  }
+  m_Topology.push_back(std::move(destroy));
+  DeleteContext(context);
+}
+
+void StateTrackingService::DestroyGlxDrawable(GLXDrawable drawable, SampledCommand destroy) {
+  if (drawable != 0 && IsGlxDrawableCurrent(drawable)) {
+    m_PendingGlxDrawableDestroys[drawable] = std::move(destroy);
+    return;
+  }
+  m_Topology.push_back(std::move(destroy));
+}
+
+bool StateTrackingService::IsGlxDrawableCurrent(GLXDrawable drawable) const {
+  return std::any_of(m_Threads.begin(), m_Threads.end(), [drawable](const auto& entry) {
+    return entry.second->Context != 0 &&
+           (entry.second->Drawable == drawable || entry.second->ReadDrawable == drawable);
+  });
+}
+
+void StateTrackingService::SetCurrent(std::shared_ptr<MakeCurrent> current) {
+  const std::shared_ptr<MakeCurrent> released =
+      std::exchange(m_Threads[current->ThreadId], current);
+  if (released != nullptr && released->Context != current->Context) {
+    const auto pending = m_PendingGlxDestroys.find(released->Context);
+    if (pending != m_PendingGlxDestroys.end()) {
+      const GITSKey context = released->Context;
+      SampledCommand destroy = std::move(pending->second);
+      m_PendingGlxDestroys.erase(pending);
+      DestroyGlxContext(context, std::move(destroy));
+    }
+  }
+  for (auto pending = m_PendingGlxDrawableDestroys.begin();
+       pending != m_PendingGlxDrawableDestroys.end();) {
+    if (IsGlxDrawableCurrent(pending->first)) {
+      ++pending;
+      continue;
+    }
+    m_Topology.push_back(std::move(pending->second));
+    pending = m_PendingGlxDrawableDestroys.erase(pending);
+  }
+  const auto state = m_Contexts.find(current->Context);
   if (state == m_Contexts.end()) {
     return;
   }

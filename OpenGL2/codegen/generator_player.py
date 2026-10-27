@@ -85,8 +85,7 @@ def display_list_commands(commands: list[Command]) -> frozenset[str]:
 # Commands AnalyzerLayer handles by hand: display list compilation and frame ends.
 ANALYZER_LAYER_CUSTOM_COMMANDS: frozenset[str] = frozenset({'glNewList', 'glEndList'}) | FRAME_END_COMMANDS
 
-# TODO: End subcapture frames at glXSwapBuffers once subcapture restores GLX state.
-_SUBCAPTURE_FRAME_END_COMMANDS: list[str] = sorted(FRAME_END_COMMANDS - {'glXSwapBuffers'})
+_SUBCAPTURE_FRAME_END_COMMANDS: list[str] = sorted(FRAME_END_COMMANDS)
 
 
 def analyzed_object_params(commands: list[Command]) -> dict[str, list[str]]:

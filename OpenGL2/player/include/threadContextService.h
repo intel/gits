@@ -46,6 +46,24 @@ public:
     Glx
   };
 
+  // A context and its draw and read DCs or drawables, and the entry point that made them current.
+  struct Current {
+    HDC Dc{};
+    HDC ReadDc{};
+    HGLRC Context{};
+    GLXDrawable Drawable{};
+    GLXDrawable ReadDrawable{};
+    GLXContext GlxContext{};
+    MakeCurrentEntryPoint EntryPoint{MakeCurrentEntryPoint::Core};
+  };
+
+  // The context current now, and its draw and read DCs or drawables, as made current through
+  // `entryPoint`.
+  static Current Capture(MakeCurrentEntryPoint entryPoint);
+  // Makes `current` current again through its entry point, or releases the current context for
+  // one without a context.
+  static bool MakeCurrent(const Current& current);
+
   // Records the context current now, and its draw and read DCs or drawables, as `threadId`'s. A
   // WGL make-current through `entryPoint` that failed leaves the entry point of the current
   // context.
@@ -75,17 +93,7 @@ public:
 private:
   ThreadContextService() = default;
 
-  struct Current {
-    HDC Dc{};
-    HDC ReadDc{};
-    HGLRC Context{};
-    GLXDrawable Drawable{};
-    GLXDrawable ReadDrawable{};
-    GLXContext GlxContext{};
-    MakeCurrentEntryPoint EntryPoint{MakeCurrentEntryPoint::Core};
-  };
   static bool IsCurrent(const Current& current);
-  static bool MakeCurrent(const Current& current);
   bool IsBound(GLXContext context) const;
   bool IsDrawableBound(GLXDrawable drawable) const;
   void DestroyReleased();

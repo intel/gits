@@ -96,30 +96,32 @@ bool ThreadContextService::MakeCurrent(const Current& current) {
   return MakeCurrent(current.EntryPoint, current.Dc, current.ReadDc, current.Context);
 }
 
-void ThreadContextService::NoteCurrent(uint32_t threadId,
-                                       MakeCurrentEntryPoint entryPoint,
-                                       bool succeeded) {
+ThreadContextService::Current ThreadContextService::Capture(MakeCurrentEntryPoint entryPoint) {
   auto& table = player::g_DispatchTable;
-  Current& current = m_Current[threadId];
+  Current current;
+  current.EntryPoint = entryPoint;
   if (entryPoint == MakeCurrentEntryPoint::Glx) {
-    current = {};
     current.GlxContext = table.glXGetCurrentContext.load(std::memory_order_acquire)();
     if (current.GlxContext != nullptr) {
       current.Drawable = table.glXGetCurrentDrawable.load(std::memory_order_acquire)();
       current.ReadDrawable = table.glXGetCurrentReadDrawable.load(std::memory_order_acquire)();
     }
-    current.EntryPoint = entryPoint;
-    m_EntryPoint = entryPoint;
-    return;
-  }
-  if (!succeeded) {
-    entryPoint = m_EntryPoint;
+    return current;
   }
   current.Context = table.wglGetCurrentContext.load(std::memory_order_acquire)();
   current.Dc = current.Context != nullptr ? table.wglGetCurrentDC.load(std::memory_order_acquire)()
                                           : nullptr;
   current.ReadDc = current.Context != nullptr ? CurrentReadDc(entryPoint, current.Dc) : nullptr;
-  current.EntryPoint = entryPoint;
+  return current;
+}
+
+void ThreadContextService::NoteCurrent(uint32_t threadId,
+                                       MakeCurrentEntryPoint entryPoint,
+                                       bool succeeded) {
+  if (entryPoint != MakeCurrentEntryPoint::Glx && !succeeded) {
+    entryPoint = m_EntryPoint;
+  }
+  m_Current[threadId] = Capture(entryPoint);
   m_EntryPoint = entryPoint;
   DestroyReleased();
 }

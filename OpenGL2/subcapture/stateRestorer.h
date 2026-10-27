@@ -87,6 +87,8 @@ private:
 
   // Makes `current`'s context current in the subcapture and on the replay driver.
   bool SwitchTo(const MakeCurrent& current);
+  // The DC or GLX drawable the current context draws to on the replay driver.
+  uint64_t LiveDrawable() const;
   void ReadVersion();
   void ReadExtensions();
   void MapNames(GITSKey shareGroup, GITSKey context);
@@ -177,6 +179,7 @@ private:
   void RestoreProgramPipeline(GITSKey key, GLuint name);
   void RestoreDefaultFramebuffer();
   void RestoreReadDrawable(const MakeCurrent& current);
+  void RestoreGlxReadDrawable(const MakeCurrent& current);
   void DeletePendingObjects(const std::map<GITSKey, std::shared_ptr<MakeCurrent>>& shareGroups);
   // Whether a container of the current context `context`, or a buffer texture of `shareGroup`,
   // references the buffer, texture or renderbuffer `name`. A deletion detaches it from the
@@ -203,10 +206,17 @@ private:
   // The share group and context whose names are mapped at the first key lookup.
   std::optional<std::pair<GITSKey, GITSKey>> m_UnmappedNames;
   uint32_t m_ThreadId{};
-  std::set<uint32_t> m_UsedThreads;
+  // The recorded threads made current on, and the recorded display of those that used GLX.
+  std::map<uint32_t, Display*> m_UsedThreads;
   HDC m_LiveDc{};
   HDC m_RecordedDc{};
-  std::set<HDC> m_RestoredDrawables;
+  // For a context made current through GLX, the drawable it draws to on the replay driver and as
+  // recorded, and the recorded display, which a WGL context has none of.
+  GLXDrawable m_LiveDrawable{};
+  GLXDrawable m_RecordedDrawable{};
+  Display* m_RecordedDisplay{};
+  // The DCs and GLX drawables whose contents are restored.
+  std::set<uint64_t> m_RestoredDrawables;
   Version m_Version;
   std::set<std::string> m_Extensions;
   std::unordered_map<GLObjectKind, std::unordered_map<GLuint, GITSKey>> m_Keys;

@@ -55,6 +55,14 @@ void AnalyzerLayer::Post(wglSwapLayerBuffersCommand& /*command*/) {
   EndFrame();
 }
 
+void AnalyzerLayer::Pre(glXSwapBuffersCommand& /*command*/) {
+  m_SwapEndsFrame = true;
+}
+
+void AnalyzerLayer::Post(glXSwapBuffersCommand& /*command*/) {
+  EndFrame();
+}
+
 void AnalyzerLayer::EndFrame() {
   if (!m_SwapEndsFrame) {
     return;

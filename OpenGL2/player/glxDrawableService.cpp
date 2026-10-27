@@ -92,6 +92,12 @@ uint64_t GlxDrawableService::Resolve(uint64_t recordedDrawable, uint64_t visualI
   return window.Drawable;
 }
 
+bool GlxDrawableService::IsWindow(uint64_t recordedDrawable) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  const auto it = m_Substitutes.find(recordedDrawable);
+  return it == m_Substitutes.end() || it->second.RecordedWindow != 0;
+}
+
 void GlxDrawableService::SetSubstitute(uint64_t recordedDrawable,
                                        uint64_t liveDrawable,
                                        uint64_t recordedWindow) {

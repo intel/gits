@@ -42,6 +42,8 @@ public:
   // one with that visual and hides it until the end of replay, as X windows cannot change their
   // visual, which loses what was set on it before, such as its swap interval. 0 resolves to 0.
   uint64_t Resolve(uint64_t recordedDrawable, uint64_t visualId = 0);
+  // False for a recorded pbuffer, true for an X or GLX window.
+  bool IsWindow(uint64_t recordedDrawable);
   // Makes `liveDrawable` the substitute of a recorded GLX window or pbuffer until removed. A GLX
   // window's `recordedWindow` is the recorded X window it was created for, and 0 for a pbuffer.
   void SetSubstitute(uint64_t recordedDrawable, uint64_t liveDrawable, uint64_t recordedWindow);

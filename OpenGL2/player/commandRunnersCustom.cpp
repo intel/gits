@@ -582,17 +582,16 @@ void GlxCreateWindowRunner::Run() {
   const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
   const Window real_win =
       drawables.Resolve(command.m_win.Value, GlxFBConfigService::VisualId(config));
-  const GLXWindow recordedWindow = command.m_Return.Value;
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.glXCreateWindow.load(std::memory_order_acquire);
-    command.m_Return.Value =
+    const GLXWindow live =
         realFunction(drawables.GetDisplay(), config, real_win,
                      command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
-    if (command.m_Return.Value != 0) {
-      drawables.SetSubstitute(recordedWindow, command.m_Return.Value, command.m_win.Value);
+    if (live != 0) {
+      drawables.SetSubstitute(command.m_Return.Value, live, command.m_win.Value);
     }
   }
   for (Layer* layer : manager.GetPostLayers()) {
@@ -626,17 +625,16 @@ void GlxCreatePbufferRunner::Run() {
   auto& manager = PlayerManager::Get();
   auto& drawables = GlxDrawableService::Get();
   const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
-  const GLXPbuffer recordedPbuffer = command.m_Return.Value;
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.glXCreatePbuffer.load(std::memory_order_acquire);
-    command.m_Return.Value =
+    const GLXPbuffer live =
         realFunction(drawables.GetDisplay(), config,
                      command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
-    if (command.m_Return.Value != 0) {
-      drawables.SetSubstitute(recordedPbuffer, command.m_Return.Value, 0);
+    if (live != 0) {
+      drawables.SetSubstitute(command.m_Return.Value, live, 0);
     }
   }
   for (Layer* layer : manager.GetPostLayers()) {
