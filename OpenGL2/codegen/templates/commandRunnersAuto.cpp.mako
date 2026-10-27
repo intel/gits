@@ -19,6 +19,9 @@ ${AUTO_GENERATED_HEADER}
 //     real HDC for the recorded, process-foreign value.
 //   - Argument<Display*>/Argument<GLXDrawable>: GlxDrawableService substitutes the player's X
 //     connection and a player-owned window for the recorded values.
+//   - Argument<GLXFBConfig>: GlxFBConfigService substitutes the player's configuration chosen
+//     from the attributes recorded right before the command.
+// A command in custom_player_runners.py's UNREPLAYED_COMMANDS runs its layers only.
 //   - HandleArgument<GLuint>/HandleArrayArgument<GLuint> (see object_name_lifecycle.py): a
 //     LOOKUP/DELETE-role field resolves its decoded Key(s) to live, player-local name(s) via
 //     UpdateHandle()/UpdateHandleArray() immediately before the call; a CREATE-role array
@@ -73,6 +76,7 @@ ${AUTO_GENERATED_HEADER}
 #include "bindlessHandleMapService.h"
 #include "discardedOutputElements.h"
 #include "glxDrawableService.h"
+#include "glxFBConfigService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -127,8 +131,15 @@ T* DiscardedOutputScratch(size_t listElements) {
                   if display_names and p.name == 'screen' and p.type_facts.base_type == 'int' and
                   p.type_facts.is_scalar}
   drawable_params = [p for p in cmd.params
-                     if p.type_facts.is_opaque_handle and p.type_facts.base_type == 'GLXDrawable']
+                     if p.type_facts.is_opaque_handle and
+                     p.type_facts.base_type in ('GLXDrawable', 'GLXWindow', 'GLXPbuffer', 'Window')]
   drawable_names = {p.name for p in drawable_params}
+  replayed = cmd.name not in unreplayed_commands
+  # The player's framebuffer configuration, chosen from the recorded attributes.
+  config_params = [p for p in cmd.params
+                   if replayed and p.type_facts.is_opaque_handle and
+                   p.type_facts.base_type == 'GLXFBConfig']
+  config_names = {p.name for p in config_params}
   guard = platform_guards.get(cmd.api)
   is_handle_creating = (not is_void and cmd.return_value.type_facts.is_mapped_handle and
                          cmd.name in handle_creating_commands)
@@ -251,7 +262,7 @@ T* DiscardedOutputScratch(size_t listElements) {
                   f'command.m_{p.name}.Value)')
       if is_bindless_handle_param(p):
           return f'BindlessHandleMapService::Get().Resolve(command.m_{p.name}.Value)'
-      if p.name in hdc_names or p.name in drawable_names:
+      if p.name in hdc_names or p.name in drawable_names or p.name in config_names:
           return f'real_{p.name}'
       if p.name in display_names:
           return 'GlxDrawableService::Get().GetDisplay()'
@@ -388,8 +399,13 @@ void ${cmd.name}Runner::Run() {
 % for p in hdc_params:
   HDC real_${p.name} = HdcVirtualizationService::Get().Resolve(command.m_${p.name}.Value);
 % endfor
+% if replayed:
 % for p in drawable_params:
   GLXDrawable real_${p.name} = GlxDrawableService::Get().Resolve(command.m_${p.name}.Value);
+% endfor
+% endif
+% for p in config_params:
+  GLXFBConfig real_${p.name} = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
 % endfor
 % if returns_bindless_handle:
   const GLuint64 capturedHandle = command.m_Return.Value;
@@ -470,6 +486,7 @@ void ${cmd.name}Runner::Run() {
     ${p.name}Ptrs[i] = reinterpret_cast<const void*>(command.m_${p.name}.Data[i]);
   }
 % endfor
+% if replayed:
   if (manager.ExecuteCommands() && !command.m_Skip) {
     auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if pixel_transfer_size_params:
@@ -550,6 +567,7 @@ ${call_indent}realFunction(${call_args});
     }
 % endif
   }
+% endif
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
   }

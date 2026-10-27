@@ -15,6 +15,7 @@
 
 #if defined GITS_PLATFORM_X11
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #endif
 
 #include <algorithm>
@@ -63,16 +64,44 @@ int GlxDrawableService::GetDefaultScreen() {
 #endif
 }
 
-uint64_t GlxDrawableService::Resolve(uint64_t recordedDrawable) {
+void GlxDrawableService::Free(void* data) {
+#if defined GITS_PLATFORM_X11
+  if (data != nullptr) {
+    XFree(data);
+  }
+#endif
+}
+
+uint64_t GlxDrawableService::Resolve(uint64_t recordedDrawable, uint64_t visualId) {
   if (recordedDrawable == 0) {
     return 0;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
+  if (const auto it = m_Substitutes.find(recordedDrawable); it != m_Substitutes.end()) {
+    return it->second.Drawable;
+  }
   PlayerWindow& window = m_Windows[recordedDrawable];
   if (window.Drawable == 0) {
-    Create(window);
+    Create(window, visualId);
+  } else if (visualId != 0 && !window.Bound && visualId != window.VisualId) {
+    windowing::WindowManager::Get().SetWindowVisibility(
+        windowing::WindowProtocol::Xlib, window.NativeDisplay, window.Drawable, false);
+    Create(window, visualId);
   }
+  window.Bound = window.Bound || visualId != 0;
   return window.Drawable;
+}
+
+void GlxDrawableService::SetSubstitute(uint64_t recordedDrawable,
+                                       uint64_t liveDrawable,
+                                       uint64_t recordedWindow) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Substitutes[recordedDrawable] = {liveDrawable, recordedWindow};
+}
+
+void GlxDrawableService::RemoveSubstitute(uint64_t recordedDrawable) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Substitutes.erase(recordedDrawable);
 }
 
 void GlxDrawableService::FitViewport(uint64_t liveDrawable, int width, int height) {
@@ -81,6 +110,17 @@ void GlxDrawableService::FitViewport(uint64_t liveDrawable, int width, int heigh
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
+  // A GLX window is sized through the X window it was created for.
+  const auto substitute =
+      std::find_if(m_Substitutes.begin(), m_Substitutes.end(),
+                   [&](const auto& entry) { return entry.second.Drawable == liveDrawable; });
+  if (substitute != m_Substitutes.end()) {
+    const auto window = m_Windows.find(substitute->second.RecordedWindow);
+    if (window == m_Windows.end() || window->second.Drawable == 0) {
+      return;
+    }
+    liveDrawable = window->second.Drawable;
+  }
   const auto it = std::find_if(m_Windows.begin(), m_Windows.end(), [&](const auto& entry) {
     return entry.second.Drawable == liveDrawable;
   });
@@ -162,8 +202,13 @@ void GlxDrawableService::RemoveWindows(const std::vector<uint64_t>& recordedWind
   }
 }
 
-void GlxDrawableService::Create(PlayerWindow& window) {
-  GetDisplay();
+void GlxDrawableService::Create(PlayerWindow& window, uint64_t visualId) {
+#if defined GITS_PLATFORM_X11
+  Display* display = GetDisplay();
+  window.VisualId = visualId != 0
+                        ? visualId
+                        : XVisualIDFromVisual(DefaultVisual(display, DefaultScreen(display)));
+#endif
   const auto& config = Configurator::Get().common.player;
   if (config.forceWindowPos.enabled) {
     window.X = static_cast<int>(config.forceWindowPos.x);
@@ -175,7 +220,7 @@ void GlxDrawableService::Create(PlayerWindow& window) {
   }
   const auto handles = windowing::WindowManager::Get().CreatePlayerWindow(
       windowing::WindowProtocol::Xlib, window.X, window.Y, window.Width, window.Height,
-      window.Visible);
+      window.Visible, visualId);
   if (handles.second == 0) {
     throw std::runtime_error("GlxDrawableService: player window creation failed");
   }

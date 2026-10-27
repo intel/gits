@@ -88,9 +88,10 @@ def extract_wrapper_body(rendered: str, name: str) -> str:
 class PreHookKeyPairCommandsTableTests(unittest.TestCase):
     """Pins PRE_HOOK_KEY_PAIR_COMMANDS to exactly WindowGeometryTrackingLayer's hooked WGL and
     GLX commands (see that layer's own header comment) plus PixelFormatCaptureLayer's
-    wglCreatePbufferARB/EXT - any other membership silently breaks the
-    SetPendingPreHookKey()/TakePendingPreHookKey() 1:1 contract at runtime, not at compile time,
-    so this table's exact contents must be pinned rather than merely smoke-tested."""
+    wglCreatePbufferARB/EXT and GLX commands taking a GLXFBConfig or a visual - any other
+    membership silently breaks the SetPendingPreHookKey()/TakePendingPreHookKey() 1:1 contract
+    at runtime, not at compile time, so this table's exact contents must be pinned rather than
+    merely smoke-tested."""
 
     def test_exact_membership(self) -> None:
         self.assertEqual(
@@ -99,7 +100,10 @@ class PreHookKeyPairCommandsTableTests(unittest.TestCase):
                        'wglMakeCurrent', 'wglSwapBuffers', 'wglSwapLayerBuffers',
                        'wglCreatePbufferARB', 'wglCreatePbufferEXT',
                        'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT',
-                       'glXMakeCurrent', 'glXSwapBuffers'}))
+                       'glXMakeCurrent', 'glXMakeContextCurrent', 'glXMakeCurrentReadSGI',
+                       'glXSwapBuffers', 'glXGetVisualFromFBConfig', 'glXCreateWindow',
+                       'glXCreatePbuffer', 'glXCreateContext', 'glXCreateNewContext',
+                       'glXCreateContextAttribsARB'}))
 
 
 class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
@@ -176,7 +180,8 @@ class PreHookExtraKeyTests(unittest.TestCase):
                          {'wglSwapBuffers': 'SetPendingMappedTextureKey',
                           'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
                           'glXSwapBuffers': 'SetPendingMappedTextureKey',
-                          'wglSetPixelFormat': 'SetPendingPixelFormatKey'})
+                          'wglSetPixelFormat': 'SetPendingPixelFormatKey',
+                          'glXCreateWindow': 'SetPendingPixelFormatKey'})
 
     def test_extra_key_precedes_the_pre_hook_pair_in_one_reservation(self) -> None:
         rendered = render_wrappers(('wglSwapBuffers', 'wglSetPixelFormat', 'wglMakeCurrent'),

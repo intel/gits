@@ -955,6 +955,12 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # but that bind stays unsupported (its HPVIDEODEV is no mapped handle), so the release
     # alone has nothing to undo on replay.
     'wglReleaseVideoImageNV',
+    # The same for GLX, whose glXBindVideoImageNV's GLXVideoDeviceNV is no handle either.
+    'glXReleaseVideoImageNV',
+
+    # Binds a video channel of the recorded display to a window. Video channels are hardware
+    # outputs the player cannot substitute.
+    'glXBindChannelToWindowSGIX',
 })
 
 
@@ -965,10 +971,13 @@ _STRING_QUERY_RE = re.compile(
 
 def is_discarded_string_return(command_name: str, return_value: ReturnValue) -> bool:
     """Whether the return value is a driver-owned string from a pure query (glGetString,
-    glGetStringi, wglGetExtensionsStringARB/EXT, the glX*String queries). The call is recorded
-    and replayed, but the returned pointer is not captured: its address is meaningless in another
-    process and nothing on replay reads its contents."""
+    glGetStringi, wglGetExtensionsStringARB/EXT, the glX*String queries), or the framebuffer
+    configurations glXChooseFBConfig/glXGetFBConfigs list. The call is recorded, but the returned
+    pointer is not captured: its address is meaningless in another process and nothing on replay
+    reads its contents."""
     facts = return_value.type_facts
+    if command_name in ('glXChooseFBConfig', 'glXGetFBConfigs'):
+        return facts.pointer_depth == 1 and facts.base_type == 'GLXFBConfig'
     return (_STRING_QUERY_RE.match(command_name) is not None
             and facts.pointer_depth == 1
             and facts.base_type in ('GLubyte', 'char')

@@ -24,7 +24,10 @@
 // Also a Pre layer for wglCreatePbufferARB/EXT and wglSetPixelFormat, whose pixel format
 // attributes it records in a PixelFormatMetaCommand (pixelFormatMetaTypes.h): a pbuffer's under
 // the command's pre-hook key (generator_recorder.py's PRE_HOOK_KEY_PAIR_COMMANDS), a window's
-// under its pixel format key (PRE_HOOK_EXTRA_KEY_COMMANDS).
+// under its pixel format key (PRE_HOOK_EXTRA_KEY_COMMANDS). The GLX commands taking a
+// GLXFBConfig get the attributes of that configuration the same way, glXCreateWindow as a window
+// and the others as a pbuffer, and glXCreateContext those of the configuration its visual
+// describes, as an application may hold a visual from any source, e.g. XGetVisualInfo.
 #include "commandsAuto.h"
 #include "layerAuto.h"
 
@@ -48,6 +51,12 @@ public:
   void Post(wglMakeCurrentCommand& command) override;
   void Post(wglMakeContextCurrentARBCommand& command) override;
   void Post(wglMakeContextCurrentEXTCommand& command) override;
+  void Pre(glXGetVisualFromFBConfigCommand& command) override;
+  void Pre(glXCreateWindowCommand& command) override;
+  void Pre(glXCreatePbufferCommand& command) override;
+  void Pre(glXCreateNewContextCommand& command) override;
+  void Pre(glXCreateContextAttribsARBCommand& command) override;
+  void Pre(glXCreateContextCommand& command) override;
 };
 
 } // namespace gits::opengl2

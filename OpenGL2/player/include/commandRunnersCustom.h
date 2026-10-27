@@ -268,8 +268,9 @@ private:
 };
 
 #if !defined(_WIN32)
-// glXCreateContext's Run() - registers the context in its share group, as
-// WglCreateContextAttribsARBRunner does.
+// glXCreateContext's Run() - creates the context with the visual of the configuration
+// GlxFBConfigService chooses from the recorded visual's attributes, and registers it in its share
+// group, as WglCreateContextAttribsARBRunner does, and its visual in GlxFBConfigService.
 class GlxCreateContextRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -283,7 +284,8 @@ private:
   glXCreateContextCommand command;
 };
 
-// glXMakeCurrent's Run() - warms up extension functions as WglMakeCurrentRunner does.
+// glXMakeCurrent's Run() - warms up extension functions as WglMakeCurrentRunner does. A player
+// window it creates has the context's visual.
 class GlxMakeCurrentRunner : public stream::CommandRunner {
 public:
   void Run() override;
@@ -295,6 +297,118 @@ protected:
 
 private:
   glXMakeCurrentCommand command;
+};
+
+// glXCreateNewContext's and glXCreateContextAttribsARB's Run() - create the context with the
+// configuration GlxFBConfigService chooses, and register it as GlxCreateContextRunner does.
+class GlxCreateNewContextRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreateNewContextCommand command;
+};
+
+class GlxCreateContextAttribsARBRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreateContextAttribsARBCommand command;
+};
+
+// glXMakeContextCurrent's Run() - see GlxMakeCurrentRunner.
+class GlxMakeContextCurrentRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXMakeContextCurrentCommand command;
+};
+
+// glXMakeCurrentReadSGI's Run() - see GlxMakeCurrentRunner.
+class GlxMakeCurrentReadSGIRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXMakeCurrentReadSGICommand command;
+};
+
+// glXCreateWindow's and glXCreatePbuffer's Run() - create the drawable with the configuration
+// GlxFBConfigService chooses, and make it the recorded one's substitute in GlxDrawableService. A
+// player window glXCreateWindow creates has the configuration's visual. Their destroy runners
+// remove the substitute.
+class GlxCreateWindowRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreateWindowCommand command;
+};
+
+class GlxDestroyWindowRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXDestroyWindowCommand command;
+};
+
+class GlxCreatePbufferRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXCreatePbufferCommand command;
+};
+
+class GlxDestroyPbufferRunner : public stream::CommandRunner {
+public:
+  void Run() override;
+
+protected:
+  void DecodeCommand() override {
+    Decode(m_Data, command);
+  }
+
+private:
+  glXDestroyPbufferCommand command;
 };
 #endif
 

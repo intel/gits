@@ -97,9 +97,17 @@ public:
   // first-capture hooks above - see this class's own header comment.
   void Pre(wglSwapBuffersCommand& command) override;
   void Pre(wglSwapLayerBuffersCommand& command) override;
-  // The GLX counterparts: a drawable is sampled when made current and at every swap.
+  // The GLX counterparts: the draw and read drawables are sampled when made current, a drawable at
+  // every swap, and an X window when a GLX window is created for it, which creates the player's
+  // window.
+  void Pre(glXCreateWindowCommand& command) override;
   void Pre(glXMakeCurrentCommand& command) override;
+  void Pre(glXMakeContextCurrentCommand& command) override;
+  void Pre(glXMakeCurrentReadSGICommand& command) override;
   void Pre(glXSwapBuffersCommand& command) override;
+  // Track the X windows of GLX windows, which are sampled instead.
+  void Post(glXCreateWindowCommand& command) override;
+  void Pre(glXDestroyWindowCommand& command) override;
 };
 
 } // namespace gits::opengl2

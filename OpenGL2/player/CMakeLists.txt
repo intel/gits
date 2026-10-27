@@ -26,6 +26,7 @@ add_library(OpenGL2_player STATIC
   include/clientArraysMetaRunner.h
   include/discardedOutputElements.h
   include/glxDrawableService.h
+  include/glxFBConfigService.h
   include/hdcVirtualizationService.h
   include/handleArgumentUpdaters.h
   include/mappedDataMetaRunner.h
@@ -48,6 +49,7 @@ add_library(OpenGL2_player STATIC
   clientArraysMetaRunner.cpp
   discardedOutputElements.cpp
   glxDrawableService.cpp
+  glxFBConfigService.cpp
   hdcVirtualizationService.cpp
   mappedDataMetaRunner.cpp
   mappedTextureDataMetaRunner.cpp

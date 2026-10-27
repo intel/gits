@@ -46,11 +46,13 @@ GITSKey HandleMapService<HandleT>::GetKey(HandleT handle, uint64_t shareGroup) {
   if (it != m_HandleToKey.end()) {
     return it->second;
   }
-  if (m_WarnedMissingHandles.insert(handleKey).second) {
-    LOG_WARNING << HandleTypeInfo<HandleT>::kServiceName << ": "
-                << HandleTypeInfo<HandleT>::kTypeName << " " << handle
-                << " has no registered key in share group " << shareGroup
-                << " (never created, or created before recording started)";
+  if constexpr (kWarnMissingKey<HandleT>) {
+    if (m_WarnedMissingHandles.insert(handleKey).second) {
+      LOG_WARNING << HandleTypeInfo<HandleT>::kServiceName << ": "
+                  << HandleTypeInfo<HandleT>::kTypeName << " " << handle
+                  << " has no registered key in share group " << shareGroup
+                  << " (never created, or created before recording started)";
+    }
   }
   return 0;
 }

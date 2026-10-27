@@ -3,7 +3,7 @@
         "GL": 2839,
         "WGL": 69,
         "EGL": 0,
-        "GLX": 51
+        "GLX": 65
     },
     "command_ids": {
         "GL": {
@@ -2970,7 +2970,21 @@
             "ID_GLXSWAPINTERVALSGI": 994607,
             "ID_GLXUSEXFONT": 994608,
             "ID_GLXWAITGL": 994609,
-            "ID_GLXWAITX": 994610
+            "ID_GLXWAITX": 994610,
+            "ID_GLXCHOOSEFBCONFIG": 994611,
+            "ID_GLXCREATECONTEXTATTRIBSARB": 994612,
+            "ID_GLXCREATENEWCONTEXT": 994613,
+            "ID_GLXCREATEPBUFFER": 994614,
+            "ID_GLXCREATEWINDOW": 994615,
+            "ID_GLXDESTROYPBUFFER": 994616,
+            "ID_GLXDESTROYWINDOW": 994617,
+            "ID_GLXGETCONFIG": 994618,
+            "ID_GLXGETFBCONFIGATTRIB": 994619,
+            "ID_GLXGETFBCONFIGS": 994620,
+            "ID_GLXGETVISUALFROMFBCONFIG": 994621,
+            "ID_GLXQUERYCONTEXT": 994622,
+            "ID_GLXQUERYEXTENSION": 994623,
+            "ID_GLXQUERYVERSION": 994624
         }
     }
 }

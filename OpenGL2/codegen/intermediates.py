@@ -229,6 +229,12 @@ _OPAQUE_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
     # An X window or pixmap of the recorded X connection, recorded with its X server (see
     # generator_recorder.py's GLX_DRAWABLE_BASE_TYPES); the player substitutes its own.
     'GLXDrawable',
+    # GLX windows and pbuffers, and the X windows GLX windows are created for, are drawables
+    # the player substitutes the same way.
+    'GLXWindow', 'GLXPbuffer', 'Window',
+    # A framebuffer configuration of the recorded X connection. The player chooses its own from
+    # the attributes recorded right before each command taking one.
+    'GLXFBConfig',
 })
 
 # Opaque handles an application only ever holds a pointer to: the X connection (`Display*`), which
@@ -275,7 +281,10 @@ _MAPPED_HANDLE_BASE_TYPES: frozenset[str] = frozenset({
 })
 
 # Mapped handles an application only ever holds a pointer to: the `XVisualInfo*` glXChooseVisual
-# returns and a GLX context is created with. The player maps it to the one it chose itself.
+# and glXGetVisualFromFBConfig return, which the player maps to the ones it got itself. The
+# commands creating something with a visual do not use the mapping: the application may also hold
+# a visual from Xlib, such as XGetVisualInfo's, which records key 0. The player chooses their
+# visual from the attributes recorded before them instead.
 _MAPPED_POINTER_BASE_TYPES: frozenset[str] = frozenset({
     'XVisualInfo',
 })

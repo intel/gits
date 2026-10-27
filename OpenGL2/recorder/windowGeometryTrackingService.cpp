@@ -296,31 +296,46 @@ std::vector<uint64_t> WindowGeometryTrackingService::ScanGlxWindows(
 
 void WindowGeometryTrackingService::CaptureGlx(uint32_t threadId,
                                                Display* display,
-                                               uint64_t drawable,
+                                               std::initializer_list<uint64_t> drawables,
                                                uint64_t geometryKey) {
+  std::vector<uint64_t> sampled;
+  for (uint64_t drawable : drawables) {
+    if (drawable != 0 && std::find(sampled.begin(), sampled.end(), drawable) == sampled.end()) {
+      sampled.push_back(drawable);
+    }
+  }
   auto& captureManager = CaptureManager::Get();
-  if (drawable == 0) {
+  if (sampled.empty()) {
     captureManager.SkipCommandKey(geometryKey);
     return;
   }
   const LastSystemErrorGuard lastErrorGuard;
   auto& identities = GlxDrawableIdentityService::Get();
-  Sample sample = QueryGlx(display, drawable);
-  sample.Window = identities.Identity(display, sample.Window);
-  if (sample.XWindow) {
-    std::lock_guard<std::mutex> lock(m_WindowsMutex);
-    m_Windows.try_emplace(sample.Window, drawable);
-  }
   WindowGeometryMetaCommand command(threadId);
   command.m_Key = geometryKey;
   SetPresent(command);
-  command.m_CallSamples.Value = 1;
-  command.m_Windows.Data.push_back(sample.Window);
-  command.m_X.Data.push_back(sample.X);
-  command.m_Y.Data.push_back(sample.Y);
-  command.m_Width.Data.push_back(sample.Width);
-  command.m_Height.Data.push_back(sample.Height);
-  command.m_Visible.Data.push_back(sample.Visible ? 1 : 0);
+  command.m_CallSamples.Value = static_cast<uint32_t>(sampled.size());
+  for (uint64_t drawable : sampled) {
+    {
+      std::lock_guard<std::mutex> lock(m_GlxWindowsMutex);
+      if (const auto it = m_GlxWindows.find(identities.Identity(display, drawable));
+          it != m_GlxWindows.end()) {
+        drawable = it->second;
+      }
+    }
+    Sample sample = QueryGlx(display, drawable);
+    sample.Window = identities.Identity(display, sample.Window);
+    if (sample.XWindow) {
+      std::lock_guard<std::mutex> lock(m_WindowsMutex);
+      m_Windows.try_emplace(sample.Window, drawable);
+    }
+    command.m_Windows.Data.push_back(sample.Window);
+    command.m_X.Data.push_back(sample.X);
+    command.m_Y.Data.push_back(sample.Y);
+    command.m_Width.Data.push_back(sample.Width);
+    command.m_Height.Data.push_back(sample.Height);
+    command.m_Visible.Data.push_back(sample.Visible ? 1 : 0);
+  }
   captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
   RecordDestroyed(threadId, ScanGlxWindows(display, command.m_Windows.Data));
 }
@@ -338,6 +353,20 @@ void WindowGeometryTrackingService::RecordDestroyed(uint32_t threadId,
   SetPresent(command);
   command.m_DestroyedWindows.Data = std::move(destroyed);
   captureManager.RecordCommand(command, new WindowGeometryMetaSerializer(command));
+}
+
+void WindowGeometryTrackingService::AddGlxWindow(Display* display,
+                                                 uint64_t glxWindow,
+                                                 uint64_t window) {
+  const uint64_t identity = GlxDrawableIdentityService::Get().Identity(display, glxWindow);
+  std::lock_guard<std::mutex> lock(m_GlxWindowsMutex);
+  m_GlxWindows[identity] = window;
+}
+
+void WindowGeometryTrackingService::RemoveGlxWindow(Display* display, uint64_t glxWindow) {
+  const uint64_t identity = GlxDrawableIdentityService::Get().Identity(display, glxWindow);
+  std::lock_guard<std::mutex> lock(m_GlxWindowsMutex);
+  m_GlxWindows.erase(identity);
 }
 
 void WindowGeometryTrackingService::Capture(uint32_t threadId,

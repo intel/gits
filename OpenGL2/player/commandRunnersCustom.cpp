@@ -9,6 +9,7 @@
 #include "commandRunnersCustom.h"
 #include "glEnumsAuto.h"
 #include "glxDrawableService.h"
+#include "glxFBConfigService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
@@ -402,18 +403,26 @@ void WglDestroyPbufferEXTRunner::Run() {
 void GlxCreateContextRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
-  UpdateHandle(command.m_vis);
   UpdateHandle(command.m_shareList);
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
+    Display* display = GlxDrawableService::Get().GetDisplay();
+    auto getVisual =
+        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
     auto realFunction = player::g_DispatchTable.glXCreateContext.load(std::memory_order_acquire);
     command.m_Return.Value =
-        realFunction(GlxDrawableService::Get().GetDisplay(), command.m_vis.Value,
-                     command.m_shareList.Value, command.m_direct.Value);
+        visual != nullptr
+            ? realFunction(display, visual, command.m_shareList.Value, command.m_direct.Value)
+            : nullptr;
+    GlxDrawableService::Free(visual);
     UpdateOutputHandle(command.m_Return);
     ShareGroupService::Get().RegisterNewContext(command.m_Return.Value, command.m_shareList.Value);
+    GlxFBConfigService::Get().SetContextVisual(command.m_Return.Value,
+                                               GlxFBConfigService::VisualId(config));
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);
@@ -424,7 +433,8 @@ void GlxMakeCurrentRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
   auto& manager = PlayerManager::Get();
   UpdateHandle(command.m_ctx);
-  const GLXDrawable real_drawable = GlxDrawableService::Get().Resolve(command.m_drawable.Value);
+  const GLXDrawable real_drawable = GlxDrawableService::Get().Resolve(
+      command.m_drawable.Value, GlxFBConfigService::Get().ContextVisual(command.m_ctx.Value));
   for (Layer* layer : manager.GetPreLayers()) {
     layer->Pre(command);
   }
@@ -439,6 +449,195 @@ void GlxMakeCurrentRunner::Run() {
     if (command.m_Return.Value != 0 && command.m_ctx.Value != nullptr) {
       player::WarmUpResolvableFunctions(command.m_ctx.Key);
     }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxCreateNewContextRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_share_list);
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXCreateNewContext.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(GlxDrawableService::Get().GetDisplay(), config, command.m_render_type.Value,
+                     command.m_share_list.Value, command.m_direct.Value);
+    UpdateOutputHandle(command.m_Return);
+    ShareGroupService::Get().RegisterNewContext(command.m_Return.Value, command.m_share_list.Value);
+    GlxFBConfigService::Get().SetContextVisual(command.m_Return.Value,
+                                               GlxFBConfigService::VisualId(config));
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxCreateContextAttribsARBRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_share_context);
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction =
+        player::g_DispatchTable.glXCreateContextAttribsARB.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(GlxDrawableService::Get().GetDisplay(), config, command.m_share_context.Value,
+                     command.m_direct.Value,
+                     command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
+    UpdateOutputHandle(command.m_Return);
+    ShareGroupService::Get().RegisterNewContext(command.m_Return.Value,
+                                                command.m_share_context.Value);
+    GlxFBConfigService::Get().SetContextVisual(command.m_Return.Value,
+                                               GlxFBConfigService::VisualId(config));
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxMakeContextCurrentRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_ctx);
+  auto& drawables = GlxDrawableService::Get();
+  const uint64_t visual = GlxFBConfigService::Get().ContextVisual(command.m_ctx.Value);
+  const GLXDrawable real_draw = drawables.Resolve(command.m_draw.Value, visual);
+  const GLXDrawable real_read = drawables.Resolve(command.m_read.Value, visual);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction =
+        player::g_DispatchTable.glXMakeContextCurrent.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(drawables.GetDisplay(), real_draw, real_read, command.m_ctx.Value);
+    if (command.m_Return.Value != 0) {
+      InvalidateReplayContextCaps();
+    }
+    if (command.m_Return.Value != 0 && command.m_ctx.Value != nullptr) {
+      player::WarmUpResolvableFunctions(command.m_ctx.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxMakeCurrentReadSGIRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  UpdateHandle(command.m_ctx);
+  auto& drawables = GlxDrawableService::Get();
+  const uint64_t visual = GlxFBConfigService::Get().ContextVisual(command.m_ctx.Value);
+  const GLXDrawable real_draw = drawables.Resolve(command.m_draw.Value, visual);
+  const GLXDrawable real_read = drawables.Resolve(command.m_read.Value, visual);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction =
+        player::g_DispatchTable.glXMakeCurrentReadSGI.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(drawables.GetDisplay(), real_draw, real_read, command.m_ctx.Value);
+    if (command.m_Return.Value != 0) {
+      InvalidateReplayContextCaps();
+    }
+    if (command.m_Return.Value != 0 && command.m_ctx.Value != nullptr) {
+      player::WarmUpResolvableFunctions(command.m_ctx.Key);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxCreateWindowRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
+  const Window real_win =
+      drawables.Resolve(command.m_win.Value, GlxFBConfigService::VisualId(config));
+  const GLXWindow recordedWindow = command.m_Return.Value;
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXCreateWindow.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(drawables.GetDisplay(), config, real_win,
+                     command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
+    if (command.m_Return.Value != 0) {
+      drawables.SetSubstitute(recordedWindow, command.m_Return.Value, command.m_win.Value);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxDestroyWindowRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXWindow real_win = drawables.Resolve(command.m_win.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXDestroyWindow.load(std::memory_order_acquire);
+    realFunction(drawables.GetDisplay(), real_win);
+    drawables.RemoveSubstitute(command.m_win.Value);
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxCreatePbufferRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXFBConfig config = GlxFBConfigService::Get().TakeChosen(command.m_ThreadId);
+  const GLXPbuffer recordedPbuffer = command.m_Return.Value;
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXCreatePbuffer.load(std::memory_order_acquire);
+    command.m_Return.Value =
+        realFunction(drawables.GetDisplay(), config,
+                     command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
+    if (command.m_Return.Value != 0) {
+      drawables.SetSubstitute(recordedPbuffer, command.m_Return.Value, 0);
+    }
+  }
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void GlxDestroyPbufferRunner::Run() {
+  ThreadContextService::Get().SwitchTo(command.m_ThreadId);
+  auto& manager = PlayerManager::Get();
+  auto& drawables = GlxDrawableService::Get();
+  const GLXPbuffer real_pbuf = drawables.Resolve(command.m_pbuf.Value);
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+  if (manager.ExecuteCommands() && !command.m_Skip) {
+    auto realFunction = player::g_DispatchTable.glXDestroyPbuffer.load(std::memory_order_acquire);
+    realFunction(drawables.GetDisplay(), real_pbuf);
+    drawables.RemoveSubstitute(command.m_pbuf.Value);
   }
   for (Layer* layer : manager.GetPostLayers()) {
     layer->Post(command);

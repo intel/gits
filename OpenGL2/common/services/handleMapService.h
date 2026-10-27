@@ -227,6 +227,14 @@ struct HandleTypeInfo<XVisualInfo*> {
   static constexpr const char* kTypeName = "XVisualInfo*";
 };
 
+// Whether GetKey() logs a handle without a key. Applications also get visuals from Xlib, such as
+// XGetVisualInfo's, which record key 0: the commands creating something with one replay from the
+// attributes recorded before them.
+template <typename HandleT>
+inline constexpr bool kWarnMissingKey = true;
+template <>
+inline constexpr bool kWarnMissingKey<XVisualInfo*> = false;
+
 // Readable, backward-compatible names for the two mapped-handle types today - every existing
 // hand-written call site (handleArgumentUpdaters.h, recorder/mapTrackingWrappers.cpp,
 // recorderWrappersAuto.cpp.mako's erase_service lookup, ...) keeps referring to these exact

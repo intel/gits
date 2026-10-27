@@ -47,10 +47,12 @@ from intermediates import Command
 # via TakePendingPreHookKey() - and the second (larger) key becomes this wrapper's own
 # `orderingKey`, used exactly like every other command's single reserved key from here on.
 #
-# wglCreatePbufferARB/EXT are the other entries: PixelFormatCaptureLayer::Pre() records their
-# PixelFormatMetaCommand (pixelFormatMetaTypes.h) under the spare key.
-# wglMakeContextCurrentARB/EXT record one geometry sample per DC, both in the metacommand
-# recorded under the spare key.
+# wglCreatePbufferARB/EXT, glXCreateContext and the GLX commands taking a GLXFBConfig, except
+# glXCreateWindow, are the other entries: PixelFormatCaptureLayer::Pre() records their
+# PixelFormatMetaCommand (pixelFormatMetaTypes.h) under the spare key. glXCreateWindow samples its
+# X window, like wglSetPixelFormat. wglMakeContextCurrentARB/EXT, glXMakeContextCurrent and
+# glXMakeCurrentReadSGI record one geometry sample per drawable, both in the metacommand recorded
+# under the spare key.
 #
 # A plain Python set, not a dict, unlike CONTEXT_SHARE_PARAM/SHARE_LISTS_COMMANDS above:
 # membership alone is everything the template needs here (there is no per-command payload to
@@ -59,7 +61,9 @@ PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
     'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB', 'wglMakeCurrent',
     'wglSwapBuffers', 'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT',
     'wglMakeContextCurrentARB', 'wglMakeContextCurrentEXT',
-    'glXMakeCurrent', 'glXSwapBuffers',
+    'glXMakeCurrent', 'glXMakeContextCurrent', 'glXMakeCurrentReadSGI', 'glXSwapBuffers',
+    'glXGetVisualFromFBConfig', 'glXCreateWindow', 'glXCreatePbuffer', 'glXCreateContext',
+    'glXCreateNewContext', 'glXCreateContextAttribsARB',
 })
 
 
@@ -79,12 +83,14 @@ POST_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
 # - MappedTextureLayer's MappedTextureDataMetaCommand: mapped-texture writes the application
 #   publishes by swapping must replay before the swap presents them.
 # - PixelFormatCaptureLayer's PixelFormatMetaCommand: the window's pixel format attributes, which
-#   its PIXELFORMATDESCRIPTOR cannot carry, must replay before the format is set.
+#   its PIXELFORMATDESCRIPTOR cannot carry, must replay before the format is set, and a GLX
+#   window's framebuffer configuration before the window is created.
 PRE_HOOK_EXTRA_KEY_COMMANDS: dict[str, str] = {
     'wglSwapBuffers': 'SetPendingMappedTextureKey',
     'wglSwapLayerBuffers': 'SetPendingMappedTextureKey',
     'glXSwapBuffers': 'SetPendingMappedTextureKey',
     'wglSetPixelFormat': 'SetPendingPixelFormatKey',
+    'glXCreateWindow': 'SetPendingPixelFormatKey',
 }
 assert PRE_HOOK_EXTRA_KEY_COMMANDS.keys() <= PRE_HOOK_KEY_PAIR_COMMANDS
 # A frame end's wrapper reserves its keys with CaptureManager::CreateFrameEndKeyRange(), which

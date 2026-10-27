@@ -78,9 +78,9 @@ public:
   // the HDC had no window, or its geometry could not be queried for that window's lifetime; its
   // other fields are then 0, and the sample only tells the player the call's window is unknown.
   //
-  // A command recorded before a GLX call has the one sample of its drawable, and no others
-  // (see WindowGeometryTrackingService::CaptureGlx). A GLX sample is identified as the GLX
-  // calls record drawables: by the XID qualified by its X server (see
+  // A command recorded before a GLX call has a sample of each drawable it names, the draw drawable
+  // first, and no others (see WindowGeometryTrackingService::CaptureGlx). A GLX sample is
+  // identified as the GLX calls record drawables: by the XID qualified by its X server (see
   // GlxDrawableIdentityService). When a new X window reuses the XID of one whose destruction the
   // recorder did not see, the player keeps the same player window for both.
   Argument<uint32_t> m_CallSamples{};

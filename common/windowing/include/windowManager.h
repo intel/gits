@@ -31,8 +31,15 @@ public:
   static WindowManager& Get();
   ~WindowManager() {}
 
-  std::pair<uint64_t, uint64_t> CreatePlayerWindow(
-      WindowProtocol protocol, int x, int y, int width, int height, bool visible);
+  // `visualId` is the X visual of an Xlib window, the screen's default one for 0. Other protocols
+  // ignore it.
+  std::pair<uint64_t, uint64_t> CreatePlayerWindow(WindowProtocol protocol,
+                                                   int x,
+                                                   int y,
+                                                   int width,
+                                                   int height,
+                                                   bool visible,
+                                                   uint64_t visualId = 0);
   void ResizeWindow(WindowProtocol protocol,
                     uint64_t nativeDisplay,
                     uint64_t nativeWindow,

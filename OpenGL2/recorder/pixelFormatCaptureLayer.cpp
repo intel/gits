@@ -16,6 +16,7 @@
 #include "systemApi.h"
 
 #include <atomic>
+#include <iterator>
 #include <span>
 
 #ifdef _WIN32
@@ -94,6 +95,73 @@ void RecordPixelFormat(uint64_t key,
   CaptureManager::Get().RecordCommand(meta, new PixelFormatMetaSerializer(meta));
 }
 
+// The glXChooseFBConfig attributes describing a framebuffer configuration's buffers. Its visual
+// is left out: the player's windows have their own.
+constexpr int kGlxFBConfigAttributes[] = {GLX_RENDER_TYPE,
+                                          GLX_DRAWABLE_TYPE,
+                                          GLX_X_RENDERABLE,
+                                          GLX_DOUBLEBUFFER,
+                                          GLX_STEREO,
+                                          GLX_AUX_BUFFERS,
+                                          GLX_RED_SIZE,
+                                          GLX_GREEN_SIZE,
+                                          GLX_BLUE_SIZE,
+                                          GLX_ALPHA_SIZE,
+                                          GLX_DEPTH_SIZE,
+                                          GLX_STENCIL_SIZE,
+                                          GLX_ACCUM_RED_SIZE,
+                                          GLX_ACCUM_GREEN_SIZE,
+                                          GLX_ACCUM_BLUE_SIZE,
+                                          GLX_ACCUM_ALPHA_SIZE,
+                                          GLX_SAMPLE_BUFFERS,
+                                          GLX_SAMPLES,
+                                          GLX_FRAMEBUFFER_SRGB_CAPABLE_ARB};
+
+// Records the meta command even when nothing could be queried: its key must be used.
+void RecordGlxFBConfig(uint64_t key, uint32_t threadId, Display* display, GLXFBConfig config) {
+  const LastSystemErrorGuard lastErrorGuard;
+  PixelFormatMetaCommand meta(threadId);
+  meta.m_Key = key;
+  meta.m_Attributes.HasValue = true;
+  auto getAttribute = g_DispatchTable.glXGetFBConfigAttrib.load(std::memory_order_acquire);
+  for (int attribute : kGlxFBConfigAttributes) {
+    int value = 0;
+    // Fails with GLX_BAD_ATTRIBUTE for an attribute of an extension the driver lacks.
+    if (config != nullptr && getAttribute(display, config, attribute, &value) == 0) {
+      meta.m_Attributes.Data.push_back(attribute);
+      meta.m_Attributes.Data.push_back(value);
+    }
+  }
+  CaptureManager::Get().RecordCommand(meta, new PixelFormatMetaSerializer(meta));
+}
+
+// The same attributes for a visual, as the framebuffer configuration the player chooses for it:
+// glXGetConfig describes a visual's buffers with the same attributes, and its render type with
+// GLX_RGBA. A visual is the X visual of a configuration rendering to windows and GLX pixmaps.
+void RecordGlxVisual(uint64_t key, uint32_t threadId, Display* display, XVisualInfo* visual) {
+  const LastSystemErrorGuard lastErrorGuard;
+  PixelFormatMetaCommand meta(threadId);
+  meta.m_Key = key;
+  meta.m_Attributes.HasValue = true;
+  auto getConfig = g_DispatchTable.glXGetConfig.load(std::memory_order_acquire);
+  int rgba = 0;
+  if (visual != nullptr && getConfig(display, visual, GLX_RGBA, &rgba) == 0) {
+    const int described[] = {GLX_RENDER_TYPE,   rgba != 0 ? GLX_RGBA_BIT : GLX_COLOR_INDEX_BIT,
+                             GLX_DRAWABLE_TYPE, GLX_WINDOW_BIT | GLX_PIXMAP_BIT,
+                             GLX_X_RENDERABLE,  1};
+    meta.m_Attributes.Data.assign(std::begin(described), std::end(described));
+    for (int attribute : kGlxFBConfigAttributes) {
+      int value = 0;
+      if (attribute != GLX_RENDER_TYPE && attribute != GLX_DRAWABLE_TYPE &&
+          attribute != GLX_X_RENDERABLE && getConfig(display, visual, attribute, &value) == 0) {
+        meta.m_Attributes.Data.push_back(attribute);
+        meta.m_Attributes.Data.push_back(value);
+      }
+    }
+  }
+  CaptureManager::Get().RecordCommand(meta, new PixelFormatMetaSerializer(meta));
+}
+
 // Resolves wglGetPixelFormatAttribivARB while the context a make-current call attached is
 // current; see Pre(wglSetPixelFormatCommand&).
 void ResolveAttributeQuery(bool succeeded, HGLRC context, HDC dc) {
@@ -134,6 +202,42 @@ void PixelFormatCaptureLayer::Pre(wglCreatePbufferEXTCommand& command) {
 void PixelFormatCaptureLayer::Pre(wglSetPixelFormatCommand& command) {
   RecordPixelFormat(CaptureManager::Get().TakePendingPixelFormatKey(), command.m_ThreadId,
                     command.m_hdc.Value, command.m_ipfd.Value, kWindowPixelFormatAttributes, false);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXGetVisualFromFBConfigCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreateWindowCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPixelFormatKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreatePbufferCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreateNewContextCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreateContextAttribsARBCommand& command) {
+  RecordGlxFBConfig(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                    command.m_dpy.Value, command.m_config.Value);
+  Pre(static_cast<Command&>(command));
+}
+
+void PixelFormatCaptureLayer::Pre(glXCreateContextCommand& command) {
+  RecordGlxVisual(CaptureManager::Get().TakePendingPreHookKey(), command.m_ThreadId,
+                  command.m_dpy.Value, command.m_vis.Value);
   Pre(static_cast<Command&>(command));
 }
 

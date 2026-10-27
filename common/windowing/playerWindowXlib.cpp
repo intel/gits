@@ -43,7 +43,7 @@ public:
     unsigned long status;
   };
 
-  PlayerWindowXlib(int x, int y, int width, int height, bool visible) {
+  PlayerWindowXlib(int x, int y, int width, int height, bool visible, uint64_t visualId) {
     m_Display = GetPlayerX11Display();
     GITS_ASSERT(m_Display != nullptr, "Failed to open X11 display");
 
@@ -51,6 +51,24 @@ public:
     Window root = RootWindow(m_Display, screen);
     Visual* visual = DefaultVisual(m_Display, screen);
     int depth = DefaultDepth(m_Display, screen);
+    if (visualId != 0) {
+      XVisualInfo_ request{};
+      request.visualid = static_cast<VisualID>(visualId);
+      request.screen = screen;
+      int count = 0;
+      XVisualInfo_* info =
+          XGetVisualInfo(m_Display, VisualIDMask | VisualScreenMask, &request, &count);
+      if (info != nullptr && count > 0) {
+        visual = info->visual;
+        depth = info->depth;
+      } else {
+        LOG_WARNING << "Player window: visual 0x" << std::hex << visualId << std::dec
+                    << " not found - using the default visual";
+      }
+      if (info != nullptr) {
+        XFree(info);
+      }
+    }
     m_Colormap = XCreateColormap(m_Display, root, visual, AllocNone);
 
     const bool borderless = !Configurator::Get().common.player.showWindowBorder;
@@ -198,15 +216,16 @@ private:
 } // namespace
 
 std::unique_ptr<PlayerWindow> CreatePlayerWindowXlib(
-    int x, int y, int width, int height, bool visible) {
+    int x, int y, int width, int height, bool visible, uint64_t visualId) {
 #if defined GITS_PLATFORM_X11
-  return std::make_unique<PlayerWindowXlib>(x, y, width, height, visible);
+  return std::make_unique<PlayerWindowXlib>(x, y, width, height, visible, visualId);
 #else
   (void)x;
   (void)y;
   (void)width;
   (void)height;
   (void)visible;
+  (void)visualId;
   return {};
 #endif
 }

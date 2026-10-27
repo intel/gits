@@ -517,11 +517,46 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     ('wglChoosePixelFormatARB', 'nNumFormats'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
-    # glx.xml gives neither a len=.
+    # glx.xml gives none of these a len=. The other GLX attribute lists are {key, value} pairs.
     ('glXChooseVisual', 'attribList'): PointerParamOverride(
         direction=PointerDirection.IN,
         length_source_kind=LengthSourceKind.GLX_VISUAL_ATTRIB_LIST),
     ('glXQueryDrawable', 'value'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXChooseFBConfig', 'attrib_list'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('glXCreateWindow', 'attrib_list'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('glXCreatePbuffer', 'attrib_list'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('glXCreateContextAttribsARB', 'attrib_list'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.KEY_VALUE_LIST),
+    ('glXChooseFBConfig', 'nelements'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXGetFBConfigs', 'nelements'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXGetFBConfigAttrib', 'value'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXGetConfig', 'value'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXQueryContext', 'value'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXQueryVersion', 'maj'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXQueryVersion', 'min'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXQueryExtension', 'errorb'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    ('glXQueryExtension', 'event'): PointerParamOverride(
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
     # glCallLists' `lists`: n list offsets of the ListNameType `type` (1 to 4 bytes each), added

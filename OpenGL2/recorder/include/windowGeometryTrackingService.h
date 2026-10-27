@@ -100,14 +100,22 @@ public:
   // for why a dropped key would stall OrderingRecorder forever).
   void Capture(uint32_t threadId, std::initializer_list<void*> hdcs, uint64_t geometryKey);
 
-  // Records a WindowGeometryMetaCommand under `geometryKey` with one sample of `drawable` (a
-  // GLXDrawable on the application's `display`), identified by its GlxDrawableIdentityService
-  // identity. The sample has window 0 when the drawable is not an X window, e.g. a GLX pixmap or
-  // pbuffer. Releases `geometryKey` for drawable 0, as a context detach has no drawable to sample.
+  // Records a WindowGeometryMetaCommand under `geometryKey` with a sample of each distinct
+  // non-zero drawable of `drawables` (GLXDrawables on the application's `display`: the draw
+  // drawable first, then the read one), identified by its GlxDrawableIdentityService identity. A
+  // GLX window is sampled as the X window it was created for. A sample has window 0 when its
+  // drawable is not an X window, e.g. a GLX pixmap or pbuffer. Releases `geometryKey` when every
+  // drawable is 0, as a context detach has no drawable to sample.
   //
   // Sampled X windows of `display`'s server found destroyed are reported as Capture() reports
   // them.
-  void CaptureGlx(uint32_t threadId, Display* display, uint64_t drawable, uint64_t geometryKey);
+  void CaptureGlx(uint32_t threadId,
+                  Display* display,
+                  std::initializer_list<uint64_t> drawables,
+                  uint64_t geometryKey);
+  // Tracks the X window `window` a GLX window was created for, until it is destroyed.
+  void AddGlxWindow(Display* display, uint64_t glxWindow, uint64_t window);
+  void RemoveGlxWindow(Display* display, uint64_t glxWindow);
 
 private:
   WindowGeometryTrackingService() = default;
@@ -160,6 +168,9 @@ private:
   // Capture-time HWND or XID of every sampled window not yet reported destroyed, by identity.
   std::unordered_map<uint64_t, uint64_t> m_Windows;
   uint32_t m_LastLifetime{0};
+  std::mutex m_GlxWindowsMutex;
+  // The X window of every live GLX window, by the GLX window's identity.
+  std::unordered_map<uint64_t, uint64_t> m_GlxWindows;
 };
 
 } // namespace gits::opengl2

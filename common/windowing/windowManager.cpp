@@ -19,7 +19,7 @@ namespace gits {
 namespace windowing {
 
 std::unique_ptr<PlayerWindow> CreatePlayerWindowXlib(
-    int x, int y, int width, int height, bool visible);
+    int x, int y, int width, int height, bool visible, uint64_t visualId);
 std::unique_ptr<PlayerWindow> CreatePlayerWindowXcb(
     int x, int y, int width, int height, bool visible);
 std::unique_ptr<PlayerWindow> CreatePlayerWindowWayland(
@@ -65,7 +65,7 @@ PlayerWindow* WindowManager::FindPlayerWindow(WindowProtocol protocol,
 }
 
 std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
-    WindowProtocol protocol, int x, int y, int width, int height, bool visible) {
+    WindowProtocol protocol, int x, int y, int width, int height, bool visible, uint64_t visualId) {
   std::unique_ptr<PlayerWindow> window;
   switch (protocol) {
 #if defined GITS_PLATFORM_WINDOWS
@@ -75,7 +75,7 @@ std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(
 #endif
 #if defined GITS_PLATFORM_X11
   case WindowProtocol::Xlib:
-    window = CreatePlayerWindowXlib(x, y, width, height, visible);
+    window = CreatePlayerWindowXlib(x, y, width, height, visible, visualId);
     break;
   case WindowProtocol::Xcb:
     window = CreatePlayerWindowXcb(x, y, width, height, visible);

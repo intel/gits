@@ -310,7 +310,7 @@ def has_return_member(cmd: Command) -> bool:
 
 def has_unserialized_return(cmd: Command) -> bool:
     """Whether the typed Command has an m_Return the stream does not carry: a discarded string
-    return, kept so recorder layers can see and replace it."""
+    or framebuffer configuration list return, kept so recorder layers can see and replace it."""
     if cmd.return_value.type.strip().lower() == 'void':  # WGL uses Win32 'VOID'.
         return False
     return is_discarded_string_return(cmd.name, cmd.return_value)

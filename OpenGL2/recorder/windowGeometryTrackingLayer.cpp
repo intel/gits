@@ -101,9 +101,30 @@ void WindowGeometryTrackingLayer::Pre(wglSwapLayerBuffersCommand& command) {
   Pre(static_cast<Command&>(command));
 }
 
+void WindowGeometryTrackingLayer::Pre(glXCreateWindowCommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  {command.m_win.Value},
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
 void WindowGeometryTrackingLayer::Pre(glXMakeCurrentCommand& command) {
   WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
-                                                  command.m_drawable.Value,
+                                                  {command.m_drawable.Value},
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(glXMakeContextCurrentCommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  {command.m_draw.Value, command.m_read.Value},
+                                                  CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(glXMakeCurrentReadSGICommand& command) {
+  WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
+                                                  {command.m_draw.Value, command.m_read.Value},
                                                   CaptureManager::Get().TakePendingPreHookKey());
   Pre(static_cast<Command&>(command));
 }
@@ -111,8 +132,21 @@ void WindowGeometryTrackingLayer::Pre(glXMakeCurrentCommand& command) {
 void WindowGeometryTrackingLayer::Pre(glXSwapBuffersCommand& command) {
   // See Pre(wglSwapBuffersCommand&) above.
   WindowGeometryTrackingService::Get().CaptureGlx(command.m_ThreadId, command.m_dpy.Value,
-                                                  command.m_drawable.Value,
+                                                  {command.m_drawable.Value},
                                                   CaptureManager::Get().TakePendingPreHookKey());
+  Pre(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Post(glXCreateWindowCommand& command) {
+  if (command.m_Return.Value != 0) {
+    WindowGeometryTrackingService::Get().AddGlxWindow(command.m_dpy.Value, command.m_Return.Value,
+                                                      command.m_win.Value);
+  }
+  Post(static_cast<Command&>(command));
+}
+
+void WindowGeometryTrackingLayer::Pre(glXDestroyWindowCommand& command) {
+  WindowGeometryTrackingService::Get().RemoveGlxWindow(command.m_dpy.Value, command.m_win.Value);
   Pre(static_cast<Command&>(command));
 }
 

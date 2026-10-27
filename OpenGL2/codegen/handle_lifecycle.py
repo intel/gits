@@ -159,8 +159,7 @@ HPBUFFEREXT_LIFECYCLE = MappedHandleLifecycle(
     },
 )
 
-# GLX contexts. glXCreateNewContext and glXCreateContextAttribsARB stay disabled until GLXFBConfig
-# is captured. Unlike wglDeleteContext, glXDestroyContext leaves a current context current until
+# GLX contexts. Unlike wglDeleteContext, glXDestroyContext leaves a current context current until
 # it is released, and glXGetCurrentContext still returns it, so its key is never erased. A later
 # context with the same address registers a key of its own.
 GLXCONTEXT_LIFECYCLE = MappedHandleLifecycle(
@@ -172,12 +171,12 @@ GLXCONTEXT_LIFECYCLE = MappedHandleLifecycle(
     param_to_erase_on_success={},
 )
 
-# The visuals glXChooseVisual returns. The application frees one with XFree, which is not
-# intercepted, so a key is never erased.
+# The visuals glXChooseVisual and glXGetVisualFromFBConfig return. The application frees one with
+# XFree, which is not intercepted, so a key is never erased.
 XVISUALINFO_LIFECYCLE = MappedHandleLifecycle(
     cpp_type='XVisualInfo',
     service_name='VisualInfoHandleMapService',
-    creating_commands=frozenset({'glXChooseVisual'}),
+    creating_commands=frozenset({'glXChooseVisual', 'glXGetVisualFromFBConfig'}),
     param_to_erase_on_success={},
 )
 

@@ -62,7 +62,28 @@ CUSTOM_PLAYER_RUNNERS: dict[str, str] = {
     'wglReleasePbufferDCEXT': 'WglReleasePbufferDCEXTRunner',
     'wglDestroyPbufferEXT': 'WglDestroyPbufferEXTRunner',
     # Register the new context in its share group, and warm up extension functions after
-    # make-current, as the WGL runners above do.
+    # make-current, as the WGL runners above do. Commands taking a GLXFBConfig use the one
+    # GlxFBConfigService chooses.
     'glXCreateContext': 'GlxCreateContextRunner',
+    'glXCreateNewContext': 'GlxCreateNewContextRunner',
+    'glXCreateContextAttribsARB': 'GlxCreateContextAttribsARBRunner',
     'glXMakeCurrent': 'GlxMakeCurrentRunner',
+    'glXMakeContextCurrent': 'GlxMakeContextCurrentRunner',
+    'glXMakeCurrentReadSGI': 'GlxMakeCurrentReadSGIRunner',
+    # Register the player's GLX window or pbuffer as the recorded one's substitute in
+    # GlxDrawableService, and forget it once destroyed.
+    'glXCreateWindow': 'GlxCreateWindowRunner',
+    'glXDestroyWindow': 'GlxDestroyWindowRunner',
+    'glXCreatePbuffer': 'GlxCreatePbufferRunner',
+    'glXDestroyPbuffer': 'GlxDestroyPbufferRunner',
 }
+
+# Queries whose generated runner runs its layers but not the real call. Their framebuffer
+# configurations are the recorded process's, and nothing on replay reads their results: the
+# player chooses its own configurations from the attributes recorded before each command creating
+# something with one. The same holds for glXGetConfig's visual, which replays as null when it is
+# not one of the mapped ones.
+UNREPLAYED_COMMANDS: frozenset[str] = frozenset({
+    'glXChooseFBConfig', 'glXGetFBConfigs', 'glXGetFBConfigAttrib', 'glXGetConfig',
+})
+assert not UNREPLAYED_COMMANDS & CUSTOM_PLAYER_RUNNERS.keys()

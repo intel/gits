@@ -10,7 +10,7 @@
 
 import re
 
-from custom_player_runners import CUSTOM_PLAYER_RUNNERS
+from custom_player_runners import CUSTOM_PLAYER_RUNNERS, UNREPLAYED_COMMANDS
 from generator_helpers import PLATFORM_GUARDS, mako_write, object_name_override_for
 from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS, SHARE_LISTS_COMMANDS
 from intermediates import Command
@@ -147,6 +147,7 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
                'player/commandRunnersAuto.cpp', commands=commands,
                handle_creating_commands=HANDLE_CREATING_COMMANDS,
                share_lists_commands=SHARE_LISTS_COMMANDS,
+               unreplayed_commands=UNREPLAYED_COMMANDS,
                platform_guards=PLATFORM_GUARDS)
     mako_write('templates/openGL2CommandFactoryAuto.cpp.mako',
                'player/openGL2CommandFactoryAuto.cpp', commands=commands,
