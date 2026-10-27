@@ -50,9 +50,11 @@ if(WITH_OPENCL)
   add_definitions(-DWITH_OPENCL)
 endif()
 
-# Experimental, work-in-progress new OpenGL backend (see OpenGL2/). Opt-in and
-# Windows x64-only for now, since only Windows x64 can currently be tested.
-if(WIN64)
+# Experimental, work-in-progress new OpenGL backend (see OpenGL2/). Built by
+# default on Windows x64 and x86-64 Linux, the platforms it can be tested on.
+# ARCH, not CMAKE_SIZEOF_VOID_P, tells a 32-bit Linux build on a 64-bit host.
+if(WIN64 OR (UNIX AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" AND
+             NOT "${ARCH}" STREQUAL "-m32"))
   option(WITH_OPENGL2 "Build the experimental OpenGL2 backend" ON)
 else()
   option(WITH_OPENGL2 "Build the experimental OpenGL2 backend" OFF)
@@ -300,7 +302,7 @@ endif()
 
 add_subdirectory(OpenGL)
 if(WITH_OPENGL2)
-  if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR "${ARCH}" STREQUAL "-m32")
     message(FATAL_ERROR "WITH_OPENGL2 is currently 64-bit-only.")
   endif()
   add_subdirectory(OpenGL2)
