@@ -50,8 +50,9 @@ void WatchedShadow::ResetWriteWatch() const {
   }
 }
 
-std::optional<WatchedShadow::ByteRange> WatchedShadow::DirtyRange(const void* data,
-                                                                  size_t size) const {
+std::optional<WatchedShadow::ByteRange> WatchedShadow::DirtyRange(
+    const void* data, size_t size, std::span<const uint8_t> baseline) const {
+  GITS_ASSERT(baseline.empty() || baseline.size() == size, "Invalid write-watch baseline size");
   const size_t pageSize = GetPageSize();
   const size_t numWatchedPages = m_Size / pageSize + (m_Size % pageSize != 0);
   // GetWriteWatch takes watched page count as input and overwrites it with dirty page count.
@@ -75,14 +76,26 @@ std::optional<WatchedShadow::ByteRange> WatchedShadow::DirtyRange(const void* da
 
   const auto begin = reinterpret_cast<uintptr_t>(data);
   const auto end = begin + size;
+  const auto* bytes = static_cast<const uint8_t*>(data);
   size_t first = size;
   size_t last = 0;
   for (ULONG_PTR index = 0; index < numDirtyPages; ++index) {
     const auto pageBegin = reinterpret_cast<uintptr_t>(pages[index]);
     const auto pageEnd = pageBegin + granularity;
     if (pageBegin < end && pageEnd > begin) {
-      first = std::min(first, static_cast<size_t>(std::max(begin, pageBegin) - begin));
-      last = std::max(last, static_cast<size_t>(std::min(end, pageEnd) - begin));
+      const size_t pageFirst = std::max(begin, pageBegin) - begin;
+      const size_t pageLast = std::min(end, pageEnd) - begin;
+      if (baseline.empty()) {
+        first = std::min(first, pageFirst);
+        last = std::max(last, pageLast);
+      } else {
+        for (size_t offset = pageFirst; offset < pageLast; ++offset) {
+          if (bytes[offset] != baseline[offset]) {
+            first = std::min(first, offset);
+            last = std::max(last, offset + 1);
+          }
+        }
+      }
     }
   }
   if (first == size) {

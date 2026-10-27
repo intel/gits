@@ -159,10 +159,14 @@ void MapTrackingService::LogStatistics() {
 // End of functions for buffer mapping statistics tracking.
 
 bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
-  constexpr GLbitfield required = GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
+  constexpr GLbitfield required = GL_MAP_WRITE_BIT;
   constexpr GLbitfield excluded =
       GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-  return (access & required) == required && (access & excluded) == 0;
+  const bool explicitFlush = (access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0;
+  const bool hasExcludedImplicitFlushAccess =
+      (access & (GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT | GL_MAP_UNSYNCHRONIZED_BIT)) != 0;
+  return (access & required) == required && (access & excluded) == 0 &&
+         (explicitFlush || !hasExcludedImplicitFlushAccess);
 }
 
 std::vector<uint8_t> MapTrackingService::PrepareInitialBytes(
@@ -285,7 +289,7 @@ void MapTrackingService::ByteSource::PrepareOwnedShadow(GLintptr offset,
                                                         std::span<const uint8_t> initialBytes,
                                                         bool initialize) {
   GITS_ASSERT(!initialize || initialBytes.size() == static_cast<size_t>(length),
-              "Non-invalidating write-only explicit-flush map has no initial bytes");
+              "Cannot initialize buffer-map shadow memory without complete initial bytes");
   GITS_ASSERT(alignment <= std::numeric_limits<size_t>::max() - static_cast<size_t>(length),
               "Cannot allocate aligned shadow for buffer map");
   const auto allocationSize = static_cast<size_t>(length) + alignment;
@@ -405,15 +409,17 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   const bool invalidated =
       (access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0;
   const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
-  const bool dirtyPageCandidate =
-      !explicitFlush && writable && !readable && invalidated && !unsynchronized;
+  const bool dirtyPageCandidate = !explicitFlush && writable && !readable && !unsynchronized;
   bool shadowAlignmentAvailable = false;
   if (dirtyPageCandidate || (explicitFlush && !readable)) {
     const auto [major, minor] = CurrentContextGLVersion();
     shadowAlignmentAvailable = major > 4 || (major == 4 && minor >= 2) ||
                                CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment");
   }
-  const bool useDirtyPageCapture = dirtyPageCandidate && shadowAlignmentAvailable;
+  // Invalidated maps copy touched pages as-is; other maps need a full baseline for comparison.
+  const bool useDirtyPageCapture =
+      dirtyPageCandidate && shadowAlignmentAvailable &&
+      (invalidated || initialBytes.size() == static_cast<size_t>(length));
   if (explicitFlush || useDirtyPageCapture) {
     range.RangePolicy.Type = explicitFlush ? CaptureRangePolicy::Mode::DeclaredFlush
                                            : CaptureRangePolicy::Mode::DirtyPages;
@@ -427,6 +433,9 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
       GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
       range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
                                       NeedsInitialShadowContents(access));
+      if (useDirtyPageCapture && !invalidated) {
+        range.Source.Baseline.assign(initialBytes.begin(), initialBytes.end());
+      }
     }
   }
   void* applicationPointer = range.Source.ApplicationPointer;
@@ -547,6 +556,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
                      "MappedDataMetaCommand recorded for this unmap";
       update.reset();
+    } else if (!update && useDirtyPageCapture && !range->Source.Baseline.empty()) {
+      BufferShadowService::Get().OnMapUnchanged(shareGroup, buffer);
     }
     RecordOrSkipMappedUpdate(key, update);
     return result;
@@ -554,7 +565,8 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (useDirtyPageCapture) {
     GITS_ASSERT(range->Source.Shadow != nullptr, "Dirty-page map has no watched shadow");
     const auto dirty = range->Source.Shadow->DirtyRange(range->Source.ApplicationPointer,
-                                                        static_cast<size_t>(range->Length));
+                                                        static_cast<size_t>(range->Length),
+                                                        range->Source.Baseline);
     if (!dirty) {
       return unmapAndRecord(std::nullopt);
     }

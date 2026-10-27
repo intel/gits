@@ -235,6 +235,15 @@ void BufferShadowService::OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfi
   }
 }
 
+void BufferShadowService::OnMapUnchanged(uint64_t shareGroup, GLuint buffer) {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_Shadows.find({shareGroup, buffer});
+  if (it != m_Shadows.end()) {
+    it->second.Known = it->second.KnownBeforeMap;
+    it->second.KnownBeforeMap = false;
+  }
+}
+
 void BufferShadowService::OnMappedBytes(uint64_t shareGroup,
                                         GLuint buffer,
                                         uint64_t offset,

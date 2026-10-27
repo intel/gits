@@ -9,7 +9,9 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <span>
 
 namespace gits::opengl2 {
 
@@ -31,8 +33,11 @@ public:
   }
   void ResetWriteWatch() const;
   // Returns one enclosing range relative to data, clipped to [data, data + size).
-  // No touched pages returns std::nullopt.
-  std::optional<ByteRange> DirtyRange(const void* data, size_t size) const;
+  // Without a baseline, includes touched page portions; with one, only differing bytes on
+  // touched pages. Returns std::nullopt when no bytes qualify.
+  std::optional<ByteRange> DirtyRange(const void* data,
+                                      size_t size,
+                                      std::span<const uint8_t> baseline = {}) const;
 
 private:
   void* m_Data{};

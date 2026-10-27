@@ -70,6 +70,10 @@ public:
   // MapTrackingService reports writable map creation and published mapped bytes here.
   // GL_MAP_INVALIDATE_BUFFER_BIT leaves only the mapped range known.
   void OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfield access);
+  // Called after unmap of a transient writable mapping if buffer contents are same as before the
+  // map. Marks the buffer's copy as known to match the actual contents if it matched before the
+  // map.
+  void OnMapUnchanged(uint64_t shareGroup, GLuint buffer);
   void OnMappedBytes(uint64_t shareGroup,
                      GLuint buffer,
                      uint64_t offset,

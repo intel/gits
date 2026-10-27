@@ -178,6 +178,7 @@ private:
     void* DriverPointer{nullptr};
     void* ApplicationPointer{nullptr};
     std::unique_ptr<WatchedShadow> Shadow;
+    std::vector<uint8_t> Baseline;
 
     void PrepareOwnedShadow(GLintptr offset,
                             GLsizeiptr length,
