@@ -267,7 +267,6 @@ void MapTrackingService::StoreWholeBufferMap(
 
 std::optional<MapTrackingService::MapRelativeRange> MapTrackingService::CaptureRangePolicy::
     SelectFlushRange(GLintptr offset, GLsizeiptr length) const {
-  GITS_ASSERT(Type != Mode::DirtyPages, "Dirty-page detection requires a byte-source backend");
   if (Type == Mode::DeclaredFlush && length > 0) {
     return MapRelativeRange{offset, length};
   }
@@ -488,11 +487,6 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
                                           GLsizeiptr length,
                                           uint64_t key,
                                           const std::function<void()>& realFlush) {
-  if (offset < 0 || length < 0) {
-    realFlush();
-    RecordOrSkipMappedUpdate(key, std::nullopt);
-    return;
-  }
   const uint64_t shareGroup = CurrentShareGroup();
   std::optional<MappedBufferUpdate> update;
   {
@@ -505,7 +499,10 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
       return;
     }
     const MappedRange& range = it->second;
-    if (offset > range.Length || length > range.Length - offset ||
+    GITS_ASSERT((range.Access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0,
+                "Cannot flush a buffer mapping created without GL_MAP_FLUSH_EXPLICIT_BIT: "
+                "the application call is invalid and GITS does not support it.");
+    if (offset < 0 || length < 0 || offset > range.Length || length > range.Length - offset ||
         range.Offset > std::numeric_limits<GLintptr>::max() - offset) {
       lock.unlock();
       realFlush();
