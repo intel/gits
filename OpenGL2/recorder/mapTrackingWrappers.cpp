@@ -105,6 +105,9 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
   }
   auto realFunction = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* result = realFunction(target, offset, length, access);
+  if (record) {
+    MapTrackingService::Get().NoteMap(true, access, result != nullptr);
+  }
   if (record && result != nullptr) {
     return MapTrackingService::Get().OnMapBufferRange(target, offset, length, access, result,
                                                       initialBytes);
@@ -148,6 +151,9 @@ void* APIENTRY CustomWrapper_glMapBuffer(GLenum target, GLenum access) {
   const bool record = !guard.IsNested();
   auto realFunction = g_DispatchTable.glMapBuffer.load(std::memory_order_acquire);
   void* result = realFunction(target, access);
+  if (record) {
+    MapTrackingService::Get().NoteMap(false, access, result != nullptr);
+  }
   if (record && result != nullptr) {
     MapTrackingService::Get().OnMapBuffer(target, access, result);
   }
@@ -165,6 +171,9 @@ void* APIENTRY CustomWrapper_glMapBufferARB(GLenum target, GLenum access) {
   const bool record = !guard.IsNested();
   auto realFunction = g_DispatchTable.glMapBufferARB.load(std::memory_order_acquire);
   void* result = realFunction(target, access);
+  if (record) {
+    MapTrackingService::Get().NoteMap(false, access, result != nullptr);
+  }
   if (record && result != nullptr) {
     MapTrackingService::Get().OnMapBuffer(target, access, result);
   }
@@ -224,6 +233,9 @@ void* APIENTRY CustomWrapper_MapNamedBuffer(GLuint buffer, GLenum access) {
   const RecursionGuard guard;
   const bool record = !guard.IsNested();
   void* result = (g_DispatchTable.*MapEntry).load(std::memory_order_acquire)(buffer, access);
+  if (record) {
+    MapTrackingService::Get().NoteMap(false, access, result != nullptr);
+  }
   if (record && result != nullptr) {
     MapTrackingService::Get().OnMapNamedBuffer(buffer, access, result, QuerySize);
   }
@@ -279,6 +291,9 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
   }
   void* result = (g_DispatchTable.*MapRangeEntry)
                      .load(std::memory_order_acquire)(buffer, offset, length, access);
+  if (record) {
+    MapTrackingService::Get().NoteMap(true, access, result != nullptr);
+  }
   if (record && result != nullptr) {
     return MapTrackingService::Get().OnMapNamedBufferRange(buffer, offset, length, access, result,
                                                            initialBytes);

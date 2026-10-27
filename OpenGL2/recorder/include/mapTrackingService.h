@@ -21,11 +21,13 @@
 
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace gits::opengl2 {
@@ -33,6 +35,8 @@ namespace gits::opengl2 {
 class MapTrackingService {
 public:
   static MapTrackingService& Get();
+
+  void NoteMap(bool range, uint32_t access, bool succeeded);
 
   using BufferParameterCallback = std::function<bool(GLenum, GLint64&)>;
   using BufferReadCallback = std::function<void(GLintptr, GLsizeiptr, void*)>;
@@ -66,7 +70,7 @@ public:
   // bitfield) so the matching glUnmapBuffer/glUnmapBufferARB can capture whatever the
   // application writes. `access` is gl.xml's BufferAccessARB enumerant
   // (GL_READ_ONLY/GL_WRITE_ONLY/GL_READ_WRITE), not glMapBufferRange's GL_MAP_*_BIT bitfield -
-  // translated internally (see TranslateWholeBufferAccessToBits) into the same MappedRange
+  // translated internally (see MapAccessEnumToBits) into the same MappedRange
   // representation OnMapBufferRange above uses. Does nothing when the mapped target has no
   // resolvable buffer bound.
   void OnMapBuffer(GLenum target, GLenum access, void* mappedPointer);
@@ -115,7 +119,19 @@ public:
                                        NamedReadSubDataFn readSubData);
 
 private:
-  MapTrackingService() = default;
+  MapTrackingService();
+
+  struct MapStatistics {
+    uint64_t Attempts{0};
+    uint64_t Successful{0};
+    uint64_t Updates{0};
+    uint64_t UpdatedBytes{0};
+  };
+  void NoteUpdate(bool range, uint32_t access, GLsizeiptr length);
+  void LogStatistics();
+
+  std::mutex m_StatisticsMutex;
+  std::map<std::pair<bool, uint32_t>, MapStatistics> m_Statistics;
 
   // For write-only explicit maps, ApplicationPointer points into GITS-owned shadow memory
   // while DriverPointer retains the real GL mapping. Otherwise they are equal.
@@ -126,6 +142,7 @@ private:
     GLintptr Offset{0};
     GLsizeiptr Length{0};
     GLbitfield Access{0};
+    bool IsRange{true}; // Whether it is a range mapping or a whole-buffer mapping.
   };
 
   // A GLuint buffer name is unique only within a share group, not process-globally: two
@@ -165,11 +182,9 @@ private:
   // Translates glMapBuffer/glMapBufferARB/glMapNamedBuffer(EXT)'s own `access` parameter - one of
   // GL_READ_ONLY/GL_WRITE_ONLY/GL_READ_WRITE (gl.xml's BufferAccessARB group - NOT a bitfield,
   // unlike glMapBufferRange's GL_MAP_*_BIT `access`) - into the GL_MAP_READ_BIT/GL_MAP_WRITE_BIT
-  // bitfield convention MappedRange::Access already uses. An access value outside the three
-  // legal enumerants (an application bug gl.xml itself cannot rule out) maps to 0 (neither
-  // bit) - snapshot handling already treats "neither bit set" as "nothing
-  // to snapshot", the same fallback every other unrecognized-input path in this service uses.
-  static GLbitfield TranslateWholeBufferAccessToBits(GLenum access);
+  // bitfield convention MappedRange::Access already uses. Invalid values throw.
+  static GLbitfield MapAccessEnumToBits(GLenum access);
+  static GLenum MapAccessBitsToEnum(GLbitfield access);
 
   // Shared tail of target and named whole-buffer maps: they map the entire buffer implicitly (no
   // explicit length), so each separately queries it (via its own target/DSA-appropriate

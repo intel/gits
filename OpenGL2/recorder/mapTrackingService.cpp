@@ -15,12 +15,15 @@
 #include "handleArgumentUpdaters.h"
 #include "log.h"
 #include "mappedDataMetaTypes.h"
+#include "messageBus.h"
 #include "openglDriversAuto.h"
 
 #include <cstring>
 #include <functional>
 #include <limits>
 #include <new>
+#include <sstream>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -96,6 +99,54 @@ MapTrackingService& MapTrackingService::Get() {
   return instance;
 }
 
+// Functions for buffer mapping statistics tracking.
+
+MapTrackingService::MapTrackingService() {
+  MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                              [this](Topic, const MessagePtr&) { LogStatistics(); });
+}
+
+void MapTrackingService::NoteMap(bool range, uint32_t access, bool succeeded) {
+  std::lock_guard<std::mutex> lock(m_StatisticsMutex);
+  auto& stats = m_Statistics[{range, access}];
+  ++stats.Attempts;
+  stats.Successful += succeeded;
+}
+
+void MapTrackingService::NoteUpdate(bool range, uint32_t access, GLsizeiptr length) {
+  if (!range) {
+    access = MapAccessBitsToEnum(access);
+  }
+  std::lock_guard<std::mutex> lock(m_StatisticsMutex);
+  auto& stats = m_Statistics[{range, access}];
+  ++stats.Updates;
+  stats.UpdatedBytes += static_cast<uint64_t>(length);
+}
+
+void MapTrackingService::LogStatistics() {
+  std::lock_guard<std::mutex> lock(m_StatisticsMutex);
+  if (m_Statistics.empty()) {
+    return;
+  }
+  LOG_INFO << "Tracked buffer mapping summary (application requests, grouped by exact access):";
+  for (const auto& [signature, stats] : m_Statistics) {
+    const auto [range, access] = signature;
+    std::ostringstream description;
+    if (range) {
+      description << "range mask "
+                  << GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask);
+    } else {
+      description << "whole-buffer access "
+                  << GetGLenumString(GLenumApi::GL, access, GLenumGroup::BufferAccessARB);
+    }
+    LOG_INFO << "  " << description.str() << ": " << stats.Attempts << " attempts, "
+             << stats.Successful << " succeeded, " << stats.Updates << " captured updates ("
+             << stats.UpdatedBytes << " bytes)";
+  }
+}
+
+// End of functions for buffer mapping statistics tracking.
+
 bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
   constexpr GLbitfield required = GL_MAP_WRITE_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
   constexpr GLbitfield excluded =
@@ -160,7 +211,7 @@ GLboolean MapTrackingService::UnmapBufferAndCapture(GLenum target) {
 //
 // Map and unmap variants share the same tracked-range and snapshot rules.
 
-GLbitfield MapTrackingService::TranslateWholeBufferAccessToBits(GLenum access) {
+GLbitfield MapTrackingService::MapAccessEnumToBits(GLenum access) {
   switch (access) {
   case GL_READ_ONLY:
     return GL_MAP_READ_BIT;
@@ -169,7 +220,20 @@ GLbitfield MapTrackingService::TranslateWholeBufferAccessToBits(GLenum access) {
   case GL_READ_WRITE:
     return GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
   default:
-    return 0;
+    throw std::invalid_argument("Unsupported whole-buffer map access enum");
+  }
+}
+
+GLenum MapTrackingService::MapAccessBitsToEnum(GLbitfield access) {
+  switch (access) {
+  case GL_MAP_READ_BIT:
+    return GL_READ_ONLY;
+  case GL_MAP_WRITE_BIT:
+    return GL_WRITE_ONLY;
+  case GL_MAP_READ_BIT | GL_MAP_WRITE_BIT:
+    return GL_READ_WRITE;
+  default:
+    throw std::invalid_argument("Unsupported whole-buffer map access bits");
   }
 }
 
@@ -181,7 +245,8 @@ void MapTrackingService::StoreWholeBufferMap(
                                {},
                                /*offset=*/0,
                                length,
-                               TranslateWholeBufferAccessToBits(access)});
+                               MapAccessEnumToBits(access),
+                               false});
 }
 
 void MapTrackingService::OnMapBuffer(GLenum target, GLenum access, void* mappedPointer) {
@@ -238,9 +303,16 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
                                         std::span<const uint8_t> initialBytes) {
   GITS_ASSERT(driverPointer != nullptr && offset >= 0 && length > 0,
               "Successful buffer range map has invalid tracking parameters");
-  GITS_ASSERT((access & GL_MAP_COHERENT_BIT) == 0 && (access & GL_MAP_PERSISTENT_BIT) == 0,
-              "Persistent or coherent buffer maps are not supported by mapped-data capture");
-  MappedRange range{driverPointer, driverPointer, {}, offset, length, access};
+  if (access & (GL_MAP_COHERENT_BIT | GL_MAP_PERSISTENT_BIT)) {
+    const std::string message =
+        (access & GL_MAP_COHERENT_BIT
+             ? "Coherent persistent buffer maps are not supported by mapped-data capture"
+             : "Non-coherent persistent buffer maps are not supported by mapped-data capture") +
+        std::string(" (access: ") +
+        GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')';
+    GITS_ASSERT(false, message);
+  }
+  MappedRange range{driverPointer, driverPointer, {}, offset, length, access, true};
   if (access & GL_MAP_FLUSH_EXPLICIT_BIT) {
     GITS_ASSERT((access & GL_MAP_WRITE_BIT) != 0,
                 "Explicit-flush buffer map has no writable byte source");
@@ -308,6 +380,8 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
   const uint64_t shareGroup = CurrentShareGroup();
   std::vector<uint8_t> bytes;
   GLintptr absoluteOffset = 0;
+  bool rangeMap = true;
+  GLbitfield access = 0;
   {
     std::unique_lock<std::mutex> lock(m_MappedBuffersMutex);
     const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
@@ -326,6 +400,8 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
       return;
     }
     absoluteOffset = range.Offset + offset;
+    rangeMap = range.IsRange;
+    access = range.Access;
     const auto start = static_cast<size_t>(offset);
     const auto count = static_cast<size_t>(length);
     bytes.resize(count);
@@ -340,6 +416,7 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
   realFlush();
   if (length > 0) {
     RecordMappedDataMetaCommand(key, shareGroup, buffer, absoluteOffset, length, bytes);
+    NoteUpdate(rangeMap, access, length);
   } else {
     CaptureManager::Get().SkipCommandKey(key);
   }
@@ -374,6 +451,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     const GLboolean result = realUnmap();
     if (result == GL_TRUE) {
       RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
+      NoteUpdate(range->IsRange, range->Access, range->Length);
     } else {
       LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
@@ -409,6 +487,7 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
     return result;
   }
   RecordMappedDataMetaCommand(key, shareGroup, buffer, range->Offset, range->Length, bytes);
+  NoteUpdate(range->IsRange, range->Access, range->Length);
   return result;
 }
 
@@ -453,7 +532,8 @@ GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
   if (pname == 0) {
     std::lock_guard<std::mutex> lock(m_WarnedTargetsMutex);
     if (m_WarnedUnrecognizedTargets.insert(target).second) {
-      LOG_WARNING << "MapTrackingService: target " << target
+      LOG_WARNING << "MapTrackingService: target "
+                  << GetGLenumString(GLenumApi::GL, target, GLenumGroup::BufferTargetARB)
                   << " is not a tracked buffer target - buffer-map tracking skipped";
     }
     return 0;
@@ -465,7 +545,8 @@ GLuint MapTrackingService::ResolveBoundBuffer(GLenum target) {
   if (buffer == 0) {
     std::lock_guard<std::mutex> lock(m_WarnedTargetsMutex);
     if (m_WarnedNoBufferBound.insert(target).second) {
-      LOG_WARNING << "MapTrackingService: target " << target
+      LOG_WARNING << "MapTrackingService: target "
+                  << GetGLenumString(GLenumApi::GL, target, GLenumGroup::BufferTargetARB)
                   << " has no buffer bound - buffer-map tracking skipped for this target";
     }
   }
