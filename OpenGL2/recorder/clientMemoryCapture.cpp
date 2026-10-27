@@ -453,13 +453,10 @@ GLint QueryPackSkipPixels() {
 }
 
 bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
-  auto get = g_DispatchTable.glGetBufferParameteriv.load(std::memory_order_acquire);
-  if (get == nullptr) {
-    get = g_DispatchTable.glGetBufferParameterivARB.load(std::memory_order_acquire);
-  }
-  if (get == nullptr) {
+  if (!TryResolveRealFunction("glGetBufferParameteriv")) {
     return false;
   }
+  auto get = g_DispatchTable.glGetBufferParameteriv.load(std::memory_order_acquire);
   get(target, pname, &value);
   return true;
 }
@@ -479,6 +476,9 @@ bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value) {
 bool GetBoundBufferSize(GLenum target, GLint64& size) {
   const auto [major, minor] = CurrentContextGLVersion();
   if (major > 3 || (major == 3 && minor >= 2)) {
+    if (!TryResolveRealFunction("glGetBufferParameteri64v")) {
+      return false;
+    }
     auto get = g_DispatchTable.glGetBufferParameteri64v.load(std::memory_order_acquire);
     get(target, GL_BUFFER_SIZE, &size);
     return true;

@@ -135,9 +135,8 @@ std::pair<int, int> CurrentContextGLVersion();
 // lists `extensionName`, using only the enumeration form legal on that version.
 bool CurrentContextHasExtension(int major, const char* extensionName);
 
-// glGetBufferParameteriv of the buffer bound to `target`, through the core entry point or, on a
-// context exposing only ARB_vertex_buffer_object, glGetBufferParameterivARB. False (and `value`
-// untouched) if neither resolved.
+// glGetBufferParameteriv of the buffer bound to `target`, through the core entry point.
+// False (and `value` untouched) if the getter could not be resolved.
 bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value);
 
 // Uses GetBoundBufferSize for GL_BUFFER_SIZE and widens other integer parameters to GLint64.
