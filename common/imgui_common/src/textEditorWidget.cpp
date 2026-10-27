@@ -28,6 +28,8 @@
 #include <plog/Formatters/TxtFormatter.h>
 #include "gitsLogFormatter.h"
 
+#include "IconsMaterialDesignIcons.h"
+
 namespace {
 bool IsBlankLine(const std::string& line) {
   return line.find_first_not_of(" \t") == std::string::npos;
@@ -51,12 +53,15 @@ static const auto& TOOL_BAR() {
           {TextEditorWidget::TOOL_BAR_ITEMS::SAVE, {"Save", "Save the current document"}},
           {TextEditorWidget::TOOL_BAR_ITEMS::REVERT,
            {"Revert", "Revert to the last saved version of the document"}},
-          {TextEditorWidget::TOOL_BAR_ITEMS::UNDO, {"Undo", "Undo the last change"}},
-          {TextEditorWidget::TOOL_BAR_ITEMS::REDO, {"Redo", "Redo last undone change"}},
-          {TextEditorWidget::TOOL_BAR_ITEMS::CHECK, {"Check", "Check the document for errors"}},
-          {TextEditorWidget::TOOL_BAR_ITEMS::SEND_BY_EMAIL, {"Send by email", "Send by email"}},
+          {TextEditorWidget::TOOL_BAR_ITEMS::UNDO, {ICON_MDI_UNDO " Undo", "Undo the last change"}},
+          {TextEditorWidget::TOOL_BAR_ITEMS::REDO,
+           {ICON_MDI_REDO " Redo", "Redo last undone change"}},
+          {TextEditorWidget::TOOL_BAR_ITEMS::CHECK,
+           {ICON_MDI_CHECK "Check", "Check the document for errors"}},
+          {TextEditorWidget::TOOL_BAR_ITEMS::SEND_BY_EMAIL,
+           {ICON_MDI_EMAIL_ARROW_RIGHT " Send by email", "Send by email"}},
           {TextEditorWidget::TOOL_BAR_ITEMS::EXPORT,
-           {"Export", "Export the document into a file"}}};
+           {ICON_MDI_EXPORT " Export", "Export the document into a file"}}};
   return items;
 }
 

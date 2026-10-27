@@ -75,7 +75,10 @@ void MainWindow::GITSBaseRow() {
 };
 
 void MainWindow::RenderMainMenu() {
-  auto versionLabel = std::string(Labels::VERSION) + ": " + APP_VERSION;
+  namespace MnuLbl = gits::gui::Labels::Menu;
+
+  auto versionLabel =
+      ICON_MDI_INFORMATION_OUTLINE + std::string(Labels::VERSION) + ": " + APP_VERSION;
 
   auto& context = StudioContext::GetInstance();
   if (ImGui::BeginMenuBar()) {
@@ -94,8 +97,8 @@ void MainWindow::RenderMainMenu() {
     ImGui::PopStyleVar();
 
     ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.x + 3.0f);
-    if (ImGui::BeginMenu("File")) {
-      if (ImGui::MenuItem("Open", "Ctrl+O")) {
+    if (ImGui::BeginMenu(MnuLbl::FILE)) {
+      if (ImGui::MenuItem(MnuLbl::OPEN, "Ctrl+O")) {
         if (context.IsLiveMode()) {
           gui_actions::ShowFileDialog(FileDialogKey{Path::CAPTURE_TARGET, GitsAction::CAPTURE});
         } else {
@@ -104,52 +107,53 @@ void MainWindow::RenderMainMenu() {
       }
       context_helper::RenderRecentMenu();
       ImGui::Separator();
-      if (ImGui::MenuItem(Labels::DETECT_BASE_PATHS)) {
+      if (ImGui::MenuItem(MnuLbl::DETECT_BASE_PATHS)) {
         context.ResetBasePaths();
       }
+      ImGui::SetItemTooltip(MnuLbl::DETECT_BASE_PATHS_HINT);
       ImGui::Separator();
-      if (ImGui::MenuItem("Quit", "Ctrl+Q")) {
+      if (ImGui::MenuItem(MnuLbl::QUIT, "Ctrl+Q")) {
         context.ShouldQuit = true;
       }
       ImGui::EndMenu();
     }
 
     if (!context.IsLiveMode()) {
-      if (ImGui::BeginMenu("Analysis")) {
+      if (ImGui::BeginMenu(MnuLbl::ANALYSIS)) {
         auto analysisState = context.Analysis;
-        if (ImGui::MenuItem("Full Analysis", "", analysisState.FullyAnalysed())) {
+        if (ImGui::MenuItem(MnuLbl::ANALYSIS_FULL, "", analysisState.FullyAnalysed())) {
           studio_actions::AnalyzeStream(
               context.ConfigurationForAction(GitsAction::PLAYBACK).ModifiedGitsConfiguration, true,
               true);
         }
-        if (ImGui::MenuItem("Screenshot Stream", "", analysisState.Screenshots)) {
+        if (ImGui::MenuItem(MnuLbl::ANALYSIS_SCREENSHOTS, "", analysisState.Screenshots)) {
           studio_actions::AnalyzeStream(
               context.ConfigurationForAction(GitsAction::PLAYBACK).ModifiedGitsConfiguration, true,
               false);
         }
-        if (ImGui::MenuItem("Trace Stream", "", analysisState.Trace)) {
+        if (ImGui::MenuItem(MnuLbl::ANALYSIS_TRACE, "", analysisState.Trace)) {
           studio_actions::AnalyzeStream(
               context.ConfigurationForAction(GitsAction::PLAYBACK).ModifiedGitsConfiguration, false,
               true);
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("View Metadata")) {
+        if (ImGui::MenuItem(MnuLbl::VIEW_METADATA)) {
           NavigateEvent event = NavigateEvent(SideBarItem::METADATA);
           EventBus::GetInstance().publish<NavigateEvent>(event);
         }
-        if (ImGui::MenuItem("View Trace")) {
+        if (ImGui::MenuItem(MnuLbl::VIEW_TRACE)) {
           NavigateEvent event = NavigateEvent(SideBarItem::API_TRACE);
           EventBus::GetInstance().publish<NavigateEvent>(event);
         }
         ImGui::EndMenu();
       }
     }
-    if (ImGui::BeginMenu("Help")) {
+    if (ImGui::BeginMenu(MnuLbl::HELP)) {
       auto& context = BaseContext::GetBaseInstance();
       auto configuration = context.GetBaseConfiguration();
       if (configuration) {
         ImGui::Separator();
-        if (ImGui::MenuItem("Switch theme")) {
+        if (ImGui::MenuItem(MnuLbl::SWITCH_THEME)) {
           configuration->Theme.CycleTheme();
           configuration->Theme.ApplyTheme();
           context.UpdatePalette();

@@ -15,6 +15,9 @@
 #include <cfloat>
 
 #include "IntelOneMono-RegularAuto.h"
+#include "MaterialDesignIcons-RegularAuto.h"
+#include "IconsMaterialDesignIcons.h"
+
 #include "log.h"
 
 ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs) {
@@ -53,6 +56,9 @@ static constexpr const char* RELEASE_NOTES_CLOSE_BUTTON = "Close";
 
 namespace gits {
 namespace ImGuiHelper {
+
+ImFont* regularFont = nullptr;
+ImFont* largeFont = nullptr;
 
 static float currentUiScale = 1.0f;
 
@@ -110,12 +116,27 @@ std::string ToStr(const ImVec2& v) {
   return std::to_string(static_cast<int>(v.x)) + "x" + std::to_string(static_cast<int>(v.y));
 }
 
-ImFont* GetIntelFont(float uiScale) {
+ImFont* GetCombinedFont(float uiScale) {
   ImGuiIO& io = ImGui::GetIO();
   ImFontConfig font_cfg;
   font_cfg.FontDataOwnedByAtlas = false;
-  return io.Fonts->AddFontFromMemoryTTF(gits::Font::font_data, gits::Font::font_data_size, 48.0f,
-                                        &font_cfg);
+  auto* font = io.Fonts->AddFontFromMemoryTTF(gits::Font::IntelOneMonoRegular::font_data,
+                                              gits::Font::IntelOneMonoRegular::font_data_size,
+                                              48.0f, &font_cfg);
+
+  ImFontConfig icons_cfg;
+  icons_cfg.MergeMode = true;
+  icons_cfg.FontDataOwnedByAtlas = false;
+  icons_cfg.GlyphMinAdvanceX = 48.0f;
+  icons_cfg.GlyphOffset.y = 5.0f;
+
+  static const ImWchar mdi_ranges[] = {(ImWchar)ICON_MIN_MDI, (ImWchar)ICON_MAX_MDI, (ImWchar)0};
+
+  io.Fonts->AddFontFromMemoryTTF(gits::Font::materialdesigniconswebfont::font_data,
+                                 gits::Font::materialdesigniconswebfont::font_data_size, 48.0f,
+                                 &icons_cfg, mdi_ranges);
+
+  return font;
 }
 
 float CurrentUIScale() {
@@ -135,12 +156,15 @@ bool UpdateUIScaling(float scale) {
   style.AntiAliasedLinesUseTex = true;
 
   io.Fonts->Clear();
-  ImFont* newFont = GetIntelFont(scale);
-  if (newFont == nullptr) {
+  regularFont = GetCombinedFont(scale);
+  largeFont = GetCombinedFont(scale * 1.4f);
+  if (regularFont == nullptr || largeFont == nullptr) {
     return false;
   }
-  newFont->Scale = scale * 0.5;
-  io.FontDefault = newFont;
+  regularFont->Scale = scale * 0.5;
+  largeFont->Scale = scale * 0.65;
+
+  io.FontDefault = regularFont;
   io.Fonts->Build();
 
   return true;
@@ -394,13 +418,12 @@ bool RangeControls(const char* label,
 void HelpButton(const std::string& title,
                 const std::string& tooltip,
                 const std::string& description) {
-  std::string buttonId = "?##HelpBtn" + title;
+  std::string buttonId = ICON_MDI_HELP "##HelpBtn" + title;
   std::string popupId = title + "##HelpPopup";
 
   float buttonSize = ImGui::GetFrameHeight();
   ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, buttonSize * 0.5f);
-  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                      ImVec2(10.0f, 0.0f)); // Manual tweak for centering
+  ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f)); // Manual tweak for centering
 
   ImGui::SameLine();
   if (ImGui::Button(buttonId.c_str(), ImVec2(buttonSize, buttonSize))) {

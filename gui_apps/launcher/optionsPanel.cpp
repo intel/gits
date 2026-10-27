@@ -13,6 +13,7 @@
 #include "context.h"
 #include "baseContext.h"
 #include "baseCommon.h"
+#include "labels.h"
 
 namespace {
 bool ArePluginsSupported() {
@@ -40,7 +41,7 @@ void OptionsPanel::Render() {
   auto& baseContext = gits::gui::BaseContext::GetBaseInstance();
 
   if (ImGui::BeginTabBar("OptionsTabs")) {
-    if (ImGui::BeginTabItem("Options")) {
+    if (ImGui::BeginTabItem(Labels::OPTIONS_PANEL_OPTIONS)) {
       switch (baseContext.SelectedAction) {
       case GitsAction::CAPTURE:
         m_CaptureOptionsPanel.Render();
@@ -56,12 +57,13 @@ void OptionsPanel::Render() {
       }
       ImGui::EndTabItem();
     }
-    if (ArePluginsSupported() && ImGui::BeginTabItem("Plugins")) {
+    if (ArePluginsSupported() && ImGui::BeginTabItem(Labels::OPTIONS_PANEL_PLUGINS)) {
       m_PluginsPanel.Render();
       ImGui::EndTabItem();
     }
 #ifdef WIN32
-    if (baseContext.SelectedAction == GitsAction::CAPTURE && ImGui::BeginTabItem("System setup")) {
+    if (baseContext.SelectedAction == GitsAction::CAPTURE &&
+        ImGui::BeginTabItem(Labels::OPTIONS_PANEL_SYSTEM_SETUP)) {
       m_SystemSetupPanel.Render();
       ImGui::EndTabItem();
     }

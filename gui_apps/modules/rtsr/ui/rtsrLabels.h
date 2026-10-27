@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "baseLabels.h"
+
 namespace gits::gui {
 
 // Text shown by this module's panel. It lives in the module rather than in the
@@ -63,9 +65,9 @@ struct RtsrLabels {
   static constexpr const char* PIPELINES_FILTER_RAY_HINT = "Filter RayTracing Pipelines";
 
   // Tabs.
-  static constexpr const char* TAB_PIPELINES = "Pipelines";
-  static constexpr const char* TAB_PERFORMANCE = "Performance";
-  static constexpr const char* TAB_PIPELINE_STATE = "Pipeline state";
+  static constexpr const char* TAB_PIPELINES = ICON_MDI_PIPE " Pipelines";
+  static constexpr const char* TAB_PERFORMANCE = ICON_MDI_SPEEDOMETER " Performance";
+  static constexpr const char* TAB_PIPELINE_STATE = ICON_MDI_PIPE_VALVE " Pipeline state";
   static constexpr const char* SOURCE_PENDING = "Preparing shader source...";
   static constexpr const char* SOURCE_FAILED = "Shader source is unavailable.";
   static constexpr const char* SOURCE_HLSL = "Reconstructed HLSL (read-only)";
@@ -97,15 +99,16 @@ struct RtsrLabels {
       "Pan and zoom freely. Turns off automatic scaling and selection by click.";
 
   // Performance tab, toolbar.
-  static constexpr const char* COLLECT_START = "Start Live Data Collection";
-  static constexpr const char* COLLECT_END = "Pause Live Data Collection";
-  static constexpr const char* COLLECT_DISABLED = "Live data collection unavailable";
+  static constexpr const char* COLLECT_START = ICON_MDI_RECORD_CIRCLE " Start Live Data Collection";
+  static constexpr const char* COLLECT_END = ICON_MDI_PAUSE " Pause Live Data Collection";
+  static constexpr const char* COLLECT_DISABLED =
+      ICON_MDI_CIRCLE_OFF_OUTLINE " Live data collection unavailable";
   static constexpr const char* COLLECT_HINT =
       "Ask the connected client to time every pipeline it binds";
   static constexpr const char* COLLECT_REFUSED =
       "The client did not accept the request. Pipeline timing is not implemented in the plugin "
       "yet.";
-  static constexpr const char* RESET_VIEW = "Reset view";
+  static constexpr const char* RESET_VIEW = ICON_MDI_REFRESH " Reset view";
   static constexpr const char* RESET_VIEW_HINT =
       "Drop the selection and return both plots to automatic scaling";
   static constexpr const char* PERF_EMPTY =
@@ -171,7 +174,7 @@ struct RtsrLabels {
   static constexpr const char* ROW_SHARE = "Share of GPU time";
   static constexpr const char* ROW_MIN_DURATION = "Min duration";
   static constexpr const char* ROW_MAX_DURATION = "Max duration";
-  static constexpr const char* GO_TO_PIPELINE = "Go to pipeline";
+  static constexpr const char* GO_TO_PIPELINE = ICON_MDI_FORWARD " Go to pipeline";
   static constexpr const char* GO_TO_PIPELINE_HINT = "Show this pipeline on the Shaders tab";
 };
 

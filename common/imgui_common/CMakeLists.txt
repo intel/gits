@@ -11,21 +11,33 @@ cmake_minimum_required(VERSION 3.10)
 set(IMGUILIB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(IMGUILIB_HEADER_DIR ${IMGUILIB_SOURCE_DIR}/include)
 
-# Font
-set(IMGUILIB_FONT_C_HEADER ${IMGUILIB_HEADER_DIR}/IntelOneMono-RegularAuto.h)
+# Fonts
+set(INTEL_ONE_MONO_FONT_C_HEADER ${IMGUILIB_HEADER_DIR}/IntelOneMono-RegularAuto.h)
+set(MATERIAL_DESIGN_ICONS_FONT_C_HEADER ${IMGUILIB_HEADER_DIR}/MaterialDesignIcons-RegularAuto.h)
+
+# TTF to C header script & function:
 set(IMGUILIB_FONT_CONVERT_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/scripts/convert_ttf_to_c_array.py)
 
-add_custom_command(
-  OUTPUT ${IMGUILIB_FONT_C_HEADER}
-  COMMAND ${CMAKE_COMMAND} -E echo "Running Python script to generate font header..."
-  COMMAND ${Python3_EXECUTABLE} ${IMGUILIB_FONT_CONVERT_SCRIPT} ${INTELONEMONO_FONT_REGULAR} ${IMGUILIB_FONT_C_HEADER}
-  DEPENDS ${IMGUILIB_FONT_CONVERT_SCRIPT}
-  COMMENT "Generating C header from TTF font file"
+function(imgui_common_add_font_header input_file output_file font_name)
+  add_custom_command(
+    OUTPUT "${output_file}"
+    COMMAND ${Python3_EXECUTABLE} "${IMGUILIB_FONT_CONVERT_SCRIPT}" "${input_file}" "${output_file}"
+    DEPENDS "${IMGUILIB_FONT_CONVERT_SCRIPT}" "${input_file}"
+    COMMENT "Generating C header from ${font_name} TTF font file"
+  )
+  set(IMGUILIB_FONT_TTF_HEADERS ${IMGUILIB_FONT_TTF_HEADERS} "${output_file}" PARENT_SCOPE)
+endfunction()
+
+imgui_common_add_font_header(
+  "${INTELONEMONO_FONT_REGULAR}" "${INTEL_ONE_MONO_FONT_C_HEADER}" "IntelOne Mono"
+)
+imgui_common_add_font_header(
+  "${MATERIAL_DESIGN_FONT_REGULAR}" "${MATERIAL_DESIGN_ICONS_FONT_C_HEADER}" "MaterialDesignIcons"
 )
 
 add_custom_target(
   generate_font_header ALL
-  DEPENDS ${IMGUILIB_FONT_TTF_HEADER}
+  DEPENDS ${IMGUILIB_FONT_TTF_HEADERS}
 )
 set_target_properties(generate_font_header PROPERTIES FOLDER "common/imgui")
 
@@ -54,7 +66,8 @@ set(IMGUILIB_HEADER_FILES
   ${IMGUILIB_HEADER_DIR}/tabGroup.h
   ${IMGUILIB_HEADER_DIR}/yamlTreeViewer.h
   ${IMGUILIB_HEADER_DIR}/textTreeViewer.h
-  ${IMGUILIB_FONT_C_HEADER}
+  ${INTEL_ONE_MONO_FONT_C_HEADER}
+  ${MATERIAL_DESIGN_ICONS_FONT_C_HEADER}
 )
 
 set(IMGUI_SRC
@@ -78,6 +91,7 @@ target_include_directories(
   ${IMGUILIB_HEADER_DIR}
   ${IMGUI_SOURCE_DIR}/
   ${IMGUI_COLOR_TEXT_EDIT_DIR} 
+  ${ICON_FONT_CPP_HEADERS_SOURCE_DIR}
 )
 
 target_include_directories(

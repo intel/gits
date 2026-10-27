@@ -26,17 +26,17 @@ using ItemType = gits::ImGuiHelper::ItemType;
 using SideBarItem = Context::SideBarItem;
 
 // main window
-static constexpr const char* HELP_BUTTON = "?";
-static constexpr const char* FILE_MENU = "File";
 static constexpr const char* OPEN_FOLDER_MENU = "Open Folder";
-static constexpr const char* HELP_MENU = "Help";
-static constexpr const char* EXIT_MENU_ITEM = "Exit";
 static constexpr const char* NEW_SESSION_BUTTON = "New Session";
 static constexpr const char* NEW_SESSION_BUTTON_TOOLTIP =
     "Clear all paths except the GITS base path";
+
+static constexpr const char* SUBCAPTURE = "Subcapture (DX)";
+static constexpr const char* SUBCAPTURE_HINT = "Subcapture (DX only!) an existing stream";
+
 static constexpr const char* SIMPLE_MODE_BACK_TO_SELECTION_BUTTON = "Back";
-static constexpr const char* SIMPLE_MODE_LABEL = "Simple Mode";
-static constexpr const char* ADVANCED_MODE_LABEL = "Advanced Mode";
+static constexpr const char* SIMPLE_MODE_LABEL = ICON_MDI_FLASH_OUTLINE " Simple Mode";
+static constexpr const char* ADVANCED_MODE_LABEL = ICON_MDI_TOOLS " Advanced Mode";
 static constexpr const char* GITS_BASE_FOLDER_MENU_ITEM = "GITS Base";
 static constexpr const char* GITS_STREAM_PLAYBACK_FOLDER_MENU_ITEM = "Playback Stream";
 static constexpr const char* GITS_STREAM_SUBCAPTURE_FOLDER_MENU_ITEM = "Subcapture Stream";
@@ -156,6 +156,10 @@ static constexpr const char* CAPTURE_MONITORING_PID_LABEL = "PID";
 static constexpr const char* CAPTURE_MONITORING_EXECUTABLE_LABEL = "Executable";
 static constexpr const char* SUBCAPTURE_MONITORING_TITLE = "Subcapture";
 
+static constexpr const char* OPTIONS_PANEL_OPTIONS = ICON_MDI_TUNE " Options";
+static constexpr const char* OPTIONS_PANEL_PLUGINS = ICON_MDI_TOY_BRICK_OUTLINE " Plugins";
+static constexpr const char* OPTIONS_PANEL_SYSTEM_SETUP = ICON_MDI_COG_OUTLINE " System setup";
+
 static const auto& SIDE_BAR() {
   static const std::map<SideBarItem, ImGuiHelper::ButtonGroupItem> items = {
       {SideBarItem::LABEL_GITS,
@@ -186,9 +190,9 @@ static const auto& SIDE_BAR_VEC() {
 
 static const auto& MODE_BUTTONS() {
   static const std::map<GitsAction, gits::ImGuiHelper::ButtonGroupItem> items = {
-      {GitsAction::PLAYBACK, {"Playback", "Playback a GITS stream"}},
-      {GitsAction::CAPTURE, {"Capture", "Capture a GITS stream"}},
-      {GitsAction::SUBCAPTURE, {"Subcapture", "Subcapture a GITS stream"}},
+      {GitsAction::PLAYBACK, {ICON_MDI_MOVIE_PLAY " Playback", "Playback a GITS stream"}},
+      {GitsAction::CAPTURE, {ICON_MDI_RECORD_REC " Capture", "Capture a GITS stream"}},
+      {GitsAction::SUBCAPTURE, {ICON_MDI_RECORD_CIRCLE " Subcapture", "Subcapture a GITS stream"}},
   };
   return items;
 }

@@ -11,8 +11,8 @@
 namespace gits::gui {
 
 namespace Labels {
-static constexpr const char* LIVE_MODE = "Live Mode";
-static constexpr const char* STREAM_MODE = "Stream Mode";
+static constexpr const char* LIVE_MODE = ICON_MDI_APPLICATION " Live Mode";
+static constexpr const char* STREAM_MODE = ICON_MDI_FILE_DOCUMENT " Stream Mode";
 
 static constexpr const char* BLANK_CONTENT_AREA = "No panel selected on the right side.";
 
@@ -20,17 +20,26 @@ static constexpr const char* LAUNCH_WORKLOAD = "Launch Target";
 
 static constexpr const char* NO_TRACEFILE = "No tracefile present.";
 
+namespace Menu {
+static constexpr const char* ANALYSIS = "Analysis";
+static constexpr const char* ANALYSIS_FULL = "Full Analysis";
+static constexpr const char* ANALYSIS_SCREENSHOTS = "Screenshot Stream";
+static constexpr const char* ANALYSIS_TRACE = "Trace Stream";
+static constexpr const char* VIEW_METADATA = "View Metadata";
+static constexpr const char* VIEW_TRACE = "View Trace";
+}; // namespace Menu
+
 namespace NavBar {
 static constexpr const char* LOAD_STREAM = "Prepare Playback";
 static constexpr const char* RESET_STREAM = "Restart Playback";
-static constexpr const char* STOP_PLAYBACK = "Stop";
-static constexpr const char* START_PLAYBACK = "Start";
-static constexpr const char* PAUSE_PLAYBACK = "Pause";
-static constexpr const char* PLAY_UNTIL = "Play Until";
-static constexpr const char* STEP_PLAYBACK = "Step";
+static constexpr const char* STOP_PLAYBACK = ICON_MDI_STOP " Stop";
+static constexpr const char* START_PLAYBACK = ICON_MDI_PLAY " Start";
+static constexpr const char* PAUSE_PLAYBACK = ICON_MDI_PAUSE "Pause";
+static constexpr const char* PLAY_UNTIL = ICON_MDI_SKIP_NEXT " Play Until";
+static constexpr const char* STEP_PLAYBACK = ICON_MDI_STEP_FORWARD " Step";
 static constexpr const char* SECTION_LABEL = "Section";
-static constexpr const char* MARK_START = "Mark Start";
-static constexpr const char* MARK_END = "Mark End";
+static constexpr const char* MARK_START = ICON_MDI_RAY_START " Mark Start";
+static constexpr const char* MARK_END = ICON_MDI_RAY_END " Mark End";
 }; // namespace NavBar
 
 namespace Status {

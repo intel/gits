@@ -11,6 +11,7 @@
 #include "imGuiHelper.h"
 
 #include "guiActions.h"
+#include "baseLabels.h"
 
 namespace gits::gui::context_helper {
 
@@ -108,7 +109,7 @@ void RenderRecentMenu(bool showStreams, bool showTargets) {
 
   auto config = context.GetBaseConfiguration();
   if (config && (showStreams || showTargets)) {
-    if (ImGui::BeginMenu("Recent")) {
+    if (ImGui::BeginMenu(gits::gui::Labels::Menu::RECENT)) {
       if (showStreams) {
         const auto& recentStreams = config->RecentStreams();
         auto selectedStream = RenderRecentMenuList(recentStreams, "streams");

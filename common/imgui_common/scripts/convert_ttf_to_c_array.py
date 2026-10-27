@@ -11,6 +11,7 @@
 import sys
 import os
 import argparse
+import re
 from typing import List
 
 
@@ -37,12 +38,18 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.input_file):
-        print(f"Error: The file {args.input_file} does not exist.")
+        print(f"Error: The input font file {args.input_file} does not exist.")
         sys.exit(1)
 
     c_code = convert_ttf_to_c_array(args.input_file)
     output_file_name = args.output_file if args.output_file.endswith(
         '.h') else f"{os.path.splitext(args.output_file)[0]}.h"
+    # take the font filename remove the extension
+    font_namespace_name = os.path.splitext(os.path.basename(args.input_file))[0].replace(" ", "").replace("-", "").replace("_", "")
+    if not font_namespace_name or font_namespace_name[0].isdigit():
+        font_namespace_name = f"font_{font_namespace_name}"
+
+    print(f"Generating C header file: {output_file_name} from {args.input_file} in namespace {font_namespace_name}")
 
     try:
         with open(output_file_name, "w") as f:
@@ -51,11 +58,13 @@ def main():
             f.write("#pragma once\n")
             f.write("namespace gits {\n")
             f.write("namespace Font {\n")
+            f.write(f"namespace {font_namespace_name} {{\n")
             f.write(c_code)
+            f.write(f"}} // namespace {font_namespace_name}\n")
             f.write("} // namespace Font\n")
             f.write("} // namespace gits\n")
     except IOError as e:
-        print(f"Error writing to file {output_file_name}: {e}")
+        print(f"Error writing font header to file {output_file_name}: {e}")
         sys.exit(1)
 
     print(f"Converted {args.input_file} to {output_file_name}")

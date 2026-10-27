@@ -17,6 +17,8 @@
 #include "baseCommon.h"
 #include "baseContext.h"
 
+#include "IconsMaterialDesignIcons.h"
+
 namespace gits::gui {
 
 namespace Labels {
@@ -47,12 +49,6 @@ static constexpr const char* STREAM = "Stream";
 static constexpr const char* STREAM_HINT = "Select a stream";
 static constexpr const char* TARGET = "Target";
 static constexpr const char* TARGET_HINT = "Select an application to run the stream with";
-static constexpr const char* CAPTURE = "Capture";
-static constexpr const char* CAPTURE_HINT = "Capture a new stream";
-static constexpr const char* PLAYBACK = "Playback";
-static constexpr const char* PLAYBACK_HINT = "Playback an existing stream";
-static constexpr const char* SUBCAPTURE = "Subcapture (DX)";
-static constexpr const char* SUBCAPTURE_HINT = "Subcapture (DX only!) an existing stream";
 static constexpr const char* START = "Start";
 static constexpr const char* START_HINT = "Start playback/capture";
 static constexpr const char* START_CAPTURE = "Start";
@@ -95,6 +91,24 @@ static constexpr const char* CHOOSE_CAPTURE_OUTPUT_PATH_HINT =
     "Open File Dialog to choose the stream output path to be used";
 static constexpr const char* OPEN_CAPTURE_OUTPUT_PATH = "Open";
 static constexpr const char* OPEN_CAPTURE_OUTPUT_PATH_HINT = "Open specified path in explorer";
+
+static constexpr const char* HELP_BUTTON = ICON_MDI_HELP_CIRCLE;
+
+namespace Menu {
+static constexpr const char* FILE = "File";
+static constexpr const char* OPEN = "Open";
+static constexpr const char* RECENT = "Recent";
+
+static constexpr const char* DETECT_BASE_PATHS = "Detect GITS base path";
+static constexpr const char* DETECT_BASE_PATHS_HINT =
+    "Try to automatically detect the GITS base path based on the executable location";
+
+static constexpr const char* QUIT = "Quit";
+
+static constexpr const char* HELP = "Help";
+
+static constexpr const char* SWITCH_THEME = ICON_MDI_THEME_LIGHT_DARK " Switch Theme";
+} // namespace Menu
 
 // Playback-Options
 static constexpr const char* EXECUTABLE_NAME_ENABLED =
@@ -178,12 +192,9 @@ static constexpr const char* GITS_CAPTURE_BUTTON = "Open Capture folder";
 static constexpr const char* GITS_SCREENSHOT_BUTTON = "Open Screenshots folder";
 static constexpr const char* GITS_TRACE_BUTTON = "Open Trace folder";
 static constexpr const char* GITS_SUBCAPTURE_BUTTON = "Open Subcapture folder";
-static constexpr const char* RELEASE_NOTES_WINDOW_TITLE = "Release Notes";
-static constexpr const char* RELEASE_NOTES_BUTTON = "Show Release Notes";
-static constexpr const char* RELEASE_NOTES_CLOSE_BUTTON = "Close";
-static constexpr const char* DETECT_BASE_PATHS = "Detect GITS base path";
-static constexpr const char* DETECT_BASE_PATHS_HINT =
-    "Try to automatically detect the GITS base path based on the executable location";
+static constexpr const char* RELEASE_NOTES_WINDOW_TITLE = ICON_MDI_NOTE_OUTLINE " Release Notes";
+static constexpr const char* RELEASE_NOTES_BUTTON = ICON_MDI_NOTE_OUTLINE " Show Release Notes";
+static constexpr const char* RELEASE_NOTES_CLOSE_BUTTON = ICON_MDI_CLOSE " Close";
 static constexpr const char* UPDATE_CONFIG_PATH = "Use config from GITS base path ";
 static constexpr const char* UPDATE_CONFIG_PATH_HINT =
     "Set the current mode's config path based ont the GITS base path";

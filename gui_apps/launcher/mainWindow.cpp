@@ -300,10 +300,12 @@ void MainWindow::Render() {
 }
 
 void MainWindow::FileMenu() {
+  namespace MnuLbl = gits::gui::Labels::Menu;
+
   auto& context = Context::GetInstance();
   const auto visibleAction = VisibleAction();
 
-  if (ImGui::BeginMenu(Labels::FILE_MENU)) {
+  if (ImGui::BeginMenu(MnuLbl::FILE)) {
     if (ImGui::MenuItem(Labels::NEW_SESSION_BUTTON)) {
       NewLauncherSession();
     }
@@ -346,10 +348,10 @@ void MainWindow::FileMenu() {
 
     ImGui::Separator();
     if (ImGui::BeginMenu(Labels::GITS_BASE_PATHS_MENU)) {
-      if (ImGui::MenuItem(Labels::DETECT_BASE_PATHS)) {
+      if (ImGui::MenuItem(MnuLbl::DETECT_BASE_PATHS)) {
         context.ResetBasePaths();
       }
-      ImGui::SetItemTooltip(Labels::DETECT_BASE_PATHS_HINT);
+      ImGui::SetItemTooltip(MnuLbl::DETECT_BASE_PATHS_HINT);
 
       const bool hasVisibleAction = visibleAction.has_value();
       if (ImGui::MenuItem(Labels::UPDATE_CONFIG_PATH, nullptr, false, hasVisibleAction)) {
@@ -373,7 +375,7 @@ void MainWindow::FileMenu() {
       ImGui::EndMenu();
     }
     ImGui::Separator();
-    if (ImGui::MenuItem(Labels::EXIT_MENU_ITEM)) {
+    if (ImGui::MenuItem(MnuLbl::QUIT)) {
       context.ShouldQuit = true;
     }
     ImGui::EndMenu();
@@ -381,14 +383,17 @@ void MainWindow::FileMenu() {
 }
 
 void MainWindow::HelpMenu() {
-  auto versionLabel = std::string(Labels::VERSION) + ": " + APP_VERSION;
+  namespace MnuLbl = gits::gui::Labels::Menu;
+  auto versionLabel =
+      ICON_MDI_INFORMATION_OUTLINE + std::string(Labels::VERSION) + ": " + APP_VERSION;
 
-  if (ImGui::BeginMenu(Labels::HELP_MENU)) {
+  if (ImGui::BeginMenu(MnuLbl::HELP)) {
 
     auto& context = BaseContext::GetBaseInstance();
     auto configuration = context.GetBaseConfiguration();
     if (configuration) {
-      if (ImGui::MenuItem("Switch theme")) {
+      ImGui::Separator();
+      if (ImGui::MenuItem(MnuLbl::SWITCH_THEME)) {
         configuration->Theme.CycleTheme();
         configuration->Theme.ApplyTheme();
         context.UpdatePalette();
@@ -545,6 +550,7 @@ void MainWindow::RenderSimpleModeSelection() {
 
   ImGui::SetCursorPos(ImVec2(startX, startY));
 
+  ImGui::PushFont(ImGuiHelper::largeFont);
   ImGuiHelper::PushButtonStyle(ImGuiHelper::ButtonStyle::BUTTON_STYLE_SUCCESS);
 
   if (ImGui::Button(captureLabel.c_str(), buttonSize)) {
@@ -567,6 +573,7 @@ void MainWindow::RenderSimpleModeSelection() {
   }
 
   ImGuiHelper::PopButtonStyle();
+  ImGui::PopFont();
 }
 
 void MainWindow::RenderAdvancedMode() {

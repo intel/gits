@@ -81,6 +81,9 @@ enum class ButtonStyle {
   BUTTON_STYLE_DEFAULT
 };
 
+extern ImFont* regularFont;
+extern ImFont* largeFont;
+
 float WidthOf(Widgets widget, const std::string& label = "");
 float LineHeight();
 
@@ -88,7 +91,7 @@ void Seperator(bool samelLine = true);
 
 std::string ToStr(const ImVec2& v);
 
-ImFont* GetIntelFont(float uiScale);
+ImFont* GetCombinedFont(float uiScale);
 
 float CurrentUIScale();
 
