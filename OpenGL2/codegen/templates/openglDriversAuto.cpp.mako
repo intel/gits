@@ -125,43 +125,64 @@ ${ret} APIENTRY ResolveAndCall_${cmd.name}(${param_decls}) {
 }
 
 % endfor
-bool TryCacheRealFunction(const char* name, void* value) {
-  // This function is rarely run, so doesn't really matter for performance.
+namespace {
+struct DispatchEntry {
+  const char* Name;
+  void (*Setter)(void*);
+  bool (*IsResolved)();
+};
 
+const DispatchEntry* FindDispatchEntry(const char* name) {
   // A braced map initializer would construct every key inline, which makes this function very
   // slow to compile.
-  struct SetterEntry {
-    const char* Name;
-    void (*Setter)(void*);
-  };
-  static const SetterEntry entries[] = {
+  static const DispatchEntry entries[] = {
 % for cmd in commands:
     {"${cmd.name}", [](void* pointer) {
          g_DispatchTable.${cmd.name}.store(
            reinterpret_cast<OpenGLDispatchTable::${cmd.name}Ptr>(pointer),
            std::memory_order_release);
+     }, [] {
+         const auto pointer = g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
+         return pointer != nullptr && pointer != &ResolveAndCall_${cmd.name};
      }},
 % endfor
   };
-  static const std::unordered_map<std::string_view, void (*)(void*)> nameToSetter = [] {
-    std::unordered_map<std::string_view, void (*)(void*)> map;
+  static const std::unordered_map<std::string_view, const DispatchEntry*> nameToEntry = [] {
+    std::unordered_map<std::string_view, const DispatchEntry*> map;
     map.reserve(std::size(entries));
-    for (const SetterEntry& entry : entries) {
-      map.emplace(entry.Name, entry.Setter);
+    for (const DispatchEntry& entry : entries) {
+      map.emplace(entry.Name, &entry);
     }
     return map;
   }();
-  auto it = nameToSetter.find(name);
-  if (it == nameToSetter.end()) {
+  const auto it = nameToEntry.find(name);
+  return it != nameToEntry.end() ? it->second : nullptr;
+}
+} // namespace
+
+bool TryCacheRealFunction(const char* name, void* value) {
+  const auto* entry = FindDispatchEntry(name);
+  if (entry == nullptr) {
     return false;
   }
-  it->second(value);
+  entry->Setter(value);
   return true;
 }
 
 bool TryResolveRealFunction(const char* name) {
+  const auto* entry = FindDispatchEntry(name);
+  if (entry == nullptr) {
+    return false;
+  }
+  if (entry->IsResolved()) {
+    return true;
+  }
   void* real = ResolveDriverFunction(name, /*logFailure=*/false);
-  return real != nullptr && TryCacheRealFunction(name, real);
+  if (real == nullptr) {
+    return false;
+  }
+  entry->Setter(real);
+  return true;
 }
 
 void* GetRealFunction(const char* name) {

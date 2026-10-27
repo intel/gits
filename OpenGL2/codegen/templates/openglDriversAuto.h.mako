@@ -73,9 +73,9 @@ extern OpenGLDispatchTable g_DispatchTable;
 // since (e.g. the bootstrap context was already destroyed).
 bool TryCacheRealFunction(const char* name, void* value);
 
-// Resolves and caches the real function for `name` like its resolve-thunk would, but without
-// warning on failure - for optional entry points a caller only prefers over a fallback. Returns
-// whether it resolved.
+// Returns true without re-resolving if `name` already has a cached real function. Otherwise
+// resolves and caches it without warning on failure. Returns false for failed resolution
+// (including unknown names); failed lookups remain retryable.
 bool TryResolveRealFunction(const char* name);
 
 // Returns the real function for `name`, or nullptr, without caching it or warning on failure -
