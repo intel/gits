@@ -688,6 +688,12 @@ void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
   const uint64_t shareGroup = CurrentShareGroup();
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   for (GLsizei index = 0; index < count; ++index) {
+    const auto mapped = m_MappedBuffers.find(Key{shareGroup, buffers[index]});
+    GITS_ASSERT(mapped == m_MappedBuffers.end(),
+                "Deleting a mapped buffer is unsupported: capture does not track implicit unmap "
+                "and retained-object lifetimes at deletion, so it cannot safely discard the "
+                "mapping or GPU-write classification. This workload requires additional recorder "
+                "support");
     m_MappedBuffers.erase(Key{shareGroup, buffers[index]});
   }
 }

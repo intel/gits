@@ -368,10 +368,10 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 <% hook = buffer_content_hooks[cmd.name] %>\
   // Reported whether or not this command is enabled - see buffer_content_hooks.py.
   if (record${f' && {hook.guard}' if hook.guard else ''}) {
-    BufferShadowService::Get().${hook.call};
 % if cmd.name in ('glDeleteBuffers', 'glDeleteBuffersARB'):
     MapTrackingService::Get().OnDelete(n, buffers);
 % endif
+    BufferShadowService::Get().${hook.call};
   }
 % endif
   if (record) {
