@@ -492,10 +492,12 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (readPointer != nullptr) {
     std::memcpy(bytes.data(), readPointer, bytes.size());
     if (realInternalUnmap() != GL_TRUE) {
-      LOG_WARNING << "MapTrackingService (" << callerName << "): internal unmap of buffer "
-                  << buffer << " returned GL_FALSE - no MappedDataMetaCommand recorded";
       CaptureManager::Get().SkipCommandKey(key);
-      return result;
+      std::ostringstream message;
+      message << "MapTrackingService (" << callerName << "): internal unmap of buffer " << buffer
+              << " returned GL_FALSE after the application unmap succeeded; "
+                 "buffer contents are undefined and therefore unusable.";
+      GITS_ASSERT(false, message.str());
     }
   } else if (!realReadSubData(range->Offset, range->Length, bytes.data())) {
     LOG_WARNING << "MapTrackingService (" << callerName << "): no readback function for buffer "
