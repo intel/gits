@@ -336,9 +336,10 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % if cmd.name in client_array_setters:
 <%
     setter = client_array_setters[cmd.name]
+    setter_condition = 'record && !command->m_Skip' if cmd.enabled else 'record'
 %>\
   // Reported whether or not this command is enabled - see client_array_draws.py's setter table.
-  if (record) {
+  if (${setter_condition}) {
 % if setter.kind == 'Interleaved':
     ClientArraysService::Get().NoteInterleavedArrays(pointer);
 % else:
@@ -365,9 +366,14 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % endif
 % endif
 % if cmd.name in buffer_content_hooks:
-<% hook = buffer_content_hooks[cmd.name] %>\
+<%
+    hook = buffer_content_hooks[cmd.name]
+    hook_condition = 'record && !command->m_Skip' if cmd.enabled else 'record'
+    if hook.guard:
+        hook_condition += f' && {hook.guard}'
+%>\
   // Reported whether or not this command is enabled - see buffer_content_hooks.py.
-  if (record${f' && {hook.guard}' if hook.guard else ''}) {
+  if (${hook_condition}) {
 % if cmd.name in ('glDeleteBuffers', 'glDeleteBuffersARB'):
     MapTrackingService::Get().OnDelete(n, buffers);
 % endif
@@ -589,20 +595,9 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % for p in delete_object_name_params:
 <%
     delete_kind = object_name_override_for(cmd.name, p.name, p.class_).kind.value
+    delete_condition = '!command->m_Skip' if is_void else '!command->m_Skip && result'
 %>\
-% if is_void:
-% if p.type_facts.is_array_element_eligible:
-    for (GLuint name : command->m_${p.name}.Value) {
-      ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
-                                          GroupIdentityFor(GLObjectKind::${delete_kind}), name);
-    }
-% else:
-    ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
-                                        GroupIdentityFor(GLObjectKind::${delete_kind}),
-                                        command->m_${p.name}.Value);
-% endif
-% else:
-    if (result) {
+    if (${delete_condition}) {
 % if p.type_facts.is_array_element_eligible:
       for (GLuint name : command->m_${p.name}.Value) {
         ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
@@ -614,7 +609,6 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
                                           command->m_${p.name}.Value);
 % endif
     }
-% endif
 % endfor
     for (Layer* postLayer : CaptureManager::Get().GetPostLayers()) {
       postLayer->Post(*command);
