@@ -399,14 +399,27 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   }
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
                     offset, length, access, true};
-  if (access & GL_MAP_FLUSH_EXPLICIT_BIT) {
-    range.RangePolicy.Type = CaptureRangePolicy::Mode::DeclaredFlush;
-    GITS_ASSERT((access & GL_MAP_WRITE_BIT) != 0,
-                "Explicit-flush buffer map has no writable byte source");
-    if ((access & GL_MAP_READ_BIT) == 0) {
-      const auto [major, minor] = CurrentContextGLVersion();
-      GITS_ASSERT(major > 4 || (major == 4 && minor >= 2) ||
-                      CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment"),
+  const bool readable = (access & GL_MAP_READ_BIT) != 0;
+  const bool writable = (access & GL_MAP_WRITE_BIT) != 0;
+  const bool explicitFlush = (access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0;
+  const bool invalidated =
+      (access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0;
+  const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
+  const bool dirtyPageCandidate =
+      !explicitFlush && writable && !readable && invalidated && !unsynchronized;
+  bool shadowAlignmentAvailable = false;
+  if (dirtyPageCandidate || (explicitFlush && !readable)) {
+    const auto [major, minor] = CurrentContextGLVersion();
+    shadowAlignmentAvailable = major > 4 || (major == 4 && minor >= 2) ||
+                               CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment");
+  }
+  const bool useDirtyPageCapture = dirtyPageCandidate && shadowAlignmentAvailable;
+  if (explicitFlush || useDirtyPageCapture) {
+    range.RangePolicy.Type = explicitFlush ? CaptureRangePolicy::Mode::DeclaredFlush
+                                           : CaptureRangePolicy::Mode::DirtyPages;
+    GITS_ASSERT(writable, "Explicit-flush buffer map has no writable byte source");
+    if (!readable) {
+      GITS_ASSERT(shadowAlignmentAvailable,
                   "GL_MIN_MAP_BUFFER_ALIGNMENT is unavailable for shadow mapping");
       GLint alignment = 0;
       g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
@@ -514,8 +527,12 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
   }
-  const auto interval = range->RangePolicy.SelectUnmapRange(range->Length);
-  if (!interval) {
+  const bool useDirtyPageCapture = range->RangePolicy.Type == CaptureRangePolicy::Mode::DirtyPages;
+  std::optional<MapRelativeRange> interval;
+  if (!useDirtyPageCapture) {
+    interval = range->RangePolicy.SelectUnmapRange(range->Length);
+  }
+  if (!useDirtyPageCapture && !interval) {
     // Capture only flushed ranges. Writes after the final flush and before unmap leave the
     // corresponding buffer contents undefined, so unmap must not snapshot those bytes.
     return realUnmap();
@@ -523,19 +540,34 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   // Reserve before the real unmap, then record or release on every path; otherwise another
   // thread can claim a later key and stall the ordering recorder on this one.
   const uint64_t key = CaptureManager::Get().CreateCommandKey();
-  if (range->Access & GL_MAP_READ_BIT) {
-    // Readable mappings can be copied before the application-visible unmap invalidates them.
-    auto bytes = range->Source.Snapshot(0, static_cast<size_t>(interval->Length));
+  const auto unmapAndRecord = [&](std::optional<MappedBufferUpdate> update) {
     const GLboolean result = realUnmap();
-    if (result == GL_TRUE) {
-      RecordOrSkipMappedUpdate(key, MakeMappedUpdate(*range, *interval, std::move(bytes)));
-    } else {
+    if (result != GL_TRUE) {
       LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
                   << " returned GL_FALSE (data store contents corrupted per spec) - no "
                      "MappedDataMetaCommand recorded for this unmap";
-      RecordOrSkipMappedUpdate(key, std::nullopt);
+      update.reset();
     }
+    RecordOrSkipMappedUpdate(key, update);
     return result;
+  };
+  if (useDirtyPageCapture) {
+    GITS_ASSERT(range->Source.Shadow != nullptr, "Dirty-page map has no watched shadow");
+    const auto dirty = range->Source.Shadow->DirtyRange(range->Source.ApplicationPointer,
+                                                        static_cast<size_t>(range->Length));
+    if (!dirty) {
+      return unmapAndRecord(std::nullopt);
+    }
+    interval = MapRelativeRange{static_cast<GLintptr>(dirty->Offset),
+                                static_cast<GLsizeiptr>(dirty->Length)};
+    auto bytes = range->Source.Snapshot(dirty->Offset, dirty->Length);
+    range->Source.WriteBack(dirty->Offset, bytes);
+    return unmapAndRecord(MakeMappedUpdate(*range, *interval, std::move(bytes)));
+  }
+  if (range->Access & GL_MAP_READ_BIT) {
+    // Readable mappings can be copied before the application-visible unmap invalidates them.
+    auto bytes = range->Source.Snapshot(0, static_cast<size_t>(interval->Length));
+    return unmapAndRecord(MakeMappedUpdate(*range, *interval, std::move(bytes)));
   }
   // Write-only pointers cannot be read safely. Unmap first, then read the resulting buffer.
   std::vector<uint8_t> bytes(static_cast<size_t>(interval->Length));
