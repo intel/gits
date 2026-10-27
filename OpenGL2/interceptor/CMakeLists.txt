@@ -48,10 +48,14 @@ target_link_libraries(OpenGL2_interceptor PRIVATE
   log
 )
 
-set_target_properties(OpenGL2_interceptor PROPERTIES
-  OUTPUT_NAME OpenGL32
-  FOLDER OpenGL2
-)
+if(WIN32)
+  set_target_properties(OpenGL2_interceptor PROPERTIES OUTPUT_NAME OpenGL32)
+else()
+  # libGL.so.1, loaded through LD_PRELOAD or LD_LIBRARY_PATH.
+  set_target_properties(OpenGL2_interceptor PROPERTIES OUTPUT_NAME GL SOVERSION 1)
+  target_link_libraries(OpenGL2_interceptor PRIVATE ${CMAKE_DL_LIBS})
+endif()
+set_target_properties(OpenGL2_interceptor PROPERTIES FOLDER OpenGL2)
 
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:OpenGL2_interceptor> DESTINATION Recorder/${OpenGL2_INSTALL_SUBDIR} OPTIONAL)

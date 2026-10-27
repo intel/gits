@@ -12,7 +12,7 @@
 
 from dataclasses import replace
 
-from generator_helpers import mako_write
+from generator_helpers import PLATFORM_GUARDS, mako_write
 from intermediates import Api, CmdType, Command, Parameter, ReturnValue
 
 # Real opengl32.dll exports these under their "wgl"-prefixed name, but wgl.xml
@@ -47,6 +47,17 @@ _WGL_NOT_REAL_EXPORTS = {
     'SwapBuffers',
     'GetEnhMetaFilePixelFormat',
 }
+
+# glx.xml contains these, but libGL does not export them: they take IRIX digital
+# media and video library types.
+_GLX_NOT_REAL_EXPORTS = {
+    'glXAssociateDMPbufferSGIX',
+    'glXCreateGLXVideoSourceSGIX',
+    'glXDestroyGLXVideoSourceSGIX',
+}
+# Hand-written overrides in interceptorCustom.cpp that hand out our own trampolines instead of
+# raw real driver pointers, which the uniform generated trampoline shape can't do.
+_GET_PROC_ADDRESS_COMMANDS = {'wglGetProcAddress', 'glXGetProcAddress', 'glXGetProcAddressARB'}
 
 
 # TODO: These two functions for adding a synthetic command are a temporary
@@ -101,33 +112,33 @@ def _get_synthetic_wgl_commands(wgl_commands: list[Command]) -> list[Command]:
 
 
 def build_interceptor_command_list(commands: dict[Api, list[Command]]) -> list[Command]:
-    """Build the command list handled by the Windows interceptor.
+    """Build the command list handled by the interceptor.
 
-    The list contains known commands, both enabled and disabled, but currently
-    GL/WGL only. This includes synthetic entries for exports absent under their
-    real names in the WGL registry.
+    The list contains known GL, WGL and GLX commands, both enabled and disabled.
+    This includes synthetic entries for exports absent under their real names
+    in the WGL registry.
     """
     wgl_commands = [c for c in commands[Api.WGL] if c.name not in _WGL_NOT_REAL_EXPORTS]
     # Pass unfiltered WGL commands, since this function needs the signatures of some
     # GDI commands that _WGL_NOT_REAL_EXPORTS filters out (e.g. wglChoosePixelFormat
     # is cloned from ChoosePixelFormat, which is getting filtered).
     wgl_commands += _get_synthetic_wgl_commands(commands[Api.WGL])
-    return commands[Api.GL] + wgl_commands
+    glx_commands = [c for c in commands[Api.GLX] if c.name not in _GLX_NOT_REAL_EXPORTS]
+    return commands[Api.GL] + wgl_commands + glx_commands
 
 
 def generate_interceptor_files(commands: list[Command]) -> None:
-    """Generate interceptor DLL exports and trampolines."""
+    """Generate interceptor exports and trampolines."""
 
-    # wglGetProcAddress gets a hand-written override instead of a generated
-    # trampoline (see interceptorCustom.cpp) - it needs to hand out our own
-    # trampolines instead of raw real driver pointers, wherever we have one,
-    # which the uniform generated trampoline shape can't do. It's still part of
-    # the dispatch table and .def export list below (recorder dispatch still
-    # needs wglGetProcAddress, and the symbol is still exported, just backed by
-    # the override instead).
-    trampoline_commands = [c for c in commands if c.name != 'wglGetProcAddress']
+    # The get-proc-address commands get hand-written overrides instead of
+    # generated trampolines (see _GET_PROC_ADDRESS_COMMANDS). They're still part
+    # of the dispatch table and of the .def export list below (recorder dispatch
+    # still needs them, and the symbols are still exported, just backed by the
+    # overrides instead).
+    trampoline_commands = [c for c in commands if c.name not in _GET_PROC_ADDRESS_COMMANDS]
 
     mako_write('templates/interceptorAuto.cpp.mako', 'interceptor/interceptorAuto.cpp',
-               commands=trampoline_commands)
+               commands=trampoline_commands, platform_guards=PLATFORM_GUARDS)
+    # The .def is the Windows export list.
     mako_write('templates/interceptorAuto.def.mako', 'interceptor/interceptorAuto.def',
-               commands=commands)
+               commands=[c for c in commands if c.api != Api.GLX])

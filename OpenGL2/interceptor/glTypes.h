@@ -6,17 +6,17 @@
 //
 // ===================== end_copyright_notice ==============================
 
-// GL and WGL scalar, handle, and struct type declarations used across the
-// full GL+WGL command set (core plus every vendor extension), matching the
-// Khronos/Microsoft <GL/gl.h>/<GL/glext.h>/<GL/wglext.h>/<windows.h>
-// typedefs. Declared by hand here instead of including those headers,
-// since they also declare every GL/WGL function (dllimport) - which would
-// conflict with this DLL's own definitions of those same functions in
-// interceptorAuto.cpp. Self-declaring these types also avoids depending on
-// <windows.h>, which doesn't exist outside Windows.
+// GL, WGL and GLX scalar, handle, and struct type declarations used across the
+// full GL+WGL+GLX command set (core plus every vendor extension), matching the
+// Khronos/Microsoft/X11 <GL/gl.h>/<GL/glext.h>/<GL/wglext.h>/<GL/glx.h>/
+// <GL/glxext.h>/<windows.h>/<X11/Xlib.h> typedefs. Declared by hand here
+// instead of including those headers, since they also declare every GL/WGL/GLX
+// function - which would conflict with the interceptor's own definitions of
+// those same functions in interceptorAuto.cpp. Self-declaring these types also
+// avoids depending on <windows.h> or <X11/Xlib.h>, which each exist on one
+// platform only, so the full command set builds everywhere.
 //
-// GLX/X11 and EGL types aren't declared here - those APIs aren't
-// intercepted yet.
+// EGL types aren't declared here, as EGL isn't intercepted.
 
 #pragma once
 
@@ -156,6 +156,36 @@ typedef struct _WGLSWAP {
 // Opaque forward declaration: only ever passed through as a pointer, never
 // read or written by this DLL.
 typedef struct _GLYPHMETRICSFLOAT* LPGLYPHMETRICSFLOAT;
+
+// ----- GLX/X11 handles and structs -----
+// XID is `unsigned long` in Xlib, 64-bit on Linux. It is 64-bit everywhere here, so that GLX
+// commands serialize identically on every platform. The structs are only ever passed through as
+// pointers.
+
+typedef uint64_t XID;
+typedef XID Window;
+typedef XID Pixmap;
+typedef XID Colormap;
+typedef XID Font;
+typedef int Bool;
+typedef int Status;
+typedef struct _XDisplay Display;
+typedef struct XVisualInfo XVisualInfo;
+
+typedef struct __GLXcontextRec* GLXContext;
+typedef struct __GLXFBConfigRec* GLXFBConfig;
+typedef struct __GLXFBConfigRec* GLXFBConfigSGIX;
+typedef XID GLXDrawable;
+typedef XID GLXPixmap;
+typedef XID GLXWindow;
+typedef XID GLXPbuffer;
+typedef XID GLXContextID;
+typedef XID GLXPbufferSGIX;
+typedef XID GLXVideoCaptureDeviceNV;
+typedef unsigned int GLXVideoDeviceNV;
+typedef struct GLXHyperpipeNetworkSGIX GLXHyperpipeNetworkSGIX;
+typedef struct GLXHyperpipeConfigSGIX GLXHyperpipeConfigSGIX;
+typedef void (*__GLXextFuncPtr)(void);
 
 // ----- GL scalar and handle types -----
 

@@ -8,6 +8,13 @@
 
 #pragma once
 
+// Windows exports the entry points through the generated interceptorAuto.def.
+#if defined(_WIN32)
+#define GL_INTERCEPTOR_EXPORT extern "C"
+#else
+#define GL_INTERCEPTOR_EXPORT extern "C" __attribute__((visibility("default")))
+#endif
+
 namespace gits::opengl2 {
 
 void* GetInterceptorProcAddress(const char* name);

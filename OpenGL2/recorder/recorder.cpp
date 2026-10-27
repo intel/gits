@@ -16,6 +16,13 @@
 
 #include <stdexcept>
 
+#if !defined(_WIN32)
+#include "messageBus.h"
+
+#include <cstdlib>
+#include <memory>
+#endif
+
 namespace gits::opengl2 {
 
 class Recorder final : public IRecorder {
@@ -51,9 +58,29 @@ public:
   }
 };
 
+#if !defined(_WIN32)
+namespace {
+
+// Windows publishes the program exit from the ExitProcess hook in recorder/recorderDLL.cpp.
+void PublishProgramExit() {
+  MessageBus::get().publish({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
+                            std::make_shared<ProgramMessage>());
+}
+
+} // namespace
+#endif
+
 } // namespace gits::opengl2
 
 extern "C" gits::opengl2::IRecorder* OPENGL_RECORDER_CALL GITSRecorderOpenGL2() {
   static gits::opengl2::Recorder recorder;
+#if !defined(_WIN32)
+  static const bool exitHandlerRegistered = [] {
+    // Constructed first, so that it is destroyed after the handler runs.
+    gits::MessageBus::get();
+    return std::atexit(gits::opengl2::PublishProgramExit) == 0;
+  }();
+  (void)exitHandlerRegistered;
+#endif
   return &recorder;
 }

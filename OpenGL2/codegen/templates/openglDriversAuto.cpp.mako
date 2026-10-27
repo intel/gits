@@ -1,4 +1,4 @@
-<%page args="commands, namespace='gits::opengl2', warmup_commands=None"/>\
+<%page args="commands, namespace='gits::opengl2', warmup_commands=None, platform_guards=None"/>\
 <%
     # WarmUpResolvableFunctions() (further below) is the only per-command loop in this file that
     # can safely iterate a *narrower* list than the dispatch table/ResolveAndCall_<cmd>/
@@ -12,6 +12,14 @@
     # narrow it).
     if warmup_commands is None:
         warmup_commands = commands
+    if platform_guards is None:
+        platform_guards = {}
+    # Window-system commands are probed only on their own platform.
+    unguarded_warmup_count = sum(1 for c in warmup_commands if c.api not in platform_guards)
+    guarded_warmup_counts = {
+        guard: sum(1 for c in warmup_commands if platform_guards.get(c.api) == guard)
+        for guard in platform_guards.values()
+    }
 %>\
 // ===================== begin_copyright_notice ============================
 //
@@ -59,7 +67,8 @@ bool IsWglGetProcAddressFailureSentinel(void* real) {
 // resolve-thunk below simply being called again on the next use).
 // wglGetProcAddress itself is excluded from the fallback (it's always
 // resolvable via the static path, being core WGL) to avoid infinite
-// recursion into itself.
+// recursion into itself. Elsewhere the fallback is glXGetProcAddressARB,
+// which libGL exports.
 //
 // `logFailure` distinguishes this function's two callers: ResolveAndCall_<cmd> (below) resolves
 // a command that is actually about to be replayed, so a failure there means that specific call
@@ -72,6 +81,7 @@ bool IsWglGetProcAddressFailureSentinel(void* real) {
 // logFailure=false and reports one aggregate count instead).
 void* ResolveDriverFunction(const char* name, bool logFailure = true) {
   void* real = GetRealProcAddress(name);
+#if defined(_WIN32)
   if (real == nullptr && strcmp(name, "wglGetProcAddress") != 0) {
     real = reinterpret_cast<void*>(
       g_DispatchTable.wglGetProcAddress.load(std::memory_order_acquire)(name));
@@ -79,6 +89,12 @@ void* ResolveDriverFunction(const char* name, bool logFailure = true) {
       real = nullptr;
     }
   }
+#else
+  if (real == nullptr && strcmp(name, "glXGetProcAddressARB") != 0) {
+    real = reinterpret_cast<void*>(g_DispatchTable.glXGetProcAddressARB.load(
+      std::memory_order_acquire)(reinterpret_cast<const GLubyte*>(name)));
+  }
+#endif
   if (real == nullptr && logFailure) {
     // Failed to load it, will retry the next time app calls it.
     // Perhaps the app made a mistake of calling it before a context was available?
@@ -246,8 +262,17 @@ void WarmUpResolvableFunctions(GITSKey contextKey) {
   // explicit set of disabled commands the player's own hand-written code still resolves
   // through this same dispatch table directly).
   unsigned resolvedCount = 0;
-  constexpr unsigned totalCount = ${len(warmup_commands)};
+  unsigned totalCount = ${unguarded_warmup_count};
+% for guard, count in guarded_warmup_counts.items():
+#if ${guard}
+  totalCount += ${count};
+#endif
+% endfor
 % for cmd in warmup_commands:
+<% guard = platform_guards.get(cmd.api) %>\
+% if guard:
+#if ${guard}
+% endif
   if (g_DispatchTable.${cmd.name}.load(std::memory_order_acquire) != &ResolveAndCall_${cmd.name}) {
     // Already resolved (and cached) by an earlier warm-up or by actual use - the dispatch-table
     // entry no longer points at its default resolve-thunk, so probing again would just repeat
@@ -260,6 +285,9 @@ void WarmUpResolvableFunctions(GITSKey contextKey) {
     TryCacheRealFunction("${cmd.name}", resolved);
     ++resolvedCount;
   }
+% if guard:
+#endif
+% endif
 % endfor
 
   // Every successful context-attaching wglMakeCurrent call for a genuinely new/different
@@ -278,7 +306,7 @@ void WarmUpResolvableFunctions(GITSKey contextKey) {
   const std::lock_guard lock(logMutex);
   if (!loggedOnce || resolvedCount != lastLoggedCount) {
     LOG_INFO << "Resolved " << resolvedCount << "/" << totalCount
-             << " OpenGL/WGL functions against the real driver.";
+             << " OpenGL functions against the real driver.";
     lastLoggedCount = resolvedCount;
     loggedOnce = true;
   }

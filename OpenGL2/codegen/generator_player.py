@@ -11,7 +11,7 @@
 import re
 
 from custom_player_runners import CUSTOM_PLAYER_RUNNERS
-from generator_helpers import mako_write, object_name_override_for
+from generator_helpers import PLATFORM_GUARDS, mako_write, object_name_override_for
 from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS, SHARE_LISTS_COMMANDS
 from intermediates import Command
 from object_name_lifecycle import ObjectNameRole
@@ -27,7 +27,8 @@ from object_name_lifecycle import ObjectNameRole
 # *Auto.{h,cpp} ones) for "g_DispatchTable.<name>" (WarmUpResolvableFunctions()'s
 # enabled-only probing loop would otherwise never warm these up either - see below for why
 # that still leaves them working correctly either way):
-#   - wglGetProcAddress: openglDriversAuto.cpp.mako's own ResolveDriverFunction() fallback path
+#   - wglGetProcAddress, glXGetProcAddressARB: openglDriversAuto.cpp.mako's own
+#     ResolveDriverFunction() fallback path
 #     (this is the recorder/player-shared template - see that file's own comment for why
 #     wglGetProcAddress itself has no generated Command/CommandRunner at all, on either side).
 #   - glGetIntegerv/glMapBufferRange: player/mappedDataMetaRunner.cpp's buffer map-tracking
@@ -52,6 +53,7 @@ from object_name_lifecycle import ObjectNameRole
 # either way, warmed up or not.
 _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'wglGetProcAddress',
+    'glXGetProcAddressARB',
     'glGetIntegerv',
     'glMapBufferRange',
     'glMapTexture2DINTEL',
@@ -62,7 +64,7 @@ _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
 # before the lists. The context state ones GL also executes are kept: commands compiled after
 # them read that state, and the context state restore overrides it later.
 _NOT_LISTED_RE = re.compile(
-    r'^(?:wgl'
+    r'^(?:wgl|glX'
     r'|gl(?:Gen|Create|Delete)(?:$|[A-Z])'
     r'|glFenceSync|glGenerate\w*Mipmap'
     r'|gl(?:Named)?Buffer(?:Sub)?Data|gl(?:Named)?BufferStorage|glCopy(?:Named)?BufferSubData'
@@ -133,7 +135,8 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
                namespace='gits::opengl2::player')
     mako_write('templates/openglDriversAuto.cpp.mako',
                'player/openglDriversAuto.cpp', commands=commands,
-               warmup_commands=warmup_commands, namespace='gits::opengl2::player')
+               warmup_commands=warmup_commands, platform_guards=PLATFORM_GUARDS,
+               namespace='gits::opengl2::player')
     mako_write('templates/commandRunnersAuto.h.mako',
                'player/include/commandRunnersAuto.h', commands=commands)
     mako_write('templates/commandRunnersAuto.cpp.mako',

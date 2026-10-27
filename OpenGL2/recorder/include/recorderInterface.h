@@ -10,8 +10,10 @@
 
 #if defined(_WIN32)
 #define OPENGL_RECORDER_CALL __stdcall
+#define OPENGL_RECORDER_EXPORT
 #else
 #define OPENGL_RECORDER_CALL
+#define OPENGL_RECORDER_EXPORT __attribute__((visibility("default")))
 #endif
 
 namespace gits::opengl2 {
@@ -32,4 +34,5 @@ public:
 
 } // namespace gits::opengl2
 
-extern "C" gits::opengl2::IRecorder* OPENGL_RECORDER_CALL GITSRecorderOpenGL2();
+extern "C" OPENGL_RECORDER_EXPORT gits::opengl2::IRecorder* OPENGL_RECORDER_CALL
+GITSRecorderOpenGL2();
