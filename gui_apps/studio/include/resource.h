@@ -8,9 +8,8 @@
 
 #pragma once
 
-#define APP_ICON      101
-#define APP_FILE_ICON 102
-#define APP_VERSION   "1.0.1"
+#define APP_ICON    101
+#define APP_VERSION "1.0.1"
 
 inline const char* RELEASE_NOTES = R"(
 Release Notes v1.0.1

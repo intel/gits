@@ -124,3 +124,15 @@ add_custom_command(TARGET gits_studio POST_BUILD
     $<TARGET_FILE:dxil-spirv-c-shared>
     $<TARGET_FILE_DIR:gits_studio>
 )
+
+install(TARGETS gits_studio
+  DESTINATION .
+  COMPONENT gits_laugits_studioncher
+)
+if(MSVC)
+  install(FILES $<TARGET_PDB_FILE:gits_studio>
+    DESTINATION .
+    COMPONENT gits_studio
+    OPTIONAL
+  )
+endif()
