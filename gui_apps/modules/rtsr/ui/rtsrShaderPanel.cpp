@@ -703,13 +703,13 @@ void RtsrShaderPanel::RenderShader(const rtsr::PipelineRecord& pipeline,
               shader.BytecodeSize);
 
   const auto entry = m_SourceCache.Request(shader.BytecodeHash, shader.EntrypointName);
-  if (entry.Status == RtsrShaderSourceCache::State::Pending) {
+  if (entry.State == RtsrShaderSourceCache::State::Pending) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::CRITICAL);
     ImGui::TextUnformatted(LB::SOURCE_PENDING);
     ImGui::PopStyleColor();
     return;
   }
-  if (entry.Status == RtsrShaderSourceCache::State::Failed) {
+  if (entry.State == RtsrShaderSourceCache::State::Failed) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::FAILURE);
     ImGui::TextUnformatted(LB::SOURCE_FAILED);
     ImGui::TextWrapped("%s", entry.Source->Diagnostic.c_str());

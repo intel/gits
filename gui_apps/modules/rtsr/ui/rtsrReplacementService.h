@@ -97,7 +97,7 @@ private:
                     rtsr::RTSR_ID pipelineId,
                     rtsr::RTSR_SHADER_STAGE stage,
                     std::optional<rtsr::SessionStore::ReplacementSnapshot> snapshot,
-                    ApplyRequest request = {});
+                    ApplyRequest request);
   void Run();
   void ApplyShader(Work work);
   void Reset(Work work);

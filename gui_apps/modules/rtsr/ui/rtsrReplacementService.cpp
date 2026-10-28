@@ -67,7 +67,7 @@ RtsrReplacementService::OperationId RtsrReplacementService::Queue(
     rtsr::RTSR_ID pipelineId,
     rtsr::RTSR_SHADER_STAGE stage,
     std::optional<rtsr::SessionStore::ReplacementSnapshot> snapshot,
-    ApplyRequest request) {
+    ApplyRequest request = {}) {
   OperationId id{};
   bool queued = false;
   {

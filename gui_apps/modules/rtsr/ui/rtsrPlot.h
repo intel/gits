@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "ImGui.h"
+#include "imgui.h"
 
 #include "rtsr/ui/rtsrSelection.h"
 

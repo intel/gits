@@ -35,7 +35,7 @@ public:
   };
 
   struct Entry {
-    State Status{State::Pending};
+    RtsrShaderSourceCache::State State{State::Pending};
     std::shared_ptr<const rtsr::ShaderSource> Source;
   };
 
