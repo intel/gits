@@ -127,7 +127,7 @@ add_custom_command(TARGET gits_studio POST_BUILD
 
 install(TARGETS gits_studio
   DESTINATION .
-  COMPONENT gits_laugits_studioncher
+  COMPONENT gits_studio
 )
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:gits_studio>
