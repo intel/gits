@@ -32,6 +32,15 @@ void OpenStream() {
   } else {
     context.SetPath("", Path::ANALYSIS, GitsAction::PLAYBACK);
   }
+
+  const auto& metadata = context.ConfigurationForAction(GitsAction::PLAYBACK).MetaData;
+  const auto& diags = metadata.RecorderDiags;
+  if (diags.contains("gits") && diags["gits"].contains("captured_frames")) {
+    context.PlayHeadState.TotalFrames = diags["gits"]["captured_frames"].get<uint64_t>();
+  } else {
+    context.PlayHeadState.TotalFrames = 0;
+  }
+
   ProcessAnalysis(false);
 }
 
@@ -116,7 +125,9 @@ void ProcessAnalysis(bool logFail) {
       }
     }
     LOG_INFO << "Found " << context.ScreenshotFiles.size() << " screenshots in " << screenshotsPath;
-    context.PlayHeadState.Init(static_cast<int>(context.ScreenshotFiles.size()));
+    if (context.PlayHeadState.TotalFrames == 0) {
+      context.PlayHeadState.Init(context.ScreenshotFiles.size());
+    }
     analysisState.Screenshots = true;
   }
 

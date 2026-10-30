@@ -85,6 +85,7 @@ void StreamWriter::Close() {
       m_CompressionThreads[i].join();
     }
   }
+  StreamHeader::Get().WriteCapturedFrames(m_Stream, m_CapturedFrames.load());
   m_Stream.close();
 }
 
@@ -94,6 +95,9 @@ void StreamWriter::Record(const CommandSerializer& commandSerializer) {
   }
 
   unsigned id = commandSerializer.Id();
+  if (id == static_cast<unsigned>(CommonCommandId::ID_FRAME_END)) {
+    ++m_CapturedFrames;
+  }
   uint64_t size = commandSerializer.Size();
   uint64_t totalSize = sizeof(id) + sizeof(size) + size;
 

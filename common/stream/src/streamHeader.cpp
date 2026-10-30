@@ -14,6 +14,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <string>
+#include <limits>
 
 namespace gits {
 namespace stream {
@@ -148,11 +149,30 @@ void StreamHeader::WriteProperties(std::ostream& stream) {
     throw EOperationFailed(EXCEPTION_MESSAGE);
   }
   m_Properties["diag"]["gits"]["config"] = std::string(configYaml.c_str());
+  m_Properties["diag"]["gits"]["captured_frames"] = std::numeric_limits<uint64_t>::max();
 
   std::string properties = m_Properties.dump();
   unsigned propertiesSize = properties.size();
   stream.write(reinterpret_cast<const char*>(&propertiesSize), sizeof(propertiesSize));
+  const std::string capturedFramesProperty = "\"captured_frames\":";
+  const auto capturedFramesOffset = properties.find(capturedFramesProperty);
+  if (capturedFramesOffset == std::string::npos) {
+    throw EOperationFailed("Captured frames metadata property was not serialized");
+  }
+  m_CapturedFramesPosition =
+      stream.tellp() +
+      static_cast<std::streamoff>(capturedFramesOffset + capturedFramesProperty.size());
   stream.write(properties.c_str(), propertiesSize);
+}
+
+void StreamHeader::WriteCapturedFrames(std::ofstream& stream, uint64_t capturedFrames) {
+  const auto currentPosition = stream.tellp();
+  const std::string value = std::to_string(capturedFrames);
+  stream.seekp(m_CapturedFramesPosition);
+  stream.write(value.data(), value.size());
+  const std::string padding(20 - value.size(), ' ');
+  stream.write(padding.data(), padding.size());
+  stream.seekp(currentPosition);
 }
 
 std::string StreamHeader::GetApplicationName() {

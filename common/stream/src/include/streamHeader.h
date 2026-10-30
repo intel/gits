@@ -32,6 +32,7 @@ public:
   std::array<unsigned, 4> GetVersion() const;
   std::string GetPropertiesDump() const;
   std::optional<nlohmann::ordered_json> FindProperty(const std::string& keyPath) const;
+  void WriteCapturedFrames(std::ofstream& stream, uint64_t capturedFrames);
   CompressionType GetCompressionType() const;
 
   enum class Api : unsigned {
@@ -71,6 +72,7 @@ private:
   nlohmann::ordered_json m_Properties;
   Api m_Api{};
   std::fstream::pos_type m_ApiPosition{};
+  std::fstream::pos_type m_CapturedFramesPosition{};
 };
 
 } // namespace stream

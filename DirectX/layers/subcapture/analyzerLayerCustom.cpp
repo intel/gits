@@ -2362,12 +2362,17 @@ void AnalyzerLayer::Post(xefgSwapChainD3D12InitFromSwapChainCommand& c) {
   }
   m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
   m_AnalyzerService.NotifyObject(c.m_pCmdQueue.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pCmdQueue.Key);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.Key);
   // Original swapChain is necessary for proper xefg swapChain initialization.
   m_AnalyzerService.ForceApplicationSwapChainRestore(c.m_pInitParams.ApplicationSwapChainKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.TempBufferHeapKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.TempBufferHeapKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.TempTextureHeapKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.TempTextureHeapKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.PipelineLibraryKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.PipelineLibraryKey);
 }
 
 void AnalyzerLayer::Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
@@ -2376,12 +2381,19 @@ void AnalyzerLayer::Post(xefgSwapChainD3D12InitFromSwapChainDescCommand& c) {
   }
   m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
   m_AnalyzerService.NotifyObject(c.m_pCmdQueue.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pCmdQueue.Key);
   m_AnalyzerService.NotifyObject(c.m_pDxgiFactory.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pDxgiFactory.Key);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.Key);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.ApplicationSwapChainKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.ApplicationSwapChainKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.TempBufferHeapKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.TempBufferHeapKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.TempTextureHeapKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.TempTextureHeapKey);
   m_AnalyzerService.NotifyObject(c.m_pInitParams.PipelineLibraryKey);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_pInitParams.PipelineLibraryKey);
 }
 
 void AnalyzerLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
@@ -2390,6 +2402,7 @@ void AnalyzerLayer::Post(xefgSwapChainD3D12GetSwapChainPtrCommand& c) {
   }
   m_AnalyzerService.NotifyObject(c.m_hSwapChain.Key);
   m_AnalyzerService.NotifyObject(c.m_ppSwapChain.Key);
+  m_AnalyzerService.AddParent(c.m_hSwapChain.Key, c.m_ppSwapChain.Key);
 }
 
 void AnalyzerLayer::Post(xefgSwapChainGetPropertiesCommand& c) {

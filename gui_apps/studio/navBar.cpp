@@ -151,7 +151,7 @@ void NavBar::Render() {
   ImGui::GetWindowDrawList()->AddLine(timeLineStart, timeLineEnd, ::Settings::COLOR_NAVBAR, 2.0f);
 
   // region marker
-  if (m_SectionActive && m_SectionActive) {
+  if (m_SectionActive) {
     ::DrawMarker(true, timeLineBasePos + vecWidthNavBar * playHead.MarkerStartPos(),
                  ::Settings::COLOR_MARKER_1);
     ::DrawMarker(false, timeLineBasePos + vecWidthNavBar * playHead.MarkerEndPos(),
@@ -306,7 +306,9 @@ void NavBar::ActionCallback(const Event& e) {
   auto& context = StudioContext::GetInstance();
 
   if (event.EventType == ActionEvent::Type::StudioAnalysisFinished) {
-    if (context.Analysis.Screenshots) {
+    if (context.PlayHeadState.TotalFrames != 0) {
+      m_PlayUntilFrame = context.PlayHeadState.TotalFrames;
+    } else if (context.Analysis.Screenshots) {
       m_PlayUntilFrame = context.PlayHeadState.TotalFrames;
     }
   }

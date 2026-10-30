@@ -75,11 +75,6 @@ void MetaDataPanel::Render() {
         currentSubPanel = SubPanel::Diags;
         ImGui::EndTabItem();
       }
-      // Stats are currently broken
-      //if (ImGui::BeginTabItem("Stats")) {
-      //  currentSubPanel = SubPanel::Stats;
-      //  ImGui::EndTabItem();
-      //}
       ImGui::EndTabBar();
     }
 
@@ -125,18 +120,6 @@ void MetaDataPanel::ClearStats() {
 void MetaDataPanel::AppendStats(std::string str) {
   std::lock_guard guard{m_StatsMutex};
   m_StatsStr.append(str);
-}
-
-void MetaDataPanel::FillStatsEditor() {
-  std::lock_guard guard{m_StatsMutex};
-  auto& context = BaseContext::GetBaseInstance();
-  // Remove everything before the "Statistics" line (which appears exactly once)
-  size_t pos = m_StatsStr.find("Statistics");
-  if (pos != std::string::npos) {
-    m_StatsStr = m_StatsStr.substr(pos);
-  }
-
-  m_MetaDataStatsEditor.SetText(m_StatsStr);
 }
 
 void MetaDataPanel::UpdateContent() {

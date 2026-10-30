@@ -20,6 +20,7 @@
 #include <mutex>
 #include <filesystem>
 #include <queue>
+#include <atomic>
 
 namespace gits {
 namespace stream {
@@ -38,6 +39,7 @@ private:
   std::ofstream m_Stream;
   std::string m_StreamDir;
   bool m_ApiWritten{};
+  std::atomic<uint64_t> m_CapturedFrames{};
   const unsigned TRIGGER_BLOCK_SIZE = 1024 * 1024 * 4;
   const unsigned INITIAL_BLOCK_ALLOC = TRIGGER_BLOCK_SIZE * 2;
   unsigned m_RecordedBlockId{};

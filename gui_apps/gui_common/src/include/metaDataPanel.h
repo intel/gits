@@ -34,7 +34,6 @@ public:
 private:
   void ClearStats();
   void AppendStats(std::string str);
-  void FillStatsEditor();
 
   void UpdateContent();
   // Event callbacks
