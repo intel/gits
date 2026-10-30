@@ -29,6 +29,7 @@ class PlayerManager;
 
 class PlayerLayerManager {
 public:
+  PlayerLayerManager();
   void LoadLayers(PlayerManager& playerManager, PluginService& pluginService);
   void Reset();
 
@@ -52,6 +53,7 @@ private:
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
+  bool m_SkipXess{};
 };
 
 } // namespace DirectX

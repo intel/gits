@@ -21,10 +21,16 @@
 #include "logDxErrorLayerAuto.h"
 #include "imguiHudLayer.h"
 #include "ccodeLayerAuto.h"
+#include "messageBus.h"
 #include "log.h"
 
 namespace gits {
 namespace DirectX {
+
+PlayerLayerManager::PlayerLayerManager() {
+  MessageBus::get().subscribe({PUBLISHER_PLUGIN, TOPIC_SKIP_XESS},
+                              [this](Topic t, const MessagePtr& m) { m_SkipXess = true; });
+}
 
 void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService& pluginService) {
   auto& cfg = Configurator::Get().directx;
@@ -104,7 +110,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
       imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
     }
-    dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager);
+    dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager, m_SkipXess);
     if (cfg.player.cCode.enabled) {
       ccodeLayer = std::make_unique<CCodeLayer>();
       const_cast<gits::Configuration&>(Configurator::Get())

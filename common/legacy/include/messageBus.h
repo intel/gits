@@ -41,6 +41,7 @@ enum TopicId {
   TOPIC_PROGRAM_EXIT,
   TOPIC_LOOP_BEGIN,
   TOPIC_LOOP_END,
+  TOPIC_SKIP_XESS,
   TOPIC_COUNT
 };
 struct Topic {

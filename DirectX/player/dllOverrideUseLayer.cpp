@@ -15,8 +15,8 @@
 
 namespace gits {
 namespace DirectX {
-DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager)
-    : Layer("DllOverrideUse"), m_Manager(manager) {
+DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager, bool skipXess)
+    : Layer("DllOverrideUse"), m_Manager(manager), m_SkipXess(skipXess) {
   m_UseAddressPinning =
       Configurator::Get().directx.player.addressPinning == AddressPinningMode::USE;
   m_DllOverridesDirectory =
@@ -29,6 +29,16 @@ DllOverrideUseLayer::DllOverrideUseLayer(PlayerManager& manager)
 }
 
 void DllOverrideUseLayer::Pre(DllContainerMetaCommand& c) {
+
+  if (m_SkipXess && c.m_dllName.Value &&
+      (_wcsicmp(c.m_dllName.Value, L"libxess.dll") == 0 ||
+       _wcsicmp(c.m_dllName.Value, L"libxell.dll") == 0 ||
+       _wcsicmp(c.m_dllName.Value, L"libxess_fg.dll") == 0)) {
+    LOG_INFO << "Skipped captured DLL " << c.m_dllName.Value;
+    c.Skip = true;
+    return;
+  }
+
   {
     std::ofstream file(m_DllOverridesDirectory / c.m_dllName.Value, std::ios::binary);
     if (!file.is_open()) {
@@ -158,7 +168,7 @@ void DllOverrideUseLayer::LoadAgilitySdk() {
 }
 
 void DllOverrideUseLayer::LoadXess() {
-  if (!m_XessLoaded) {
+  if (!m_SkipXess && !m_XessLoaded) {
     if (m_Manager.GetXessService().LoadXess("D3D12\\libxess.dll")) {
       m_XessLoaded = true;
     }
@@ -166,7 +176,7 @@ void DllOverrideUseLayer::LoadXess() {
 }
 
 void DllOverrideUseLayer::LoadXell() {
-  if (!m_XellLoaded) {
+  if (!m_SkipXess && !m_XellLoaded) {
     if (m_Manager.GetXessService().LoadXell("D3D12\\libxell.dll")) {
       m_XellLoaded = true;
     }
@@ -174,7 +184,7 @@ void DllOverrideUseLayer::LoadXell() {
 }
 
 void DllOverrideUseLayer::LoadXefg() {
-  if (!m_XefgLoaded) {
+  if (!m_SkipXess && !m_XefgLoaded) {
     if (m_Manager.GetXessService().LoadXefg("D3D12\\libxess_fg.dll")) {
       m_XefgLoaded = true;
     }

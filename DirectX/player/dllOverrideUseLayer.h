@@ -20,7 +20,7 @@ class PlayerManager;
 
 class DllOverrideUseLayer : public Layer {
 public:
-  DllOverrideUseLayer(PlayerManager& manager);
+  DllOverrideUseLayer(PlayerManager& manager, bool skipXess);
   ~DllOverrideUseLayer() = default;
 
   void Pre(DllContainerMetaCommand& command) override;
@@ -53,6 +53,7 @@ private:
   std::filesystem::path m_DllOverridesDirectory;
   const std::string m_DllOverridesRelativePath = "D3D12\\overrides\\D3D12";
   bool m_AgilitySdkLoaded{};
+  bool m_SkipXess{};
   bool m_XessLoaded{};
   bool m_XellLoaded{};
   bool m_XefgLoaded{};
