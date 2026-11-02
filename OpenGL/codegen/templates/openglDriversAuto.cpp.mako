@@ -142,62 +142,89 @@ ${ret} APIENTRY ResolveAndCall_${cmd.name}(${param_decls}) {
 
 % endfor
 namespace {
-struct DispatchEntry {
-  const char* Name;
-  void (*Setter)(void*);
-  bool (*IsResolved)();
-};
+// Commands are addressed by their index in `names` through switches rather than through
+// per-command functions: thousands of small functions make static analysis of this file slow.
+// Each case stays a single block, as static analysis skips functions of more than 10000 blocks.
+constexpr unsigned NO_DISPATCH_INDEX = ~0u;
 
-const DispatchEntry* FindDispatchEntry(const char* name) {
+unsigned FindDispatchIndex(const char* name) {
   // A braced map initializer would construct every key inline, which makes this function very
   // slow to compile.
-  static const DispatchEntry entries[] = {
+  static const char* const names[] = {
 % for cmd in commands:
-    {"${cmd.name}", [](void* pointer) {
-         g_DispatchTable.${cmd.name}.store(
-           reinterpret_cast<OpenGLDispatchTable::${cmd.name}Ptr>(pointer),
-           std::memory_order_release);
-     }, [] {
-         const auto pointer = g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
-         return pointer != nullptr && pointer != &ResolveAndCall_${cmd.name};
-     }},
+    "${cmd.name}",
 % endfor
   };
-  static const std::unordered_map<std::string_view, const DispatchEntry*> nameToEntry = [] {
-    std::unordered_map<std::string_view, const DispatchEntry*> map;
-    map.reserve(std::size(entries));
-    for (const DispatchEntry& entry : entries) {
-      map.emplace(entry.Name, &entry);
+  static const std::unordered_map<std::string_view, unsigned> nameToIndex = [] {
+    std::unordered_map<std::string_view, unsigned> map;
+    map.reserve(std::size(names));
+    for (unsigned index = 0; index < std::size(names); ++index) {
+      map.emplace(names[index], index);
     }
     return map;
   }();
-  const auto it = nameToEntry.find(name);
-  return it != nameToEntry.end() ? it->second : nullptr;
+  const auto it = nameToIndex.find(name);
+  return it != nameToIndex.end() ? it->second : NO_DISPATCH_INDEX;
+}
+
+void StoreRealFunction(unsigned index, void* pointer) {
+  switch (index) {
+% for index, cmd in enumerate(commands):
+  case ${index}:
+    g_DispatchTable.${cmd.name}.store(
+      reinterpret_cast<OpenGLDispatchTable::${cmd.name}Ptr>(pointer), std::memory_order_release);
+    return;
+% endfor
+  default:
+    return;
+  }
+}
+
+const void* LoadRealFunction(unsigned index) {
+  switch (index) {
+% for index, cmd in enumerate(commands):
+  case ${index}:
+    return reinterpret_cast<const void*>(
+      g_DispatchTable.${cmd.name}.load(std::memory_order_acquire));
+% endfor
+  default:
+    return nullptr;
+  }
+}
+
+bool IsRealFunctionResolved(unsigned index) {
+  static const void* const resolveThunks[] = {
+% for cmd in commands:
+    reinterpret_cast<const void*>(&ResolveAndCall_${cmd.name}),
+% endfor
+  };
+  const void* pointer = LoadRealFunction(index);
+  return pointer != nullptr && pointer != resolveThunks[index];
 }
 } // namespace
 
 bool TryCacheRealFunction(const char* name, void* value) {
-  const auto* entry = FindDispatchEntry(name);
-  if (entry == nullptr) {
+  const unsigned index = FindDispatchIndex(name);
+  if (index == NO_DISPATCH_INDEX) {
     return false;
   }
-  entry->Setter(value);
+  StoreRealFunction(index, value);
   return true;
 }
 
 bool TryResolveRealFunction(const char* name) {
-  const auto* entry = FindDispatchEntry(name);
-  if (entry == nullptr) {
+  const unsigned index = FindDispatchIndex(name);
+  if (index == NO_DISPATCH_INDEX) {
     return false;
   }
-  if (entry->IsResolved()) {
+  if (IsRealFunctionResolved(index)) {
     return true;
   }
   void* real = ResolveDriverFunction(name, /*logFailure=*/false);
   if (real == nullptr) {
     return false;
   }
-  entry->Setter(real);
+  StoreRealFunction(index, real);
   return true;
 }
 
