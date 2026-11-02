@@ -131,15 +131,13 @@ class PreHookKeyPairWrapperShapeTests(unittest.TestCase):
                 # two reservation shapes are mutually exclusive per generator_recorder.py's own
                 # `% if cmd.name in pre_hook_key_pair_commands: ... % else: ... % endif`.
                 self.assertNotIn(
-                    'const uint64_t orderingKey = record ? CaptureManager::Get()'
-                    '.CreateCommandKey() : 0;', body)
+                    'const uint64_t orderingKey = CaptureManager::Get().CreateCommandKey();', body)
 
     def test_a_command_outside_the_table_reserves_a_single_key_with_no_pending_hookup(
             self) -> None:
         body = extract_wrapper_body(self.rendered, 'wglDeleteContext')
         self.assertIn(
-            'const uint64_t orderingKey = record ? CaptureManager::Get().CreateCommandKey() : 0;',
-            body)
+            'const uint64_t orderingKey = CaptureManager::Get().CreateCommandKey();', body)
         self.assertNotIn('CreateCommandKeyPair', body)
         self.assertNotIn('SetPendingPreHookKey', body)
 
@@ -214,9 +212,9 @@ class PreHookExtraKeyTests(unittest.TestCase):
         body = extract_wrapper_body(rendered, 'wglSwapBuffers')
         self.assertIn('CaptureManager::Get().CreateFrameEndKeyRange(3)', body)
         self.assertNotIn('CreateCommandKeyRange', body)
-        pre_layers = body.find('preLayer->Pre(*command);')
+        pre_layers = body.find('preLayer->Pre(command);')
         ran = body.find('CaptureManager::Get().FrameEndPreLayersRan(orderingKey);')
-        call = body.find('realFunction(')
+        call = body.rfind('realFunction(')
         self.assertNotEqual(pre_layers, -1, body)
         self.assertLess(pre_layers, ran)
         self.assertLess(ran, call)
@@ -239,16 +237,16 @@ class ExistenceQueryWrapperTests(unittest.TestCase):
         body = extract_wrapper_body(
             render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
         lookup = body.find(
-            'UpdateHandleIfRegistered(command->m_texture, GLObjectKind::Texture);')
-        call = body.find('realFunction(texture);')
+            'UpdateHandleIfRegistered(command.m_texture, GLObjectKind::Texture);')
+        call = body.rfind('realFunction(texture);')
         confirm = body.find(
-            'ConfirmExistenceQuery(command->m_texture, GLObjectKind::Texture, result);')
+            'ConfirmExistenceQuery(command.m_texture, GLObjectKind::Texture, result);')
         self.assertNotEqual(lookup, -1, body)
         self.assertNotEqual(call, -1, body)
         self.assertNotEqual(confirm, -1, body)
         self.assertLess(lookup, call)
         self.assertLess(call, confirm)
-        self.assertNotIn('UpdateHandle(command->m_texture', body)
+        self.assertNotIn('UpdateHandle(command.m_texture', body)
 
 
 class LayerReplacedCallWrapperTests(unittest.TestCase):
@@ -264,28 +262,41 @@ class LayerReplacedCallWrapperTests(unittest.TestCase):
 
     def test_out_pointer_is_set_before_the_pre_layers(self) -> None:
         body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
-        pointer = body.find('command->m_data.Pointer = static_cast<GLint*>(data);')
-        pre = body.find('preLayer->Pre(*command);')
+        pointer = body.find('command.m_data.Pointer = static_cast<GLint*>(data);')
+        pre = body.find('preLayer->Pre(command);')
         self.assertNotEqual(pointer, -1, body)
         self.assertLess(pointer, pre)
 
     def test_void_call_is_skipped(self) -> None:
         body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
-        self.assertIn('if (!record || !command->m_Skip) {\n    realFunction(pname, data);', body)
+        self.assertIn('if (!command.m_Skip) {\n    realFunction(pname, data);', body)
 
     def test_skipped_call_returns_m_return(self) -> None:
         body = extract_wrapper_body(self.rendered, 'glIsTexture')
-        self.assertIn('GLboolean result = record && command->m_Skip ? command->m_Return.Value : '
+        self.assertIn('GLboolean result = command.m_Skip ? command.m_Return.Value : '
                       'realFunction(texture);', body)
-        self.assertIn('return record ? command->m_Return.Value : result;', body)
+        self.assertIn('return command.m_Return.Value;', body)
 
     def test_string_result_reaches_the_post_layers(self) -> None:
         body = extract_wrapper_body(self.rendered, 'glGetString')
-        assign = body.find('command->m_Return.Value = result;')
-        post = body.find('postLayer->Post(*command);')
+        assign = body.find('command.m_Return.Value = result;')
+        post = body.find('postLayer->Post(command);')
         self.assertNotEqual(assign, -1, body)
         self.assertLess(assign, post)
-        self.assertIn('return record ? command->m_Return.Value : result;', body)
+        self.assertIn('return command.m_Return.Value;', body)
+
+
+class NestedCallWrapperTests(unittest.TestCase):
+    """A call nested in another wrapper's call only reaches the driver: it reserves no key and
+    runs no layers."""
+
+    def test_nested_call_returns_before_reserving_a_key(self) -> None:
+        body = extract_wrapper_body(
+            render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
+        nested = body.find('if (guard.IsNested()) {\n    return realFunction(texture);\n  }')
+        key = body.find('CaptureManager::Get().CreateCommandKey()')
+        self.assertNotEqual(nested, -1, body)
+        self.assertLess(nested, key)
 
 
 class EncoderLayerSkipRecordingTests(unittest.TestCase):

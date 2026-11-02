@@ -451,7 +451,7 @@ class PixelTransferSizeIsUnknownCppHelperTests(unittest.TestCase):
         # Populated exactly twice: once for the IN-direction case (before the real call, next
         # to the RawPointer companion), once for the OUT-direction case (after Capture()).
         matches = re.findall(
-            r'command->m_\$\{p\.name\}SizeUnknown\.Value = PixelTransferSizeIsUnknown\(',
+            r'command\.m_\$\{p\.name\}SizeUnknown\.Value = PixelTransferSizeIsUnknown\(',
             source)
         self.assertEqual(len(matches), 2,
                          'Expected exactly one IN-direction and one OUT-direction '
@@ -587,10 +587,10 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             self) -> None:
         source = self._RECORDER_WRAPPERS_AUTO_CPP_MAKO.read_text(encoding='utf-8')
         self.assertIn(
-            'command->m_${p.name}IsBufferOffset.Value = '
+            'command.m_${p.name}IsBufferOffset.Value = '
             'UnpackPixelsPointerIsBufferOffset(${p.name});', source)
         self.assertIn(
-            'command->m_${p.name}IsBufferOffset.Value = '
+            'command.m_${p.name}IsBufferOffset.Value = '
             'PackPixelsPointerIsBufferOffset(${p.name});', source)
 
     def test_command_runners_auto_cpp_mako_bypasses_skip_for_buffer_offset_calls(self) -> None:
