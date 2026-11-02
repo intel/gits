@@ -8,11 +8,67 @@
 
 #include "stateTrackingService.h"
 
+#include "log.h"
+
 #include <algorithm>
+#include <cstring>
 #include <iterator>
 #include <utility>
 
 namespace gits::opengl {
+
+namespace {
+
+// Every command serializer encodes the command's m_Key and then its m_ThreadId first.
+constexpr size_t KEY_OFFSET = 0;
+constexpr size_t THREAD_ID_OFFSET = KEY_OFFSET + sizeof(GITSKey);
+constexpr size_t ENVELOPE_SIZE = THREAD_ID_OFFSET + sizeof(uint32_t);
+
+class StoredCommandSerializer : public stream::CommandSerializer {
+public:
+  StoredCommandSerializer(unsigned id, const std::vector<char>& data) : m_Id(id) {
+    m_DataSize = data.size();
+    m_Data.reset(new char[data.size()]);
+    std::memcpy(m_Data.get(), data.data(), data.size());
+  }
+
+  unsigned Id() const override {
+    return m_Id;
+  }
+
+  void SetKey(GITSKey key) {
+    std::memcpy(m_Data.get() + KEY_OFFSET, &key, sizeof(key));
+  }
+
+  void SetThreadId(uint32_t threadId) {
+    std::memcpy(m_Data.get() + THREAD_ID_OFFSET, &threadId, sizeof(threadId));
+  }
+
+private:
+  unsigned m_Id;
+};
+
+} // namespace
+
+StoredCommand::StoredCommand(const stream::CommandSerializer& serializer)
+    : m_Id(serializer.Id()), m_Data(serializer.Data(), serializer.Data() + serializer.Size()) {
+  GITS_ASSERT(m_Data.size() >= ENVELOPE_SIZE, "Stored command is shorter than its envelope");
+}
+
+void StoredCommand::Record(SubcaptureRecorder& recorder,
+                           GITSKey key,
+                           std::optional<uint32_t> threadId) const {
+  StoredCommandSerializer serializer(m_Id, m_Data);
+  serializer.SetKey(key);
+  if (threadId) {
+    serializer.SetThreadId(*threadId);
+  }
+  recorder.Record(serializer);
+}
+
+std::shared_ptr<StoredCommand> StoreSerialized(const stream::CommandSerializer& serializer) {
+  return std::make_shared<StoredCommand>(serializer);
+}
 
 bool IsContainerKind(GLObjectKind kind) {
   switch (kind) {

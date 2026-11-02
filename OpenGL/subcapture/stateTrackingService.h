@@ -27,38 +27,26 @@
 namespace gits::opengl {
 
 // A copy of a replayed command, written again under a state-restore key, on its own thread or
-// on `threadId`.
+// on `threadId`. It keeps the serialized command, so storing commands of thousands of types
+// instantiates no code per type.
 class StoredCommand {
 public:
-  virtual ~StoredCommand() = default;
-  virtual void Record(SubcaptureRecorder& recorder,
-                      GITSKey key,
-                      std::optional<uint32_t> threadId = std::nullopt) const = 0;
-};
-
-template <typename SerializerT, typename CommandT>
-class StoredCommandOf : public StoredCommand {
-public:
-  explicit StoredCommandOf(const CommandT& command) : m_Command(command) {}
+  explicit StoredCommand(const stream::CommandSerializer& serializer);
 
   void Record(SubcaptureRecorder& recorder,
               GITSKey key,
-              std::optional<uint32_t> threadId) const override {
-    CommandT command = m_Command;
-    command.m_Key = key;
-    if (threadId) {
-      command.m_ThreadId = *threadId;
-    }
-    recorder.Record(SerializerT(command));
-  }
+              std::optional<uint32_t> threadId = std::nullopt) const;
 
 private:
-  CommandT m_Command;
+  unsigned m_Id{};
+  std::vector<char> m_Data;
 };
+
+std::shared_ptr<StoredCommand> StoreSerialized(const stream::CommandSerializer& serializer);
 
 template <typename SerializerT, typename CommandT>
 std::shared_ptr<StoredCommand> Store(const CommandT& command) {
-  return std::make_shared<StoredCommandOf<SerializerT, CommandT>>(command);
+  return StoreSerialized(SerializerT(command));
 }
 
 // A recorded command with the window geometry sample the recorder took for it, if any.
