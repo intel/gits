@@ -1800,8 +1800,7 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsComm
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {
-  if (c.Skip || c.m_Result.Value != NVAPI_OK ||
-      !Configurator::Get().directx.player.multithreadedShaderCompilation) {
+  if (c.Skip || c.m_Result.Value != NVAPI_OK) {
     return;
   }
 
@@ -1811,8 +1810,7 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& 
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThreadCommand& c) {
-  if (c.Skip || c.m_Result.Value != NVAPI_OK ||
-      !Configurator::Get().directx.player.multithreadedShaderCompilation) {
+  if (c.Skip || c.m_Result.Value != NVAPI_OK) {
     return;
   }
 
@@ -1825,6 +1823,18 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThre
   NvAPIShaderExtnSlot slot{c.m_pDev.Key, c.m_uavSlot.Value, c.m_uavSpace.Value};
   if (std::find(m_NvapiShaderExtnSlotsUsed.begin(), m_NvapiShaderExtnSlotsUsed.end(), slot) ==
       m_NvapiShaderExtnSlotsUsed.end()) {
+    static bool logged = false;
+    if (!logged) {
+      for (const NvAPIShaderExtnSlot& used : m_NvapiShaderExtnSlotsUsed) {
+        if (used.DeviceKey == slot.DeviceKey) {
+          LOG_ERROR << "NvAPI_D3D12_SetNvShaderExtnSlotSpaceLocalThread - multiple NVIDIA shader "
+                       "extension slots per device are not supported. Pipelines using "
+                       "previously set slots may be compiled incorrectly";
+          logged = true;
+          break;
+        }
+      }
+    }
     m_NvapiShaderExtnSlotsUsed.push_back(slot);
     NvAPI_D3D12_SetNvShaderExtnSlotSpace(c.m_pDev.Value, c.m_uavSlot.Value, c.m_uavSpace.Value);
   }
