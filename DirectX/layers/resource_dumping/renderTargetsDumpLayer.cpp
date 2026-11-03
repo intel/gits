@@ -439,12 +439,6 @@ void RenderTargetsDumpLayer::DumpDepthStencil(ID3D12GraphicsCommandList* command
           D3D12CalcSubresource(mipLevel, arrayIndex, planeSlice, desc.MipLevels, arraySize);
       BarrierState resourceState = m_ResourceStateTracker.GetSubresourceState(
           commandList, depthStencil.ResourceKey, subresource);
-      if (!resourceState.Enhanced) {
-        if (!(resourceState.State & D3D12_RESOURCE_STATE_DEPTH_WRITE) &&
-            !(resourceState.State & D3D12_RESOURCE_STATE_DEPTH_READ)) {
-          resourceState.State = D3D12_RESOURCE_STATE_DEPTH_WRITE | D3D12_RESOURCE_STATE_DEPTH_READ;
-        }
-      }
       m_ResourceDump.DumpResource(commandList, depthStencil.Resource, subresource, resourceState,
                                   dumpName, mipLevel, format, commandListDraw);
     }
