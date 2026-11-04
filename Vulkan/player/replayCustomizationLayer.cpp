@@ -276,9 +276,8 @@ void ReplayCustomizationLayer::Pre(vkQueuePresentKHRCommand& command) {
   command.m_Skip = true;
 }
 
-// The recorded size of a dedicated image allocation can be below what the replay driver requires
-// (e.g. an imported image that had a different layout at capture time). Binding it would leave the
-// end of the image without memory. Buffers are left alone - their size does not depend on layout.
+// A dedicated image allocation that does not fit the replayed image means the image was created
+// differently than at capture time, e.g. an INTEL pNext structure missing from the stream.
 void ReplayCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
   auto* allocateInfo = command.m_pAllocateInfo.Value;
   if (!allocateInfo) {
@@ -295,22 +294,9 @@ void ReplayCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
       .vkGetImageMemoryRequirements(command.m_device.Value, dedicated->image, &requirements);
 
   if (requirements.size > allocateInfo->allocationSize) {
-    // A pinned allocation is recreated at its recorded address - growing it could overlap the next
-    // pinned range.
-    auto* captureAddress =
-        static_cast<const VkMemoryOpaqueCaptureAddressAllocateInfo*>(getPNextStructure(
-            allocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO));
-    if (captureAddress && captureAddress->opaqueCaptureAddress != 0) {
-      LOG_WARNING << "Dedicated image allocation (key " << command.m_pMemory.Key << ") is "
-                  << allocateInfo->allocationSize << " bytes but the replay driver requires "
-                  << requirements.size
-                  << " - not grown because the allocation is pinned to its capture address.";
-    } else {
-      LOG_INFO << "Dedicated image allocation (key " << command.m_pMemory.Key << ") grown from "
-               << allocateInfo->allocationSize << " to " << requirements.size
-               << " bytes - the replay driver requires more memory for the image than recorded.";
-      allocateInfo->allocationSize = requirements.size;
-    }
+    LOG_WARNING << "Dedicated image allocation (key " << command.m_pMemory.Key << ") is "
+                << allocateInfo->allocationSize << " bytes but the replay driver requires "
+                << requirements.size << " for the image.";
   }
   if ((requirements.memoryTypeBits & (1u << allocateInfo->memoryTypeIndex)) == 0) {
     LOG_WARNING << "Dedicated image allocation (key " << command.m_pMemory.Key
@@ -321,6 +307,13 @@ void ReplayCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    LOG_ERROR << "vkAllocateMemory (key " << command.m_pMemory.Key << ") failed with "
+              << command.m_Return.Value << " - size "
+              << command.m_pAllocateInfo.Value->allocationSize << ", memory type "
+              << command.m_pAllocateInfo.Value->memoryTypeIndex << ".";
+    return;
+  }
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, command.m_pAllocateInfo.Value->allocationSize,
       command.m_pAllocateInfo.Value->memoryTypeIndex);
