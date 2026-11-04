@@ -11,6 +11,7 @@
 #include "subcaptureRange.h"
 
 #include <cstdint>
+#include <map>
 #include <set>
 #include <unordered_set>
 #include <vector>
@@ -62,6 +63,12 @@ public:
   void NoteInRangeMicromapWrite(uint64_t micromapKey);
   void NoteInRangeMicromapRead(uint64_t micromapKey);
 
+  // Note the image index an in-range acquire returned; only the first per swapchain is kept.
+  // The recording pass presents the image before it right after state restore, so the
+  // swapchain's image order lines up with the range. No-op outside the range or when
+  // optimization is off.
+  void NoteInRangeAcquire(uint64_t swapchainKey, uint32_t imageIndex);
+
   // Compute the dependency closure of the collected roots and write the
   // analysis file.  Idempotent: only the first call writes.
   void DumpAnalysisFile();
@@ -99,6 +106,7 @@ private:
   std::set<uint64_t> m_AsReadInRange;
   std::unordered_set<uint64_t> m_MicromapWrittenInRange;
   std::set<uint64_t> m_MicromapReadInRange;
+  std::map<uint64_t, uint32_t> m_FirstAcquiredImages;
 };
 
 } // namespace vulkan

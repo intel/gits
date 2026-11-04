@@ -36,10 +36,13 @@ The output stream is written under `Common.Player.SubcapturePath` (see
     - The player restores the full Vulkan state (memory contents, image layouts, descriptor sets, pipelines, synchronization state, ...) at the start of the range, then records the in-range commands, so the trimmed stream stands on its own.
     - Right after `StateRestoreEnd` the trimmed stream presents the restored state once
       (frame 0), as on DirectX. It replaces the legacy `SwapAfterPrepare` option and is always
-      on. It uses a swapchain image the application did not hold at the cut, so it is skipped
-      (with a warning) if every swapchain had an image acquired. Its commands carry
-      state-restore keys, so frame numbering in screenshots, the trace, the HUD and the
-      Benchmark and Statistics plugins skips it, as on DirectX.
+      on. It uses a swapchain that is not retired and of which the application held no image at
+      the cut; it is skipped (with a warning) if there is none. It presents the image before
+      the one the range acquires first (taken from the analysis file), so the swapchain image
+      order lines up with the range; without an analysis file it presents the image the
+      application presented last before the cut. Its commands carry state-restore keys, so
+      frame numbering in screenshots, the trace, the HUD, the Benchmark and Statistics plugins
+      and a further subcapture of the trimmed stream skips it, as on DirectX.
     - Output-stream compression is controlled by `Common.Player.Subcapture.CompressionType` (`ZSTD` by default, or `LZ4`).
 
 ### Two-pass workflow (optimized, default)

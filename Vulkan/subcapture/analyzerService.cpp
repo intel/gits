@@ -66,6 +66,12 @@ void AnalyzerService::NoteInRangeAsWrite(uint64_t asKey) {
   }
 }
 
+void AnalyzerService::NoteInRangeAcquire(uint64_t swapchainKey, uint32_t imageIndex) {
+  if (m_Optimize && swapchainKey && m_SubcaptureRange.InRange()) {
+    m_FirstAcquiredImages.emplace(swapchainKey, imageIndex);
+  }
+}
+
 void AnalyzerService::NoteInRangeAsRead(uint64_t asKey) {
   if (m_Optimize && asKey && m_SubcaptureRange.InRange()) {
     m_AsReadInRange.insert(asKey);
@@ -391,6 +397,14 @@ void AnalyzerService::DumpAnalysisFile() {
     if (op.IsCopy) {
       emitter << YAML::Key << "CopyMode" << YAML::Value << static_cast<int>(op.CopyMode);
     }
+    emitter << YAML::EndMap;
+  }
+  emitter << YAML::EndSeq;
+  emitter << YAML::Key << "FirstAcquiredImages" << YAML::Value << YAML::BeginSeq;
+  for (const auto& [swapchainKey, imageIndex] : m_FirstAcquiredImages) {
+    emitter << YAML::Flow << YAML::BeginMap;
+    emitter << YAML::Key << "Swapchain" << YAML::Value << swapchainKey;
+    emitter << YAML::Key << "Image" << YAML::Value << imageIndex;
     emitter << YAML::EndMap;
   }
   emitter << YAML::EndSeq;

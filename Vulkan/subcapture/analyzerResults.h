@@ -11,6 +11,7 @@
 #include "vulkanHeader2.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -114,6 +115,10 @@ public:
     return m_MicromapChain;
   }
 
+  // Image index returned by the range's first acquire on the swapchain, if the analysis
+  // pass saw one (see AnalyzerService::NoteInRangeAcquire).
+  std::optional<uint32_t> GetFirstAcquiredImage(uint64_t swapchainKey) const;
+
   // True if a previous analysis pass already wrote the analysis file.  Used by
   // the layer manager to choose between analysis and recording passes.
   static bool IsAnalysis();
@@ -139,6 +144,7 @@ private:
   bool m_MicromapChainLoaded{false};
   std::vector<MicromapChainOp> m_MicromapChain;
   std::unordered_set<uint64_t> m_RetainedMicromapCommands;
+  std::unordered_map<uint64_t, uint32_t> m_FirstAcquiredImages;
 };
 
 } // namespace vulkan

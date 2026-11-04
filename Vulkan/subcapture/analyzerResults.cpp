@@ -88,6 +88,13 @@ AnalyzerResults::AnalyzerResults() {
         m_MicromapChain.push_back(op);
       }
     }
+    const YAML::Node firstAcquiredImages = root["FirstAcquiredImages"];
+    if (firstAcquiredImages && firstAcquiredImages.IsSequence()) {
+      for (const auto& node : firstAcquiredImages) {
+        // Throws exception when key is not found
+        m_FirstAcquiredImages[node["Swapchain"].as<uint64_t>()] = node["Image"].as<uint32_t>();
+      }
+    }
   } catch (const std::exception& e) {
     // Treat any parse error as no valid analysis: nothing is loaded, so the recording
     // pass restores everything rather than acting on half-read data. IsAnalysis() only
@@ -103,7 +110,16 @@ AnalyzerResults::AnalyzerResults() {
     m_MicromapChainLoaded = false;
     m_MicromapChain.clear();
     m_RetainedMicromapCommands.clear();
+    m_FirstAcquiredImages.clear();
   }
+}
+
+std::optional<uint32_t> AnalyzerResults::GetFirstAcquiredImage(uint64_t swapchainKey) const {
+  const auto it = m_FirstAcquiredImages.find(swapchainKey);
+  if (it == m_FirstAcquiredImages.end()) {
+    return std::nullopt;
+  }
+  return it->second;
 }
 
 bool AnalyzerResults::RestoreObject(uint64_t objectKey) const {

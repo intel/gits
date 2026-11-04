@@ -2973,8 +2973,6 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
 }
 
 void StateTrackingService::RecordPostRestorePresent() {
-  // Newest swapchain first: an older live one may be retired (oldSwapchain of a newer one), and
-  // acquiring from a retired swapchain is not guaranteed to succeed.
   for (const auto& [key, ownedState] : std::ranges::reverse_view(m_States)) {
     ObjectState* state = ownedState.get();
     if (state->Destroyed || state->CreationCommandId != CommandId::ID_VKCREATESWAPCHAINKHR ||
@@ -2984,24 +2982,67 @@ void StateTrackingService::RecordPostRestorePresent() {
     auto* sc = static_cast<SwapchainState*>(state);
     // Images the application holds at the cut are re-acquired by RestoreSwapchain; one more
     // acquire could exceed the swapchain's acquire limit and block.
-    if (sc->ImageKeys.empty() || !sc->AcquiredImages.empty() || sc->PresentQueueKey == 0 ||
-        !m_RestoredThisPass.count(sc->PresentQueueKey)) {
+    if (sc->Retired || sc->ImageKeys.empty() || !sc->AcquiredImages.empty() ||
+        sc->PresentQueueKey == 0 || !m_RestoredThisPass.count(sc->PresentQueueKey)) {
       continue;
     }
 
-    // Same null semaphore and fence as the RestoreSwapchain re-acquire. The image is not acquired
-    // at the cut, so EmitImageLayoutTransitions left it in PRESENT_SRC_KHR.
+    // Present the image before the range's first acquire: a driver that hands out images in
+    // presentation order then returns the recorded index, so the player needs no extra presents
+    // to match it. Without analysis results, the last image presented before the cut is used.
+    const uint32_t imageCount = static_cast<uint32_t>(sc->ImageKeys.size());
+    const std::optional<uint32_t> firstAcquired =
+        m_AnalyzerResults ? m_AnalyzerResults->GetFirstAcquiredImage(sc->Key) : std::nullopt;
     uint32_t imageIndex = 0;
+    if (firstAcquired && *firstAcquired < imageCount) {
+      imageIndex = (*firstAcquired + imageCount - 1) % imageCount;
+    } else if (sc->LastPresentedImage < imageCount) {
+      imageIndex = sc->LastPresentedImage;
+    }
+
+    // The present has no wait semaphore, so the acquire signals a temporary fence that is waited
+    // on before the present. The image is not acquired at the cut, so EmitImageLayoutTransitions
+    // left it in PRESENT_SRC_KHR.
+    const uint64_t fenceKey = AllocateSyntheticKey();
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFenceCommand createFenceCmd;
+    createFenceCmd.m_device.Key = sc->ParentKey;
+    createFenceCmd.m_pCreateInfo.Value = &fenceInfo;
+    createFenceCmd.m_pFence.Key = fenceKey;
+    createFenceCmd.m_Return.Value = VK_SUCCESS;
+    createFenceCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkCreateFenceSerializer(createFenceCmd));
+
     vkAcquireNextImageKHRCommand acquireCmd;
     acquireCmd.m_device.Key = sc->ParentKey;
     acquireCmd.m_swapchain.Key = sc->Key;
     acquireCmd.m_timeout.Value = 3000000000ULL;
     acquireCmd.m_semaphore.Key = 0;
-    acquireCmd.m_fence.Key = 0;
+    acquireCmd.m_fence.Key = fenceKey;
     acquireCmd.m_pImageIndex.Value = &imageIndex;
     acquireCmd.m_Return.Value = VK_SUCCESS;
     acquireCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkAcquireNextImageKHRSerializer(acquireCmd));
+
+    static VkFence kDummyFenceSlot = VK_NULL_HANDLE;
+    vkWaitForFencesCommand waitCmd;
+    waitCmd.m_device.Key = sc->ParentKey;
+    waitCmd.m_fenceCount.Value = 1;
+    waitCmd.m_pFences.Value = &kDummyFenceSlot;
+    waitCmd.m_pFences.Size = 1;
+    waitCmd.m_pFences.Keys = {fenceKey};
+    waitCmd.m_waitAll.Value = VK_TRUE;
+    waitCmd.m_timeout.Value = 3000000000ULL;
+    waitCmd.m_Return.Value = VK_SUCCESS;
+    waitCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkWaitForFencesSerializer(waitCmd));
+
+    vkDestroyFenceCommand destroyFenceCmd;
+    destroyFenceCmd.m_device.Key = sc->ParentKey;
+    destroyFenceCmd.m_fence.Key = fenceKey;
+    destroyFenceCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkDestroyFenceSerializer(destroyFenceCmd));
 
     // pSwapchains must be non-null so that the player remaps the swapchain from HandleKeys.
     static const VkSwapchainKHR kDummySwapchainSlot = VK_NULL_HANDLE;

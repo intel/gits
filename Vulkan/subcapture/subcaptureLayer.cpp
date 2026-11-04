@@ -121,6 +121,7 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
       const bool presentedOk = (presentResult == VK_SUCCESS || presentResult == VK_SUBOPTIMAL_KHR);
       if (presentedOk && sc) {
         sc->PresentQueueKey = command.m_queue.Key;
+        sc->LastPresentedImage = pi.pImageIndices[i];
       }
       if (presentedOk && sc && pi.pImageIndices[i] < sc->ImageKeys.size()) {
         m_ImageLayout.CompletePendingTransferOnPresent(sc->ImageKeys[pi.pImageIndices[i]],
@@ -133,11 +134,13 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
     return;
   }
 
+  const bool stateRestorePresent = IsStateRestoreKey(command.m_Key);
+
   // Analysis pass: advance the frame counter and dump the analysis file when
   // the range ends.  No restore and no recording happen here.
   if (m_AnalysisMode) {
     const bool wasInRange = m_SubcaptureRange.InRange();
-    m_SubcaptureRange.FrameEnd();
+    m_SubcaptureRange.FrameEnd(stateRestorePresent);
     const bool nowInRange = m_SubcaptureRange.InRange();
     if (wasInRange && !nowInRange && m_AnalyzerService) {
       m_AnalyzerService->DumpAnalysisFile();
@@ -146,13 +149,13 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
   }
 
   // Fire state restore exactly once, before the first recorded frame.
-  if (m_SubcaptureRange.IsRestorePoint()) {
+  if (!stateRestorePresent && m_SubcaptureRange.IsRestorePoint()) {
     TriggerRestoreState();
     // After RestoreState the recorder stream is open; the very next FrameEnd
     // will put us inside the range so recording begins below.
   }
 
-  m_SubcaptureRange.FrameEnd();
+  m_SubcaptureRange.FrameEnd(stateRestorePresent);
 
   // RecordingLayer (registered immediately after SubcaptureLayer in the post
   // order) is the sole owner of stream output: it records the in-range
@@ -2801,6 +2804,13 @@ void SubcaptureLayer::Post(vkDestroySurfaceKHRCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkCreateSwapchainKHRCommand& command) {
+  // oldSwapchain is retired even if the creation fails.
+  if (command.m_pCreateInfo.HandleKeys.size() > 1) {
+    auto* oldSc = m_StateTracking.GetState<SwapchainState>(command.m_pCreateInfo.HandleKeys[1]);
+    if (oldSc) {
+      oldSc->Retired = true;
+    }
+  }
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
@@ -2884,6 +2894,9 @@ void SubcaptureLayer::Post(vkAcquireNextImageKHRCommand& command) {
   if (sc) {
     sc->AcquiredImages.insert(*command.m_pImageIndex.Value);
   }
+  if (m_AnalysisMode && m_AnalyzerService && !IsStateRestoreKey(command.m_Key)) {
+    m_AnalyzerService->NoteInRangeAcquire(command.m_swapchain.Key, *command.m_pImageIndex.Value);
+  }
   // The acquire signals the binary semaphore; track it so state restore
   // re-signals it for any first recorded submit that waits on it.
   m_SyncState.OnImageAcquired(command.m_semaphore.Key);
@@ -2907,6 +2920,9 @@ void SubcaptureLayer::Post(vkAcquireNextImage2KHRCommand& command) {
   auto* sc = m_StateTracking.GetState<SwapchainState>(swapchainKey);
   if (sc) {
     sc->AcquiredImages.insert(*command.m_pImageIndex.Value);
+  }
+  if (m_AnalysisMode && m_AnalyzerService && !IsStateRestoreKey(command.m_Key)) {
+    m_AnalyzerService->NoteInRangeAcquire(swapchainKey, *command.m_pImageIndex.Value);
   }
   // The acquire signals the binary semaphore; track it (see vkAcquireNextImageKHR).
   if (command.m_pAcquireInfo.HandleKeys.size() > 1) {

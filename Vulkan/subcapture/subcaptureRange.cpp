@@ -37,8 +37,10 @@ SubcaptureRange::SubcaptureRange(const std::string& framesStr) {
   LOG_INFO << "Vulkan subcapture enabled for frames " << m_StartFrame << "-" << m_EndFrame;
 }
 
-void SubcaptureRange::FrameEnd() {
-  ++m_CurrentFrame;
+void SubcaptureRange::FrameEnd(bool stateRestore) {
+  if (!stateRestore) {
+    ++m_CurrentFrame;
+  }
 }
 
 bool SubcaptureRange::IsRestorePoint() const {

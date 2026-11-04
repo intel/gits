@@ -30,8 +30,9 @@ public:
   // An empty or "-" string means subcapture is disabled.
   explicit SubcaptureRange(const std::string& framesStr);
 
-  // Called after each vkQueuePresentKHR.  Advances the frame counter.
-  void FrameEnd();
+  // Called after each vkQueuePresentKHR.  Advances the frame counter unless the
+  // present was recorded by a state restore (it is not an application frame).
+  void FrameEnd(bool stateRestore);
 
   // Returns true exactly once: on the Present call that precedes the first
   // frame of the requested subcapture range.  After it returns true once it

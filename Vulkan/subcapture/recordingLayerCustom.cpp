@@ -52,7 +52,7 @@ void RecordingLayer::Post(vkQueuePresentKHRCommand& command) {
   // SubcaptureLayer is registered before RecordingLayer in the post-layer
   // order, so by the time this function runs SubcaptureLayer has already:
   //   1. Triggered state restore (if this is the restore-point present), and
-  //   2. Called FrameEnd() on the shared SubcaptureRange.
+  //   2. Called FrameEnd(stateRestore) on the shared SubcaptureRange.
   // Therefore m_Range.InRange() now reflects the NEXT frame's state, not the
   // frame that just ended.  m_WasInRange holds whether the frame that just
   // ended was inside the capture range -- that is the correct guard for
@@ -60,8 +60,10 @@ void RecordingLayer::Post(vkQueuePresentKHRCommand& command) {
   if (m_WasInRange) {
     m_Recorder.Record(vkQueuePresentKHRSerializer(command));
 
-    FrameEndCommand frameEnd;
-    m_Recorder.Record(FrameEndSerializer(frameEnd));
+    if (!IsStateRestoreKey(command.m_Key)) {
+      FrameEndCommand frameEnd;
+      m_Recorder.Record(FrameEndSerializer(frameEnd));
+    }
   }
 
   // InRange() already reflects the post-FrameEnd (next-frame) state.

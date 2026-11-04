@@ -560,6 +560,10 @@ struct SwapchainState : ObjectState {
   // per queue family and surface, so the post-restore present must reuse a queue the
   // application has presented this swapchain on.
   uint64_t PresentQueueKey{};
+  // Image index of that present.
+  uint32_t LastPresentedImage{UINT32_MAX};
+  // Passed as oldSwapchain to a later vkCreateSwapchainKHR; images can no longer be acquired.
+  bool Retired{};
 };
 
 // ---- Query pool --------------------------------------------------------
