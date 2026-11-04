@@ -30,7 +30,7 @@ public:
 
   void StateRestoreBegin();
   void StateRestoreEnd();
-  void FrameEnd();
+  void FrameEnd(bool stateRestore);
   void Command(const std::string& name);
 
 private:

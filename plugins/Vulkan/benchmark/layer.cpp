@@ -23,8 +23,9 @@ void BenchmarkLayer::Pre(vkCreateInstanceCommand& command) {
 void BenchmarkLayer::Post(vkQueuePresentKHRCommand& command) {
   // Count only frames that actually presented: skip commands the player elided
   // (e.g. renderOffscreen) and unsuccessful presents.  VK_SUBOPTIMAL_KHR still
-  // represents a completed present, so it is counted.
-  if (command.m_Skip ||
+  // represents a completed present, so it is counted. The present recorded after state restore
+  // is not an application frame.
+  if (command.m_Skip || IsStateRestoreKey(command.m_Key) ||
       (command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_SUBOPTIMAL_KHR)) {
     return;
   }

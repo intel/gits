@@ -225,6 +225,9 @@ void ScreenshotsLayer::Pre(vkDestroySwapchainKHRCommand& command) {
 
 void ScreenshotsLayer::Pre(vkQueuePresentKHRCommand& command) {
   tl_presentInfoCopy.Restore = false;
+  if (IsStateRestoreKey(command.m_Key)) {
+    return;
+  }
   const unsigned frame = m_CurrentFrame.fetch_add(1) + 1;
   if (!m_ScreenshotRange[frame]) {
     return;

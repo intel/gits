@@ -20,7 +20,7 @@ namespace vulkan {
 void StatisticsLayer::Post(${command.name}Command& command) {
   m_StatisticsService.Command("${command.name}");
 % if command.name == 'vkQueuePresentKHR':
-  m_StatisticsService.FrameEnd();
+  m_StatisticsService.FrameEnd(IsStateRestoreKey(command.m_Key));
 % endif
 }
 % if define:

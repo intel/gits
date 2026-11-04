@@ -27,6 +27,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
@@ -510,6 +511,7 @@ void StateTrackingService::RestoreState() {
     StateRestoreEndCommand cmd;
     m_Recorder.Record(StateRestoreEndSerializer(cmd));
   }
+  RecordPostRestorePresent();
 
   // NOTE: do NOT call m_Recorder.FinishRecording() here.
   // The stream must remain open so that in-range commands (draw calls,
@@ -2968,6 +2970,58 @@ void StateTrackingService::RestoreSwapchain(ObjectState* state) {
     acquireCmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkAcquireNextImageKHRSerializer(acquireCmd));
   }
+}
+
+void StateTrackingService::RecordPostRestorePresent() {
+  // Newest swapchain first: an older live one may be retired (oldSwapchain of a newer one), and
+  // acquiring from a retired swapchain is not guaranteed to succeed.
+  for (const auto& [key, ownedState] : std::ranges::reverse_view(m_States)) {
+    ObjectState* state = ownedState.get();
+    if (state->Destroyed || state->CreationCommandId != CommandId::ID_VKCREATESWAPCHAINKHR ||
+        !m_RestoredThisPass.count(state->Key)) {
+      continue;
+    }
+    auto* sc = static_cast<SwapchainState*>(state);
+    // Images the application holds at the cut are re-acquired by RestoreSwapchain; one more
+    // acquire could exceed the swapchain's acquire limit and block.
+    if (sc->ImageKeys.empty() || !sc->AcquiredImages.empty() || sc->PresentQueueKey == 0 ||
+        !m_RestoredThisPass.count(sc->PresentQueueKey)) {
+      continue;
+    }
+
+    // Same null semaphore and fence as the RestoreSwapchain re-acquire. The image is not acquired
+    // at the cut, so EmitImageLayoutTransitions left it in PRESENT_SRC_KHR.
+    uint32_t imageIndex = 0;
+    vkAcquireNextImageKHRCommand acquireCmd;
+    acquireCmd.m_device.Key = sc->ParentKey;
+    acquireCmd.m_swapchain.Key = sc->Key;
+    acquireCmd.m_timeout.Value = 3000000000ULL;
+    acquireCmd.m_semaphore.Key = 0;
+    acquireCmd.m_fence.Key = 0;
+    acquireCmd.m_pImageIndex.Value = &imageIndex;
+    acquireCmd.m_Return.Value = VK_SUCCESS;
+    acquireCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkAcquireNextImageKHRSerializer(acquireCmd));
+
+    // pSwapchains must be non-null so that the player remaps the swapchain from HandleKeys.
+    static const VkSwapchainKHR kDummySwapchainSlot = VK_NULL_HANDLE;
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &kDummySwapchainSlot;
+    presentInfo.pImageIndices = &imageIndex;
+
+    vkQueuePresentKHRCommand presentCmd;
+    presentCmd.m_queue.Key = sc->PresentQueueKey;
+    presentCmd.m_pPresentInfo.Value = &presentInfo;
+    presentCmd.m_pPresentInfo.HandleKeys.push_back(sc->Key);
+    presentCmd.m_Return.Value = VK_SUCCESS;
+    presentCmd.m_Key = m_Recorder.CreateStateRestoreKey();
+    m_Recorder.Record(vkQueuePresentKHRSerializer(presentCmd));
+    return;
+  }
+  LOG_WARNING << "Vulkan subcapture: no restored swapchain to present after state restore; "
+                 "the subcapture has no frame 0";
 }
 
 bool StateTrackingService::RestoreDescriptorSets(ObjectState* state) {

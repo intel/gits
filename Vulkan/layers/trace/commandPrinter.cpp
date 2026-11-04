@@ -70,7 +70,8 @@ void CommandPrinter::print(bool flush, bool newLine) {
   CommandId id = m_Command.GetId();
 
   // Frame boundary: vkQueuePresentKHR
-  if (id == CommandId::ID_VKQUEUEPRESENTKHR && !m_State.StateRestorePhase) {
+  if (id == CommandId::ID_VKQUEUEPRESENTKHR && !m_State.StateRestorePhase &&
+      !IsStateRestoreKey(m_Command.m_Key)) {
     m_Stream << " Frame #" << m_State.FrameCount << " end";
     ++m_State.FrameCount;
     m_State.DrawCount = 0;

@@ -1331,7 +1331,9 @@ void HudLayer::Post(vkQueuePresentKHRCommand& command) {
     return;
   }
 
-  CGits::Instance().FrameCountUp();
+  if (!IsStateRestoreKey(command.m_Key)) {
+    CGits::Instance().FrameCountUp();
+  }
 
   if (tl_hudPresentInfoCopy.restore && command.m_pPresentInfo.Value) {
     command.m_pPresentInfo.Value->waitSemaphoreCount = tl_hudPresentInfoCopy.waitSemaphoreCount;

@@ -119,6 +119,9 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
       // to every swapchain in the batch.
       const VkResult presentResult = pi.pResults ? pi.pResults[i] : command.m_Return.Value;
       const bool presentedOk = (presentResult == VK_SUCCESS || presentResult == VK_SUBOPTIMAL_KHR);
+      if (presentedOk && sc) {
+        sc->PresentQueueKey = command.m_queue.Key;
+      }
       if (presentedOk && sc && pi.pImageIndices[i] < sc->ImageKeys.size()) {
         m_ImageLayout.CompletePendingTransferOnPresent(sc->ImageKeys[pi.pImageIndices[i]],
                                                        presentQueueFamily);

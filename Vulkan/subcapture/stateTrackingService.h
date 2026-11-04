@@ -428,6 +428,10 @@ private:
   bool RestoreVideoSession(ObjectState* state);
   void RestoreSurface(ObjectState* state);
   void RestoreSwapchain(ObjectState* state);
+  // Record one acquire + present after the StateRestoreEnd marker so that the restored state is
+  // presented as frame 0 before the first recorded frame, as on DirectX. Frame-marker consumers
+  // count this present as the first frame.
+  void RecordPostRestorePresent();
   bool RestoreDescriptorSets(ObjectState* state);
   // Emit a single vkAllocateDescriptorSets that allocates every live, pNext-free
   // descriptor set of the given pool that has not yet been allocated this pass.

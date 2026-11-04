@@ -38,8 +38,8 @@ void StatisticsService::StateRestoreEnd() {
   m_StateRestore = false;
 }
 
-void StatisticsService::FrameEnd() {
-  if (!m_StateRestore) {
+void StatisticsService::FrameEnd(bool stateRestore) {
+  if (!m_StateRestore && !stateRestore) {
     ++m_FramesNum;
     for (auto& [name, info] : m_CallInfos) {
       if (info.CurrentFrameNum > 0) {

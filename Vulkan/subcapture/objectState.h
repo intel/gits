@@ -556,6 +556,10 @@ struct SwapchainState : ObjectState {
   // Used during state restore to re-acquire those images so the first recorded
   // frame sees them in the correct state without needing layout barriers.
   std::unordered_set<uint32_t> AcquiredImages{};
+  // Queue of the last successful vkQueuePresentKHR of this swapchain. Presentation support is
+  // per queue family and surface, so the post-restore present must reuse a queue the
+  // application has presented this swapchain on.
+  uint64_t PresentQueueKey{};
 };
 
 // ---- Query pool --------------------------------------------------------
