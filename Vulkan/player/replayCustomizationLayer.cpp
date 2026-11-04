@@ -11,6 +11,7 @@
 #include "swapchainImageSyncService.h"
 #include "configurator.h"
 #include "suppressNames.h"
+#include "vulkanHelpers.h"
 #include "log.h"
 
 #include <algorithm>
@@ -273,6 +274,50 @@ void ReplayCustomizationLayer::Pre(vkQueuePresentKHRCommand& command) {
     presentInfo->pWaitSemaphores = nullptr;
   }
   command.m_Skip = true;
+}
+
+// The recorded size of a dedicated image allocation can be below what the replay driver requires
+// (e.g. an imported image that had a different layout at capture time). Binding it would leave the
+// end of the image without memory. Buffers are left alone - their size does not depend on layout.
+void ReplayCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
+  auto* allocateInfo = command.m_pAllocateInfo.Value;
+  if (!allocateInfo) {
+    return;
+  }
+  auto* dedicated = static_cast<const VkMemoryDedicatedAllocateInfo*>(
+      getPNextStructure(allocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO));
+  if (!dedicated || dedicated->image == VK_NULL_HANDLE) {
+    return;
+  }
+
+  VkMemoryRequirements requirements{};
+  m_Manager.GetDeviceDispatchTable(command.m_device.Value)
+      .vkGetImageMemoryRequirements(command.m_device.Value, dedicated->image, &requirements);
+
+  if (requirements.size > allocateInfo->allocationSize) {
+    // A pinned allocation is recreated at its recorded address - growing it could overlap the next
+    // pinned range.
+    auto* captureAddress =
+        static_cast<const VkMemoryOpaqueCaptureAddressAllocateInfo*>(getPNextStructure(
+            allocateInfo->pNext, VK_STRUCTURE_TYPE_MEMORY_OPAQUE_CAPTURE_ADDRESS_ALLOCATE_INFO));
+    if (captureAddress && captureAddress->opaqueCaptureAddress != 0) {
+      LOG_WARNING << "Dedicated image allocation (key " << command.m_pMemory.Key << ") is "
+                  << allocateInfo->allocationSize << " bytes but the replay driver requires "
+                  << requirements.size
+                  << " - not grown because the allocation is pinned to its capture address.";
+    } else {
+      LOG_INFO << "Dedicated image allocation (key " << command.m_pMemory.Key << ") grown from "
+               << allocateInfo->allocationSize << " to " << requirements.size
+               << " bytes - the replay driver requires more memory for the image than recorded.";
+      allocateInfo->allocationSize = requirements.size;
+    }
+  }
+  if ((requirements.memoryTypeBits & (1u << allocateInfo->memoryTypeIndex)) == 0) {
+    LOG_WARNING << "Dedicated image allocation (key " << command.m_pMemory.Key
+                << ") uses memory type " << allocateInfo->memoryTypeIndex
+                << " which the replay driver does not allow for the image (allowed bits 0x"
+                << std::hex << requirements.memoryTypeBits << std::dec << ").";
+  }
 }
 
 void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {

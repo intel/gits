@@ -49,6 +49,7 @@ public:
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
   void Pre(vkCreateWaylandSurfaceKHRCommand& command) override;
 #endif
+  void Pre(vkAllocateMemoryCommand& command) override;
   void Post(vkAllocateMemoryCommand& command) override;
   void Post(vkMapMemoryCommand& command) override;
   void Post(vkMapMemory2Command& command) override;
