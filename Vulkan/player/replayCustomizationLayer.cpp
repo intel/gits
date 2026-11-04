@@ -329,6 +329,11 @@ void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
               << command.m_pAllocateInfo.Value->memoryTypeIndex << ".";
     return;
   }
+  if (!command.m_pMemory.Value || *command.m_pMemory.Value == VK_NULL_HANDLE) {
+    LOG_ERROR << "vkAllocateMemory (key " << command.m_pMemory.Key
+              << ") returned VK_SUCCESS without a memory handle.";
+    return;
+  }
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, command.m_pAllocateInfo.Value->allocationSize,
       command.m_pAllocateInfo.Value->memoryTypeIndex);
