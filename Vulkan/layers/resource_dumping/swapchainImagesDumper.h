@@ -75,6 +75,9 @@ private:
 
   StagedFrame* ReserveStagedFrame();
 
+  static bool Is10BitFormat(VkFormat format);
+  void Convert10BitToRgba8(uint8_t* pixels) const;
+
   uint32_t GetMemoryTypeIndexWithFlags(uint32_t memoryTypeBits,
                                        VkMemoryPropertyFlags requiredFlags) const;
   void CreateStagingBuffer(StagedFrame& stagedFrame);

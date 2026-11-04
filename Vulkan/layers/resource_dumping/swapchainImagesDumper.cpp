@@ -32,10 +32,31 @@ SwapchainImagesDumper::SwapchainImagesDumper(VkDevice device,
   // Normally the swapchain format 32-bit RGBA/BGRA with alpha present
   if (m_Format != VK_FORMAT_R8G8B8A8_UNORM && m_Format != VK_FORMAT_R8G8B8A8_SRGB &&
       m_Format != VK_FORMAT_R8G8B8A8_SNORM && m_Format != VK_FORMAT_B8G8R8A8_UNORM &&
-      m_Format != VK_FORMAT_B8G8R8A8_SRGB && m_Format != VK_FORMAT_B8G8R8A8_SNORM) {
+      m_Format != VK_FORMAT_B8G8R8A8_SRGB && m_Format != VK_FORMAT_B8G8R8A8_SNORM &&
+      !Is10BitFormat(m_Format)) {
     LOG_ERROR << "SwapchainImagesDumper: unsupported swapchain format "
               << static_cast<int>(m_Format)
-              << ". Only 4-component RGBA/BGRA formats are supported for screenshot dumping.";
+              << ". Only 32-bit RGBA/BGRA formats are supported for screenshot dumping.";
+  }
+}
+
+bool SwapchainImagesDumper::Is10BitFormat(VkFormat format) {
+  return format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 ||
+         format == VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+}
+
+void SwapchainImagesDumper::Convert10BitToRgba8(uint8_t* pixels) const {
+  // Truncates each channel to its top 8 bits, as the DirectX image writer does
+  const bool redInLowBits = m_Format == VK_FORMAT_A2B10G10R10_UNORM_PACK32;
+  for (uint32_t i = 0; i < m_Width * m_Height; ++i) {
+    uint32_t packed;
+    std::memcpy(&packed, pixels + i * BYTES_PER_PIXEL, sizeof(packed));
+    const uint8_t low = static_cast<uint8_t>((packed & 0x3FF) >> 2);
+    const uint8_t green = static_cast<uint8_t>(((packed >> 10) & 0x3FF) >> 2);
+    const uint8_t high = static_cast<uint8_t>(((packed >> 20) & 0x3FF) >> 2);
+    pixels[i * BYTES_PER_PIXEL + 0] = redInLowBits ? low : high;
+    pixels[i * BYTES_PER_PIXEL + 1] = green;
+    pixels[i * BYTES_PER_PIXEL + 2] = redInLowBits ? high : low;
   }
 }
 
@@ -365,6 +386,8 @@ void SwapchainImagesDumper::DumpStagedFrame(StagedFrame& stagedFrame, const std:
     for (uint32_t i = 0; i < m_Width * m_Height; ++i) {
       std::swap(pixels[i * BYTES_PER_PIXEL + 0], pixels[i * BYTES_PER_PIXEL + 2]);
     }
+  } else if (Is10BitFormat(m_Format)) {
+    Convert10BitToRgba8(pixels);
   }
 
   // Force opaque alpha
