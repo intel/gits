@@ -61,7 +61,7 @@ public:
     return m_AnalyzerService.get();
   }
 
-  // Non-null only in analysis mode. Passed to the AnalyzerLayer.
+  // Non-null only in an optimized analysis pass. Passed to the AnalyzerLayer.
   AnalyzerRaytracingService* GetAnalyzerRaytracingService() {
     return m_AnalyzerRaytracingService.get();
   }

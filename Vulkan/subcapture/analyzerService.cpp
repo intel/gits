@@ -32,10 +32,12 @@ AnalyzerService::AnalyzerService(StateTrackingService& stateTracking,
 
 AnalyzerService::~AnalyzerService() {
   // Safety net: if the stream ended while still inside the range (e.g. the
-  // application exited mid-subcapture) make sure the collected information is
-  // still written, mirroring the DirectX AnalyzerService destructor.
+  // application exited mid-subcapture) the analysis file is still written, even
+  // if nothing was collected, mirroring the DirectX AnalyzerService destructor.
+  // Without it every following run would repeat the analysis pass.
   try {
-    if (!m_Dumped && !m_ObjectsForRestore.empty()) {
+    if (!m_Dumped && m_SubcaptureRange.InRange()) {
+      LOG_WARNING << "Vulkan subcapture: stream ended inside the subcapture range";
       DumpAnalysisFile();
     }
   } catch (...) {
@@ -67,7 +69,7 @@ void AnalyzerService::NoteInRangeAsWrite(uint64_t asKey) {
 }
 
 void AnalyzerService::NoteInRangeAcquire(uint64_t swapchainKey, uint32_t imageIndex) {
-  if (m_Optimize && swapchainKey && m_SubcaptureRange.InRange()) {
+  if (swapchainKey && m_SubcaptureRange.InRange()) {
     m_FirstAcquiredImages.emplace(swapchainKey, imageIndex);
   }
 }
@@ -216,7 +218,7 @@ void AnalyzerService::DumpAnalysisFile() {
   // TLAS" and "used directly by an in-range command".
   std::vector<RaytracingOptimizationService::OptimizedAsCommand> blasChain;
   std::vector<RaytracingOptimizationService::OptimizedMicromapCommand> micromapChain;
-  if (m_OptimizationService) {
+  if (m_Optimize && m_OptimizationService) {
     std::unordered_set<uint64_t> usedBlasKeys;
     for (uint64_t key : closure) {
       // Only a structure destroyed before the range is unusable by an in-range command.
@@ -360,6 +362,9 @@ void AnalyzerService::DumpAnalysisFile() {
   // (AnalyzerResults) detects and treats as an incomplete/corrupt analysis.
   YAML::Emitter emitter;
   emitter << YAML::BeginMap;
+  // Without optimization the sections below are empty, so an optimized run must not use this
+  // file (AnalyzerResults::IsUsableAnalysisFile).
+  emitter << YAML::Key << "Optimize" << YAML::Value << m_Optimize;
   emitter << YAML::Key << "Objects" << YAML::Value << YAML::BeginSeq;
   for (uint64_t key : closure) {
     if (key) {

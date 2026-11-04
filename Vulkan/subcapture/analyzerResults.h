@@ -128,11 +128,12 @@ public:
   static std::string GetAnalysisFileName();
 
 private:
-  // True if the analysis file exists, parses as YAML and carries the trailing
-  // completion marker written by a fully finished analysis pass.  A missing,
-  // truncated or unparsable file (e.g. from an interrupted analysis run) returns
-  // false so it is treated as "no valid analysis".
-  static bool IsCompleteAnalysisFile(const std::string& fileName);
+  // True if the analysis file exists, parses as YAML, carries the trailing
+  // completion marker written by a fully finished analysis pass and, if
+  // optimization is on, was written with optimization on.  Any other file (e.g.
+  // from an interrupted analysis run) returns false so it is treated as "no valid
+  // analysis".
+  static bool IsUsableAnalysisFile(const std::string& fileName);
 
   bool m_Optimize{};
   bool m_CaptureAsBuildInputs{};

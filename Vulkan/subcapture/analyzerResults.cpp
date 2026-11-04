@@ -22,32 +22,29 @@ AnalyzerResults::AnalyzerResults() {
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
   // Affects optimized and unoptimized runs
   m_CaptureAsBuildInputs = Configurator::Get().common.player.subcapture.vulkan.captureASBuildInputs;
-  if (!m_Optimize) {
-    // No analysis-derived behaviour at all, so a file left over from an earlier
-    // optimized run must not be read.
-    return;
-  }
 
   const std::string fileName = GetAnalysisFileName();
   if (!std::filesystem::exists(fileName)) {
     return;
   }
-  if (!IsCompleteAnalysisFile(fileName)) {
+  if (!IsUsableAnalysisFile(fileName)) {
     LOG_WARNING << "Vulkan subcapture: analysis file '" << fileName
-                << "' is incomplete or corrupt (missing completion marker); ignoring it and "
-                   "re-running the analysis pass to regenerate it.";
+                << "' is incomplete, corrupt or was written with "
+                   "Common.Player.Subcapture.Optimize off; ignoring it and re-running the "
+                   "analysis pass to regenerate it.";
     return;
   }
 
   try {
     YAML::Node root = YAML::LoadFile(fileName);
-    const YAML::Node objects = root["Objects"];
+    // Restore-reducing sections are only acted on with optimization on.
+    const YAML::Node objects = m_Optimize ? root["Objects"] : YAML::Node();
     if (objects && objects.IsSequence()) {
       for (const auto& node : objects) {
         m_ObjectKeys.insert(node.as<uint64_t>());
       }
     }
-    const YAML::Node blasChain = root["BlasChain"];
+    const YAML::Node blasChain = m_Optimize ? root["BlasChain"] : YAML::Node();
     if (blasChain && blasChain.IsSequence()) {
       m_BlasChainLoaded = true;
       for (const auto& node : blasChain) {
@@ -69,7 +66,7 @@ AnalyzerResults::AnalyzerResults() {
         m_BlasChain.push_back(op);
       }
     }
-    const YAML::Node micromapChain = root["MicromapChain"];
+    const YAML::Node micromapChain = m_Optimize ? root["MicromapChain"] : YAML::Node();
     if (micromapChain && micromapChain.IsSequence()) {
       m_MicromapChainLoaded = true;
       for (const auto& node : micromapChain) {
@@ -97,8 +94,8 @@ AnalyzerResults::AnalyzerResults() {
     }
   } catch (const std::exception& e) {
     // Treat any parse error as no valid analysis: nothing is loaded, so the recording
-    // pass restores everything rather than acting on half-read data. IsAnalysis() only
-    // tests the completion marker, so pass selection is unchanged and a raytracing
+    // pass restores everything rather than acting on half-read data. IsAnalysis() does not
+    // parse the sections, so pass selection is unchanged and a raytracing
     // stream stops at SubcaptureLayer::RequireBlasChainForRaytracing.
     LOG_WARNING << "Vulkan subcapture: failed to parse analysis file '" << fileName << "' ("
                 << e.what() << "); ignoring it - delete it to re-run the analysis pass.";
@@ -157,16 +154,22 @@ bool AnalyzerResults::IsAnalysis() {
   // interrupted analysis run is ignored here so the analysis pass re-runs and
   // regenerates it, instead of silently driving the recording pass with a
   // partial restore set.
-  return IsCompleteAnalysisFile(GetAnalysisFileName());
+  return IsUsableAnalysisFile(GetAnalysisFileName());
 }
 
-bool AnalyzerResults::IsCompleteAnalysisFile(const std::string& fileName) {
+bool AnalyzerResults::IsUsableAnalysisFile(const std::string& fileName) {
   if (!std::filesystem::exists(fileName)) {
     return false;
   }
   try {
     YAML::Node root = YAML::LoadFile(fileName);
-    return root["Complete"] && root["Complete"].as<bool>();
+    if (!root["Complete"] || !root["Complete"].as<bool>()) {
+      return false;
+    }
+    // An unoptimized analysis leaves the restore-reducing sections empty, so an optimized run
+    // must not use it. Files without the key predate it and were only written optimized.
+    const bool optimized = !root["Optimize"] || root["Optimize"].as<bool>();
+    return optimized || !Configurator::Get().common.player.subcapture.optimize;
   } catch (...) {
     return false;
   }

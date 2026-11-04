@@ -45,21 +45,25 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
   if (m_AnalysisMode) {
     // Analysis pass: collect in-range object usage; never restore.
     m_AnalyzerService = std::make_unique<AnalyzerService>(m_StateTracking, m_SubcaptureRange);
-    m_AnalyzerRaytracingService =
-        std::make_unique<AnalyzerRaytracingService>(m_StateTracking, m_GpuReadbackHelper);
-    m_RaytracingOptimizationService = std::make_unique<RaytracingOptimizationService>();
-    m_AnalyzerService->SetRaytracingService(m_AnalyzerRaytracingService.get());
-    m_AnalyzerService->SetOptimizationService(m_RaytracingOptimizationService.get());
     m_Micromap.SetAnalyzerService(m_AnalyzerService.get());
-    m_Micromap.SetRaytracingOptimizationService(m_RaytracingOptimizationService.get());
-    // Drive the analyzer's TLAS instance readback and flush the chain-reduction graph at
-    // submit time, once the staged builds/copies have executed. Flushing at submit gives
-    // the chain graph true GPU execution order across command buffers.
-    m_StateTracking.SetSubmittedCommandBufferCallback(
-        [this](uint64_t cbKey, uint64_t submitQueueKey) {
-          m_AnalyzerRaytracingService->ReadStagedTlasInstances(cbKey, submitQueueKey);
-          m_RaytracingOptimizationService->OnQueueSubmit(cbKey);
-        });
+    // Without Optimize the analysis keeps only the first in-range acquires; the TLAS instance
+    // readbacks idle the queue and their chain data would be discarded.
+    if (Configurator::Get().common.player.subcapture.optimize) {
+      m_AnalyzerRaytracingService =
+          std::make_unique<AnalyzerRaytracingService>(m_StateTracking, m_GpuReadbackHelper);
+      m_RaytracingOptimizationService = std::make_unique<RaytracingOptimizationService>();
+      m_AnalyzerService->SetRaytracingService(m_AnalyzerRaytracingService.get());
+      m_AnalyzerService->SetOptimizationService(m_RaytracingOptimizationService.get());
+      m_Micromap.SetRaytracingOptimizationService(m_RaytracingOptimizationService.get());
+      // Drive the analyzer's TLAS instance readback and flush the chain-reduction graph at
+      // submit time, once the staged builds/copies have executed. Flushing at submit gives
+      // the chain graph true GPU execution order across command buffers.
+      m_StateTracking.SetSubmittedCommandBufferCallback(
+          [this](uint64_t cbKey, uint64_t submitQueueKey) {
+            m_AnalyzerRaytracingService->ReadStagedTlasInstances(cbKey, submitQueueKey);
+            m_RaytracingOptimizationService->OnQueueSubmit(cbKey);
+          });
+    }
   } else {
     // Recording pass: gate restore by the analysis results (a no-op that
     // restores everything when optimization is off or the analysis set is
@@ -2283,7 +2287,7 @@ void SubcaptureLayer::RequireBlasChainForRaytracing(const char* commandName) {
   }
   FatalSubcaptureError(
       std::string("the stream calls ") + commandName +
-      " before the subcapture range, which needs the analysis pass so the "
+      " before the subcapture range, which needs an optimized analysis pass so the "
       "rtas chain can be captured. Run with Common.Player.Subcapture.Optimize=true, or set "
       "Common.Player.Subcapture.Vulkan.CaptureASBuildInputs=false to restore "
       "acceleration structures from serialized blobs (replayable only on this GPU and driver)");

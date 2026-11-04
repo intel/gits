@@ -92,12 +92,10 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
                    "skipping subcapture (recording one requires driver execution).";
   }
   const bool subcaptureActive = subcaptureEnabled && execute;
-  // Two-pass optimization is only engaged when optimize is enabled and no
-  // analysis file exists yet.  When optimize is off (or an analysis file is
-  // present) we go straight to the recording pass, restoring everything exactly
-  // like the legacy single-pass flow.
-  const bool subcaptureAnalysis =
-      subcaptureActive && cfg.common.player.subcapture.optimize && !AnalyzerResults::IsAnalysis();
+  // The analysis pass runs whenever no usable analysis file exists yet, as on
+  // DirectX. Optimize only decides whether the recording pass restores just the
+  // objects the analysis marked as needed or every live object.
+  const bool subcaptureAnalysis = subcaptureActive && !AnalyzerResults::IsAnalysis();
 
   std::unique_ptr<Layer> subcaptureLayer;
   std::unique_ptr<Layer> analyzerLayer;
@@ -107,9 +105,12 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
     // the analysis file.  No output stream is produced; the user must run again.
     subcaptureLayer = std::make_unique<SubcaptureLayer>(
         playerManager, cfg.common.player.subcapture.frames, /*analysisMode=*/true);
+    // AnalyzerLayer only collects data that Optimize uses.
     auto* sc = static_cast<SubcaptureLayer*>(subcaptureLayer.get());
-    analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService(),
-                                                    *sc->GetAnalyzerRaytracingService());
+    if (sc->GetAnalyzerRaytracingService()) {
+      analyzerLayer = std::make_unique<AnalyzerLayer>(*sc->GetAnalyzerService(),
+                                                      *sc->GetAnalyzerRaytracingService());
+    }
     LOG_INFO << "SUBCAPTURE ANALYSIS. RUN AGAIN FOR SUBCAPTURE RECORDING.";
   } else if (subcaptureActive) {
     subcaptureLayer =

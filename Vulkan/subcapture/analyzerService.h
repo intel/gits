@@ -65,8 +65,8 @@ public:
 
   // Note the image index an in-range acquire returned; only the first per swapchain is kept.
   // The recording pass presents the image before it right after state restore, so the
-  // swapchain's image order lines up with the range. No-op outside the range or when
-  // optimization is off.
+  // swapchain's image order lines up with the range. No-op outside the range. Unlike the
+  // notes above, it is also kept with optimization off.
   void NoteInRangeAcquire(uint64_t swapchainKey, uint32_t imageIndex);
 
   // Compute the dependency closure of the collected roots and write the

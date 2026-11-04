@@ -39,19 +39,21 @@ The output stream is written under `Common.Player.SubcapturePath` (see
       on. It uses a swapchain that is not retired and of which the application held no image at
       the cut; it is skipped (with a warning) if there is none. It presents the image before
       the one the range acquires first (taken from the analysis file), so the swapchain image
-      order lines up with the range; without an analysis file it presents the image the
-      application presented last before the cut. Its commands carry state-restore keys, so
+      order lines up with the range; if the analysis saw no acquire on that swapchain, it
+      presents the image the application presented last before the cut. Its commands carry
+      state-restore keys, so
       frame numbering in screenshots, the trace, the HUD, the Benchmark and Statistics plugins
       and a further subcapture of the trimmed stream skips it, as on DirectX.
     - Output-stream compression is controlled by `Common.Player.Subcapture.CompressionType` (`ZSTD` by default, or `LZ4`).
 
-### Two-pass workflow (optimized, default)
+### Two-pass workflow
 
-When `Common.Player.Subcapture.Optimize` is `true` (the default) and no analysis
-file exists yet, the player performs two passes:
+As on DirectX, sub-capture always takes two passes:
 
-1. **Analysis pass** — the first run replays the stream, tracks state, and
-   records which objects the requested range actually references. It writes an
+1. **Analysis pass** — when no analysis file exists yet, the run replays the
+   stream, tracks state, and records what the requested range needs: the image
+   each swapchain acquires first and, with `Common.Player.Subcapture.Optimize`
+   on (the default), which objects the range actually references. It writes an
    analysis file next to the working directory named
    `<streamName>_frames-<range>_analysis.yml` and logs:
 
@@ -62,8 +64,9 @@ file exists yet, the player performs two passes:
    No output stream is produced in this pass.
 
 2. **Recording pass** — running the player again (with the same options and the
-   analysis file now present) produces the trimmed `*.gits2`, restoring **only
-   the objects the analysis marked as needed**. This keeps the sub-capture small.
+   analysis file now present) produces the trimmed `*.gits2`. With `Optimize` on it
+   restores **only the objects the analysis marked as needed**, which keeps the
+   sub-capture small.
 
 Example (analysis, then recording):
 
@@ -73,17 +76,18 @@ gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Fra
 ```
 
 !!! note
-    An incomplete or corrupt analysis file (for example from an interrupted first run) is ignored and regenerated automatically on the next run.
+    An incomplete or corrupt analysis file (for example from an interrupted first run) is ignored and regenerated automatically on the next run. So is a file written with `Optimize` off when `Optimize` is on, because it lacks the data the optimized restore needs; a file written with `Optimize` on is reused with `Optimize` off.
 
-### Single-pass workflow (restore everything)
+### Restoring everything
 
-Set `Common.Player.Subcapture.Optimize` to `false` to skip the analysis pass.
-A single run then produces the trimmed stream, restoring **every** live object
-regardless of whether the range uses it. This is simpler and needs only one
-run, at the cost of a larger sub-capture.
+Set `Common.Player.Subcapture.Optimize` to `false` on both passes to restore
+**every** live object regardless of whether the range uses it, at the cost of a
+larger sub-capture. The analysis pass then only notes the first swapchain image the range
+acquires, without the per-command and ray tracing analysis.
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2   # analysis pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2   # recording pass
 ```
 
 ## Ray tracing and opacity micromaps
@@ -150,7 +154,7 @@ DirectX backend:
 |--------|---------|---------|
 | `Enabled` | `false` | Turn sub-capture on. |
 | `Frames` | `""` | Frame range to keep, e.g. `5` or `3-6`. |
-| `Optimize` | `true` | Use analysis results to restore only necessary objects (enables the two-pass flow). |
+| `Optimize` | `true` | Use analysis results to restore only necessary objects. |
 | `CompressionType` | `ZSTD` | Output stream compression (`ZSTD` or `LZ4`). |
 
 The output location is `Common.Player.SubcapturePath` (default
