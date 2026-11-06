@@ -174,23 +174,6 @@ void HdcVirtualizationService::Create(PlayerWindow& window) {
   }
   window.NativeDisplay = handles.first;
   window.NativeWindow = handles.second;
-  MeasureBorder(window);
-#endif
-}
-
-void HdcVirtualizationService::MeasureBorder(PlayerWindow& window) {
-#ifdef _WIN32
-  const HWND hwnd = reinterpret_cast<HWND>(window.NativeWindow);
-  RECT windowRect{};
-  RECT clientRect{};
-  if (GetWindowRect(hwnd, &windowRect) && GetClientRect(hwnd, &clientRect)) {
-    window.BorderExtraWidth =
-        (windowRect.right - windowRect.left) - (clientRect.right - clientRect.left);
-    window.BorderExtraHeight =
-        (windowRect.bottom - windowRect.top) - (clientRect.bottom - clientRect.top);
-  }
-#else
-  (void)window;
 #endif
 }
 
@@ -202,8 +185,7 @@ void HdcVirtualizationService::Resize(PlayerWindow& window, int clientWidth, int
   }
   windowing::WindowManager::Get().ResizeWindow(
       windowing::WindowProtocol::Win, window.NativeDisplay, window.NativeWindow,
-      static_cast<uint32_t>(clientWidth + window.BorderExtraWidth),
-      static_cast<uint32_t>(clientHeight + window.BorderExtraHeight));
+      static_cast<uint32_t>(clientWidth), static_cast<uint32_t>(clientHeight));
 }
 
 void HdcVirtualizationService::GrowToFit(HDC drawDc, int width, int height) {

@@ -140,8 +140,13 @@ public:
       return;
     }
 
+    // width and height are the client size, SetWindowPos takes the outer window size.
+    RECT rect{0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
+    AdjustWindowRectEx(&rect, static_cast<DWORD>(GetWindowLongPtrA(m_Hwnd, GWL_STYLE)), FALSE,
+                       static_cast<DWORD>(GetWindowLongPtrA(m_Hwnd, GWL_EXSTYLE)));
+
     SetLastError(NO_ERROR);
-    if (SetWindowPos(m_Hwnd, nullptr, 0, 0, static_cast<int>(width), static_cast<int>(height),
+    if (SetWindowPos(m_Hwnd, nullptr, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
                      SWP_NOREPOSITION | SWP_NOMOVE | SWP_NOZORDER) == 0) {
       LOG_ERROR << "SetWindowPos failed, GetLastError() = " << GetLastError();
       GITS_ASSERT(false, "SetWindowPos failed");
@@ -219,17 +224,20 @@ public:
       return TRUE;
     }
 
+    // Sent before WM_NCCREATE. The default limit clamps a bordered window to the screen and
+    // shrinks the client area below the recorded swapchain size.
+    if (msg == WM_GETMINMAXINFO) {
+      auto* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+      mmi->ptMaxTrackSize.x = 32768;
+      mmi->ptMaxTrackSize.y = 32768;
+      return 0;
+    }
+
     if (self == nullptr) {
       return DefWindowProcA(hwnd, msg, wParam, lParam);
     }
 
     switch (msg) {
-    case WM_GETMINMAXINFO: {
-      auto* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-      mmi->ptMaxTrackSize.x = 32768;
-      mmi->ptMaxTrackSize.y = 32768;
-      break;
-    }
     case WM_KEYDOWN:
       switch (wParam) {
       case VK_ESCAPE:

@@ -151,10 +151,6 @@ private:
     // A sample gave the window a positive client area.
     bool HasGeometry{false};
     bool Shown{false};
-    // Window-vs-client size delta measured right after creation: WindowManager::ResizeWindow()
-    // sizes the whole window, while CreatePlayerWindow() takes a client size.
-    int BorderExtraWidth{0};
-    int BorderExtraHeight{0};
   };
 
   // m_Mutex must be held by the following.
@@ -162,7 +158,6 @@ private:
   PlayerWindow& WindowFor(HDC recordedValue);
   void AdoptFallback(uint64_t window);
   void Create(PlayerWindow& window);
-  void MeasureBorder(PlayerWindow& window);
   void ApplyGeometry(PlayerWindow& window, int x, int y, int clientWidth, int clientHeight);
   void Resize(PlayerWindow& window, int clientWidth, int clientHeight);
   void ApplyVisibility(PlayerWindow& window, bool shown);
