@@ -35,6 +35,8 @@ In-repo documentation under `docs/` is the source of truth when external links a
    - Use the body to explain what and why, not how
    - Start subject with relevant scope markers like [Vk], [DX12], [L0], [common], [docs], etc. Don't go overboard with them.
    - Do not start commit messages with BOM.
+   - Never add `Signed-off-by:` trailers or use `git commit -s` or `git commit --signoff`. A sign-off
+       may only be made by a human as it can have legal consequences.
    
 
 6. **Avoid stream-degrading fallbacks.** GITS streams support functional and GPU-driver performance testing. Do not silently switch to a capture path that degrades stream correctness or performance. If the current system cannot record a suitable stream because of resource limits, fail clearly and recommend recording on a capable system. Consider a degrading fallback only when no suitable system can record a working stream; require explicit user opt-in and document the tradeoff. Do not add speculative fallbacks.
