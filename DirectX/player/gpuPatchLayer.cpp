@@ -15,6 +15,7 @@
 
 #include <fstream>
 #include <optional>
+#include <unordered_set>
 #include <wrl/client.h>
 
 namespace gits {
@@ -133,8 +134,193 @@ void GpuPatchLayer::Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& 
   }
   CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.m_Result.Value, shaderIdentifier.size());
+  uint64_t patchMask =
+      GetPatchMask(c.m_Object.Key, c.m_pExportName.Value ? c.m_pExportName.Value : L"");
   m_ShaderIdentifierService.AddPlayerShaderIdentifier(c.Key, shaderIdentifier,
-                                                      c.m_pExportName.Value);
+                                                      c.m_pExportName.Value, patchMask);
+}
+
+// The commands below are used only to learn which local root signature belongs to which export.
+// Their arguments come from the stream and are valid even when the command is marked as skipped
+// (for example MultithreadedObjectCreationLayer skips CreateStateObject and creates the object on
+// a worker thread), so Skip is intentionally not checked.
+void GpuPatchLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  m_RootSignatureService.CreateRootSignature(c);
+}
+
+void GpuPatchLayer::Post(ID3D12Device5CreateStateObjectCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  StateObjectInfo info;
+  FillStateObjectInfo(c.m_pDesc, info);
+  m_StateObjectInfos[c.m_ppStateObject.Key] = std::move(info);
+}
+
+void GpuPatchLayer::Post(ID3D12Device7AddToStateObjectCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  StateObjectInfo info;
+  auto it = m_StateObjectInfos.find(c.m_pStateObjectToGrowFrom.Key);
+  if (it != m_StateObjectInfos.end()) {
+    info = it->second;
+  }
+  FillStateObjectInfo(c.m_pAddition, info);
+  m_StateObjectInfos[c.m_ppNewStateObject.Key] = std::move(info);
+}
+
+void GpuPatchLayer::Post(IUnknownQueryInterfaceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvObject.Key) {
+    return;
+  }
+  // GetShaderIdentifier is called on the state object properties interface, which has its own
+  // object key. Remember which state object it belongs to.
+  const IID& iid = c.m_riid.Value;
+  if (IsEqualIID(iid, __uuidof(ID3D12StateObjectProperties)) ||
+      IsEqualIID(iid, __uuidof(ID3D12StateObjectProperties1)) ||
+      IsEqualIID(iid, __uuidof(ID3D12StateObjectProperties2))) {
+    m_StateObjectByProperties[c.m_ppvObject.Key] = c.m_Object.Key;
+  }
+}
+
+void GpuPatchLayer::FillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
+                                        StateObjectInfo& info) {
+  if (!stateObjectDesc.Value) {
+    return;
+  }
+
+  std::unordered_map<const D3D12_STATE_SUBOBJECT*, ObjectKey> localSignatures;
+  std::unordered_map<std::wstring, std::unordered_set<std::wstring>> hitGroups;
+  for (unsigned i = 0; i < stateObjectDesc.Value->NumSubobjects; ++i) {
+    const D3D12_STATE_SUBOBJECT& subobject = stateObjectDesc.Value->pSubobjects[i];
+    auto itKey = stateObjectDesc.InterfaceKeysBySubobject.find(i);
+    ObjectKey subobjectKey = itKey != stateObjectDesc.InterfaceKeysBySubobject.end()
+                                 ? itKey->second
+                                 : ObjectKey{};
+    switch (subobject.Type) {
+    case D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE: {
+      localSignatures[&subobject] = subobjectKey;
+    } break;
+    case D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION: {
+      const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION& desc =
+          *static_cast<const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION*>(subobject.pDesc);
+      auto it = localSignatures.find(desc.pSubobjectToAssociate);
+      if (it == localSignatures.end()) {
+        break;
+      }
+      if (desc.NumExports == 0) {
+        // Default association: applies to all exports without an explicit association
+        info.DefaultLocalRootSignature = it->second;
+      }
+      for (unsigned j = 0; j < desc.NumExports; ++j) {
+        info.ExportToLocalRootSignature[desc.pExports[j]] = it->second;
+      }
+    } break;
+    case D3D12_STATE_SUBOBJECT_TYPE_EXISTING_COLLECTION: {
+      auto itCollection = m_StateObjectInfos.find(subobjectKey);
+      if (itCollection != m_StateObjectInfos.end()) {
+        for (auto& it : itCollection->second.ExportToLocalRootSignature) {
+          info.ExportToLocalRootSignature.emplace(it.first, it.second);
+        }
+      }
+    } break;
+    case D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP: {
+      const D3D12_HIT_GROUP_DESC& desc = *static_cast<const D3D12_HIT_GROUP_DESC*>(subobject.pDesc);
+      if (desc.AnyHitShaderImport) {
+        hitGroups[desc.AnyHitShaderImport].insert(desc.HitGroupExport);
+      }
+      if (desc.ClosestHitShaderImport) {
+        hitGroups[desc.ClosestHitShaderImport].insert(desc.HitGroupExport);
+      }
+      if (desc.IntersectionShaderImport) {
+        hitGroups[desc.IntersectionShaderImport].insert(desc.HitGroupExport);
+      }
+    } break;
+    }
+  }
+
+  // A hit group uses the local root signature associated with one of its shaders, unless the hit
+  // group itself is associated with a local root signature explicitly.
+  std::unordered_map<std::wstring, ObjectKey> hitGroupToLocalRootSignature;
+  for (auto& itExport : info.ExportToLocalRootSignature) {
+    auto itGroups = hitGroups.find(itExport.first);
+    if (itGroups != hitGroups.end()) {
+      for (const std::wstring& hitGroup : itGroups->second) {
+        hitGroupToLocalRootSignature.emplace(hitGroup, itExport.second);
+      }
+    }
+  }
+  for (auto& it : hitGroupToLocalRootSignature) {
+    info.ExportToLocalRootSignature.emplace(it.first, it.second);
+  }
+}
+
+uint64_t GpuPatchLayer::GetPatchMask(ObjectKey stateObjectPropertiesKey,
+                                     const std::wstring& exportName) {
+  constexpr uint64_t unknownLayout = CapturePlayerShaderIdentifierService::PATCH_MASK_ALL;
+
+  auto itProperties = m_StateObjectByProperties.find(stateObjectPropertiesKey);
+  ObjectKey stateObjectKey =
+      itProperties != m_StateObjectByProperties.end() ? itProperties->second : stateObjectPropertiesKey;
+  auto itInfo = m_StateObjectInfos.find(stateObjectKey);
+  if (itInfo == m_StateObjectInfos.end()) {
+    return unknownLayout;
+  }
+
+  const StateObjectInfo& info = itInfo->second;
+  ObjectKey localRootSignatureKey{};
+  auto itExport = info.ExportToLocalRootSignature.find(exportName);
+  if (itExport != info.ExportToLocalRootSignature.end()) {
+    localRootSignatureKey = itExport->second;
+  } else {
+    localRootSignatureKey = info.DefaultLocalRootSignature;
+  }
+  if (!localRootSignatureKey) {
+    // No local root signature is visible for this export. It may still be declared inside a DXIL
+    // library, so do not assume that its records have no handles or addresses.
+    return unknownLayout;
+  }
+
+  const D3D12_ROOT_SIGNATURE_DESC* desc =
+      m_RootSignatureService.GetRootSignatureDesc(localRootSignatureKey);
+  if (!desc) {
+    return unknownLayout;
+  }
+  return ComputeLocalRootSignaturePatchMask(*desc);
+}
+
+uint64_t GpuPatchLayer::ComputeLocalRootSignaturePatchMask(const D3D12_ROOT_SIGNATURE_DESC& desc) {
+  // The local root arguments follow the shader identifier in the order of the root parameters.
+  // Root constants take 4 bytes each, root descriptors and descriptor tables take 8 bytes and are
+  // 8 bytes aligned.
+  uint64_t mask = 0;
+  unsigned byteOffset = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+  for (unsigned i = 0; i < desc.NumParameters; ++i) {
+    const D3D12_ROOT_PARAMETER& param = desc.pParameters[i];
+    switch (param.ParameterType) {
+    case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+      byteOffset += sizeof(uint32_t) * param.Constants.Num32BitValues;
+      break;
+    case D3D12_ROOT_PARAMETER_TYPE_CBV:
+    case D3D12_ROOT_PARAMETER_TYPE_SRV:
+    case D3D12_ROOT_PARAMETER_TYPE_UAV:
+    case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE: {
+      byteOffset = ((byteOffset + sizeof(uint64_t) - 1) / sizeof(uint64_t)) * sizeof(uint64_t);
+      unsigned slot = (byteOffset - D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES) / sizeof(uint64_t);
+      if (slot >= CapturePlayerShaderIdentifierService::PATCH_MASK_SLOT_COUNT) {
+        // The layout does not fit in the mask, fall back to treating every slot as a candidate
+        return CapturePlayerShaderIdentifierService::PATCH_MASK_ALL;
+      }
+      mask |= 1ull << slot;
+      byteOffset += sizeof(uint64_t);
+    } break;
+    }
+  }
+  return mask;
 }
 
 void GpuPatchLayer::Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {

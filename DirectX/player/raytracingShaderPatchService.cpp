@@ -367,6 +367,7 @@ struct ShaderIdentifierMapping
 {
   uint64_t4 captureIdentifier;
   uint64_t4 playerIdentifier;
+  uint64_t patchMask;
 };
 StructuredBuffer<ShaderIdentifierMapping> shaderIdentifierMappings : register(t1);
 
@@ -413,6 +414,11 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   captureIdentifier.y = bindingTable[bindingTableOffset + 1];
   captureIdentifier.z = bindingTable[bindingTableOffset + 2];
   captureIdentifier.w = bindingTable[bindingTableOffset + 3];
+  // Bit k of the mask tells whether the 8-byte slot k of the local root arguments (record byte
+  // offset 32 + 8 * k) holds a descriptor table handle or a root descriptor address. Slots that
+  // hold anything else (root constants) must not be translated. All bits are set when the layout
+  // of the record is unknown: every slot is then a candidate.
+  uint64_t patchMask = ~(uint64_t)0;
   if (shaderIdentiferCount) {
     int first = 0;
     int last = shaderIdentiferCount - 1;
@@ -424,6 +430,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         bindingTable[bindingTableOffset + 1] = mapping.playerIdentifier.y;
         bindingTable[bindingTableOffset + 2] = mapping.playerIdentifier.z;
         bindingTable[bindingTableOffset + 3] = mapping.playerIdentifier.w;
+        patchMask = mapping.patchMask;
         break;
       } else if (greaterThan_uint64_t4(captureIdentifier, mapping.captureIdentifier)) {
         first = mid + 1;
@@ -433,6 +440,12 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
     }
   }
   for (uint i = 4; i < recordSize; ++i) {
+    uint slot = i - 4;
+    bool patchable = (slot < 64) ? (((patchMask >> slot) & 1) != 0)
+                                 : (patchMask == ~(uint64_t)0);
+    if (!patchable) {
+      continue;
+    }
     uint64_t captureAddress = bindingTable[bindingTableOffset + i];
     if (!captureAddress) {
       continue;

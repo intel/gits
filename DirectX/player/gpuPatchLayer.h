@@ -17,12 +17,14 @@
 #include "capturePlayerDescriptorHandleService.h"
 #include "gpuPatchDumpService.h"
 #include "resourceStateTracker.h"
+#include "descriptorRootSignatureService.h"
 
 #include <d3d12.h>
 #include <map>
 #include <unordered_map>
 #include <set>
 #include <array>
+#include <string>
 #include <vector>
 
 namespace gits {
@@ -40,6 +42,10 @@ public:
   void Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
   void Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
   void Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
+  void Post(ID3D12DeviceCreateRootSignatureCommand& command) override;
+  void Post(ID3D12Device5CreateStateObjectCommand& command) override;
+  void Post(ID3D12Device7AddToStateObjectCommand& command) override;
+  void Post(IUnknownQueryInterfaceCommand& command) override;
   void Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
   void Post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
@@ -103,6 +109,19 @@ private:
                          CommandKey callKey);
   size_t GetDispatchRaysPatchSize(const D3D12_DISPATCH_RAYS_DESC& desc) const;
   void WaitForFence(ID3D12Fence* fence, unsigned fenceValue);
+
+  // Local root signatures associated with the exports of a state object. Used to find out which
+  // 8-byte slots of a shader record hold descriptor handles or GPU addresses and which hold root
+  // constants. Only associations that are visible as state object subobjects are known; exports
+  // whose local root signature is declared inside a DXIL library have no entry.
+  struct StateObjectInfo {
+    std::unordered_map<std::wstring, ObjectKey> ExportToLocalRootSignature;
+    ObjectKey DefaultLocalRootSignature{};
+  };
+  void FillStateObjectInfo(D3D12_STATE_OBJECT_DESC_Argument& stateObjectDesc,
+                           StateObjectInfo& info);
+  uint64_t GetPatchMask(ObjectKey stateObjectPropertiesKey, const std::wstring& exportName);
+  static uint64_t ComputeLocalRootSignaturePatchMask(const D3D12_ROOT_SIGNATURE_DESC& desc);
 
   PlayerManager& m_Manager;
   bool m_UseAddressPinning{};
@@ -209,6 +228,10 @@ private:
   GpuPatchCommandListService m_CommandListService;
   GpuPatchDumpService m_DumpService;
   ResourceStateTracker m_ResourceStateTracker;
+  DescriptorRootSignatureService m_RootSignatureService;
+
+  std::unordered_map<ObjectKey, StateObjectInfo> m_StateObjectInfos;
+  std::unordered_map<ObjectKey, ObjectKey> m_StateObjectByProperties;
 
   std::unordered_map<ObjectKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;

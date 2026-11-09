@@ -148,7 +148,9 @@ std::vector<unsigned> DescriptorRootSignatureService::GetBindlessDescriptorIndex
 D3D12_ROOT_SIGNATURE_DESC* DescriptorRootSignatureService::GetRootSignatureDesc(
     ObjectKey rootSignatureKey) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_RootSignatureDescs[rootSignatureKey];
+  // Do not use operator[]: it would insert a null entry for an unknown key
+  auto it = m_RootSignatureDescs.find(rootSignatureKey);
+  return it == m_RootSignatureDescs.end() ? nullptr : it->second;
 }
 
 bool DescriptorRootSignatureService::UnboundedRetrieved(ObjectKey descriptorHeapKey,
