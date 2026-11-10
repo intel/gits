@@ -542,8 +542,8 @@ void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
     return;
   }
 
-  m_Manager.GetMapTrackingService().StorePhysicalDevice(command.m_pDevice.Key,
-                                                        command.m_physicalDevice.Key);
+  m_Manager.GetMapTrackingService().StoreDevice(command.m_pDevice.Key, command.m_physicalDevice.Key,
+                                                GetDeviceGroupSize(*command.m_pCreateInfo.Value));
 
   m_RayTracingService.OnPostCreateDevice(command);
 }
@@ -620,6 +620,11 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   mapTrackingService.StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, *command.m_pMemory.Value,
       s_AllocateInfo.AllocateInfoModified, s_AllocateInfo.ExternalMemory);
+  if (command.m_Return.Value == VK_SUCCESS &&
+      !IsMemoryImport(command.m_pAllocateInfo.Value->pNext)) {
+    mapTrackingService.ClearMemory(command.m_device.Value, command.m_pMemory.Key,
+                                   *command.m_pAllocateInfo.Value);
+  }
 }
 
 void CaptureCustomizationLayer::Post(vkFreeMemoryCommand& command) {

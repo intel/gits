@@ -9,6 +9,9 @@
 #include "mapTrackingService.h"
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
+#include "vulkanHelpers.h"
+
+#include <sstream>
 
 #ifdef GITS_PLATFORM_LINUX
 #include <algorithm>
@@ -159,9 +162,11 @@ MapTrackingService::~MapTrackingService() {
 #endif
 }
 
-void MapTrackingService::StorePhysicalDevice(GITSKey deviceKey, GITSKey physicalDeviceKey) {
+void MapTrackingService::StoreDevice(GITSKey deviceKey,
+                                     GITSKey physicalDeviceKey,
+                                     uint32_t deviceGroupSize) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_DeviceToPhysicalDevice[deviceKey] = physicalDeviceKey;
+  m_Devices[deviceKey] = DeviceInfo{physicalDeviceKey, deviceGroupSize};
 }
 
 void MapTrackingService::StorePhysicalDeviceMemoryProperties(
@@ -172,9 +177,9 @@ void MapTrackingService::StorePhysicalDeviceMemoryProperties(
 
 bool MapTrackingService::IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  auto deviceIt = m_DeviceToPhysicalDevice.find(deviceKey);
-  GITS_ASSERT(deviceIt != m_DeviceToPhysicalDevice.end());
-  GITSKey physicalDeviceKey = deviceIt->second;
+  auto deviceIt = m_Devices.find(deviceKey);
+  GITS_ASSERT(deviceIt != m_Devices.end());
+  GITSKey physicalDeviceKey = deviceIt->second.PhysicalDeviceKey;
   auto it = m_PhysicalDeviceMemoryProperties.find(physicalDeviceKey);
   GITS_ASSERT(it != m_PhysicalDeviceMemoryProperties.end());
   VkPhysicalDeviceMemoryProperties& memoryProperties = it->second;
@@ -230,6 +235,60 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
   allocationInfo.MemoryTypeIndex = allocateInfo.memoryTypeIndex;
   allocationInfo.ExternalMemory = externalPtr;
   m_Allocations[deviceMemoryKey] = std::move(allocationInfo);
+}
+
+void MapTrackingService::ClearMemory(VkDevice device,
+                                     GITSKey deviceMemoryKey,
+                                     const VkMemoryAllocateInfo& allocateInfo) {
+  VkDeviceMemory memory{};
+  VkMemoryPropertyFlags propertyFlags{};
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    auto it = m_Allocations.find(deviceMemoryKey);
+    GITS_ASSERT(it != m_Allocations.end());
+    const AllocationInfo& allocationInfo = it->second;
+    if (allocationInfo.ExternalMemory) {
+      return;
+    }
+    const DeviceInfo& deviceInfo = m_Devices.at(allocationInfo.DeviceKey);
+    const VkPhysicalDeviceMemoryProperties& memoryProperties =
+        m_PhysicalDeviceMemoryProperties.at(deviceInfo.PhysicalDeviceKey);
+    // The application cannot map memory with multiple instances either.
+    if (HasMultipleInstances(allocateInfo, memoryProperties, deviceInfo.DeviceGroupSize)) {
+      return;
+    }
+    memory = allocationInfo.Memory;
+    propertyFlags = memoryProperties.memoryTypes[allocationInfo.MemoryTypeIndex].propertyFlags;
+  }
+
+  VkDeviceLevelDispatchTable& dispatchTable = m_Manager.GetDeviceDispatchTable(device);
+  void* data{};
+  const auto errorMessage = [&](const char* operation, VkResult result) {
+    std::ostringstream message;
+    message << "Cannot record memory (key " << deviceMemoryKey << ", "
+            << allocateInfo.allocationSize << " bytes): " << operation
+            << " the whole allocation to zero it failed with " << result
+            << ". The player starts from zeroed memory, so pages the application reads before "
+               "writing them would differ in the replay. Record on a system with more free host "
+               "memory.";
+    return message.str();
+  };
+  VkResult result = dispatchTable.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &data);
+  if (result != VK_SUCCESS) {
+    GITS_ASSERT(false, errorMessage("mapping", result));
+    return;
+  }
+  const VkDeviceSize size = allocateInfo.allocationSize;
+  std::memset(data, 0, static_cast<size_t>(size));
+  if (!(propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+    VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, memory, 0,
+                              VK_WHOLE_SIZE};
+    result = dispatchTable.vkFlushMappedMemoryRanges(device, 1, &range);
+  }
+  dispatchTable.vkUnmapMemory(device, memory);
+  if (result != VK_SUCCESS) {
+    GITS_ASSERT(false, errorMessage("flushing", result));
+  }
 }
 
 void MapTrackingService::RemoveAllocationInfo(GITSKey deviceMemoryKey) {

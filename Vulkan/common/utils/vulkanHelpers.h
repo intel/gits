@@ -10,7 +10,9 @@
 
 #include "vulkanHeader2.h"
 
+#include <algorithm>
 #include <bit>
+#include <iterator>
 
 namespace gits {
 namespace vulkan {
@@ -24,6 +26,26 @@ inline const void* getPNextStructure(const void* pNext, VkStructureType structur
     pNextPtr = (const VkBaseInStructure*)pNextPtr->pNext;
   }
   return nullptr;
+}
+
+// Returns true if the pNext chain of a VkMemoryAllocateInfo imports the memory.
+inline bool IsMemoryImport(const void* pNext) {
+  static const VkStructureType importTypes[] = {
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
+      VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
+      VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+      VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS,
+      VK_STRUCTURE_TYPE_IMPORT_SCREEN_BUFFER_INFO_QNX,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_METAL_HANDLE_INFO_EXT,
+  };
+  return std::any_of(std::begin(importTypes), std::end(importTypes), [pNext](VkStructureType type) {
+    return getPNextStructure(pNext, type) != nullptr;
+  });
 }
 
 // Returns the number of physical devices of a logical device created with the given info.

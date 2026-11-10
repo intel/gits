@@ -27,7 +27,7 @@ class MapTrackingService {
 public:
   MapTrackingService(CaptureManager& manager, stream::OrderingRecorder& recorder);
   ~MapTrackingService();
-  void StorePhysicalDevice(GITSKey deviceKey, GITSKey physicalDeviceKey);
+  void StoreDevice(GITSKey deviceKey, GITSKey physicalDeviceKey, uint32_t deviceGroupSize);
   void StorePhysicalDeviceMemoryProperties(
       GITSKey physicalDeviceKey, const VkPhysicalDeviceMemoryProperties& memoryProperties);
   bool IsMemoryMappable(GITSKey deviceKey, uint32_t memoryTypeIndex);
@@ -41,6 +41,12 @@ public:
                            VkDeviceMemory memory,
                            const VkMemoryAllocateInfo& allocateInfo,
                            void* externalPtr);
+  // Zeroes an allocation not backed by external memory. Only the mapped pages the application
+  // writes are recorded, and the player clears host-visible memory at allocation, so pages read
+  // before being written must be zero in the recording as well.
+  void ClearMemory(VkDevice device,
+                   GITSKey deviceMemoryKey,
+                   const VkMemoryAllocateInfo& allocateInfo);
   void RemoveAllocationInfo(GITSKey deviceMemoryKey);
   void StoreData(GITSKey deviceMemoryKey, VkDeviceSize offset, VkDeviceSize size, void** ppData);
   void RemoveData(GITSKey deviceMemoryKey);
@@ -85,7 +91,11 @@ private:
 #endif
 
   uint32_t m_PageSize;
-  std::unordered_map<GITSKey, GITSKey> m_DeviceToPhysicalDevice;
+  struct DeviceInfo {
+    GITSKey PhysicalDeviceKey{};
+    uint32_t DeviceGroupSize{1};
+  };
+  std::unordered_map<GITSKey, DeviceInfo> m_Devices;
   std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
   std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
 #ifdef GITS_PLATFORM_LINUX

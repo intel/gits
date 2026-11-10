@@ -14,29 +14,6 @@ namespace vulkan {
 
 namespace {
 
-bool IsMemoryImport(const void* pNext) {
-  for (auto* pStruct = static_cast<const VkBaseInStructure*>(pNext); pStruct != nullptr;
-       pStruct = pStruct->pNext) {
-    switch (pStruct->sType) {
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT:
-    case VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA:
-    case VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT:
-    case VK_STRUCTURE_TYPE_IMPORT_MEMORY_METAL_HANDLE_INFO_EXT:
-    case VK_STRUCTURE_TYPE_IMPORT_SCREEN_BUFFER_INFO_QNX:
-    case VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS:
-      return true;
-    default:
-      break;
-    }
-  }
-  return false;
-}
-
 bool IsDedicatedToImage(const void* pNext) {
   auto* pDedicatedInfo = static_cast<const VkMemoryDedicatedAllocateInfo*>(
       getPNextStructure(pNext, VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO));
