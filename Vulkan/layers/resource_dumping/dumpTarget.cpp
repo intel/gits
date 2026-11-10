@@ -16,6 +16,31 @@ namespace vulkan {
 
 namespace {
 
+bool InRange(uint32_t value, uint32_t base, uint32_t count) {
+  return value >= base && (count == VK_REMAINING_MIP_LEVELS || value - base < count);
+}
+
+bool IsSelected(const DumpTarget& target,
+                VkImageAspectFlags slotAspect,
+                uint32_t mipLevel,
+                uint32_t arrayLayer) {
+  if (target.Selection.empty()) {
+    return true;
+  }
+  for (const VkImageSubresourceRange& range : target.Selection) {
+    VkImageAspectFlags aspects = range.aspectMask;
+    if (aspects & VK_IMAGE_ASPECT_COLOR_BIT) {
+      aspects |=
+          VK_IMAGE_ASPECT_PLANE_0_BIT | VK_IMAGE_ASPECT_PLANE_1_BIT | VK_IMAGE_ASPECT_PLANE_2_BIT;
+    }
+    if ((aspects & slotAspect) && InRange(mipLevel, range.baseMipLevel, range.levelCount) &&
+        InRange(arrayLayer, range.baseArrayLayer, range.layerCount)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool IsCopiedInPlace(VkImageLayout layout) {
   return layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || layout == VK_IMAGE_LAYOUT_GENERAL ||
          layout == VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR;
@@ -62,14 +87,29 @@ bool IsCopied(const DumpTarget& target,
               uint32_t aspectSlot,
               uint32_t mipLevel,
               uint32_t arrayLayer) {
-  return !(target.Layouts.SlotAspect(aspectSlot) & target.ExcludedAspects) &&
-         IsContentDefined(target.Layouts.Get(aspectSlot, mipLevel, arrayLayer));
+  const ImageLayouts& layouts = target.Layouts;
+  return !(layouts.SlotAspect(aspectSlot) & target.ExcludedAspects) &&
+         IsContentDefined(layouts.Get(aspectSlot, mipLevel, arrayLayer)) &&
+         IsSelected(target, layouts.SlotAspect(aspectSlot), mipLevel, arrayLayer);
 }
 
-std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const DumpTarget& target,
+std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const std::vector<const DumpTarget*>& targets,
                                                       bool separateDepthStencilLayouts) {
   std::vector<VkImageMemoryBarrier> barriers;
-  const ImageLayouts& layouts = target.Layouts;
+  if (targets.empty()) {
+    return barriers;
+  }
+  const ImageLayouts& layouts = targets.front()->Layouts;
+  const VkImage image = targets.front()->Image;
+  const auto copiedBy = [&targets](uint32_t slot, uint32_t mip,
+                                   uint32_t layer) -> const DumpTarget* {
+    for (const DumpTarget* target : targets) {
+      if (IsCopied(*target, slot, mip, layer)) {
+        return target;
+      }
+    }
+    return nullptr;
+  };
   const bool depthStencil =
       layouts.AspectSlots() == 2 && layouts.SlotAspect(0) == VK_IMAGE_ASPECT_DEPTH_BIT;
   for (uint32_t mip = 0; mip < layouts.MipLevels(); ++mip) {
@@ -78,7 +118,7 @@ std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const DumpTarget& target,
       std::optional<uint32_t> firstCopied;
       for (uint32_t slot = 0; slot < layouts.AspectSlots(); ++slot) {
         aspects |= layouts.SlotAspect(slot);
-        if (!firstCopied && IsCopied(target, slot, mip, layer)) {
+        if (!firstCopied && copiedBy(slot, mip, layer)) {
           firstCopied = slot;
         }
       }
@@ -87,25 +127,32 @@ std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const DumpTarget& target,
       }
       // A barrier names several aspects only if all of them are copied from the same layout, or if
       // the depth and stencil layouts cannot be separate.
-      const VkImageLayout layout = layouts.Get(*firstCopied, mip, layer);
+      const VkImageLayout layout =
+          copiedBy(*firstCopied, mip, layer)->Layouts.Get(*firstCopied, mip, layer);
       bool allCopiedAlike = true;
       for (uint32_t slot = 0; slot < layouts.AspectSlots(); ++slot) {
-        allCopiedAlike = allCopiedAlike && IsCopied(target, slot, mip, layer) &&
-                         layouts.Get(slot, mip, layer) == layout;
+        const DumpTarget* target = copiedBy(slot, mip, layer);
+        allCopiedAlike =
+            allCopiedAlike && target && target->Layouts.Get(slot, mip, layer) == layout;
       }
       if (allCopiedAlike || (depthStencil && !separateDepthStencilLayouts)) {
-        AddTransition(barriers, target.Image, aspects, layout, mip, layer);
+        AddTransition(barriers, image, aspects, layout, mip, layer);
         continue;
       }
       for (uint32_t slot = 0; slot < layouts.AspectSlots(); ++slot) {
-        if (IsCopied(target, slot, mip, layer)) {
-          AddTransition(barriers, target.Image, layouts.SlotAspect(slot),
-                        layouts.Get(slot, mip, layer), mip, layer);
+        if (const DumpTarget* target = copiedBy(slot, mip, layer)) {
+          AddTransition(barriers, image, layouts.SlotAspect(slot),
+                        target->Layouts.Get(slot, mip, layer), mip, layer);
         }
       }
     }
   }
   return barriers;
+}
+
+std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const DumpTarget& target,
+                                                      bool separateDepthStencilLayouts) {
+  return TransferSrcBarriers(std::vector<const DumpTarget*>{&target}, separateDepthStencilLayouts);
 }
 
 VkImageLayout CopySourceLayout(const DumpTarget& target,
@@ -129,6 +176,16 @@ VkDeviceSize CopyRegions(const DumpTarget& target, std::vector<VkBufferImageCopy
                   subresource.baseArrayLayer)) {
       continue;
     }
+    const uint32_t depth = region.imageExtent.depth;
+    const uint32_t firstSlice = std::min(target.BaseSlice, depth);
+    const uint32_t slices = target.SliceCount == VK_REMAINING_ARRAY_LAYERS
+                                ? depth - firstSlice
+                                : std::min(target.SliceCount, depth - firstSlice);
+    if (slices == 0) {
+      continue;
+    }
+    region.imageOffset.z = static_cast<int32_t>(firstSlice);
+    region.imageExtent.depth = slices;
 
     // Buffer offsets must be multiples of the texel block size, and of 4 for depth/stencil.
     const RegionTexels texels = GetRegionTexels(info, subresource.aspectMask);
@@ -140,7 +197,7 @@ VkDeviceSize CopyRegions(const DumpTarget& target, std::vector<VkBufferImageCopy
         (region.imageExtent.width + texels.BlockWidth - 1) / texels.BlockWidth;
     const VkDeviceSize blocksY =
         (region.imageExtent.height + texels.BlockHeight - 1) / texels.BlockHeight;
-    offset += blocksX * blocksY * region.imageExtent.depth * texels.BytesPerBlock;
+    offset += blocksX * blocksY * slices * texels.BytesPerBlock;
     regions.push_back(region);
   }
   return offset;

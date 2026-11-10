@@ -26,6 +26,8 @@ public:
 
   // Implemented in resourcesDumpLayerCustom.cpp.
   void Post(RestoreContentDataCommand& command) override;
+  void Post(StateRestoreBeginCommand& command) override;
+  void Post(StateRestoreEndCommand& command) override;
   void Post(vkQueuePresentKHRCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
   void Pre(vkDestroyDeviceCommand& command) override;

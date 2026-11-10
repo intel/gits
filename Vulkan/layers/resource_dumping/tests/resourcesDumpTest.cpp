@@ -160,11 +160,13 @@ DumpTarget ImageDumpTarget(VkFormat format, VkExtent3D extent, ImageLayouts layo
 }
 
 void TestBarriers() {
-  // The stencil contents of a depth/stencil image are undefined.
+  // The render pass stores only the depth of a depth/stencil attachment.
   DumpTarget target =
       ImageDumpTarget(VK_FORMAT_D24_UNORM_S8_UINT, {4, 4, 1},
                       ImageLayouts(VK_FORMAT_D24_UNORM_S8_UINT, false, 1, 1,
                                    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+  target.Selection.push_back({VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1});
+
   target.Layouts.Set({VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1}, VK_IMAGE_LAYOUT_UNDEFINED);
   std::vector<VkImageMemoryBarrier> barriers = TransferSrcBarriers(target, false);
   Check(barriers.size() == 1 &&
@@ -179,12 +181,21 @@ void TestBarriers() {
             barriers[0].oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         "barriers: with separate layouts only the copied aspect is transitioned");
 
+  target.Layouts.Set({VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1},
+                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+  barriers = TransferSrcBarriers(target, true);
+  Check(barriers.size() == 1 &&
+            barriers[0].subresourceRange.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT,
+        "barriers: an aspect that is not copied is not transitioned, whatever its layout");
+  target.Layouts.Set({VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1}, VK_IMAGE_LAYOUT_UNDEFINED);
+
   std::vector<VkBufferImageCopy> regions;
   CopyRegions(target, regions);
   Check(regions.size() == 1 && regions[0].imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT,
-        "regions: only the defined aspect is copied");
+        "regions: only the selected aspect is copied");
 
   // The stencil has no transfer source usage.
+  target.Selection.clear();
   target.Layouts.Set({VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1},
                      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
   target.ExcludedAspects = VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -211,6 +222,31 @@ void TestBarriers() {
   Check(mismatch && mismatch->Expected == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
             mismatch->Actual == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         "mismatch: a copied layer in another layout");
+  actual.Set({VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 2, 1}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  color.Selection.push_back({VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
+  actual.Set({VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 2}, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+  Check(!FindLayoutMismatch(color, actual), "mismatch: layers that are not copied are ignored");
+
+  // 2D views of different slices of a 3D image both select its only layer.
+  DumpTarget slices = ImageDumpTarget(VK_FORMAT_R8G8B8A8_UNORM, {4, 4, 4},
+                                      ImageLayouts(VK_FORMAT_R8G8B8A8_UNORM, false, 1, 1,
+                                                   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+  slices.SliceCount = 1;
+  DumpTarget otherSlices = slices;
+  otherSlices.BaseSlice = 2;
+  barriers = TransferSrcBarriers(std::vector<const DumpTarget*>{&slices, &otherSlices}, false);
+  Check(barriers.size() == 1 && barriers[0].subresourceRange.layerCount == 1,
+        "barriers: a layer that several targets copy is transitioned once");
+  DumpTarget firstLayers = ImageDumpTarget(VK_FORMAT_R8G8B8A8_UNORM, {4, 4, 1},
+                                           ImageLayouts(VK_FORMAT_R8G8B8A8_UNORM, false, 1, 3,
+                                                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+  DumpTarget lastLayers = firstLayers;
+  firstLayers.Selection = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 2}};
+  lastLayers.Selection = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 2}};
+  barriers = TransferSrcBarriers(std::vector<const DumpTarget*>{&firstLayers, &lastLayers}, false);
+  Check(barriers.size() == 1 && barriers[0].subresourceRange.baseArrayLayer == 0 &&
+            barriers[0].subresourceRange.layerCount == 3,
+        "barriers: overlapping selections transition each layer once");
 
   DumpTarget inPlace = ImageDumpTarget(
       VK_FORMAT_B8G8R8A8_UNORM, {4, 4, 1},
@@ -238,11 +274,34 @@ void TestBarriers() {
 }
 
 void TestRegions() {
+  // A 2D view of slices 2 to 4 of mip 1 of a 3D image.
+  DumpTarget target =
+      ImageDumpTarget(VK_FORMAT_R8G8B8A8_UNORM, {8, 8, 16},
+                      ImageLayouts(VK_FORMAT_R8G8B8A8_UNORM, false, 2, 1, VK_IMAGE_LAYOUT_GENERAL));
+  target.Selection.push_back({VK_IMAGE_ASPECT_COLOR_BIT, 1, 1, 0, 1});
+  target.BaseSlice = 2;
+  target.SliceCount = 3;
+  std::vector<VkBufferImageCopy> regions;
+  const VkDeviceSize size = CopyRegions(target, regions);
+  Check(regions.size() == 1, "regions: one mip of the 3D image is copied");
+  Check(regions.size() == 1 && regions[0].imageSubresource.mipLevel == 1 &&
+            regions[0].imageOffset.z == 2 && regions[0].imageExtent.depth == 3 &&
+            regions[0].bufferOffset == 0,
+        "regions: the slices of the view are copied");
+  Check(size == 4 * 4 * 3 * 4, "regions: the staging holds the copied slices");
+
+  target.BaseSlice = 6;
+  target.SliceCount = VK_REMAINING_ARRAY_LAYERS;
+  regions.clear();
+  CopyRegions(target, regions);
+  Check(regions.size() == 1 && regions[0].imageOffset.z == 6 && regions[0].imageExtent.depth == 2,
+        "regions: the remaining slices of the mip are copied");
+
   DumpTarget layers = ImageDumpTarget(
       VK_FORMAT_R8G8B8A8_UNORM, {4, 4, 1},
       ImageLayouts(VK_FORMAT_R8G8B8A8_UNORM, false, 1, 2, VK_IMAGE_LAYOUT_UNDEFINED));
   layers.Layouts.Set({VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 1, 1}, VK_IMAGE_LAYOUT_GENERAL);
-  std::vector<VkBufferImageCopy> regions;
+  regions.clear();
   Check(CopyRegions(layers, regions) == 4 * 4 * 4 && regions.size() == 1 &&
             regions[0].imageSubresource.baseArrayLayer == 1 && regions[0].bufferOffset == 0,
         "regions: undefined layers are not copied and take no staging");

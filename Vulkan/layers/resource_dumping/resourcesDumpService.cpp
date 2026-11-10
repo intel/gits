@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <fstream>
 #include <stdexcept>
 #include <string_view>
 
@@ -71,12 +72,10 @@ const T* FindInChain(const void* pNext, VkStructureType sType) {
 }
 
 bool HasTransferSrcUsage(const VkBufferCreateInfo& info) {
-  for (auto* node = static_cast<const VkBaseInStructure*>(info.pNext); node != nullptr;
-       node = node->pNext) {
-    if (node->sType == VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO) {
-      return reinterpret_cast<const VkBufferUsageFlags2CreateInfo*>(node)->usage &
-             VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
-    }
+  const auto* usage = FindInChain<VkBufferUsageFlags2CreateInfo>(
+      info.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO);
+  if (usage) {
+    return usage->usage & VK_BUFFER_USAGE_2_TRANSFER_SRC_BIT;
   }
   return info.usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 }
@@ -126,28 +125,78 @@ std::string QueueFamilyToString(uint32_t queueFamilyIndex) {
   return std::to_string(queueFamilyIndex);
 }
 
+template <typename Attachments>
+void MarkRenderTarget(Attachments& attachments, uint32_t index) {
+  if (index < attachments.size()) {
+    attachments[index].RenderTarget = true;
+  }
+}
+
+bool HasDepth(VkFormat format) {
+  const FormatBlockInfo info = GetFormatBlockInfo(format);
+  return info.IsDepthStencil && info.DepthBytes > 0;
+}
+
+bool HasStencil(VkFormat format) {
+  const FormatBlockInfo info = GetFormatBlockInfo(format);
+  return info.IsDepthStencil && info.StencilBytes > 0;
+}
+
+const char* AspectName(VkImageAspectFlags aspect) {
+  switch (aspect) {
+  case VK_IMAGE_ASPECT_DEPTH_BIT:
+    return "depth";
+  case VK_IMAGE_ASPECT_STENCIL_BIT:
+    return "stencil";
+  default:
+    return "color";
+  }
+}
+
 } // namespace
 
 ResourcesDumpService::ResourcesDumpService(DispatchTablesHolder& dispatchTablesHolder)
     : m_DispatchTablesHolder(dispatchTablesHolder) {
-  const auto& config = Configurator::Get().vulkan.player.resourcesDump;
-  m_ResourceKeys = ParseOption(config.resourceKeys, "resourceKeys");
-  m_CommandKeys = ParseOption(config.commandKeys, "commandKeys");
-  m_ImageFormat = config.format;
-  if (m_ImageFormat == ImageFormat::DDS) {
-    throw std::runtime_error(
-        "Vulkan.Player.ResourcesDump.format: DDS is not supported, use PNG or JPEG");
-  }
-  if (m_ResourceKeys.empty() || m_CommandKeys.empty()) {
-    LOG_WARNING << "ResourcesDump: both Vulkan.Player.ResourcesDump.commandKeys and "
-                   "Vulkan.Player.ResourcesDump.resourceKeys are needed, nothing is dumped";
+  const auto& playerConfig = Configurator::Get().common.player;
+  const auto dumpPath = [&playerConfig](const char* folder) {
+    std::filesystem::path path =
+        playerConfig.outputDir.empty() ? playerConfig.streamDir / folder : playerConfig.outputDir;
+    if (!path.empty() && !std::filesystem::exists(path)) {
+      std::filesystem::create_directories(path);
+    }
+    return path;
+  };
+
+  const auto& resourcesConfig = Configurator::Get().vulkan.player.resourcesDump;
+  m_ResourcesDump = resourcesConfig.enabled;
+  if (m_ResourcesDump) {
+    m_ResourceKeys = ParseOption(resourcesConfig.resourceKeys, "resourceKeys");
+    m_CommandKeys = ParseOption(resourcesConfig.commandKeys, "commandKeys");
+    m_ResourcesFormat = resourcesConfig.format;
+    if (m_ResourcesFormat == ImageFormat::DDS) {
+      throw std::runtime_error(
+          "Vulkan.Player.ResourcesDump.format: DDS is not supported, use PNG or JPEG");
+    }
+    if (m_CommandKeys.empty() || m_ResourceKeys.empty()) {
+      LOG_WARNING << "ResourcesDump: Vulkan.Player.ResourcesDump."
+                  << (m_CommandKeys.empty() ? "commandKeys" : "resourceKeys")
+                  << " is empty, nothing is dumped";
+    }
+    m_ResourcesPath = dumpPath("resources");
   }
 
-  const auto& playerConfig = Configurator::Get().common.player;
-  m_DumpPath = playerConfig.outputDir.empty() ? playerConfig.streamDir / "resources"
-                                              : playerConfig.outputDir;
-  if (!m_DumpPath.empty() && !std::filesystem::exists(m_DumpPath)) {
-    std::filesystem::create_directories(m_DumpPath);
+  const auto& renderTargetsConfig = Configurator::Get().vulkan.player.renderTargetsDump;
+  m_RenderTargetsDump = renderTargetsConfig.enabled;
+  if (m_RenderTargetsDump) {
+    m_RenderTargetFrames = BitRange(renderTargetsConfig.frames);
+    m_RenderTargetPasses = BitRange(renderTargetsConfig.renderPasses);
+    m_RenderTargetsDryRun = renderTargetsConfig.dryRun;
+    m_RenderTargetsFormat = renderTargetsConfig.format;
+    if (m_RenderTargetsFormat == ImageFormat::DDS) {
+      throw std::runtime_error(
+          "Vulkan.Player.RenderTargetsDump.format: DDS is not supported, use PNG or JPEG");
+    }
+    m_RenderTargetsPath = dumpPath("render_targets");
   }
 
   m_EndSubscription =
@@ -221,7 +270,55 @@ std::string ResourcesDumpService::Close() {
                      "it is not dumped";
     }
   }
+  if (m_RenderTargetsDump && m_SelectedRenderPasses == 0) {
+    LOG_WARNING << "RenderTargetsDump: no render pass instance of Vulkan.Player.RenderTargetsDump."
+                   "frames and renderPasses was replayed, so nothing is dumped";
+  }
+  if (m_RenderTargetsDryRun) {
+    WriteDryRun();
+  }
   return error;
+}
+
+void ResourcesDumpService::WriteDryRun() const {
+  const std::filesystem::path path = m_RenderTargetsPath / "RenderTargetsDumpDryRun.yaml";
+  std::ofstream file(path);
+  file << "RenderPassesWithTargetsByFrame:";
+  if (m_DryRunRenderPasses.empty()) {
+    file << " {}";
+  }
+  file << "\n";
+  for (const auto& [frame, renderPasses] : m_DryRunRenderPasses) {
+    file << "  " << frame << ": [";
+    const char* separator = "";
+    for (unsigned renderPass : renderPasses) {
+      file << separator << renderPass;
+      separator = ", ";
+    }
+    file << "]\n";
+  }
+  file.close();
+  if (!file.fail()) {
+    LOG_INFO << "RenderTargetsDump: written " << path.string();
+  } else {
+    LOG_ERROR << "RenderTargetsDump: cannot write " << path.string();
+  }
+}
+
+const char* ResourcesDumpService::LogName() const {
+  return m_ResourcesDump ? "ResourcesDump" : "RenderTargetsDump";
+}
+
+void ResourcesDumpService::StateRestoreBegin() {
+  m_StateRestore = true;
+  m_Frame = 0;
+  m_RenderPassCount = 0;
+}
+
+void ResourcesDumpService::StateRestoreEnd() {
+  m_StateRestore = false;
+  m_Frame = 1;
+  m_RenderPassCount = 0;
 }
 
 void ResourcesDumpService::RestoredImageLayouts(
@@ -244,6 +341,13 @@ void ResourcesDumpService::RestoredImageLayouts(
     if (queueIt != m_Queues.end()) {
       ApplyOwnershipChange(image.Owner, {OwnershipChange::Kind::Use, queueIt->second.second, true});
     }
+  }
+}
+
+void ResourcesDumpService::Present() {
+  if (!m_StateRestore) {
+    ++m_Frame;
+    m_RenderPassCount = 0;
   }
 }
 
@@ -398,10 +502,13 @@ void ResourcesDumpService::CreateImage(GITSKey key,
                                        VkDevice device,
                                        VkImage image,
                                        const VkImageCreateInfo& info) {
-  if (!m_ResourceKeys.count(key)) {
+  constexpr VkImageUsageFlags attachmentUsage =
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  if (m_ResourceKeys.count(key)) {
+    m_CreatedResourceKeys.insert(key);
+  } else if (!TracksRenderTargets() || !(info.usage & attachmentUsage)) {
     return;
   }
-  m_CreatedResourceKeys.insert(key);
   Image state;
   state.Key = key;
   state.Device = device;
@@ -449,7 +556,8 @@ void ResourcesDumpService::DestroyImage(VkImage image) {
 }
 
 void ResourcesDumpService::PrepareSwapchain(VkDevice device, VkSwapchainCreateInfoKHR& info) {
-  if (m_ResourceKeys.empty() || (info.imageUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
+  if ((m_ResourceKeys.empty() && !TracksRenderTargets()) ||
+      (info.imageUsage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
     return;
   }
   auto deviceIt = m_Devices.find(device);
@@ -466,8 +574,9 @@ void ResourcesDumpService::PrepareSwapchain(VkDevice device, VkSwapchainCreateIn
   if (instanceTable->vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, info.surface,
                                                                &capabilities) != VK_SUCCESS ||
       !(capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)) {
-    LOG_WARNING << "ResourcesDump: the surface does not support the transfer source usage, so the "
-                   "swapchain images cannot be dumped";
+    LOG_WARNING << LogName()
+                << ": the surface does not support the transfer source usage, so the swapchain "
+                   "images cannot be dumped";
     return;
   }
   info.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -495,10 +604,13 @@ void ResourcesDumpService::GetSwapchainImages(VkDevice device,
   const VkSwapchainCreateInfoKHR& info = swapchainIt->second;
   m_SwapchainImages[swapchain].assign(images, images + count);
   for (uint32_t i = 0; i < count; ++i) {
-    if (!m_ResourceKeys.count(keys[i]) || m_Images.count(images[i])) {
+    const bool listed = m_ResourceKeys.count(keys[i]);
+    if (m_Images.count(images[i]) || (!listed && !TracksRenderTargets())) {
       continue;
     }
-    m_CreatedResourceKeys.insert(keys[i]);
+    if (listed) {
+      m_CreatedResourceKeys.insert(keys[i]);
+    }
     Image state;
     state.Key = keys[i];
     state.Device = device;
@@ -577,6 +689,8 @@ void ResourcesDumpService::CreateImageView(VkImageView view, const VkImageViewCr
   }
   View state{info.image, info.subresourceRange};
   if (imageIt->second.Type == VK_IMAGE_TYPE_3D) {
+    state.BaseSlice = info.subresourceRange.baseArrayLayer;
+    state.SliceCount = info.subresourceRange.layerCount;
     state.Range.baseArrayLayer = 0;
     state.Range.layerCount = 1;
   }
@@ -588,10 +702,72 @@ void ResourcesDumpService::DestroyImageView(VkImageView view) {
 }
 
 void ResourcesDumpService::CreateRenderPass(VkRenderPass renderPass,
-                                            std::vector<AttachmentFinalLayouts> finalLayouts,
-                                            uint32_t viewMask) {
-  m_RenderPasses[renderPass] = std::move(finalLayouts);
+                                            const VkRenderPassCreateInfo& info) {
+  std::vector<RenderPassAttachment>& attachments = m_RenderPasses[renderPass];
+  attachments.clear();
+  for (uint32_t i = 0; info.pAttachments && i < info.attachmentCount; ++i) {
+    const VkAttachmentDescription& description = info.pAttachments[i];
+    attachments.push_back({description.format, description.finalLayout, description.finalLayout,
+                           description.storeOp, description.stencilStoreOp});
+  }
+  for (uint32_t i = 0; info.pSubpasses && i < info.subpassCount; ++i) {
+    const VkSubpassDescription& subpass = info.pSubpasses[i];
+    for (uint32_t j = 0; subpass.pColorAttachments && j < subpass.colorAttachmentCount; ++j) {
+      MarkRenderTarget(attachments, subpass.pColorAttachments[j].attachment);
+      if (subpass.pResolveAttachments) {
+        MarkRenderTarget(attachments, subpass.pResolveAttachments[j].attachment);
+      }
+    }
+    if (subpass.pDepthStencilAttachment) {
+      MarkRenderTarget(attachments, subpass.pDepthStencilAttachment->attachment);
+    }
+  }
+  uint32_t viewMask = 0;
+  const auto* multiview = FindInChain<VkRenderPassMultiviewCreateInfo>(
+      info.pNext, VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO);
+  for (uint32_t i = 0; multiview && multiview->pViewMasks && i < multiview->subpassCount; ++i) {
+    viewMask |= multiview->pViewMasks[i];
+  }
   m_RenderPassViewMasks[renderPass] = viewMask;
+}
+
+void ResourcesDumpService::CreateRenderPass(VkRenderPass renderPass,
+                                            const VkRenderPassCreateInfo2& info) {
+  std::vector<RenderPassAttachment>& attachments = m_RenderPasses[renderPass];
+  attachments.clear();
+  uint32_t& viewMask = m_RenderPassViewMasks[renderPass];
+  viewMask = 0;
+  for (uint32_t i = 0; info.pAttachments && i < info.attachmentCount; ++i) {
+    const VkAttachmentDescription2& description = info.pAttachments[i];
+    RenderPassAttachment attachment{description.format, description.finalLayout,
+                                    description.finalLayout, description.storeOp,
+                                    description.stencilStoreOp};
+    const auto* stencilLayout = FindInChain<VkAttachmentDescriptionStencilLayout>(
+        description.pNext, VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_STENCIL_LAYOUT);
+    if (stencilLayout) {
+      attachment.StencilFinalLayout = stencilLayout->stencilFinalLayout;
+    }
+    attachments.push_back(attachment);
+  }
+  for (uint32_t i = 0; info.pSubpasses && i < info.subpassCount; ++i) {
+    const VkSubpassDescription2& subpass = info.pSubpasses[i];
+    viewMask |= subpass.viewMask;
+    for (uint32_t j = 0; subpass.pColorAttachments && j < subpass.colorAttachmentCount; ++j) {
+      MarkRenderTarget(attachments, subpass.pColorAttachments[j].attachment);
+      if (subpass.pResolveAttachments) {
+        MarkRenderTarget(attachments, subpass.pResolveAttachments[j].attachment);
+      }
+    }
+    if (subpass.pDepthStencilAttachment) {
+      MarkRenderTarget(attachments, subpass.pDepthStencilAttachment->attachment);
+    }
+    const auto* depthStencilResolve = FindInChain<VkSubpassDescriptionDepthStencilResolve>(
+        subpass.pNext, VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_DEPTH_STENCIL_RESOLVE);
+    if (depthStencilResolve && depthStencilResolve->pDepthStencilResolveAttachment) {
+      MarkRenderTarget(attachments,
+                       depthStencilResolve->pDepthStencilResolveAttachment->attachment);
+    }
+  }
 }
 
 void ResourcesDumpService::DestroyRenderPass(VkRenderPass renderPass) {
@@ -706,7 +882,8 @@ void ResourcesDumpService::ClearCommandBuffer(CommandBufferState& state) {
   state.Dumps.clear();
   state.Changes.clear();
   state.Attachments.clear();
-  state.FinalLayouts.clear();
+  state.RenderTargets.clear();
+  state.RenderPass = VK_NULL_HANDLE;
   state.InRenderPass = false;
   state.Suspending = false;
   state.DumpsBeforeRenderPass.reset();
@@ -854,12 +1031,11 @@ void ResourcesDumpService::BeginRenderPass(VkCommandBuffer commandBuffer,
   state->InRenderPass = true;
   state->Suspending = false;
   state->DumpsBeforeRenderPass = state->DumpsBeforeRenderPass.value_or(state->Dumps.size());
+  state->RenderPassFrame = m_Frame;
+  state->RenderPassNumber = ++m_RenderPassCount;
+  state->RenderPass = info.renderPass;
   state->Attachments.clear();
-  state->FinalLayouts.clear();
-  auto renderPassIt = m_RenderPasses.find(info.renderPass);
-  if (renderPassIt != m_RenderPasses.end()) {
-    state->FinalLayouts = renderPassIt->second;
-  }
+  state->RenderTargets.clear();
   auto viewMaskIt = m_RenderPassViewMasks.find(info.renderPass);
   state->ViewMask = viewMaskIt == m_RenderPassViewMasks.end() ? 0 : viewMaskIt->second;
   state->LayerCount = VK_REMAINING_ARRAY_LAYERS;
@@ -868,61 +1044,99 @@ void ResourcesDumpService::BeginRenderPass(VkCommandBuffer commandBuffer,
     state->Attachments = framebufferIt->second.Views;
     state->LayerCount = framebufferIt->second.Layers;
   }
-  for (auto* node = static_cast<const VkBaseInStructure*>(info.pNext); node != nullptr;
-       node = node->pNext) {
-    if (node->sType == VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO) {
-      const auto* attachments = reinterpret_cast<const VkRenderPassAttachmentBeginInfo*>(node);
-      if (attachments->pAttachments) {
-        state->Attachments.assign(attachments->pAttachments,
-                                  attachments->pAttachments + attachments->attachmentCount);
-      }
-    }
+  const auto* attachmentViews = FindInChain<VkRenderPassAttachmentBeginInfo>(
+      info.pNext, VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO);
+  if (attachmentViews && attachmentViews->pAttachments) {
+    state->Attachments.assign(attachmentViews->pAttachments,
+                              attachmentViews->pAttachments + attachmentViews->attachmentCount);
   }
   for (VkImageView view : state->Attachments) {
     TrackAttachmentUse(*state, view);
   }
-}
 
-void ResourcesDumpService::EndRenderPass(VkCommandBuffer commandBuffer) {
-  CommandBufferState* state = GetCommandBuffer(commandBuffer);
-  if (!state) {
+  auto renderPassIt = m_RenderPasses.find(info.renderPass);
+  if (renderPassIt == m_RenderPasses.end()) {
     return;
   }
-  const size_t count = std::min(state->Attachments.size(), state->FinalLayouts.size());
+  const std::vector<RenderPassAttachment>& attachments = renderPassIt->second;
+  const auto depthStencilCount =
+      std::count_if(attachments.begin(), attachments.end(), [](const RenderPassAttachment& a) {
+        return a.RenderTarget && (HasDepth(a.Format) || HasStencil(a.Format));
+      });
+  const size_t count = std::min(attachments.size(), state->Attachments.size());
   for (size_t i = 0; i < count; ++i) {
-    auto viewIt = m_Views.find(state->Attachments[i]);
-    if (viewIt == m_Views.end()) {
+    const RenderPassAttachment& attachment = attachments[i];
+    if (!attachment.RenderTarget) {
       continue;
     }
-    auto imageIt = m_Images.find(viewIt->second.Image);
-    if (imageIt == m_Images.end()) {
+    const VkImageView view = state->Attachments[i];
+    const bool depth = HasDepth(attachment.Format);
+    const bool stencil = HasStencil(attachment.Format);
+    if (!depth && !stencil) {
+      state->RenderTargets.push_back({"rt_" + std::to_string(i), view, VK_IMAGE_ASPECT_COLOR_BIT,
+                                      attachment.FinalLayout, attachment.StoreOp});
       continue;
     }
-    const AttachmentFinalLayouts& finalLayouts = state->FinalLayouts[i];
-    for (const VkImageSubresourceRange& range :
-         RenderedRanges(*state, viewIt->second, imageIt->second)) {
-      StateChange change;
-      change.Image = viewIt->second.Image;
-      change.Range = range;
-      change.Layout = finalLayouts.Layout;
-      if ((change.Range.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-          finalLayouts.StencilLayout != finalLayouts.Layout) {
-        StateChange stencilChange = change;
-        stencilChange.Range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-        stencilChange.Layout = finalLayouts.StencilLayout;
-        change.Range.aspectMask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
-        if (change.Range.aspectMask) {
+    const std::string name = depthStencilCount > 1 ? "ds_" + std::to_string(i) : "ds";
+    if (depth) {
+      state->RenderTargets.push_back(
+          {name, view, VK_IMAGE_ASPECT_DEPTH_BIT, attachment.FinalLayout, attachment.StoreOp});
+    }
+    if (stencil) {
+      state->RenderTargets.push_back({name, view, VK_IMAGE_ASPECT_STENCIL_BIT,
+                                      attachment.StencilFinalLayout, attachment.StencilStoreOp});
+    }
+  }
+}
+
+void ResourcesDumpService::EndRenderPass(GITSKey key, VkCommandBuffer commandBuffer) {
+  CommandBufferState* state = GetCommandBuffer(commandBuffer);
+  if (!state) {
+    CommandBufferCall(key, commandBuffer);
+    return;
+  }
+  auto renderPassIt = m_RenderPasses.find(state->RenderPass);
+  if (renderPassIt != m_RenderPasses.end()) {
+    const std::vector<RenderPassAttachment>& attachments = renderPassIt->second;
+    const size_t count = std::min(attachments.size(), state->Attachments.size());
+    for (size_t i = 0; i < count; ++i) {
+      auto viewIt = m_Views.find(state->Attachments[i]);
+      if (viewIt == m_Views.end()) {
+        continue;
+      }
+      auto imageIt = m_Images.find(viewIt->second.Image);
+      if (imageIt == m_Images.end()) {
+        continue;
+      }
+      const RenderPassAttachment& attachment = attachments[i];
+      for (const VkImageSubresourceRange& range :
+           RenderedRanges(*state, viewIt->second, imageIt->second)) {
+        StateChange change;
+        change.Image = viewIt->second.Image;
+        change.Range = range;
+        change.Layout = attachment.FinalLayout;
+        if ((change.Range.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
+            attachment.StencilFinalLayout != attachment.FinalLayout) {
+          StateChange stencilChange = change;
+          stencilChange.Range.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+          stencilChange.Layout = attachment.StencilFinalLayout;
+          change.Range.aspectMask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
+          if (change.Range.aspectMask) {
+            state->Changes.push_back(change);
+          }
+          state->Changes.push_back(stencilChange);
+        } else {
           state->Changes.push_back(change);
         }
-        state->Changes.push_back(stencilChange);
-      } else {
-        state->Changes.push_back(change);
       }
     }
   }
+  const std::vector<RenderTarget> renderTargets = std::move(state->RenderTargets);
   state->InRenderPass = false;
+  state->RenderPass = VK_NULL_HANDLE;
   state->Attachments.clear();
-  state->FinalLayouts.clear();
+  state->RenderTargets.clear();
+  EndRenderPassInstance(key, commandBuffer, *state, renderTargets);
 }
 
 void ResourcesDumpService::BeginRendering(VkCommandBuffer commandBuffer,
@@ -936,30 +1150,60 @@ void ResourcesDumpService::BeginRendering(VkCommandBuffer commandBuffer,
   state->DumpsBeforeRenderPass = state->DumpsBeforeRenderPass.value_or(state->Dumps.size());
   state->LayerCount = info.layerCount;
   state->ViewMask = info.viewMask;
-  const auto trackUse = [this, state](const VkRenderingAttachmentInfo& attachment) {
+  if (info.flags & VK_RENDERING_RESUMING_BIT) {
+    std::tie(state->RenderPassFrame, state->RenderPassNumber) = m_SuspendedRenderPass;
+  } else {
+    state->RenderPassFrame = m_Frame;
+    state->RenderPassNumber = ++m_RenderPassCount;
+  }
+  state->RenderTargets.clear();
+  const auto addAttachment = [this, state](const VkRenderingAttachmentInfo& attachment,
+                                           const std::string& name, VkImageAspectFlags aspect) {
     if (attachment.imageView) {
       TrackAttachmentUse(*state, attachment.imageView);
+      state->RenderTargets.push_back(
+          {name, attachment.imageView, aspect, attachment.imageLayout, attachment.storeOp});
     }
     if (attachment.resolveMode != VK_RESOLVE_MODE_NONE && attachment.resolveImageView) {
       TrackAttachmentUse(*state, attachment.resolveImageView);
+      state->RenderTargets.push_back({name + "_resolve", attachment.resolveImageView, aspect,
+                                      attachment.resolveImageLayout, VK_ATTACHMENT_STORE_OP_STORE});
     }
   };
   for (uint32_t i = 0; info.pColorAttachments && i < info.colorAttachmentCount; ++i) {
-    trackUse(info.pColorAttachments[i]);
+    addAttachment(info.pColorAttachments[i], "rt_" + std::to_string(i), VK_IMAGE_ASPECT_COLOR_BIT);
   }
   if (info.pDepthAttachment) {
-    trackUse(*info.pDepthAttachment);
+    addAttachment(*info.pDepthAttachment, "ds", VK_IMAGE_ASPECT_DEPTH_BIT);
   }
   if (info.pStencilAttachment) {
-    trackUse(*info.pStencilAttachment);
+    addAttachment(*info.pStencilAttachment, "ds", VK_IMAGE_ASPECT_STENCIL_BIT);
   }
 }
 
-void ResourcesDumpService::EndRendering(VkCommandBuffer commandBuffer) {
+void ResourcesDumpService::EndRendering(GITSKey key, VkCommandBuffer commandBuffer) {
   CommandBufferState* state = GetCommandBuffer(commandBuffer);
-  if (state && !state->Suspending) {
-    state->InRenderPass = false;
+  if (!state) {
+    CommandBufferCall(key, commandBuffer);
+    return;
   }
+  if (state->Suspending) {
+    state->RenderTargets.clear();
+    m_SuspendedRenderPass = {state->RenderPassFrame, state->RenderPassNumber};
+    if (m_CommandKeys.count(key)) {
+      m_ReachedCommandKeys.insert(key);
+      LOG_ERROR << "ResourcesDump: command " << DumpKeyToString(key)
+                << " suspends a render pass instance that a later command buffer resumes, so "
+                   "resources cannot be copied after it. Use the key of the command that ends "
+                   "the resumed render pass instance, or of the vkQueueSubmit that submits the "
+                   "command buffers, instead.";
+    }
+    return;
+  }
+  const std::vector<RenderTarget> renderTargets = std::move(state->RenderTargets);
+  state->InRenderPass = false;
+  state->RenderTargets.clear();
+  EndRenderPassInstance(key, commandBuffer, *state, renderTargets);
 }
 
 void ResourcesDumpService::ExecuteCommands(VkCommandBuffer commandBuffer,
@@ -1057,6 +1301,43 @@ void ResourcesDumpService::EndCommandBuffer(GITSKey key, VkCommandBuffer command
     state->Unsubmitted = true;
     state->RecordingEnd = ++m_RecordingEnds;
   }
+}
+
+void ResourcesDumpService::EndRenderPassInstance(GITSKey key,
+                                                 VkCommandBuffer commandBuffer,
+                                                 CommandBufferState& state,
+                                                 const std::vector<RenderTarget>& renderTargets) {
+  if (m_CommandKeys.count(key)) {
+    m_ReachedCommandKeys.insert(key);
+    if (state.Protected) {
+      LOG_ERROR << "ResourcesDump: command " << DumpKeyToString(key)
+                << " is recorded into a protected command buffer, which cannot write the staging "
+                   "memory. Use the key of the vkQueueSubmit that submits the command buffer "
+                   "instead.";
+    } else {
+      RecordDumps(commandBuffer, state,
+                  CollectTargets(key, state.Device, state.QueueFamilyIndex, &state));
+    }
+  }
+  if (!m_RenderTargetsDump || !m_RenderTargetFrames[state.RenderPassFrame] ||
+      !m_RenderTargetPasses[state.RenderPassNumber]) {
+    return;
+  }
+  ++m_SelectedRenderPasses;
+  if (m_RenderTargetsDryRun) {
+    if (!renderTargets.empty()) {
+      m_DryRunRenderPasses[state.RenderPassFrame].insert(state.RenderPassNumber);
+    }
+    return;
+  }
+  if (state.Protected) {
+    LOG_WARNING << "RenderTargetsDump: frame " << state.RenderPassFrame << " render pass "
+                << state.RenderPassNumber
+                << " is recorded into a protected command buffer, which cannot write the staging "
+                   "memory, so its render targets are not dumped";
+    return;
+  }
+  RecordDumps(commandBuffer, state, RenderTargetTargets(state, renderTargets));
 }
 
 void ResourcesDumpService::RecordDumps(VkCommandBuffer commandBuffer,
@@ -1447,6 +1728,9 @@ void ResourcesDumpService::CheckSubmission(GITSKey key,
         firstCopies = firstCopies.value_or(i);
         lastCopies = i;
         for (const StagedResource& resource : point.Batch->Resources) {
+          if (resource.Target.RenderTarget) {
+            continue;
+          }
           auto imageIt = m_Images.find(resource.Target.Image);
           const std::string problem =
               imageIt == m_Images.end() ? "" : SwapchainImageProblem(imageIt->second, queue);
@@ -1740,7 +2024,7 @@ std::vector<DumpTarget> ResourcesDumpService::CollectTargets(GITSKey commandKey,
     }
   }
   for (const auto& [handle, image] : m_Images) {
-    if (image.Device != device) {
+    if (image.Device != device || !m_ResourceKeys.count(image.Key)) {
       continue;
     }
     std::optional<DumpTarget> target =
@@ -1913,18 +2197,118 @@ std::optional<DumpTarget> ResourcesDumpService::ImageTarget(GITSKey commandKey,
                                                             const ChangeLists& before) {
   DumpTarget target;
   target.Name = DumpName(commandKey, "image", image.Key);
-  target.FileFormat = m_ImageFormat;
+  target.FileFormat = m_ResourcesFormat;
   target.Image = handle;
   target.Layouts = ResolveLayouts(handle, image, before);
   return MakeImageTarget(CommandContext(commandKey), std::move(target), image,
-                         ResolveOwner(VK_NULL_HANDLE, handle, image, before), queueFamilyIndex);
+                         ResolveOwner(VK_NULL_HANDLE, handle, image, before), queueFamilyIndex,
+                         false);
+}
+
+std::vector<DumpTarget> ResourcesDumpService::RenderTargetTargets(
+    const CommandBufferState& state, const std::vector<RenderTarget>& renderTargets) {
+  const std::string context = "RenderTargetsDump: in frame " +
+                              std::to_string(state.RenderPassFrame) + " render pass " +
+                              std::to_string(state.RenderPassNumber);
+  // The aspects of an attachment sharing a name are dumped together.
+  struct Entry {
+    std::string Name;
+    VkImage Handle{};
+    DumpTarget Target;
+  };
+  const ChangeLists before = ChangesBefore(&state);
+  std::vector<Entry> entries;
+  for (const RenderTarget& renderTarget : renderTargets) {
+    auto viewIt = m_Views.find(renderTarget.View);
+    if (viewIt == m_Views.end()) {
+      continue;
+    }
+    const VkImage handle = viewIt->second.Image;
+    auto imageIt = m_Images.find(handle);
+    if (imageIt == m_Images.end()) {
+      continue;
+    }
+    const Image& image = imageIt->second;
+    const std::string what = context + ", the render target " + renderTarget.Name + " (image O" +
+                             DumpKeyToString(image.Key) + ")";
+    if (image.Samples != VK_SAMPLE_COUNT_1_BIT) {
+      LOG_INFO << what << " is multisampled and cannot be copied to a buffer, so it is not dumped";
+      continue;
+    }
+    if (renderTarget.StoreOp != VK_ATTACHMENT_STORE_OP_STORE) {
+      LOG_WARNING << what << " is not dumped, as its store operation "
+                  << toStr(renderTarget.StoreOp) << " leaves the "
+                  << AspectName(renderTarget.Aspect) << " contents undefined";
+      continue;
+    }
+    const View& view = viewIt->second;
+    std::vector<VkImageSubresourceRange> ranges = RenderedRanges(state, view, image);
+    uint32_t baseSlice = view.BaseSlice;
+    uint32_t sliceCount = view.SliceCount;
+    if (image.Type == VK_IMAGE_TYPE_3D) {
+      // The depth slices from the first to the last rendered one.
+      const uint32_t depth = std::max(1u, image.Extent.depth >> view.Range.baseMipLevel);
+      const std::vector<VkImageSubresourceRange> slices =
+          RenderedLayers({view.Range.aspectMask, view.Range.baseMipLevel, 1, baseSlice, sliceCount},
+                         depth, state.LayerCount, state.ViewMask);
+      if (slices.empty()) {
+        ranges.clear();
+      } else {
+        baseSlice = slices.front().baseArrayLayer;
+        sliceCount = slices.back().baseArrayLayer + slices.back().layerCount - baseSlice;
+      }
+    }
+    if (ranges.empty()) {
+      continue;
+    }
+    auto entryIt = std::find_if(entries.begin(), entries.end(), [&](const Entry& entry) {
+      return entry.Name == renderTarget.Name && entry.Handle == handle;
+    });
+    if (entryIt == entries.end()) {
+      std::string format = toStr(image.Format);
+      if (format.starts_with("VK_FORMAT_")) {
+        format.erase(0, std::char_traits<char>::length("VK_FORMAT_"));
+      }
+      Entry entry{renderTarget.Name, handle};
+      entry.Target.Name =
+          m_RenderTargetsPath / ("renderpass_f_" + std::to_string(state.RenderPassFrame) + "_rp_" +
+                                 std::to_string(state.RenderPassNumber) + "_" + renderTarget.Name +
+                                 "_O" + DumpKeyToString(image.Key) + "_" + format);
+      entry.Target.FileFormat = m_RenderTargetsFormat;
+      entry.Target.Image = handle;
+      entry.Target.Layouts = ResolveLayouts(handle, image, before);
+      entry.Target.BaseSlice = baseSlice;
+      entry.Target.SliceCount = sliceCount;
+      entryIt = entries.insert(entries.end(), std::move(entry));
+    }
+    // The layout the render pass instance leaves the attachment in is the one its copies start
+    // from, whatever layout changes the tracking missed.
+    for (VkImageSubresourceRange& range : ranges) {
+      range.aspectMask = renderTarget.Aspect;
+      entryIt->Target.Layouts.Set(range, renderTarget.Layout);
+      entryIt->Target.Selection.push_back(range);
+    }
+  }
+
+  std::vector<DumpTarget> targets;
+  for (Entry& entry : entries) {
+    const Image& image = m_Images.at(entry.Handle);
+    std::optional<DumpTarget> target = MakeImageTarget(
+        context, std::move(entry.Target), image,
+        ResolveOwner(VK_NULL_HANDLE, entry.Handle, image, before), state.QueueFamilyIndex, true);
+    if (target) {
+      targets.push_back(std::move(*target));
+    }
+  }
+  return targets;
 }
 
 std::optional<DumpTarget> ResourcesDumpService::MakeImageTarget(const std::string& context,
                                                                 DumpTarget target,
                                                                 const Image& image,
                                                                 const Ownership& owner,
-                                                                uint32_t queueFamilyIndex) {
+                                                                uint32_t queueFamilyIndex,
+                                                                bool renderTarget) {
   if (!CanDump(context, "image", image, owner, queueFamilyIndex)) {
     return std::nullopt;
   }
@@ -1973,6 +2357,7 @@ std::optional<DumpTarget> ResourcesDumpService::MakeImageTarget(const std::strin
   target.Format = image.Format;
   target.Extent = image.Extent;
   target.Disjoint = image.Disjoint;
+  target.RenderTarget = renderTarget;
   std::vector<VkBufferImageCopy> regions;
   CopyRegions(target, regions);
   if (regions.empty() && target.ExcludedAspects) {
@@ -2002,7 +2387,7 @@ std::optional<DumpTarget> ResourcesDumpService::MakeImageTarget(const std::strin
       }
     }
   }
-  if (undefined > 0) {
+  if (undefined > 0 && !renderTarget) {
     LOG_INFO << what << " has " << undefined << " of " << total
              << " subresources with undefined contents, which are not dumped";
   }
@@ -2010,10 +2395,10 @@ std::optional<DumpTarget> ResourcesDumpService::MakeImageTarget(const std::strin
 }
 
 std::filesystem::path ResourcesDumpService::DumpName(GITSKey commandKey,
-                                                     const char* kind,
+                                                     const std::string& kind,
                                                      GITSKey resourceKey) const {
-  return m_DumpPath / ("command_" + DumpKeyToString(commandKey) + "_" + kind + "_O" +
-                       DumpKeyToString(resourceKey));
+  return m_ResourcesPath / ("command_" + DumpKeyToString(commandKey) + "_" + kind + "_O" +
+                            DumpKeyToString(resourceKey));
 }
 
 } // namespace vulkan

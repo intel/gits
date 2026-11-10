@@ -20,7 +20,7 @@
 namespace gits {
 namespace vulkan {
 
-// A buffer, or every subresource of an image whose layout is defined, to copy at a dump point.
+// A buffer, or subresources of an image, to copy at a dump point.
 struct DumpTarget {
   std::filesystem::path Name;
   VkBuffer Buffer{};
@@ -34,14 +34,22 @@ struct DumpTarget {
   // The aspects that are not copied, as the image was created without the transfer source usage
   // for them.
   VkImageAspectFlags ExcludedAspects{};
+  // The subresources to copy, of those whose layouts are defined. Empty selects all of them.
+  std::vector<VkImageSubresourceRange> Selection;
+  // The depth slices of a 3D image to copy, which a 2D view of the image selects as array layers.
+  uint32_t BaseSlice{};
+  uint32_t SliceCount{VK_REMAINING_ARRAY_LAYERS};
   // The file format of images that can be converted to 8 bit RGBA.
   ImageFormat FileFormat{ImageFormat::PNG};
+  // An attachment of the render pass instance that ends at the dump point. Its commands already
+  // wait for the acquisition of a swapchain image.
+  bool RenderTarget{};
 };
 
 bool IsContentDefined(VkImageLayout layout);
 
-// Whether a subresource of the image is copied: its aspect is not excluded and its layout is
-// defined.
+// Whether a subresource of the image is copied: its aspect is not excluded, it is selected and its
+// layout is defined.
 bool IsCopied(const DumpTarget& target,
               uint32_t aspectSlot,
               uint32_t mipLevel,
@@ -51,6 +59,11 @@ bool IsCopied(const DumpTarget& target,
 // separateDepthStencilLayouts a barrier on a depth/stencil image names both aspects, so an aspect
 // that is not copied is transitioned along with the copied one.
 std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const DumpTarget& target,
+                                                      bool separateDepthStencilLayouts);
+// The barriers of targets of one image at one dump point. The barriers of a vkCmdPipelineBarrier
+// call may not transition a subresource twice, so a subresource that several targets copy is
+// transitioned once, from its layout in the first of them.
+std::vector<VkImageMemoryBarrier> TransferSrcBarriers(const std::vector<const DumpTarget*>& targets,
                                                       bool separateDepthStencilLayouts);
 
 // The layout the copies read a subresource in. A subresource in VK_IMAGE_LAYOUT_GENERAL or

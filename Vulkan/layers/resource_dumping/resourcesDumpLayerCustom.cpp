@@ -40,53 +40,6 @@ std::vector<VkCommandBuffer> SubmittedCommandBuffers(uint32_t submitCount,
   return commandBuffers;
 }
 
-VkImageLayout StencilFinalLayout(const VkAttachmentDescription& description) {
-  return description.finalLayout;
-}
-
-VkImageLayout StencilFinalLayout(const VkAttachmentDescription2& description) {
-  for (auto* node = static_cast<const VkBaseInStructure*>(description.pNext); node != nullptr;
-       node = node->pNext) {
-    if (node->sType == VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION_STENCIL_LAYOUT) {
-      return reinterpret_cast<const VkAttachmentDescriptionStencilLayout*>(node)
-          ->stencilFinalLayout;
-    }
-  }
-  return description.finalLayout;
-}
-
-template <typename CreateInfo>
-std::vector<ResourcesDumpService::AttachmentFinalLayouts> FinalLayouts(const CreateInfo* info) {
-  std::vector<ResourcesDumpService::AttachmentFinalLayouts> layouts;
-  for (uint32_t i = 0; info && info->pAttachments && i < info->attachmentCount; ++i) {
-    layouts.push_back(
-        {info->pAttachments[i].finalLayout, StencilFinalLayout(info->pAttachments[i])});
-  }
-  return layouts;
-}
-
-uint32_t ViewMask(const VkRenderPassCreateInfo* info) {
-  uint32_t viewMask = 0;
-  for (auto* node = info ? static_cast<const VkBaseInStructure*>(info->pNext) : nullptr; node;
-       node = node->pNext) {
-    if (node->sType == VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO) {
-      const auto* multiview = reinterpret_cast<const VkRenderPassMultiviewCreateInfo*>(node);
-      for (uint32_t i = 0; multiview->pViewMasks && i < multiview->subpassCount; ++i) {
-        viewMask |= multiview->pViewMasks[i];
-      }
-    }
-  }
-  return viewMask;
-}
-
-uint32_t ViewMask(const VkRenderPassCreateInfo2* info) {
-  uint32_t viewMask = 0;
-  for (uint32_t i = 0; info && info->pSubpasses && i < info->subpassCount; ++i) {
-    viewMask |= info->pSubpasses[i].viewMask;
-  }
-  return viewMask;
-}
-
 const char* DeferSignals(SubmitSignalsDeferral& deferral,
                          vkQueueSubmitCommand& command,
                          SubmitSignals::Function,
@@ -119,11 +72,23 @@ void ResourcesDumpLayer::Post(RestoreContentDataCommand& command) {
   }
 }
 
+void ResourcesDumpLayer::Post(StateRestoreBeginCommand& command) {
+  m_Service.StateRestoreBegin();
+}
+
+void ResourcesDumpLayer::Post(StateRestoreEndCommand& command) {
+  m_Service.StateRestoreEnd();
+}
+
 void ResourcesDumpLayer::Post(vkQueuePresentKHRCommand& command) {
   const VkPresentInfoKHR* info = command.m_pPresentInfo.Value;
   for (uint32_t i = 0; info && info->pSwapchains && info->pImageIndices && i < info->swapchainCount;
        ++i) {
     m_Service.ReleaseSwapchainImages(info->pSwapchains[i], 1, &info->pImageIndices[i]);
+  }
+  // The present that state restore records after it ends shows the restored state as frame 0.
+  if (!IsStateRestoreKey(command.m_Key)) {
+    m_Service.Present();
   }
 }
 
@@ -293,26 +258,23 @@ void ResourcesDumpLayer::Pre(vkDestroyImageViewCommand& command) {
 }
 
 void ResourcesDumpLayer::Post(vkCreateRenderPassCommand& command) {
-  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value) {
-    m_Service.CreateRenderPass(*command.m_pRenderPass.Value,
-                               FinalLayouts(command.m_pCreateInfo.Value),
-                               ViewMask(command.m_pCreateInfo.Value));
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value &&
+      command.m_pCreateInfo.Value) {
+    m_Service.CreateRenderPass(*command.m_pRenderPass.Value, *command.m_pCreateInfo.Value);
   }
 }
 
 void ResourcesDumpLayer::Post(vkCreateRenderPass2Command& command) {
-  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value) {
-    m_Service.CreateRenderPass(*command.m_pRenderPass.Value,
-                               FinalLayouts(command.m_pCreateInfo.Value),
-                               ViewMask(command.m_pCreateInfo.Value));
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value &&
+      command.m_pCreateInfo.Value) {
+    m_Service.CreateRenderPass(*command.m_pRenderPass.Value, *command.m_pCreateInfo.Value);
   }
 }
 
 void ResourcesDumpLayer::Post(vkCreateRenderPass2KHRCommand& command) {
-  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value) {
-    m_Service.CreateRenderPass(*command.m_pRenderPass.Value,
-                               FinalLayouts(command.m_pCreateInfo.Value),
-                               ViewMask(command.m_pCreateInfo.Value));
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pRenderPass.Value &&
+      command.m_pCreateInfo.Value) {
+    m_Service.CreateRenderPass(*command.m_pRenderPass.Value, *command.m_pCreateInfo.Value);
   }
 }
 
@@ -513,18 +475,15 @@ void ResourcesDumpLayer::Post(vkCmdBeginRenderPass2KHRCommand& command) {
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRenderPassCommand& command) {
-  m_Service.EndRenderPass(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRenderPass(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRenderPass2Command& command) {
-  m_Service.EndRenderPass(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRenderPass(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRenderPass2KHRCommand& command) {
-  m_Service.EndRenderPass(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRenderPass(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdBeginRenderingCommand& command) {
@@ -542,23 +501,19 @@ void ResourcesDumpLayer::Post(vkCmdBeginRenderingKHRCommand& command) {
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRenderingCommand& command) {
-  m_Service.EndRendering(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRendering(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRenderingKHRCommand& command) {
-  m_Service.EndRendering(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRendering(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRendering2EXTCommand& command) {
-  m_Service.EndRendering(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRendering(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdEndRendering2KHRCommand& command) {
-  m_Service.EndRendering(command.m_commandBuffer.Value);
-  m_Service.CommandBufferCall(command.m_Key, command.m_commandBuffer.Value);
+  m_Service.EndRendering(command.m_Key, command.m_commandBuffer.Value);
 }
 
 void ResourcesDumpLayer::Post(vkCmdExecuteCommandsCommand& command) {

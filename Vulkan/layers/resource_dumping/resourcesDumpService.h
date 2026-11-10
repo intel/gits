@@ -14,8 +14,10 @@
 #include "arguments.h"
 #include "enumsAuto.h"
 #include "vulkanHeader2.h"
+#include "bit_range.h"
 
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -29,10 +31,12 @@ namespace vulkan {
 
 class DispatchTablesHolder;
 
-// Dumps the resources listed in Vulkan.Player.ResourcesDump.resourceKeys after the commands listed
-// in Vulkan.Player.ResourcesDump.commandKeys. A command recorded into a command buffer dumps the
-// resources when that command buffer executes, right after the command; a queue submission dumps
-// them after the work it submits.
+// Vulkan.Player.ResourcesDump: dumps the resources listed in resourceKeys after the commands listed
+// in commandKeys. A command recorded into a command buffer dumps the resources when that command
+// buffer executes, right after the command; a queue submission dumps them after the work it
+// submits.
+// Vulkan.Player.RenderTargetsDump: dumps the color and depth/stencil attachments of the selected
+// render pass instances when they end.
 class ResourcesDumpService {
 public:
   explicit ResourcesDumpService(DispatchTablesHolder& dispatchTablesHolder);
@@ -40,9 +44,12 @@ public:
   ResourcesDumpService(const ResourcesDumpService&) = delete;
   ResourcesDumpService& operator=(const ResourcesDumpService&) = delete;
 
+  void StateRestoreBegin();
+  void StateRestoreEnd();
   // The layouts state restore leaves the images in, with the barriers it records itself.
   void RestoredImageLayouts(VkQueue queue,
                             const std::vector<std::pair<uint64_t, VkImageLayout>>& layouts);
+  void Present();
 
   void CreateDevice(VkPhysicalDevice physicalDevice,
                     VkDevice device,
@@ -75,15 +82,8 @@ public:
                               const uint32_t* imageIndices);
   void CreateImageView(VkImageView view, const VkImageViewCreateInfo& info);
   void DestroyImageView(VkImageView view);
-  // The layouts a render pass leaves an attachment in.
-  struct AttachmentFinalLayouts {
-    VkImageLayout Layout{};
-    VkImageLayout StencilLayout{};
-  };
-  // viewMask is the union of the view masks of the subpasses of a multiview render pass.
-  void CreateRenderPass(VkRenderPass renderPass,
-                        std::vector<AttachmentFinalLayouts> finalLayouts,
-                        uint32_t viewMask);
+  void CreateRenderPass(VkRenderPass renderPass, const VkRenderPassCreateInfo& info);
+  void CreateRenderPass(VkRenderPass renderPass, const VkRenderPassCreateInfo2& info);
   void DestroyRenderPass(VkRenderPass renderPass);
   void CreateFramebuffer(VkFramebuffer framebuffer, const VkFramebufferCreateInfo& info);
   void DestroyFramebuffer(VkFramebuffer framebuffer);
@@ -107,9 +107,10 @@ public:
                 const VkImageMemoryBarrier* imageBarriers);
   void Barriers(VkCommandBuffer commandBuffer, const VkDependencyInfo& dependencyInfo);
   void BeginRenderPass(VkCommandBuffer commandBuffer, const VkRenderPassBeginInfo& info);
-  void EndRenderPass(VkCommandBuffer commandBuffer);
+  // The end of a render pass instance, after which its attachments may be dumped.
+  void EndRenderPass(GITSKey key, VkCommandBuffer commandBuffer);
   void BeginRendering(VkCommandBuffer commandBuffer, const VkRenderingInfo& info);
-  void EndRendering(VkCommandBuffer commandBuffer);
+  void EndRendering(GITSKey key, VkCommandBuffer commandBuffer);
   void ExecuteCommands(VkCommandBuffer commandBuffer,
                        const VkCommandBuffer* secondaries,
                        uint32_t count);
@@ -214,12 +215,33 @@ private:
     // The subresources of the image. A 2D view of a 3D image selects depth slices instead of
     // array layers, so its range has the one array layer of the image.
     VkImageSubresourceRange Range{};
+    uint32_t BaseSlice{};
+    uint32_t SliceCount{VK_REMAINING_ARRAY_LAYERS};
+  };
+
+  struct RenderPassAttachment {
+    VkFormat Format{};
+    VkImageLayout FinalLayout{};
+    VkImageLayout StencilFinalLayout{};
+    VkAttachmentStoreOp StoreOp{};
+    VkAttachmentStoreOp StencilStoreOp{};
+    // Used as a color, resolve or depth/stencil attachment by a subpass.
+    bool RenderTarget{};
   };
 
   struct Framebuffer {
     // Empty for an imageless framebuffer.
     std::vector<VkImageView> Views;
     uint32_t Layers{};
+  };
+
+  // An aspect of an attachment of a render pass instance, and its layout once the instance ends.
+  struct RenderTarget {
+    std::string Name;
+    VkImageView View{};
+    VkImageAspectFlags Aspect{};
+    VkImageLayout Layout{};
+    VkAttachmentStoreOp StoreOp{};
   };
 
   // The copies recorded at a dump point, which execute after the first ChangeIndex changes of the
@@ -261,12 +283,15 @@ private:
     bool Suspending{};
     // The number of dump points recorded before the first render pass instance began.
     std::optional<size_t> DumpsBeforeRenderPass;
+    unsigned RenderPassFrame{};
+    unsigned RenderPassNumber{};
+    VkRenderPass RenderPass{};
     // The layers of the attachments that the render pass instance renders: the views of its view
     // mask, or without multiview the first LayerCount layers.
     uint32_t LayerCount{};
     uint32_t ViewMask{};
     std::vector<VkImageView> Attachments;
-    std::vector<AttachmentFinalLayouts> FinalLayouts;
+    std::vector<RenderTarget> RenderTargets;
     std::vector<StateChange> Changes;
     std::vector<DumpPoint> Dumps;
   };
@@ -351,6 +376,15 @@ private:
                          VkImage image,
                          const Resource& resource,
                          const ChangeLists& before) const;
+  bool TracksRenderTargets() const {
+    return m_RenderTargetsDump && !m_RenderTargetsDryRun;
+  }
+  const char* LogName() const;
+  // Dumps after a command that ends a render pass instance.
+  void EndRenderPassInstance(GITSKey key,
+                             VkCommandBuffer commandBuffer,
+                             CommandBufferState& state,
+                             const std::vector<RenderTarget>& renderTargets);
   void RecordDumps(VkCommandBuffer commandBuffer,
                    CommandBufferState& state,
                    std::vector<DumpTarget> targets);
@@ -360,6 +394,8 @@ private:
                                          VkDevice device,
                                          uint32_t queueFamilyIndex,
                                          const CommandBufferState* state);
+  std::vector<DumpTarget> RenderTargetTargets(const CommandBufferState& state,
+                                              const std::vector<RenderTarget>& renderTargets);
   std::optional<DumpTarget> BufferTarget(GITSKey commandKey,
                                          VkBuffer handle,
                                          const Buffer& buffer,
@@ -370,13 +406,14 @@ private:
                                         const Image& image,
                                         uint32_t queueFamilyIndex,
                                         const ChangeLists& before);
-  // Completes a target of an image whose layouts are defined. The context starts the messages of
-  // skipped images.
+  // Completes a target of the selected subresources of an image whose layouts are defined. The
+  // context starts the messages of skipped images.
   std::optional<DumpTarget> MakeImageTarget(const std::string& context,
                                             DumpTarget target,
                                             const Image& image,
                                             const Ownership& owner,
-                                            uint32_t queueFamilyIndex);
+                                            uint32_t queueFamilyIndex,
+                                            bool renderTarget);
   bool CanDump(const std::string& context,
                const char* kind,
                const Resource& resource,
@@ -405,17 +442,38 @@ private:
   // graphics support.
   VkImageAspectFlags AspectsWithoutCopies(const Image& image, uint32_t queueFamilyIndex) const;
   std::string CommandContext(GITSKey commandKey) const;
-  std::filesystem::path DumpName(GITSKey commandKey, const char* kind, GITSKey resourceKey) const;
+  std::filesystem::path DumpName(GITSKey commandKey,
+                                 const std::string& kind,
+                                 GITSKey resourceKey) const;
+  void WriteDryRun() const;
   // Finishes the dumps once the replay ends, and returns the first failure, or an empty string.
   std::string Close();
 
   DispatchTablesHolder& m_DispatchTablesHolder;
+
+  bool m_ResourcesDump{};
   std::unordered_set<GITSKey> m_ResourceKeys;
   std::unordered_set<GITSKey> m_CommandKeys;
   std::unordered_set<GITSKey> m_ReachedCommandKeys;
   std::unordered_set<GITSKey> m_CreatedResourceKeys;
-  ImageFormat m_ImageFormat{};
-  std::filesystem::path m_DumpPath;
+  ImageFormat m_ResourcesFormat{};
+  std::filesystem::path m_ResourcesPath;
+
+  bool m_RenderTargetsDump{};
+  bool m_RenderTargetsDryRun{};
+  BitRange m_RenderTargetFrames;
+  BitRange m_RenderTargetPasses;
+  ImageFormat m_RenderTargetsFormat{};
+  std::filesystem::path m_RenderTargetsPath;
+  unsigned m_SelectedRenderPasses{};
+  std::map<unsigned, std::set<unsigned>> m_DryRunRenderPasses;
+
+  bool m_StateRestore{};
+  unsigned m_Frame{1};
+  unsigned m_RenderPassCount{};
+  // The frame and number of the latest render pass instance that suspends.
+  std::pair<unsigned, unsigned> m_SuspendedRenderPass{};
+
   unsigned m_EndSubscription{};
   bool m_Closed{};
   uint64_t m_RecordingEnds{};
@@ -441,7 +499,7 @@ private:
   // The semaphores of swapchain image acquisitions that no submission waited for yet.
   std::unordered_map<VkSemaphore, VkImage> m_AcquireSemaphores;
   std::unordered_map<VkImageView, View> m_Views;
-  std::unordered_map<VkRenderPass, std::vector<AttachmentFinalLayouts>> m_RenderPasses;
+  std::unordered_map<VkRenderPass, std::vector<RenderPassAttachment>> m_RenderPasses;
   // The union of the view masks of the subpasses of each multiview render pass.
   std::unordered_map<VkRenderPass, uint32_t> m_RenderPassViewMasks;
   std::unordered_map<VkFramebuffer, Framebuffer> m_Framebuffers;

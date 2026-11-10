@@ -66,7 +66,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // null-driver run (Common.Player.Execute == false) there is no live swapchain
   // to dump, so skip the layer and tell the user why.
   // Resources dumps read buffers and images back through the driver as well.
-  const bool resourcesDumpRequested = Configurator::Get().vulkan.player.resourcesDump.enabled;
+  const bool resourcesDumpRequested = Configurator::Get().vulkan.player.resourcesDump.enabled ||
+                                      Configurator::Get().vulkan.player.renderTargetsDump.enabled;
   Layer* screenshotLayer = nullptr;
   Layer* resourcesDumpLayer = nullptr;
   m_ResourceDumpingLayerGroup =
@@ -80,8 +81,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
                    "skipping capture (it requires driver execution).";
   }
   if (resourcesDumpRequested && !execute) {
-    LOG_WARNING << "Vulkan.Player.ResourcesDump requested but Common.Player.Execute is false; "
-                   "skipping the dump (it requires driver execution).";
+    LOG_WARNING << "Vulkan.Player.ResourcesDump or RenderTargetsDump requested but "
+                   "Common.Player.Execute is false; skipping the dump (it requires driver "
+                   "execution).";
   }
 
   // Subcapture-related layers (SubcaptureLayer, RecordingLayer) only make sense

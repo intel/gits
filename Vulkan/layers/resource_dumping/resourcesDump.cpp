@@ -147,13 +147,24 @@ std::shared_ptr<DumpBatch> ResourcesDump::RecordDumps(VkCommandBuffer commandBuf
 }
 
 void ResourcesDump::RecordCopies(VkCommandBuffer commandBuffer, DumpBatch& batch) {
-  std::vector<VkImageMemoryBarrier> toTransfer;
+  std::vector<std::vector<const DumpTarget*>> images;
   for (const StagedResource& resource : batch.Resources) {
     if (resource.Target.Image) {
-      const std::vector<VkImageMemoryBarrier> barriers =
-          TransferSrcBarriers(resource.Target, m_SeparateDepthStencilLayouts);
-      toTransfer.insert(toTransfer.end(), barriers.begin(), barriers.end());
+      auto imageIt = std::find_if(images.begin(), images.end(), [&](const auto& targets) {
+        return targets.front()->Image == resource.Target.Image;
+      });
+      if (imageIt == images.end()) {
+        images.push_back({&resource.Target});
+      } else {
+        imageIt->push_back(&resource.Target);
+      }
     }
+  }
+  std::vector<VkImageMemoryBarrier> toTransfer;
+  for (const std::vector<const DumpTarget*>& targets : images) {
+    const std::vector<VkImageMemoryBarrier> barriers =
+        TransferSrcBarriers(targets, m_SeparateDepthStencilLayouts);
+    toTransfer.insert(toTransfer.end(), barriers.begin(), barriers.end());
   }
   std::vector<VkImageMemoryBarrier> back = toTransfer;
   for (VkImageMemoryBarrier& barrier : back) {

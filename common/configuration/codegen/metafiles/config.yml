@@ -2285,6 +2285,33 @@ Configuration:
                 Type: ImageFormat
                 Default: PNG
                 Description: Image format (PNG/JPEG)
+          - Name: RenderTargetsDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether render targets dumping is enabled or not
+              - Name: frames
+                Type: std::string
+                Default: ""
+                Description: Frame range. For example '3-6'
+              - Name: renderPasses
+                Type: std::string
+                Default: ""
+                Description:
+                  Range of render pass instances in each frame, counted from 1 in recording
+                  order (supports multiple ranges and strides). For example '1-100:5'
+              - Name: format
+                Type: ImageFormat
+                Default: PNG
+                Description: Image format (PNG/JPEG)
+              - Name: dryRun
+                Type: bool
+                Default: false
+                Description:
+                  Whether dry run is enabled or not. Lists the selected render pass instances
+                  that have render targets instead of dumping them.
       - Name: Recorder
         Type: Group
         Options:

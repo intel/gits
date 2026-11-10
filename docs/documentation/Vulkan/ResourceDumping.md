@@ -5,7 +5,8 @@ title: ResourceDumping
 
 # Resource dumping (Vulkan)
 
-This page covers the **new Vulkan backend**.
+This page covers the **new Vulkan backend**. Both dumps require `Common.Player.Execute` and can be
+enabled together.
 
 ## ResourcesDump
 
@@ -14,7 +15,7 @@ the `Vulkan.Player.ResourcesDump` group:
 
 | Option | Description |
 |---|---|
-| `enabled` | Enables the dump. Requires `Common.Player.Execute`. |
+| `enabled` | Enables the dump. |
 | `commandKeys` | Keys of the commands after which the resources are dumped. |
 | `resourceKeys` | Keys of the buffers and images to dump. Nothing is dumped if empty. |
 | `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGBA. |
@@ -63,11 +64,10 @@ Resources are dumped to `stream_dir/resources` or to `OutputDir`.
   semaphore value that may be signaled after the submission and that the submission does not
   signal before, stops the replay with an error, as the value may depend on those signals. So does
   a submission that executes the dump and signals semaphores or a fence after it, when the earlier
-  work of the queue waits for such a value.
-  The copies are recorded for the layouts and queue family owners that the command buffers
-  recorded before the dump leave. A submission in which other command buffers execute before the
-  copies, so that the resources are in other layouts or not owned by their queue family, stops the
-  replay with an error.
+  work of the queue waits for such a value. The copies are recorded for the layouts and queue
+  family owners that the command buffers recorded before the dump leave. A submission in which
+  other command buffers execute before the copies, so that the resources are in other layouts or
+  not owned by their queue family, stops the replay with an error.
 
 A semaphore value may be signaled after a submission when no work submitted before it signals that
 timeline semaphore value, or when the signal operation that the value or a binary semaphore wait
@@ -82,7 +82,63 @@ it: after a submission, the image is skipped with a warning, and a submission th
 of it recorded into a command buffer stops the replay with an error. Shared presentable images are
 copied in `VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR`, which they may not leave.
 
-### Limitations
+### File names
+
+1. Command key: `command_Key#`.
+2. Resource kind and key: `_buffer_O#` or `_image_O#`.
+3. Images only, optional: `_plane_#` or `_depth`/`_stencil`, `_array_#`, `_mip_#`, `_slice_#`.
+
+## RenderTargetsDump
+
+Dumps the color and depth/stencil attachments of the selected render pass instances when they
+end. Configure it in the `Vulkan.Player.RenderTargetsDump` group:
+
+| Option | Description |
+|---|---|
+| `enabled` | Enables the dump. |
+| `frames` | Frame range, for example `3-6`. |
+| `renderPasses` | Range of render pass instances in each frame, for example `1-100:5`. |
+| `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGBA. |
+| `dryRun` | Writes `RenderTargetsDumpDryRun.yaml`, listing the selected render pass instances that have render targets by frame, instead of dumping them. |
+
+Frames are counted from 1 and end at `vkQueuePresentKHR`. The state restore of a sub-captured
+stream, with the present it records to show the restored state, is frame 0, so frame 1 is the
+first frame of the subcapture. Render pass instances (`vkCmdBeginRenderPass*`, or
+`vkCmdBeginRendering*` without `VK_RENDERING_RESUMING_BIT`) are counted from 1 in each frame, in
+recording order. A render pass instance that suspends and resumes is dumped once, when its last
+part ends.
+
+Render targets are dumped to `stream_dir/render_targets` or to `OutputDir`, for example:
+
+```
+gitsPlayer.exe --Vulkan.Player.RenderTargetsDump.Enabled --Vulkan.Player.RenderTargetsDump.Frames=1-2 --Vulkan.Player.RenderTargetsDump.RenderPasses=1-10 path\to\stream.gits2
+```
+
+### Render targets
+
+For render passes, the render targets are the attachments that a subpass uses as color, resolve or
+depth/stencil attachments, numbered by their index in the render pass. For dynamic rendering, they
+are the color attachments, numbered by their index in `VkRenderingInfo`, and the depth and stencil
+attachments, each followed by its resolve attachment if it has one. The contents are the ones at
+the end of the render pass instance, after the store and resolve operations. Only the layers of the
+attachment image view that the render pass instance renders are dumped: the framebuffer layers or
+`VkRenderingInfo::layerCount` layers, or with multiview the layers of the views in the view mask.
+
+A render target is skipped with a warning if its store operation is not
+`VK_ATTACHMENT_STORE_OP_STORE`, as its contents are then undefined. Multisampled render targets
+are skipped; their resolve attachments are dumped instead. Render pass instances in protected
+command buffers are skipped, as these cannot write the staging memory.
+
+### File names
+
+1. Frame and render pass instance: `renderpass_f_#_rp_#`.
+2. Render target and image key: `_rt_#_O#` (color) or `_ds_O#` (depth/stencil, `_ds_#_O#` if a
+   render pass has several). Resolve attachments of dynamic rendering add `_resolve`, as in
+   `_rt_0_resolve_O#` or `_ds_resolve_O#`.
+3. Image format without the `VK_FORMAT_` prefix, for example `_B8G8R8A8_UNORM`.
+4. Optional: `_depth`/`_stencil`, `_array_#`, `_mip_#`, `_slice_#`.
+
+## Limitations
 
 A resource is skipped with a warning if it is sparse, protected, not bound to memory, created
 without the transfer source usage, owned by another or an external queue family, shared with
@@ -112,12 +168,6 @@ The resources are written once the work they wait for completes, which may wait 
 values that later replayed calls signal. If the replay ends before it signals them, for example at
 `ExitFrame` or after an error, the player stops waiting once no resource has been written for 10
 seconds, logs the resources that are not written, and fails.
-
-### File names
-
-1. Command key: `command_Key#`.
-2. Resource kind and key: `_buffer_O#` or `_image_O#`.
-3. Images only, optional: `_plane_#` or `_depth`/`_stencil`, `_array_#`, `_mip_#`, `_slice_#`.
 
 Buffers are written as `.bin` files. Images are written as `.png` or `.jpg` files if their format
 can be converted (8 and 16 bit normalized, 16 and 32 bit float, 10 bit packed, depth and
