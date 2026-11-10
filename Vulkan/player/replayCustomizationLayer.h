@@ -11,6 +11,8 @@
 #include "layerAuto.h"
 #include "rayTracingReplayService.h"
 
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace gits {
@@ -178,6 +180,17 @@ public:
 private:
   PlayerManager& m_Manager;
   RayTracingReplayService m_RayTracingService;
+  struct DeviceMemoryInfo {
+    VkPhysicalDeviceMemoryProperties MemoryProperties{};
+    uint32_t DeviceGroupSize{1};
+  };
+  std::mutex m_DeviceMemoryInfosMutex;
+  std::unordered_map<VkDevice, DeviceMemoryInfo> m_DeviceMemoryInfos;
+
+  // The recorder records only the mapped pages the application writes. A host-visible allocation
+  // starts zeroed when recorded on Windows, where the recorder backs it with zeroed system memory,
+  // so pages read before being written must be zero in the replay as well.
+  void ClearHostVisibleMemory(vkAllocateMemoryCommand& command);
 
   // Serializes the playback thread behind the GPU after every queue submission
   void WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue, VkResult submitResult);

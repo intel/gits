@@ -19,6 +19,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -43,6 +45,25 @@ std::string GetSkippedHostAddressMessage(const char* commandName) {
          ": skipped. It addresses its payload through VkDeviceOrHostAddress host pointers, which "
          "are capture-process addresses the recorder never followed. Content it would have "
          "written is missing unless the stream carries it as a mapped-memory update.";
+}
+
+bool IsMemoryImport(const void* pNext) {
+  static const VkStructureType importTypes[] = {
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_NV,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_WIN32_HANDLE_INFO_KHR,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_FD_INFO_KHR,
+      VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT,
+      VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+      VK_STRUCTURE_TYPE_IMPORT_NATIVE_BUFFER_INFO_OHOS,
+      VK_STRUCTURE_TYPE_IMPORT_SCREEN_BUFFER_INFO_QNX,
+      VK_STRUCTURE_TYPE_IMPORT_MEMORY_METAL_HANDLE_INFO_EXT,
+  };
+  return std::any_of(std::begin(importTypes), std::end(importTypes), [pNext](VkStructureType type) {
+    return getPNextStructure(pNext, type) != nullptr;
+  });
 }
 } // namespace
 
@@ -71,6 +92,18 @@ void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   m_Manager.GetDeviceDiagnosticService().TrackDevice(
       command.m_physicalDevice.Value, *command.m_pDevice.Value, command.m_pCreateInfo.Value);
 
+  DeviceMemoryInfo memoryInfo{};
+  m_Manager.GetInstanceDispatchTable(command.m_physicalDevice.Value)
+      .vkGetPhysicalDeviceMemoryProperties(command.m_physicalDevice.Value,
+                                           &memoryInfo.MemoryProperties);
+  if (command.m_pCreateInfo.Value) {
+    memoryInfo.DeviceGroupSize = GetDeviceGroupSize(*command.m_pCreateInfo.Value);
+  }
+  {
+    std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
+    m_DeviceMemoryInfos[device] = memoryInfo;
+  }
+
   m_RayTracingService.OnPostCreateDevice(command);
 }
 
@@ -78,6 +111,8 @@ void ReplayCustomizationLayer::Pre(vkDestroyDeviceCommand& command) {
   m_Manager.GetSwapchainImageSyncService().UntrackDevice(command.m_device.Value);
   m_Manager.GetDeviceDiagnosticService().UntrackDevice(command.m_device.Value);
   m_RayTracingService.OnPreDestroyDevice(command);
+  std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
+  m_DeviceMemoryInfos.erase(command.m_device.Value);
 }
 
 void ReplayCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {
@@ -337,6 +372,62 @@ void ReplayCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, command.m_pAllocateInfo.Value->allocationSize,
       command.m_pAllocateInfo.Value->memoryTypeIndex);
+  ClearHostVisibleMemory(command);
+}
+
+void ReplayCustomizationLayer::ClearHostVisibleMemory(vkAllocateMemoryCommand& command) {
+  const VkMemoryAllocateInfo& allocateInfo = *command.m_pAllocateInfo.Value;
+  if (IsMemoryImport(allocateInfo.pNext)) {
+    return;
+  }
+  DeviceMemoryInfo memoryInfo{};
+  {
+    std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
+    auto it = m_DeviceMemoryInfos.find(command.m_device.Value);
+    if (it == m_DeviceMemoryInfos.end()) {
+      return;
+    }
+    memoryInfo = it->second;
+  }
+  const VkPhysicalDeviceMemoryProperties& properties = memoryInfo.MemoryProperties;
+  if (allocateInfo.memoryTypeIndex >= properties.memoryTypeCount) {
+    return;
+  }
+  const VkMemoryType& memoryType = properties.memoryTypes[allocateInfo.memoryTypeIndex];
+  // The application cannot map memory with multiple instances either.
+  if (!(memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) ||
+      HasMultipleInstances(allocateInfo, properties, memoryInfo.DeviceGroupSize)) {
+    return;
+  }
+
+  VkDevice device = command.m_device.Value;
+  VkDeviceMemory memory = *command.m_pMemory.Value;
+  auto& dt = m_Manager.GetDeviceDispatchTable(device);
+  void* data = nullptr;
+  const auto error = [&](const char* operation, VkResult result) {
+    std::ostringstream message;
+    message << "Cannot replay memory (key " << command.m_pMemory.Key << ", "
+            << allocateInfo.allocationSize << " bytes): " << operation << " the whole allocation "
+            << "to zero it failed with " << result
+            << ". The allocation starts zeroed in the recording, so pages the application reads "
+               "before writing them would differ. Replay on a system with more free host "
+               "memory.";
+    return std::runtime_error(message.str());
+  };
+  VkResult result = dt.vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &data);
+  if (result != VK_SUCCESS) {
+    throw error("mapping", result);
+  }
+  std::memset(data, 0, static_cast<size_t>(allocateInfo.allocationSize));
+  if (!(memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {
+    VkMappedMemoryRange range{VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, nullptr, memory, 0,
+                              VK_WHOLE_SIZE};
+    result = dt.vkFlushMappedMemoryRanges(device, 1, &range);
+  }
+  dt.vkUnmapMemory(device, memory);
+  if (result != VK_SUCCESS) {
+    throw error("flushing", result);
+  }
 }
 
 void ReplayCustomizationLayer::Post(vkMapMemoryCommand& command) {
