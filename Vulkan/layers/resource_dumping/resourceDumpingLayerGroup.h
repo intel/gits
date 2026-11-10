@@ -10,6 +10,7 @@
 
 #include "layerGroup.h"
 #include "screenshotsLayer.h"
+#include "resourcesDumpLayerAuto.h"
 
 namespace gits {
 namespace vulkan {
@@ -26,6 +27,10 @@ public:
 
   ScreenshotsLayer* getScreenshotLayer() {
     return static_cast<ScreenshotsLayer*>(getLayer(ScreenshotsLayer::LAYER_NAME));
+  }
+
+  ResourcesDumpLayer* getResourcesDumpLayer() {
+    return static_cast<ResourcesDumpLayer*>(getLayer(ResourcesDumpLayer::LAYER_NAME));
   }
 
 private:

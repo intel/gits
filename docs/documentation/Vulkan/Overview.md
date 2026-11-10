@@ -7,7 +7,7 @@ title: Overview
 
 This page covers the **new Vulkan backend**. GITS records Vulkan API calls made
 by an application into a stream and replays them with `gitsPlayer`. Common
-features such as [frame sub-capture](Subcapture.md), resource dumping, and
+features such as [frame sub-capture](Subcapture.md), [resource dumping](ResourceDumping.md), and
 screenshots are supported.
 
 # Recording a stream

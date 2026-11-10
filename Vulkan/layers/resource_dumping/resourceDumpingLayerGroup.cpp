@@ -22,6 +22,9 @@ void ResourceDumpingLayerGroup::loadLayers() {
       !Configurator::Get().common.player.captureFrames.empty()) {
     addLayer(std::make_unique<ScreenshotsLayer>(m_DispatchTablesHolder));
   }
+  if (Configurator::Get().vulkan.player.resourcesDump.enabled) {
+    addLayer(std::make_unique<ResourcesDumpLayer>(m_DispatchTablesHolder));
+  }
 }
 
 } // namespace vulkan

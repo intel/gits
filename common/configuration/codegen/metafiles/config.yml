@@ -2261,6 +2261,30 @@ Configuration:
                   Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
                   Opens RenderDoc with recorded captures. Captures are not saved by default
                   but can be saved via RenderDoc UI.
+          - Name: ResourcesDump
+            Type: Group
+            Options:
+              - Name: enabled
+                Type: bool
+                Default: false
+                Description: Whether resource dumping is enabled or not
+              - Name: commandKeys
+                Type: std::string
+                Default: ""
+                Description:
+                  Comma separated list of keys of vkQueueSubmit* calls or of commands recorded into
+                  command buffers, as printed by the trace (S prefix for state restore keys).
+                  Resources are dumped after the queue submission or after the command.
+              - Name: resourceKeys
+                Type: std::string
+                Default: ""
+                Description:
+                  Comma separated list of keys of buffers and images to dump, as printed by the
+                  trace (O prefix optional). Nothing is dumped if empty.
+              - Name: format
+                Type: ImageFormat
+                Default: PNG
+                Description: Image format (PNG/JPEG)
       - Name: Recorder
         Type: Group
         Options:

@@ -103,6 +103,7 @@ nav:
         - 'documentation/Vulkan/Overview.md'
         - 'documentation/Vulkan/Subcapture.md'
         - 'documentation/Vulkan/Plugins.md'
+        - 'documentation/Vulkan/ResourceDumping.md'
         - 'documentation/Vulkan/VulkanLegacy.md'
       - Level Zero:
         - 'documentation/LevelZero/l0_gits_indirect_access_pointers_locations.md'

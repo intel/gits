@@ -486,12 +486,13 @@ void SubcaptureLayer::Post(RestoreContentDataCommand& command) {
   // The player uploads image content through barriers it records itself, so the layouts it
   // leaves behind never reach this layer as commands. Reconstructing them from the manifest
   // would have to mirror every failure path the upload can take, so take the layouts the
-  // upload actually applied instead. A data token can flush a batch, so drain after each.
-  for (const auto& [imageKey, layout] :
-       PlayerManager::Get().GetRestoreContentService().DrainAppliedImageLayouts()) {
-    auto* image = m_StateTracking.GetState<ImageState>(imageKey);
-    if (image) {
-      image->CurrentLayout = layout;
+  // upload actually applied instead.
+  for (const auto& applied : command.m_AppliedImageLayouts) {
+    for (const auto& [imageKey, layout] : applied.Layouts) {
+      auto* image = m_StateTracking.GetState<ImageState>(imageKey);
+      if (image) {
+        image->CurrentLayout = layout;
+      }
     }
   }
 }

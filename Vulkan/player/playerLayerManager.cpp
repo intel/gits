@@ -65,15 +65,23 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // only be produced when the API commands are actually executed.  In a
   // null-driver run (Common.Player.Execute == false) there is no live swapchain
   // to dump, so skip the layer and tell the user why.
+  // Resources dumps read buffers and images back through the driver as well.
+  const bool resourcesDumpRequested = Configurator::Get().vulkan.player.resourcesDump.enabled;
   Layer* screenshotLayer = nullptr;
+  Layer* resourcesDumpLayer = nullptr;
   m_ResourceDumpingLayerGroup =
       std::make_unique<ResourceDumpingLayerGroup>(playerManager.GetDispatchTablesHolder());
-  if (screenshotsRequested && execute) {
+  if ((screenshotsRequested || resourcesDumpRequested) && execute) {
     m_ResourceDumpingLayerGroup->loadLayers();
     screenshotLayer = m_ResourceDumpingLayerGroup->getScreenshotLayer();
+    resourcesDumpLayer = m_ResourceDumpingLayerGroup->getResourcesDumpLayer();
   } else if (screenshotsRequested) {
     LOG_WARNING << "Screenshots/frame capture requested but Common.Player.Execute is false; "
                    "skipping capture (it requires driver execution).";
+  }
+  if (resourcesDumpRequested && !execute) {
+    LOG_WARNING << "Vulkan.Player.ResourcesDump requested but Common.Player.Execute is false; "
+                   "skipping the dump (it requires driver execution).";
   }
 
   // Subcapture-related layers (SubcaptureLayer, RecordingLayer) only make sense
@@ -140,6 +148,9 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   if (screenshotLayer) {
     m_PreLayers.push_back(screenshotLayer);
   }
+  if (resourcesDumpLayer) {
+    m_PreLayers.push_back(resourcesDumpLayer);
+  }
   enablePreLayer(subcaptureLayer);
   enablePreLayer(analyzerLayer);
   enablePreLayer(logVkErrorLayer);
@@ -163,6 +174,11 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
 
   enablePostLayer(portabilityLayer);
   enablePostLayer(logVkErrorLayer);
+  // The resources dump restores the submission fences and semaphore signals it deferred, which
+  // the replay customization tracks.
+  if (resourcesDumpLayer) {
+    m_PostLayers.push_back(resourcesDumpLayer);
+  }
   enablePostLayer(replayCustomizationLayer);
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);

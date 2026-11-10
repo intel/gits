@@ -25,6 +25,7 @@ from generator_interceptor import generate_interceptor_files
 from plugin_generator import generate_plugin_artifacts
 from generator_subcapture import generate_subcapture_files
 from generator_api_debug import generate_api_debug_files
+from generator_resource_dumping import generate_resource_dumping_files
 
 def main():
     parser = argparse.ArgumentParser(description='Generate vulkan files.')
@@ -67,6 +68,7 @@ def main():
     generate_player_files(context, os.path.join(output_path, 'player'))
     generate_trace_files(context, os.path.join(output_path, 'layers/trace'))
     generate_api_debug_files(context, os.path.join(output_path, 'layers/api_debug'))
+    generate_resource_dumping_files(context, os.path.join(output_path, 'layers/resource_dumping'))
     generate_subcapture_files(context, os.path.join(output_path, 'subcapture'))
     generate_vk_layer_json(context, os.path.join(output_path, 'layer'))
     generate_interceptor_files(context, os.path.join(output_path, 'interceptor'))

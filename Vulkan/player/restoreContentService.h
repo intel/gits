@@ -59,14 +59,9 @@ public:
   RestoreContentService& operator=(const RestoreContentService&) = delete;
 
   void Manifest(const RestoreContentManifestCommand& command);
-  void OnData(const RestoreContentDataCommand& command);
-
-  // Images an upload was actually submitted for, paired with the layout its final barrier
-  // leaves them in. The barriers are recorded here rather than replayed from the stream, so
-  // a layer that tracks image layouts cannot see them and has to be told. Every failure path
-  // above skips its images, so what comes out is only what really happened. Drained by the
-  // caller: entries are reported once.
-  std::vector<std::pair<uint64_t, VkImageLayout>> DrainAppliedImageLayouts();
+  // Sets command.m_AppliedImageLayouts to the uploads the token submitted, without the images of
+  // the uploads that failed.
+  void OnData(RestoreContentDataCommand& command);
 
 private:
   struct ResourceDesc {
@@ -129,7 +124,9 @@ private:
   // in-flight submission has finished before we overwrite its staging bytes.
   void BeginBatch(Session& session, size_t batchIdx);
   // Record + submit the copies for every received resource of batchIdx.
-  void FlushBatch(Session& session, size_t batchIdx);
+  void FlushBatch(Session& session,
+                  size_t batchIdx,
+                  std::vector<RestoreContentDataCommand::AppliedImageLayouts>& applied);
   void DestroySession(Session& session);
 
   // Assign every resource a batch and an offset inside that batch's staging
@@ -153,7 +150,6 @@ private:
 
   PlayerManager& m_Player;
   std::unordered_map<uint64_t, std::unique_ptr<Session>> m_Sessions;
-  std::vector<std::pair<uint64_t, VkImageLayout>> m_AppliedImageLayouts;
 };
 
 } // namespace vulkan

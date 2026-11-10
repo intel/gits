@@ -169,6 +169,15 @@ public:
   // resource index (not a byte offset), Region.Size the byte count (0 when the
   // resource's readback failed at record time).
   MemoryRegions m_Regions{};
+
+  // Set by the replay: the uploads the token submitted, each with the images it uploaded paired
+  // with the layouts its final barrier leaves them in. The barriers are not commands of the
+  // stream, so the layers that track image layouts take them from here.
+  struct AppliedImageLayouts {
+    VkQueue Queue{};
+    std::vector<std::pair<uint64_t, VkImageLayout>> Layouts;
+  };
+  std::vector<AppliedImageLayouts> m_AppliedImageLayouts{};
 };
 
 } // namespace vulkan

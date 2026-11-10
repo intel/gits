@@ -410,7 +410,10 @@ void RestoreContentService::BeginBatch(Session& session, size_t batchIdx) {
   }
 }
 
-void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
+void RestoreContentService::FlushBatch(
+    Session& session,
+    size_t batchIdx,
+    std::vector<RestoreContentDataCommand::AppliedImageLayouts>& applied) {
   Slot& slot = SlotFor(session, batchIdx);
   auto& dt = *session.Dt;
   auto& hms = HandleMapService::Get();
@@ -574,15 +577,12 @@ void RestoreContentService::FlushBatch(Session& session, size_t batchIdx) {
     return;
   }
   slot.InFlight = true;
-  m_AppliedImageLayouts.insert(m_AppliedImageLayouts.end(), appliedImageLayouts.begin(),
-                               appliedImageLayouts.end());
+  if (!appliedImageLayouts.empty()) {
+    applied.push_back({session.Queue, std::move(appliedImageLayouts)});
+  }
 }
 
-std::vector<std::pair<uint64_t, VkImageLayout>> RestoreContentService::DrainAppliedImageLayouts() {
-  return std::exchange(m_AppliedImageLayouts, {});
-}
-
-void RestoreContentService::OnData(const RestoreContentDataCommand& command) {
+void RestoreContentService::OnData(RestoreContentDataCommand& command) {
   auto it = m_Sessions.find(command.m_DeviceKey);
   if (it == m_Sessions.end() || !it->second) {
     return;
@@ -611,7 +611,7 @@ void RestoreContentService::OnData(const RestoreContentDataCommand& command) {
     // batches flush at the right time and CurrentBatch is always set.
     if (batchIdx != session.CurrentBatch) {
       if (session.CurrentBatch != SIZE_MAX) {
-        FlushBatch(session, session.CurrentBatch);
+        FlushBatch(session, session.CurrentBatch, command.m_AppliedImageLayouts);
       }
       BeginBatch(session, batchIdx);
       session.CurrentBatch = batchIdx;
@@ -647,7 +647,7 @@ void RestoreContentService::OnData(const RestoreContentDataCommand& command) {
   // flush the final batch, wait for all in-flight uploads, and tear down.
   if (session.Processed >= session.Resources.size()) {
     if (session.Valid && session.CurrentBatch != SIZE_MAX) {
-      FlushBatch(session, session.CurrentBatch);
+      FlushBatch(session, session.CurrentBatch, command.m_AppliedImageLayouts);
     }
     DestroySession(session);
     m_Sessions.erase(it);
