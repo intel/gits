@@ -15,6 +15,8 @@ PRIVATE
   ${SRC_DIR}/pluginService.h
   ${SRC_DIR}/pluginService.cpp
   ${SRC_DIR}/suppressNames.h
+  ${SRC_DIR}/formatBlockInfo.h
+  ${SRC_DIR}/formatBlockInfo.cpp
 )
 
 target_include_directories(Vulkan_utils
@@ -27,6 +29,7 @@ target_link_libraries(Vulkan_utils
 PUBLIC
   configuration
   common
+  Vulkan_layer_interface
 )
 
 add_dependencies(Vulkan_utils config_codegen)

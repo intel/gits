@@ -9,6 +9,7 @@
 #pragma once
 
 #include "stateTrackingService.h" // for IGpuReadbackHelper
+#include "formatBlockInfo.h"
 
 #include <functional>
 
@@ -16,16 +17,6 @@ namespace gits {
 namespace vulkan {
 
 class PlayerManager;
-
-// Aspect mask to use in image barriers and barrier subresource ranges for a
-// format: DEPTH and/or STENCIL for depth/stencil formats; for color formats,
-// COLOR unless the image is a disjoint multi-planar one (VK_IMAGE_CREATE_
-// DISJOINT_BIT), which must use its plane bits instead
-// (VUID-VkImageMemoryBarrier-image-01672 / -image-09242). The recorder's
-// readback barriers and the player's upload barriers both go through this so
-// they cannot disagree.  Not for copy regions - those need one plane bit per
-// region instead.
-VkImageAspectFlags AspectMaskForFormat(VkFormat format, bool disjoint = false);
 
 // Concrete implementation of IGpuReadbackHelper. Uses PlayerManager dispatch
 // tables (GetDeviceDispatchTable / GetInstanceDispatchTable), same pattern as DX12 player.
