@@ -18,7 +18,7 @@ the `Vulkan.Player.ResourcesDump` group:
 | `enabled` | Enables the dump. |
 | `commandKeys` | Keys of the commands after which the resources are dumped. |
 | `resourceKeys` | Keys of the buffers and images to dump. Nothing is dumped if empty. |
-| `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGBA. |
+| `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGB. |
 
 Keys are the numbers printed at the start of trace lines (`Common.Shared.Trace.Enabled`). Object
 keys may keep their `O` prefix, and keys of state restore calls of sub-captured streams take an
@@ -98,7 +98,7 @@ end. Configure it in the `Vulkan.Player.RenderTargetsDump` group:
 | `enabled` | Enables the dump. |
 | `frames` | Frame range, for example `3-6`. |
 | `renderPasses` | Range of render pass instances in each frame, for example `1-100:5`. |
-| `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGBA. |
+| `format` | `PNG` or `JPEG` for images that can be converted to 8 bit RGB. |
 | `dryRun` | Writes `RenderTargetsDumpDryRun.yaml`, listing the selected render pass instances that have render targets by frame, instead of dumping them. |
 
 Frames are counted from 1 and end at `vkQueuePresentKHR`. The state restore of a sub-captured
@@ -171,4 +171,7 @@ seconds, logs the resources that are not written, and fails.
 
 Buffers are written as `.bin` files. Images are written as `.png` or `.jpg` files if their format
 can be converted (8 and 16 bit normalized, 16 and 32 bit float, 10 bit packed, depth and
-stencil), and as `.bin` files with the tightly packed texels otherwise.
+stencil), and as `.bin` files with the tightly packed texels otherwise. Converted images are
+written as 8 bit RGB without alpha. Images with a single channel, depth and stencil are written to
+red. Depth and stencil are stretched so that the lowest value of the image is black and the
+highest red, unless the image has a single value.

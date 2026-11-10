@@ -202,7 +202,7 @@ bool IsConvertedDepth(VkFormat format) {
   }
 }
 
-bool CanConvertToRgba8(VkFormat format, VkImageAspectFlags aspect) {
+bool CanConvertToRgb8(VkFormat format, VkImageAspectFlags aspect) {
   switch (aspect) {
   case VK_IMAGE_ASPECT_DEPTH_BIT:
     return IsConvertedDepth(format);
@@ -218,18 +218,17 @@ bool CanConvertToRgba8(VkFormat format, VkImageAspectFlags aspect) {
 bool ConvertPacked32(VkFormat format,
                      const uint8_t* texels,
                      size_t texelCount,
-                     std::vector<uint8_t>& rgba) {
+                     std::vector<uint8_t>& rgb) {
   if (!IsConvertedPacked32(format)) {
     return false;
   }
   for (size_t i = 0; i < texelCount; ++i) {
     const uint32_t value = ReadPacked32(texels + i * 4);
-    uint8_t* out = &rgba[i * 4];
+    uint8_t* out = &rgb[i * 3];
     if (format == VK_FORMAT_B10G11R11_UFLOAT_PACK32) {
       out[0] = ToByte(UnsignedSmallFloatToFloat(value & 0x7ff, 6));
       out[1] = ToByte(UnsignedSmallFloatToFloat((value >> 11) & 0x7ff, 6));
       out[2] = ToByte(UnsignedSmallFloatToFloat((value >> 22) & 0x3ff, 5));
-      out[3] = 255;
       continue;
     }
     const uint8_t low = static_cast<uint8_t>((value & 0x3ff) >> 2);
@@ -239,15 +238,31 @@ bool ConvertPacked32(VkFormat format,
     out[0] = rgbOrder ? low : high;
     out[1] = middle;
     out[2] = rgbOrder ? high : low;
-    out[3] = static_cast<uint8_t>((value >> 30) * 85);
   }
   return true;
+}
+
+void ConvertStencil(const uint8_t* texels, size_t texelCount, std::vector<uint8_t>& rgb) {
+  uint8_t lowest = 255;
+  uint8_t highest = 0;
+  for (size_t i = 0; i < texelCount; ++i) {
+    lowest = std::min(lowest, texels[i]);
+    highest = std::max(highest, texels[i]);
+  }
+  const bool stretched = lowest < highest;
+  for (size_t i = 0; i < texelCount; ++i) {
+    rgb[i * 3] =
+        stretched ? ToByte(static_cast<float>(texels[i] - lowest) / (highest - lowest)) : texels[i];
+  }
 }
 
 bool ConvertDepth(VkFormat format,
                   const uint8_t* texels,
                   size_t texelCount,
-                  std::vector<uint8_t>& rgba) {
+                  std::vector<uint8_t>& rgb) {
+  std::vector<float> depths(texelCount);
+  float lowest = INFINITY;
+  float highest = -INFINITY;
   for (size_t i = 0; i < texelCount; ++i) {
     float depth{};
     switch (format) {
@@ -269,43 +284,48 @@ bool ConvertDepth(VkFormat format,
     default:
       return false;
     }
-    const uint8_t gray = ToByte(depth);
-    uint8_t* out = &rgba[i * 4];
-    out[0] = out[1] = out[2] = gray;
-    out[3] = 255;
+    depths[i] = depth;
+    if (std::isfinite(depth)) {
+      lowest = std::min(lowest, depth);
+      highest = std::max(highest, depth);
+    }
+  }
+  const bool stretched = lowest < highest;
+  // The range of finite floats can exceed the largest float.
+  const double range = static_cast<double>(highest) - lowest;
+  for (size_t i = 0; i < texelCount; ++i) {
+    rgb[i * 3] =
+        ToByte(stretched ? static_cast<float>((depths[i] - static_cast<double>(lowest)) / range)
+                         : depths[i]);
   }
   return true;
 }
 
 } // namespace
 
-bool ConvertToRgba8(VkFormat format,
-                    VkImageAspectFlags aspect,
-                    const uint8_t* texels,
-                    uint32_t width,
-                    uint32_t height,
-                    std::vector<uint8_t>& rgba) {
-  if (!CanConvertToRgba8(format, aspect)) {
+bool ConvertToRgb8(VkFormat format,
+                   VkImageAspectFlags aspect,
+                   const uint8_t* texels,
+                   uint32_t width,
+                   uint32_t height,
+                   std::vector<uint8_t>& rgb) {
+  if (!CanConvertToRgb8(format, aspect)) {
     return false;
   }
   const size_t texelCount = static_cast<size_t>(width) * height;
-  rgba.assign(texelCount * 4, 0);
+  rgb.assign(texelCount * 3, 0);
 
   if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
-    return ConvertDepth(format, texels, texelCount, rgba);
+    return ConvertDepth(format, texels, texelCount, rgb);
   }
   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT) {
-    for (size_t i = 0; i < texelCount; ++i) {
-      uint8_t* out = &rgba[i * 4];
-      out[0] = out[1] = out[2] = texels[i];
-      out[3] = 255;
-    }
+    ConvertStencil(texels, texelCount, rgb);
     return true;
   }
   if (aspect != VK_IMAGE_ASPECT_COLOR_BIT) {
     return false;
   }
-  if (ConvertPacked32(format, texels, texelCount, rgba)) {
+  if (ConvertPacked32(format, texels, texelCount, rgb)) {
     return true;
   }
 
@@ -317,30 +337,24 @@ bool ConvertToRgba8(VkFormat format,
   const uint32_t texelSize = componentSize * plain->Channels;
   for (size_t i = 0; i < texelCount; ++i) {
     const uint8_t* in = texels + i * texelSize;
-    uint8_t channels[4]{0, 0, 0, 255};
-    for (uint32_t c = 0; c < plain->Channels; ++c) {
+    uint8_t channels[3]{};
+    for (uint32_t c = 0; c < std::min(plain->Channels, 3u); ++c) {
       channels[c] = ComponentToByte(plain->Kind, in + c * componentSize);
     }
-    uint8_t* out = &rgba[i * 4];
-    if (plain->Channels == 1) {
-      out[0] = out[1] = out[2] = channels[0];
-      out[3] = 255;
-      continue;
-    }
+    uint8_t* out = &rgb[i * 3];
     out[0] = plain->Bgr ? channels[2] : channels[0];
     out[1] = channels[1];
     out[2] = plain->Bgr ? channels[0] : channels[2];
-    out[3] = channels[3];
   }
   return true;
 }
 
-std::filesystem::path WriteRgba8Image(const std::filesystem::path& pathWithoutExtension,
-                                      ImageFormat format,
-                                      uint32_t width,
-                                      uint32_t height,
-                                      const std::vector<uint8_t>& rgba) {
-  constexpr int channels = 4;
+std::filesystem::path WriteRgb8Image(const std::filesystem::path& pathWithoutExtension,
+                                     ImageFormat format,
+                                     uint32_t width,
+                                     uint32_t height,
+                                     const std::vector<uint8_t>& rgb) {
+  constexpr int channels = 3;
   std::filesystem::path path = pathWithoutExtension;
   // The image is encoded in memory, as the stb file functions do not report write errors.
   std::vector<uint8_t> encoded;
@@ -354,11 +368,11 @@ std::filesystem::path WriteRgba8Image(const std::filesystem::path& pathWithoutEx
     constexpr int jpegQuality = 95;
     path += ".jpg";
     ok = stbi_write_jpg_to_func(append, &encoded, static_cast<int>(width), static_cast<int>(height),
-                                channels, rgba.data(), jpegQuality);
+                                channels, rgb.data(), jpegQuality);
   } else {
     path += ".png";
     ok = stbi_write_png_to_func(append, &encoded, static_cast<int>(width), static_cast<int>(height),
-                                channels, rgba.data(), static_cast<int>(width * channels));
+                                channels, rgb.data(), static_cast<int>(width * channels));
   }
   if (!ok || !WriteBinary(path, encoded.data(), encoded.size())) {
     return {};

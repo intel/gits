@@ -693,7 +693,7 @@ void ResourcesDump::WriteImage(const StagedResource& resource, const uint8_t* da
   const FormatBlockInfo info = GetFormatBlockInfo(target.Format);
   unsigned written = 0;
   unsigned raw = 0;
-  std::vector<uint8_t> rgba;
+  std::vector<uint8_t> rgb;
   for (const VkBufferImageCopy& region : resource.Regions) {
     const VkImageSubresourceLayers& subresource = region.imageSubresource;
     const RegionTexels texels = GetRegionTexels(info, subresource.aspectMask);
@@ -722,10 +722,10 @@ void ResourcesDump::WriteImage(const StagedResource& resource, const uint8_t* da
       const uint8_t* sliceData = data + region.bufferOffset + slice * sliceBytes;
       const bool converted =
           texels.BlockWidth == 1 && texels.BlockHeight == 1 &&
-          ConvertToRgba8(target.Format, subresource.aspectMask, sliceData, width, height, rgba);
+          ConvertToRgb8(target.Format, subresource.aspectMask, sliceData, width, height, rgb);
       bool ok = false;
       if (converted) {
-        ok = !WriteRgba8Image(sliceName, target.FileFormat, width, height, rgba).empty();
+        ok = !WriteRgb8Image(sliceName, target.FileFormat, width, height, rgb).empty();
       } else {
         sliceName += ".bin";
         ok = WriteBinary(sliceName, sliceData, sliceBytes);

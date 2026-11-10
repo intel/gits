@@ -17,6 +17,7 @@
 #include "queueFamilyOwnership.h"
 #include "submitSignalsDeferral.h"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -556,72 +557,96 @@ void TestSignalsDeferral() {
 }
 
 void TestConversion() {
-  std::vector<uint8_t> rgba;
+  std::vector<uint8_t> rgb;
 
   const uint8_t bgra[] = {10, 20, 30, 40};
-  Check(ConvertToRgba8(VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, bgra, 1, 1, rgba),
+  Check(ConvertToRgb8(VK_FORMAT_B8G8R8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, bgra, 1, 1, rgb),
         "convert: B8G8R8A8 is converted");
-  Check(rgba == std::vector<uint8_t>{30, 20, 10, 40}, "convert: B8G8R8A8 swaps red and blue");
+  Check(rgb == std::vector<uint8_t>{30, 20, 10},
+        "convert: B8G8R8A8 swaps red and blue and drops alpha");
 
   const uint8_t red[] = {200};
-  Check(ConvertToRgba8(VK_FORMAT_R8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, red, 1, 1, rgba),
+  Check(ConvertToRgb8(VK_FORMAT_R8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, red, 1, 1, rgb),
         "convert: R8 is converted");
-  Check(rgba == std::vector<uint8_t>{200, 200, 200, 255}, "convert: one channel is gray");
+  Check(rgb == std::vector<uint8_t>{200, 0, 0}, "convert: one channel is red");
 
   float floats[4] = {0.0f, 0.5f, 2.0f, -1.0f};
   uint8_t floatTexel[sizeof(floats)];
   std::memcpy(floatTexel, floats, sizeof(floats));
-  Check(ConvertToRgba8(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, floatTexel, 1, 1,
-                       rgba),
+  Check(ConvertToRgb8(VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, floatTexel, 1, 1,
+                      rgb),
         "convert: R32G32B32A32_SFLOAT is converted");
-  Check(rgba == std::vector<uint8_t>{0, 128, 255, 0}, "convert: floats are clamped to 0-1");
+  Check(rgb == std::vector<uint8_t>{0, 128, 255}, "convert: floats are clamped to 0-1");
 
   const uint16_t halfOne = 0x3c00;
   uint8_t halfTexel[2];
   std::memcpy(halfTexel, &halfOne, sizeof(halfOne));
-  Check(ConvertToRgba8(VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, halfTexel, 1, 1, rgba),
+  Check(ConvertToRgb8(VK_FORMAT_R16_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, halfTexel, 1, 1, rgb),
         "convert: R16_SFLOAT is converted");
-  Check(rgba[0] == 255, "convert: half 1.0 is white");
+  Check(rgb[0] == 255, "convert: half 1.0 is white");
 
   const int8_t snorm[] = {-127, 0, 127, 127};
   uint8_t snormTexel[4];
   std::memcpy(snormTexel, snorm, sizeof(snorm));
-  Check(ConvertToRgba8(VK_FORMAT_R8G8B8A8_SNORM, VK_IMAGE_ASPECT_COLOR_BIT, snormTexel, 1, 1, rgba),
+  Check(ConvertToRgb8(VK_FORMAT_R8G8B8A8_SNORM, VK_IMAGE_ASPECT_COLOR_BIT, snormTexel, 1, 1, rgb),
         "convert: R8G8B8A8_SNORM is converted");
-  Check(rgba[0] == 0 && rgba[1] == 128 && rgba[2] == 255,
+  Check(rgb[0] == 0 && rgb[1] == 128 && rgb[2] == 255,
         "convert: signed normalized values map from -1 to 1");
 
   const uint32_t packed = (3u << 30) | (1023u << 20) | (0u << 10) | 512u;
   uint8_t packedTexel[4];
   std::memcpy(packedTexel, &packed, sizeof(packed));
-  Check(ConvertToRgba8(VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_ASPECT_COLOR_BIT, packedTexel,
-                       1, 1, rgba),
+  Check(ConvertToRgb8(VK_FORMAT_A2B10G10R10_UNORM_PACK32, VK_IMAGE_ASPECT_COLOR_BIT, packedTexel, 1,
+                      1, rgb),
         "convert: A2B10G10R10 is converted");
-  Check(rgba == std::vector<uint8_t>{128, 0, 255, 255}, "convert: A2B10G10R10 channels");
+  Check(rgb == std::vector<uint8_t>{128, 0, 255}, "convert: A2B10G10R10 channels");
 
   const uint32_t depth24 = 0xff000000u | 0xffffffu;
   uint8_t depthTexel[4];
   std::memcpy(depthTexel, &depth24, sizeof(depth24));
-  Check(ConvertToRgba8(VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT, depthTexel, 1, 1,
-                       rgba),
-        "convert: the depth of D24_UNORM_S8_UINT is converted");
-  Check(rgba == std::vector<uint8_t>{255, 255, 255, 255},
-        "convert: the depth ignores the upper byte");
+  Check(
+      ConvertToRgb8(VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_ASPECT_DEPTH_BIT, depthTexel, 1, 1, rgb),
+      "convert: the depth of D24_UNORM_S8_UINT is converted");
+  Check(rgb == std::vector<uint8_t>{255, 0, 0},
+        "convert: the depth ignores the upper byte and is red");
+
+  const float depths[] = {0.5f, 0.75f, NAN, 1.0f};
+  uint8_t depthTexels[sizeof(depths)];
+  std::memcpy(depthTexels, depths, sizeof(depths));
+  Check(ConvertToRgb8(VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT, depthTexels, 4, 1, rgb),
+        "convert: D32_SFLOAT is converted");
+  Check(rgb == std::vector<uint8_t>{0, 0, 0, 128, 0, 0, 0, 0, 0, 255, 0, 0},
+        "convert: depth is stretched from the lowest to the highest value");
+
+  const float extremeDepths[] = {-3e38f, 0.0f, 3e38f};
+  uint8_t extremeTexels[sizeof(extremeDepths)];
+  std::memcpy(extremeTexels, extremeDepths, sizeof(extremeDepths));
+  Check(ConvertToRgb8(VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT, extremeTexels, 3, 1, rgb),
+        "convert: D32_SFLOAT with extreme values is converted");
+  Check(rgb == std::vector<uint8_t>{0, 0, 0, 128, 0, 0, 255, 0, 0},
+        "convert: depth is stretched when its range exceeds the largest float");
 
   const uint8_t stencil[] = {7};
+  Check(ConvertToRgb8(VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT, stencil, 1, 1, rgb),
+        "convert: stencil is converted");
+  Check(rgb == std::vector<uint8_t>{7, 0, 0},
+        "convert: a stencil of one value is written as it is");
+
+  const uint8_t stencils[] = {2, 3, 4};
   Check(
-      ConvertToRgba8(VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT, stencil, 1, 1, rgba),
-      "convert: stencil is converted");
-  Check(rgba[0] == 7, "convert: stencil values are written as they are");
+      ConvertToRgb8(VK_FORMAT_D24_UNORM_S8_UINT, VK_IMAGE_ASPECT_STENCIL_BIT, stencils, 3, 1, rgb),
+      "convert: stencils are converted");
+  Check(rgb == std::vector<uint8_t>{0, 0, 0, 128, 0, 0, 255, 0, 0},
+        "convert: stencil is stretched from the lowest to the highest value");
 
   const uint8_t integer[] = {1, 2, 3, 4};
-  rgba.clear();
-  Check(!ConvertToRgba8(VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_ASPECT_COLOR_BIT, integer, 1, 1, rgba),
+  rgb.clear();
+  Check(!ConvertToRgb8(VK_FORMAT_R8G8B8A8_UINT, VK_IMAGE_ASPECT_COLOR_BIT, integer, 1, 1, rgb),
         "convert: integer formats have no conversion");
-  Check(!ConvertToRgba8(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, VK_IMAGE_ASPECT_PLANE_0_BIT, integer, 1,
-                        1, rgba),
+  Check(!ConvertToRgb8(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, VK_IMAGE_ASPECT_PLANE_0_BIT, integer, 1,
+                       1, rgb),
         "convert: planes have no conversion");
-  Check(rgba.empty(), "convert: formats without a conversion allocate nothing");
+  Check(rgb.empty(), "convert: formats without a conversion allocate nothing");
 }
 
 } // namespace
