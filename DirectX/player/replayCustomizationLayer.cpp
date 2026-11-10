@@ -116,8 +116,71 @@ void ReplayCustomizationLayer::Pre(D3D12CreateDeviceCommand& c) {
   LOG_INFO << "D3D12CreateDevice - Using adapter: " << toStr(desc.Description);
 }
 
+static HRESULT CreateOffscreenSwapChain(IDXGIFactory2* factory,
+                                        IUnknown* device,
+                                        const DXGI_SWAP_CHAIN_DESC1& recordedDesc,
+                                        SIZE windowSize,
+                                        IDXGISwapChain1** swapChain) {
+  DXGI_SWAP_CHAIN_DESC1 desc = recordedDesc;
+  // Zero size means "use window client size", but composition needs an explicit size.
+  if (desc.Width == 0) {
+    desc.Width = windowSize.cx;
+  }
+  if (desc.Height == 0) {
+    desc.Height = windowSize.cy;
+  }
+  GITS_ASSERT(desc.Width != 0 && desc.Height != 0,
+              "Offscreen replay: cannot resolve zero swapchain size");
+
+  // Composition swapchains require stretch scaling and an explicit alpha mode, and cannot
+  // switch display modes.
+  desc.Scaling = DXGI_SCALING_STRETCH;
+  if (desc.AlphaMode == DXGI_ALPHA_MODE_UNSPECIFIED) {
+    desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
+  }
+  desc.Flags &= ~static_cast<UINT>(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+
+  HRESULT hr = factory->CreateSwapChainForComposition(device, &desc, nullptr, swapChain);
+  GITS_ASSERT(SUCCEEDED(hr),
+              "Offscreen replay: CreateSwapChainForComposition failed. Window-less replay is not "
+              "possible with the recorded swapchain description on this system.");
+  return hr;
+}
+
+void ReplayCustomizationLayer::Pre(CreateWindowMetaCommand& c) {
+  m_CapturedWindowSizes[c.m_hWnd.Value] = {c.m_width.Value, c.m_height.Value};
+}
+
+// Zero dimensions mean "use the window client size", which composition swapchains reject. Resolve
+// them to the size the window would have, and track explicit sizes like a real window resize does.
+void ReplayCustomizationLayer::ResolveOffscreenBufferSize(ObjectKey swapChainKey,
+                                                          UINT& width,
+                                                          UINT& height) {
+  auto windowIt = m_SwapChainCapturedWindows.find(swapChainKey);
+  GITS_ASSERT(windowIt != m_SwapChainCapturedWindows.end(),
+              "Offscreen replay: resize of a swapchain with no known window");
+  SIZE& size = m_CapturedWindowSizes[windowIt->second];
+  if (width == 0) {
+    width = static_cast<UINT>(size.cx);
+  } else {
+    size.cx = static_cast<LONG>(width);
+  }
+  if (height == 0) {
+    height = static_cast<UINT>(size.cy);
+  } else {
+    size.cy = static_cast<LONG>(height);
+  }
+  GITS_ASSERT(width != 0 && height != 0, "Offscreen replay: cannot resolve zero resize size");
+}
+
 void ReplayCustomizationLayer::Pre(IDXGISwapChainSetFullscreenStateCommand& c) {
   if (c.Skip) {
+    return;
+  }
+  if (m_Manager.GetWindowService().IsOffscreen()) {
+    // Window-less swapchains cannot enter fullscreen.
+    c.Skip = true;
+    c.m_Result.Value = S_OK;
     return;
   }
   if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
@@ -147,6 +210,39 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
   if (c.Skip) {
     return;
   }
+  if (m_Manager.GetWindowService().IsOffscreen()) {
+    const DXGI_SWAP_CHAIN_DESC& d = *c.m_pDesc.Value;
+    DXGI_SWAP_CHAIN_DESC1 desc1{};
+    desc1.Width = d.BufferDesc.Width;
+    desc1.Height = d.BufferDesc.Height;
+    desc1.Format = d.BufferDesc.Format;
+    desc1.SampleDesc = d.SampleDesc;
+    desc1.BufferUsage = d.BufferUsage;
+    desc1.BufferCount = d.BufferCount;
+    desc1.SwapEffect = d.SwapEffect;
+    desc1.Flags = d.Flags;
+
+    // Create the swapchain here and skip the generated runner call, which would need an HWND.
+    Microsoft::WRL::ComPtr<IDXGIFactory2> factory2;
+    c.m_Result.Value = c.m_Object.Value->QueryInterface(IID_PPV_ARGS(&factory2));
+    GITS_ASSERT(SUCCEEDED(c.m_Result.Value),
+                "Offscreen replay: factory does not support IDXGIFactory2, cannot create a "
+                "window-less swapchain");
+    Microsoft::WRL::ComPtr<IDXGISwapChain1> swapChain1;
+    HWND capturedHwnd = d.OutputWindow;
+    c.m_Result.Value = CreateOffscreenSwapChain(factory2.Get(), c.m_pDevice.Value, desc1,
+                                                m_CapturedWindowSizes[capturedHwnd], &swapChain1);
+    if (SUCCEEDED(c.m_Result.Value)) {
+      Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
+      c.m_Result.Value = swapChain1.As(&swapChain);
+      if (SUCCEEDED(c.m_Result.Value) && c.m_ppSwapChain.Value) {
+        *c.m_ppSwapChain.Value = swapChain.Detach();
+        m_SwapChainCapturedWindows[c.m_ppSwapChain.Key] = capturedHwnd;
+      }
+    }
+    c.Skip = true;
+    return;
+  }
   c.m_pDesc.Value->OutputWindow =
       m_Manager.GetWindowService().GetCurrentHwnd(c.m_pDesc.Value->OutputWindow);
   if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
@@ -159,7 +255,7 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryCreateSwapChainCommand& c) {
 }
 
 void ReplayCustomizationLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
-  if (!c.Skip && c.m_Result.Value == S_OK &&
+  if (!m_Manager.GetWindowService().IsOffscreen() && !c.Skip && c.m_Result.Value == S_OK &&
       Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
     m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
   }
@@ -167,6 +263,17 @@ void ReplayCustomizationLayer::Post(IDXGIFactoryCreateSwapChainCommand& c) {
 
 void ReplayCustomizationLayer::Pre(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
   if (c.Skip) {
+    return;
+  }
+  if (m_Manager.GetWindowService().IsOffscreen()) {
+    // Create the swapchain here and skip the generated runner call, which would need an HWND.
+    c.m_Result.Value =
+        CreateOffscreenSwapChain(c.m_Object.Value, c.m_pDevice.Value, *c.m_pDesc.Value,
+                                 m_CapturedWindowSizes[c.m_hWnd.Value], c.m_ppSwapChain.Value);
+    if (SUCCEEDED(c.m_Result.Value)) {
+      m_SwapChainCapturedWindows[c.m_ppSwapChain.Key] = c.m_hWnd.Value;
+    }
+    c.Skip = true;
     return;
   }
   c.m_hWnd.Value = m_Manager.GetWindowService().GetCurrentHwnd(c.m_hWnd.Value);
@@ -184,7 +291,7 @@ void ReplayCustomizationLayer::Pre(IDXGIFactory2CreateSwapChainForHwndCommand& c
 }
 
 void ReplayCustomizationLayer::Post(IDXGIFactory2CreateSwapChainForHwndCommand& c) {
-  if (!c.Skip && c.m_Result.Value == S_OK &&
+  if (!m_Manager.GetWindowService().IsOffscreen() && !c.Skip && c.m_Result.Value == S_OK &&
       Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
     m_ExclusiveFullscreenSwapChains.insert(c.m_ppSwapChain.Key);
   }
@@ -206,6 +313,11 @@ void ReplayCustomizationLayer::Pre(IDXGIFactoryMakeWindowAssociationCommand& c) 
   if (c.Skip) {
     return;
   }
+  if (m_Manager.GetWindowService().IsOffscreen()) {
+    c.Skip = true;
+    c.m_Result.Value = S_OK;
+    return;
+  }
   c.m_WindowHandle.Value = m_Manager.GetWindowService().GetCurrentHwnd(c.m_WindowHandle.Value);
 }
 
@@ -214,6 +326,26 @@ void ReplayCustomizationLayer::Post(CreateWindowMetaCommand& c) {
     return;
   }
   m_Hwnd = c.m_hWnd.Value;
+}
+
+void ReplayCustomizationLayer::Pre(IDXGISwapChainGetContainingOutputCommand& c) {
+  // Composition swapchains are not on any output, so the replayed call would fail.
+  GITS_ASSERT(c.Skip || !m_Manager.GetWindowService().IsOffscreen(),
+              "IDXGISwapChain::GetContainingOutput is not supported with 'renderOffscreen'");
+}
+
+void ReplayCustomizationLayer::Pre(IDXGISwapChainResizeBuffersCommand& c) {
+  if (c.Skip || !m_Manager.GetWindowService().IsOffscreen()) {
+    return;
+  }
+  ResolveOffscreenBufferSize(c.m_Object.Key, c.m_Width.Value, c.m_Height.Value);
+}
+
+void ReplayCustomizationLayer::Pre(IDXGISwapChain3ResizeBuffers1Command& c) {
+  if (c.Skip || !m_Manager.GetWindowService().IsOffscreen()) {
+    return;
+  }
+  ResolveOffscreenBufferSize(c.m_Object.Key, c.m_Width.Value, c.m_Height.Value);
 }
 
 void ReplayCustomizationLayer::Post(IDXGISwapChainResizeBuffersCommand& c) {
@@ -2058,6 +2190,9 @@ void ReplayCustomizationLayer::Pre(xefgSwapChainD3D12InitFromSwapChainDescComman
   if (command.Skip) {
     return;
   }
+  GITS_ASSERT(!m_Manager.GetWindowService().IsOffscreen(),
+              "xefgSwapChainD3D12InitFromSwapChainDesc creates the swapchain from a window handle, "
+              "which is not supported with 'renderOffscreen'");
   command.m_hWnd.Value = m_Manager.GetWindowService().GetCurrentHwnd(command.m_hWnd.Value);
   if (Configurator::Get().common.player.windowMode == WindowMode::EXCLUSIVE_FULLSCREEN) {
     if (!command.m_pFullscreenDesc.Value) {

@@ -108,10 +108,18 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
       debugInfoLayer = std::make_unique<DebugInfoLayer>();
     }
     if (Configurator::IsHudEnabledForApi(ApiBool::DX)) {
-      imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+      if (Configurator::Get().common.player.renderOffscreen) {
+        // The HUD is drawn into a window's swapchain, which offscreen replay does not have.
+        LOG_WARNING << "HUD is not supported with 'renderOffscreen', disabling it";
+      } else {
+        imGuiHUDLayer = std::make_unique<ImGuiHUDLayer>();
+      }
     }
     dllOverrideUseLayer = std::make_unique<DllOverrideUseLayer>(playerManager, m_SkipXess);
     if (cfg.player.cCode.enabled) {
+      // Offscreen replay has no window handles, but the generated code looks up the captured ones.
+      GITS_ASSERT(!Configurator::Get().common.player.renderOffscreen,
+                  "CCode generation is not supported with 'renderOffscreen'");
       ccodeLayer = std::make_unique<CCodeLayer>();
       const_cast<gits::Configuration&>(Configurator::Get())
           .directx.player.multithreadedShaderCompilation = false;

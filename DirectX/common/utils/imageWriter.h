@@ -16,6 +16,12 @@
 namespace gits {
 namespace DirectX {
 
+// Keeps the COM multithreaded apartment alive for the lifetime of the process. DirectXTex caches
+// its WIC factory in a static, so without this the factory can outlive the apartment (and
+// windowscodecs.dll) once the short-lived dump threads exit. Safe to call repeatedly from any
+// thread; call before the first DirectXTex WIC use.
+void KeepWicComAlive();
+
 bool WriteImage(const std::filesystem::path& outputFileName,
                 ImageFormat outputFormat,
                 uint8_t* pixelData,

@@ -22,7 +22,19 @@ static void ApplyForcedPlayerWindowSize(int& width, int& height) {
   }
 }
 
+WindowService::WindowService() {
+  windowing::WindowManager::Get().SetOffscreen(Configurator::Get().common.player.renderOffscreen);
+}
+
+bool WindowService::IsOffscreen() const {
+  return windowing::WindowManager::Get().IsOffscreen();
+}
+
 HWND WindowService::CreatePlayerWindow(HWND captureHwnd, int width, int height) {
+  if (IsOffscreen()) {
+    return nullptr;
+  }
+
   int wndWidth = width;
   int wndHeight = height;
   ApplyForcedPlayerWindowSize(wndWidth, wndHeight);
@@ -64,6 +76,10 @@ void WindowService::ResizePlayerWindow(HWND playerHwnd, int width, int height) {
 }
 
 HWND WindowService::GetCurrentHwnd(HWND captureHwnd) {
+  if (IsOffscreen()) {
+    return nullptr;
+  }
+
   auto it = m_WindowMap.find(captureHwnd);
   if (it == m_WindowMap.end()) {
     LOG_WARNING << "Cannot find window for hWnd from capture: " << std::hex << captureHwnd

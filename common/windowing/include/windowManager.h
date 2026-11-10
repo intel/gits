@@ -31,6 +31,18 @@ public:
   static WindowManager& Get();
   ~WindowManager() {}
 
+  // Offscreen mode is opt-in per API: an API enables it only when its replay can run without a
+  // native window (e.g. by creating window-less swapchains). While enabled, `CreatePlayerWindow`
+  // returns null handles without logging an error, and the other window operations are no-ops
+  // because no window is ever tracked. Callers must treat null handles as "no window".
+  // Disabled by default so APIs that still require a window are unaffected.
+  void SetOffscreen(bool offscreen) {
+    m_Offscreen = offscreen;
+  }
+  bool IsOffscreen() const {
+    return m_Offscreen;
+  }
+
   // `visualId` is the X visual of an Xlib window, the screen's default one for 0. Other protocols
   // ignore it.
   std::pair<uint64_t, uint64_t> CreatePlayerWindow(WindowProtocol protocol,
@@ -71,6 +83,7 @@ private:
   };
 
   std::vector<ManagedWindow> m_Windows;
+  bool m_Offscreen{false};
 };
 
 } // namespace windowing

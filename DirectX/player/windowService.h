@@ -16,6 +16,11 @@ namespace DirectX {
 
 class WindowService {
 public:
+  // Enables offscreen mode in the shared window manager when 'renderOffscreen' is set.
+  WindowService();
+
+  // In offscreen mode no window is created and these return/do nothing (null HWND).
+  bool IsOffscreen() const;
   HWND CreatePlayerWindow(HWND captureHwnd, int width, int height);
   void ResizePlayerWindow(HWND playerHwnd, int width, int height);
   HWND GetCurrentHwnd(HWND captureHwnd);

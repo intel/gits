@@ -387,6 +387,8 @@ void ResourceDump::DumpTexture(DumpInfo& dumpInfo, void* data) {
     return;
   }
 
+  KeepWicComAlive();
+
   DXGI_FORMAT destFormat =
       ::DirectX::IsSRGB(format) ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
 

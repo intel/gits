@@ -38,9 +38,13 @@ public:
   void Post(IDXGIFactoryCreateSwapChainCommand& command) override;
   void Pre(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
   void Post(IDXGIFactory2CreateSwapChainForHwndCommand& command) override;
+  void Pre(CreateWindowMetaCommand& command) override;
   void Pre(IDXGISwapChainPresentCommand& command) override;
   void Pre(IDXGISwapChain1Present1Command& command) override;
+  void Pre(IDXGISwapChainGetContainingOutputCommand& command) override;
+  void Pre(IDXGISwapChainResizeBuffersCommand& command) override;
   void Post(IDXGISwapChainResizeBuffersCommand& command) override;
+  void Pre(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void Post(IDXGISwapChain3ResizeBuffers1Command& command) override;
   void Pre(IDXGIFactoryMakeWindowAssociationCommand& command) override;
   void Post(ID3D12ResourceMapCommand& command) override;
@@ -227,6 +231,7 @@ private:
   };
 
 private:
+  void ResolveOffscreenBufferSize(ObjectKey swapChainKey, UINT& width, UINT& height);
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
@@ -255,7 +260,12 @@ private:
   bool m_UseAddressPinning{};
   bool m_NonIncrementalFenceWait{};
   bool m_AfterAddRef{};
+  ULONG m_StreamReleaseResult{};
   HWND m_Hwnd{};
+  // Offscreen replay has no window to take a size from. These track what the window client size
+  // would be, keyed by the captured HWND, to resolve zero swapchain dimensions.
+  std::unordered_map<HWND, SIZE> m_CapturedWindowSizes;
+  std::unordered_map<ObjectKey, HWND> m_SwapChainCapturedWindows;
   std::unordered_set<ObjectKey> m_ExclusiveFullscreenSwapChains;
   GpuExecutionTracker m_GpuExecutionTracker;
 };

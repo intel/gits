@@ -102,6 +102,14 @@ static bool WriteImageToDds(const std::filesystem::path& outputFileName,
   return true;
 }
 
+void KeepWicComAlive() {
+  static const HRESULT hr = [] {
+    CO_MTA_USAGE_COOKIE cookie{};
+    return CoIncrementMTAUsage(&cookie);
+  }();
+  GITS_ASSERT(SUCCEEDED(hr));
+}
+
 bool WriteImage(const std::filesystem::path& outputFileName,
                 ImageFormat outputFormat,
                 uint8_t* pixelData,
@@ -157,6 +165,7 @@ bool WriteImage(const std::filesystem::path& outputFileName,
     }
   } else {
     // Use DirectX Tex SDK to save images with WIC
+    KeepWicComAlive();
     ::DirectX::Image image{};
     image.width = width;
     image.height = height;

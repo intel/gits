@@ -72,6 +72,10 @@ std::pair<uint64_t, uint64_t> WindowManager::CreatePlayerWindow(WindowProtocol p
                                                                 bool visible,
                                                                 uint64_t visualId,
                                                                 bool changeDisplayMode) {
+  if (IsOffscreen()) {
+    return std::make_pair(0ULL, 0ULL);
+  }
+
   std::unique_ptr<PlayerWindow> window;
   switch (protocol) {
 #if defined GITS_PLATFORM_WINDOWS

@@ -642,12 +642,13 @@ Configuration:
             Type: bool
             Default: false
             Arguments: [renderOffscreen]
-            Description: Forces offscreen rendering in EGL or Vulkan.
+            Description: Forces offscreen rendering in EGL, Vulkan or DirectX 12.
             LongDescription: |
-              Offscreen rendering: 
+              Offscreen rendering:
 
-              - in EGL to a pbuffer, 
-              - in Vulkan to a swapchain without presentation. 
+              - in EGL to a pbuffer,
+              - in Vulkan to a swapchain without presentation,
+              - in DirectX 12 to swapchains that are not bound to any window (no window is created).
 
               Not supported for other API types. Use --captureFrames or similar option to get rendering output.
           - Name: forceOrigScreenResolution
