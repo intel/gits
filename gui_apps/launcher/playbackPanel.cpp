@@ -14,7 +14,7 @@
 #include "context.h"
 #include "launcherActions.h"
 #include "fileActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "baseEventBus.h"
 #include "guiActions.h"
 #include "configOptions.h"

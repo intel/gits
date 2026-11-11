@@ -13,7 +13,7 @@
 #include "context.h"
 #include "baseContext.h"
 #include "baseCommon.h"
-#include "labels.h"
+#include "launcherLabels.h"
 
 namespace {
 bool ArePluginsSupported() {

@@ -10,7 +10,7 @@
 
 #include "imgui.h"
 #include "launcherActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "baseEventBus.h"
 #include "configOptions.h"
 #include "configMetadataAuto.h"

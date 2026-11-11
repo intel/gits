@@ -11,7 +11,7 @@
 #include "context.h"
 #include "baseContext.h"
 #include "launcherActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "captureActions.h"
 #include "mainWindow.h"
 #include "baseEventBus.h"

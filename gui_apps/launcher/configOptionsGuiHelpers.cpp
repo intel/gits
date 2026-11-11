@@ -13,7 +13,7 @@
 #include "contextHelper.h"
 #include "imgui.h"
 #include "imGuiHelper.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "launcherActions.h"
 #include "guiActions.h"
 #include "configMetadataAuto.h"

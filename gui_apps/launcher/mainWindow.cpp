@@ -11,7 +11,7 @@
 #include "imGuiHelper.h"
 #include "tabGroup.h"
 #include "baseLabels.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "launcherActions.h"
 #include "launcherCommon.h"
 #ifdef _WIN32

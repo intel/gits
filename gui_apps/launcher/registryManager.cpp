@@ -19,7 +19,7 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include "labels.h"
+#include "launcherLabels.h"
 #include "log.h"
 
 namespace gits::gui {

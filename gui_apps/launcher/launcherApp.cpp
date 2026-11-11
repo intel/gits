@@ -9,7 +9,7 @@
 #include "launcherApp.h"
 
 #include "resource.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "imGuiHelper.h"
 #include "context.h"
 #include "guiActions.h"

@@ -19,7 +19,7 @@
 #include "launcherActions.h"
 #include "guiActions.h"
 #include "fileActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "captureActions.h"
 #include "contextHelper.h"
 #include "baseEventBus.h"

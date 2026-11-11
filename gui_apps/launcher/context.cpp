@@ -31,7 +31,7 @@
 #include "captureActions.h"
 #include "fileActions.h"
 #include "guiActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "launcherConfig.h"
 #include "log.h"
 #include "launcherActions.h"

@@ -22,7 +22,7 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_HEADER_DIR}/launcherConfig.h
   ${LAUNCHER_HEADER_DIR}/context.h
   ${LAUNCHER_HEADER_DIR}/resource.h
-  ${LAUNCHER_HEADER_DIR}/labels.h
+  ${LAUNCHER_HEADER_DIR}/launcherLabels.h
   ${LAUNCHER_HEADER_DIR}/configOptionsGuiHelpers.h
   )
 

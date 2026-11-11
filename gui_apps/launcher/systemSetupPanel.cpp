@@ -17,7 +17,7 @@
 #include "imGuiHelper.h"
 #include "context.h"
 #include "launcherActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "log.h"
 #include "registryManager.h"
 

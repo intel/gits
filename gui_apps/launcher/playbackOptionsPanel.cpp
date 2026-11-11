@@ -14,7 +14,7 @@
 #include "imgui.h"
 #include "imGuiHelper.h"
 #include "launcherActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "baseEventBus.h"
 #include "contextHelper.h"
 #include "configOptions.h"

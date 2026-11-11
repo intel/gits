@@ -26,7 +26,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include "fileActions.h"
-#include "labels.h"
+#include "launcherLabels.h"
 #include "captureActions.h"
 #include "log.h"
 #include "configurator.h"
