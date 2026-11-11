@@ -14,7 +14,7 @@
 
 #include "tabGroup.h"
 
-#include "context.h"
+#include "launcherContext.h"
 #include "contentPanel.h"
 #include "playbackPanel.h"
 #include "capturePanel.h"

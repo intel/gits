@@ -33,7 +33,7 @@ SubcaptureOptionsPanel::SubcaptureOptionsPanel() : BasePanel() {
 }
 
 void SubcaptureOptionsPanel::Render() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   static auto changed = true;
 
   // Common subcapture option (shared with playback)
@@ -229,7 +229,7 @@ void SubcaptureOptionsPanel::Render() {
 }
 
 void SubcaptureOptionsPanel::RenderSimple() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
   RowSubcapturePath();
@@ -264,7 +264,7 @@ void SubcaptureOptionsPanel::RenderSimple() {
 }
 
 void SubcaptureOptionsPanel::RowSubcapturePath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
   ImGui::Text(Labels::SUBCAPTURE_PATH);
@@ -293,7 +293,7 @@ void SubcaptureOptionsPanel::RowSubcapturePath() {
 void SubcaptureOptionsPanel::ContextCallback(const Event& e) {
   const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   if (contextEvent.Mode == GitsAction::SUBCAPTURE &&
       (contextEvent.EventType == ContextEvent::Type::MetadataLoaded ||

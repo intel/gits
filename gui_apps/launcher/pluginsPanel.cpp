@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "pluginsPanel.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "launcherActions.h"
 #include "configOptions.h"
 #include <fstream>
@@ -22,7 +22,7 @@
 namespace {
 // Helpers and messages / labels
 gits::gui::Api GetPluginsApi() {
-  auto& context = gits::gui::Context::GetInstance();
+  auto& context = gits::gui::LauncherContext::GetInstance();
   if (context.SelectedAction == gits::gui::GitsAction::CAPTURE) {
     return context.SelectedApiForCapture;
   }
@@ -212,7 +212,7 @@ std::optional<PluginsPanel::PluginListEntry> PluginsPanel::GetPluginListEntry(
     return std::nullopt;
   }
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   const auto& pluginsList = context.SelectedAction == GitsAction::CAPTURE
                                 ? config_options::RecorderPlugins(context.SelectedAction)
@@ -246,7 +246,7 @@ void PluginsPanel::LoadPluginsList() {
 }
 
 void PluginsPanel::UpdateGitsConfig(const std::string& pluginName, const bool enable) {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto& gitsConfigPath = context.GetPathSafe(Path::CONFIG);
 
   if (gitsConfigPath.empty() || !std::filesystem::exists(gitsConfigPath)) {

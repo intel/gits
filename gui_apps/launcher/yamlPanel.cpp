@@ -15,7 +15,7 @@
 #include <algorithm>
 #include "imGuiHelper.h"
 
-#include "context.h"
+#include "launcherContext.h"
 #include "launcherActions.h"
 #include "launcherLabels.h"
 #include "baseEventBus.h"
@@ -49,7 +49,7 @@ YAMLPanel::YAMLPanel() : m_ConfigEditor("YAMLConfigEditor"), m_YamlTreeViewer() 
 void YAMLPanel::Render() {
   auto currentConfig = m_ActiveConfig;
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto configPath = context.GetPathSafe(Path::CONFIG);
   bool hasConfigFile = !configPath.empty();
   std::string configFilename = "default config";
@@ -127,7 +127,7 @@ void YAMLPanel::UpdateContent() {
           TextEditorWidget::TOOL_BAR_ITEMS::UNDO, TextEditorWidget::TOOL_BAR_ITEMS::REDO,
           TextEditorWidget::TOOL_BAR_ITEMS::CHECK, TextEditorWidget::TOOL_BAR_ITEMS::EXPORT}};
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& configurationForMode = context.ConfigurationForAction();
   std::optional<std::string> ymlText = std::nullopt;
   switch (m_ActiveConfig) {
@@ -163,7 +163,7 @@ void YAMLPanel::UpdateContent() {
 }
 
 bool YAMLPanel::UpdateInMemoryConfig(const std::filesystem::path& filePath) {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& currentModeConfiguration = context.ConfigurationForAction();
 
   bool success = false;
@@ -191,7 +191,7 @@ bool YAMLPanel::UpdateInMemoryConfig(const std::filesystem::path& filePath) {
 
 void YAMLPanel::SaveInMemoryConfigToFile(const std::filesystem::path& filePath) {
   UpdateInMemoryConfig(filePath);
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto exportPath = std::filesystem::path();
   switch (context.SelectedAction) {
   case GitsAction::CAPTURE:

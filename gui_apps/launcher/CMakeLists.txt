@@ -13,14 +13,14 @@ list(APPEND LAUNCHER_SOURCE
   ${LAUNCHER_SOURCE_DIR}/main.cpp
   ${LAUNCHER_SOURCE_DIR}/launcherActions.cpp
   ${LAUNCHER_SOURCE_DIR}/launcherApp.cpp
-  ${LAUNCHER_SOURCE_DIR}/context.cpp
+  ${LAUNCHER_SOURCE_DIR}/launcherContext.cpp
   ${LAUNCHER_SOURCE_DIR}/configOptionsGuiHelpers.cpp
 
   ${LAUNCHER_HEADER_DIR}/launcherCommon.h
   ${LAUNCHER_HEADER_DIR}/launcherActions.h
   ${LAUNCHER_HEADER_DIR}/launcherApp.h
   ${LAUNCHER_HEADER_DIR}/launcherConfig.h
-  ${LAUNCHER_HEADER_DIR}/context.h
+  ${LAUNCHER_HEADER_DIR}/launcherContext.h
   ${LAUNCHER_HEADER_DIR}/resource.h
   ${LAUNCHER_HEADER_DIR}/launcherLabels.h
   ${LAUNCHER_HEADER_DIR}/configOptionsGuiHelpers.h

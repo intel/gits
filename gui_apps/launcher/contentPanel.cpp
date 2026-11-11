@@ -8,7 +8,7 @@
 
 #include "contentPanel.h"
 
-#include "context.h"
+#include "launcherContext.h"
 #include "baseContext.h"
 #include "launcherActions.h"
 #include "launcherLabels.h"
@@ -19,7 +19,7 @@
 
 namespace gits::gui {
 
-typedef Context::SideBarItem SideBarItem;
+typedef LauncherContext::SideBarItem SideBarItem;
 
 ContentPanel::ContentPanel()
     : m_OptionsPanel(), m_YAMLPanel(), m_MetaDataPanel(), m_ResourceDumpPanel() {
@@ -54,7 +54,7 @@ float ContentPanel::WidthColumn1(bool resetSize) {
 }
 
 void ContentPanel::Render() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   if (ImGui::BeginTable("MainLayoutTable", 2, ImGuiTableFlags_BordersInnerV)) {
     ImGui::TableSetupColumn("Sidebar", ImGuiTableColumnFlags_WidthFixed, WidthColumn1() - 12.0f);
     ImGui::TableSetupColumn("Content", ImGuiTableColumnFlags_WidthStretch);
@@ -114,7 +114,7 @@ void ContentPanel::Render() {
 }
 
 void ContentPanel::RenderSimple() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   m_OptionsPanel.RenderSimple();
 
@@ -131,7 +131,7 @@ void ContentPanel::RenderSimple() {
 void ContentPanel::CaptureActionCallback(const Event& e) {
   const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& baseContext = BaseContext::GetBaseInstance();
 
   switch (actionEvent.ActionState) {
@@ -155,19 +155,19 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
     auto logPath = capture_actions::FindLatestRecorderLog(logDirectory);
 
     if (logPath.empty()) {
-      context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+      context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
       return;
     }
 
     std::ifstream file(logPath);
     if (!file.is_open()) {
-      context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+      context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
       return;
     }
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
     baseContext.AddGITSLogText(content);
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::LOG);
 
     const auto& streamDirectory = capture_actions::GetStreamDirectoryFromLog(content);
     if (streamDirectory.has_value()) {

@@ -11,13 +11,13 @@
 #include "resource.h"
 #include "launcherLabels.h"
 #include "imGuiHelper.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "guiActions.h"
 
 namespace gits::gui {
 
 LauncherConfig* LauncherApp::InitializeApp() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   m_LauncherConfig = new LauncherConfig();
   m_LauncherConfig->FillFromFile();
@@ -28,7 +28,7 @@ LauncherConfig* LauncherApp::InitializeApp() {
 };
 
 void LauncherApp::CreateUI() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   context.DetectBasePaths();
 
@@ -40,8 +40,8 @@ void LauncherApp::CreateUI() {
                                    : Labels::LOG_LAUNCHER_ADMIN_MODE_NO);
 #endif
 
-  context.BtnsSideBar =
-      new ImGuiHelper::TabGroup<Context::SideBarItem>(Labels::SIDE_BAR(), false, true, true);
+  context.BtnsSideBar = new ImGuiHelper::TabGroup<LauncherContext::SideBarItem>(Labels::SIDE_BAR(),
+                                                                                false, true, true);
 
   context.TheMainWindow = std::make_shared<MainWindow>();
   mainWindow = context.TheMainWindow;
@@ -56,7 +56,7 @@ void LauncherApp::CreateUI() {
 };
 
 void LauncherApp::RenderUI() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   const auto& io = ImGui::GetIO();
   ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
@@ -85,7 +85,7 @@ void LauncherApp::RenderUI() {
 };
 
 void LauncherApp::DestroyUI() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   delete context.BtnsSideBar;
   context.BtnsSideBar = nullptr;

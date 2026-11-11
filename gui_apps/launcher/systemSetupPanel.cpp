@@ -15,7 +15,7 @@
 #include <shlobj.h>
 
 #include "imGuiHelper.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "launcherActions.h"
 #include "launcherLabels.h"
 #include "log.h"
@@ -33,7 +33,7 @@ void SystemSetupPanel::Render() {
 }
 
 void SystemSetupPanel::RenderRegistry() {
-  const bool elevated = Context::GetInstance().IsAdminMode;
+  const bool elevated = LauncherContext::GetInstance().IsAdminMode;
 
   if (!elevated) {
     ImGui::PushStyleColor(ImGuiCol_Text, ImGuiHelper::Colors::WARNING);

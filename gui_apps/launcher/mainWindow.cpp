@@ -29,7 +29,7 @@
 
 namespace {
 
-std::string BuildCaptureStatusBadgeText(const gits::gui::Context& context,
+std::string BuildCaptureStatusBadgeText(const gits::gui::LauncherContext& context,
                                         bool waitingForQuietPeriod) {
   if (!waitingForQuietPeriod) {
     return gits::gui::Labels::CAPTURE_MONITORING_STATE_ACTIVE;
@@ -91,7 +91,7 @@ void RenderCenteredStatusPanel(const char* panelId,
   ImGui::PopStyleColor(2);
 }
 
-void RenderCapturePlaceholderContent(const gits::gui::Context& context, float cardWidth) {
+void RenderCapturePlaceholderContent(const gits::gui::LauncherContext& context, float cardWidth) {
   auto& baseContext = gits::gui::BaseContext::GetBaseInstance();
   const auto executablePath = baseContext.GetPathSafe(gits::gui::Path::CAPTURE_TARGET);
   const auto monitoredPid = context.CaptureMonitoredPid.load();
@@ -136,7 +136,7 @@ void RenderCapturePlaceholderContent(const gits::gui::Context& context, float ca
   ImGui::PopStyleColor();
 }
 
-void RenderSubcapturePlaceholderContent(const gits::gui::Context& context) {
+void RenderSubcapturePlaceholderContent(const gits::gui::LauncherContext& context) {
   auto& baseContext = gits::gui::BaseContext::GetBaseInstance();
   const auto streamPath =
       baseContext.GetPathSafe(gits::gui::Path::INPUT_STREAM, gits::gui::GitsAction::SUBCAPTURE);
@@ -159,7 +159,7 @@ void RenderSubcapturePlaceholderContent(const gits::gui::Context& context) {
 }
 
 void RenderPlaceholder() {
-  auto& context = gits::gui::Context::GetInstance();
+  auto& context = gits::gui::LauncherContext::GetInstance();
 
   const auto windowPos = ImGui::GetWindowPos();
   const auto windowSize = ImGui::GetWindowSize();
@@ -229,7 +229,7 @@ MainWindow::MainWindow() {
 
 #ifdef _WIN32
   RegistryManager::Instance().LoadEntriesFromYamlFile(
-      Context::GetInstance().GetRegistryKeysYamlPath());
+      LauncherContext::GetInstance().GetRegistryKeysYamlPath());
 #endif
 };
 
@@ -249,7 +249,7 @@ const CaptureCleanupOptions MainWindow::GetCleanupOptions() const {
 }
 
 void MainWindow::SetPlaybackFile(const std::filesystem::path& filePath) {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   context.SetPath(filePath, Path::INPUT_STREAM, GitsAction::PLAYBACK);
   context.SetPath(filePath, Path::INPUT_STREAM, GitsAction::SUBCAPTURE);
   context.ChangeMode(GitsAction::PLAYBACK);
@@ -257,7 +257,7 @@ void MainWindow::SetPlaybackFile(const std::filesystem::path& filePath) {
 }
 
 void MainWindow::Render() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   if (m_CaptureInProgress || context.SubcaptureInProgress) {
     RenderPlaceholder();
@@ -302,7 +302,7 @@ void MainWindow::Render() {
 void MainWindow::FileMenu() {
   namespace MnuLbl = gits::gui::Labels::Menu;
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto visibleAction = VisibleAction();
 
   if (ImGui::BeginMenu(MnuLbl::FILE)) {
@@ -411,7 +411,7 @@ void MainWindow::HelpMenu() {
 }
 
 void MainWindow::ModeSelectionButtons() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   ImGui::SameLine();
   auto offsetX = (ImGui::GetWindowWidth() - tabsToolBar->GetSize().x) / 2.0f;
@@ -423,7 +423,7 @@ void MainWindow::ModeSelectionButtons() {
 }
 
 void MainWindow::SimpleCurrentActionLabel() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto actionLabel = Labels::MODE_BUTTONS().at(context.SelectedAction).label;
   const auto labelText = actionLabel;
   const auto labelWidth = ImGui::CalcTextSize(labelText.c_str()).x;
@@ -435,7 +435,7 @@ void MainWindow::SimpleCurrentActionLabel() {
 }
 
 void MainWindow::SimpleActionButtons() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto backButtonWidth = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button,
                                               Labels::SIMPLE_MODE_BACK_TO_SELECTION_BUTTON);
   auto mainActionWidth = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button,
@@ -474,7 +474,7 @@ void MainWindow::SimpleActionButtons() {
 }
 
 void MainWindow::ModeToggle() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const char* currentModeLabel =
       context.CurrentMode == Mode::SIMPLE ? Labels::SIMPLE_MODE_LABEL : Labels::ADVANCED_MODE_LABEL;
   const auto simpleWidth = ImGui::CalcTextSize(Labels::SIMPLE_MODE_LABEL).x;
@@ -500,7 +500,7 @@ void MainWindow::ModeToggle() {
 }
 
 void MainWindow::RenderSimpleMode() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   if (context.SimpleModeSelectedAction.has_value()) {
     switch (context.SelectedAction) {
@@ -532,7 +532,7 @@ void MainWindow::RenderSimpleMode() {
 }
 
 void MainWindow::RenderSimpleModeSelection() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto& captureLabel = Labels::MODE_BUTTONS().at(GitsAction::CAPTURE).label;
   const auto& playbackLabel = Labels::MODE_BUTTONS().at(GitsAction::PLAYBACK).label;
   const auto& subcaptureLabel = Labels::MODE_BUTTONS().at(GitsAction::SUBCAPTURE).label;
@@ -577,7 +577,7 @@ void MainWindow::RenderSimpleModeSelection() {
 }
 
 void MainWindow::RenderAdvancedMode() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   GITSBaseRow();
 
@@ -608,7 +608,7 @@ void MainWindow::RenderAdvancedMode() {
 }
 
 std::optional<GitsAction> MainWindow::VisibleAction() const {
-  const auto& context = Context::GetInstance();
+  const auto& context = LauncherContext::GetInstance();
 
   if (context.CurrentMode == Mode::SIMPLE) {
     return context.SimpleModeSelectedAction;
@@ -618,7 +618,7 @@ std::optional<GitsAction> MainWindow::VisibleAction() const {
 }
 
 void MainWindow::MainActionButtons() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto mainActionWidth = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button,
                                               Labels::MainAction(context.SelectedAction));
 
@@ -710,7 +710,7 @@ void MainWindow::ShowReleaseNotesModal() {
 }
 
 void MainWindow::ShowCCodeModal() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   if (!m_ShowCCodeGeneration || context.SelectedAction != GitsAction::PLAYBACK) {
     return;
   }
@@ -772,7 +772,7 @@ void MainWindow::ShowCCodeModal() {
 }
 
 void MainWindow::GITSBaseRow() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
@@ -798,7 +798,7 @@ void MainWindow::GITSBaseRow() {
 void MainWindow::CaptureActionCallback(const Event& e) {
   const ActionEvent& actionEvent = static_cast<const ActionEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   switch (actionEvent.ActionState) {
   case ActionEvent::State::Started:
@@ -818,7 +818,7 @@ void MainWindow::CaptureActionCallback(const Event& e) {
 void MainWindow::PathCallback(const Event& e) {
   const PathEvent& pathEvent = static_cast<const PathEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   context.LauncherConfiguration->ToFile();
 
 #ifdef _WIN32

@@ -45,7 +45,7 @@ PlaybackOptionsPanel::PlaybackOptionsPanel() : BasePanel() {
 }
 
 void PlaybackOptionsPanel::Render() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
   auto windowWidth = ImGui::GetContentRegionAvail().x;
 
@@ -178,7 +178,7 @@ void PlaybackOptionsPanel::RenderSimple() {
 }
 
 void PlaybackOptionsPanel::SetScreenshotPathFromInputStream() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, GitsAction::PLAYBACK);
   const auto screenshotPath = streamPath.parent_path();
   context.SetPath(screenshotPath, Path::ARTIFACTS, GitsAction::PLAYBACK);
@@ -187,7 +187,7 @@ void PlaybackOptionsPanel::SetScreenshotPathFromInputStream() {
 void PlaybackOptionsPanel::ContextCallback(const Event& e) {
   const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   if (contextEvent.Mode == GitsAction::PLAYBACK &&
       (contextEvent.EventType == ContextEvent::Type::MetadataLoaded ||

@@ -41,10 +41,10 @@ typedef gits::ImGuiHelper::TextEditorWidget TextEditorWidget;
 
 class MainWindow;
 
-class Context : public BaseContext {
+class LauncherContext : public BaseContext {
 public:
-  static Context& GetInstance() {
-    static Context context;
+  static LauncherContext& GetInstance() {
+    static LauncherContext context;
     return context;
   }
 
@@ -94,7 +94,7 @@ public:
   void ChangeMode(GitsAction gitsAction);
 
 private:
-  Context();
+  LauncherContext();
 };
 
 } // namespace gits::gui

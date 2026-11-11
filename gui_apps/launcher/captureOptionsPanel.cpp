@@ -12,7 +12,7 @@
 
 #include "baseContext.h"
 #include "baseCommon.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "launcherActions.h"
 #include "launcherLabels.h"
 #include "baseLabels.h"
@@ -37,7 +37,7 @@ void CaptureOptionsPanel::Render() {
                              &config_options::RecorderEnabled(GitsAction::CAPTURE));
   config_options_gui_helpers::ConfigOptionHelpButton(ConfigMetadata::Common::Recorder::enabled);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto api = context.SelectedApiForCapture;
 
   if (api == Api::DIRECTX || api == Api::VULKAN) {

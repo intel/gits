@@ -9,7 +9,7 @@
 #include "configOptionsGuiHelpers.h"
 
 #include "configOptions.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "contextHelper.h"
 #include "imgui.h"
 #include "imGuiHelper.h"
@@ -22,7 +22,7 @@ namespace gits::gui::config_options_gui_helpers {
 
 bool Trace(GitsAction gitsAction, float indentation) {
   bool changed = false;
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   const char* buttonLabelToUse = gitsAction == GitsAction::CAPTURE
                                      ? Labels::BASE_ON_TARGET_PATH_TRACE

@@ -16,14 +16,14 @@
 #include "imGuiHelper.h"
 #include "baseCommon.h"
 #include "baseContext.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "baseLabels.h"
 
 namespace gits::gui {
 
 namespace Labels {
 using ItemType = gits::ImGuiHelper::ItemType;
-using SideBarItem = Context::SideBarItem;
+using SideBarItem = LauncherContext::SideBarItem;
 
 // main window
 static constexpr const char* OPEN_FOLDER_MENU = "Open Folder";

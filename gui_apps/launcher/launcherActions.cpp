@@ -41,7 +41,7 @@
 
 namespace gits::gui {
 
-typedef Context::SideBarItem SideBarItem;
+typedef LauncherContext::SideBarItem SideBarItem;
 
 std::optional<std::string> ValidateYaml(const std::string& text) {
   try {
@@ -116,7 +116,7 @@ void RelaunchAsAdmin() {
 #endif
 
 void UpdateCLICall() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   context.UpdateFixedLauncherArguments();
 
   switch (context.SelectedAction) {
@@ -164,7 +164,7 @@ void UpdateCLICall() {
 }
 
 void PlaybackStream() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
   auto tmpConfigInfo =
@@ -200,7 +200,7 @@ void PlaybackStream() {
 }
 
 void SubcaptureStream() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto gitsPlayerPath = context.GetGITSPlayerPath();
 
   auto tmpConfigInfo =
@@ -237,7 +237,7 @@ void SubcaptureStream() {
 }
 
 void GenerateCCode(CCodeExport parameters) {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const auto gitsPlayerPath = context.GetGITSPlayerPath();
 
   context.SetGITSLogText("");
@@ -271,7 +271,7 @@ void GenerateCCode(CCodeExport parameters) {
 
 TemporaryConfigInfo PrepareTemporaryConfigFile(GitsAction gitsAction,
                                                const std::filesystem::path& directory) {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& baseContext = BaseContext::GetBaseInstance();
 
   if (directory.empty()) {
@@ -411,7 +411,7 @@ bool IsValidGITSBasePath(const std::filesystem::path& path) {
 }
 
 void SetAllConfigsFromBasePath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   auto captureConfigPath = context.GetRecorderConfigPathForApi(context.SelectedApiForCapture);
   if (std::filesystem::exists(captureConfigPath)) {
@@ -425,7 +425,7 @@ void SetAllConfigsFromBasePath() {
 }
 
 void NewLauncherSession() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   const auto emptyPath = "";
 
@@ -443,13 +443,13 @@ void NewLauncherSession() {
 }
 
 void SetTracePathFromInputStream() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto streamPath = context.GetPathSafe(Path::INPUT_STREAM, GitsAction::PLAYBACK);
   context.SetPath(streamPath.parent_path(), Path::TRACE, GitsAction::PLAYBACK);
 }
 
 void SetTracePathFromTargetExecutable() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto targetPath = context.GetPathSafe(Path::CAPTURE_TARGET, GitsAction::CAPTURE);
   context.SetPath(targetPath.parent_path(), Path::TRACE, GitsAction::CAPTURE);
 }

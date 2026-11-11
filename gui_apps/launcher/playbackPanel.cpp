@@ -11,7 +11,7 @@
 #include "imGuiHelper.h"
 
 #include "resource.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "launcherActions.h"
 #include "fileActions.h"
 #include "launcherLabels.h"
@@ -45,7 +45,7 @@ float WidthLastButton() {
 } // namespace
 
 namespace gits::gui {
-typedef gits::gui::Context::SideBarItem SideBarItem;
+typedef gits::gui::LauncherContext::SideBarItem SideBarItem;
 
 PlaybackPanel::PlaybackPanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
@@ -70,7 +70,7 @@ void PlaybackPanel::RenderSimple() {
 }
 
 void PlaybackPanel::RowStreamPath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
   ImGui::Text(Labels::STREAM);
@@ -102,7 +102,7 @@ void PlaybackPanel::RowStreamPath() {
 }
 
 void PlaybackPanel::RowArguments() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CUSTOM_ARGS);
   ImGui::SameLine();
@@ -127,7 +127,7 @@ void PlaybackPanel::RowArguments() {
 }
 
 void PlaybackPanel::RowConfigPath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CONFIG);
   ImGui::SameLine();
@@ -177,7 +177,7 @@ void PlaybackPanel::FileDropCallback(const Event& e) {
 void PlaybackPanel::ContextCallback(const Event& e) {
   const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& configurationForMode = context.ConfigurationForAction(GitsAction::PLAYBACK);
 
   if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {

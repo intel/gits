@@ -14,7 +14,7 @@
 #include "imGuiHelper.h"
 
 #include "resource.h"
-#include "context.h"
+#include "launcherContext.h"
 #include "baseContext.h"
 #include "launcherActions.h"
 #include "guiActions.h"
@@ -78,7 +78,7 @@ float WidthLastButton() {
 } // namespace
 
 namespace gits::gui {
-typedef Context::SideBarItem SideBarItem;
+typedef LauncherContext::SideBarItem SideBarItem;
 
 CapturePanel::CapturePanel() : BasePanel() {
   EventBus::GetInstance().subscribe<PathEvent>(
@@ -117,7 +117,7 @@ void CapturePanel::RenderSimple() {
 }
 
 void CapturePanel::RowCleanup() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   [[maybe_unused]] auto availableWidth = ImGui::GetContentRegionAvail().x;
   [[maybe_unused]] const auto style = ImGui::GetStyle();
 
@@ -154,7 +154,7 @@ void CapturePanel::RowTargetPath() {
 
   auto comboWidth = ImGui::CalcTextSize("N/A   ").x + style.FramePadding.x * 2.0f;
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
 
   ImGui::Text(Labels::TARGET);
@@ -194,7 +194,7 @@ void CapturePanel::RowTargetPath() {
 }
 
 void CapturePanel::RowArguments() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CUSTOM_ARGS);
   ImGui::SameLine();
@@ -215,7 +215,7 @@ void CapturePanel::RowArguments() {
 }
 
 void CapturePanel::RowConfigPath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CAPTURE_CONFIG);
   ImGui::SameLine();
@@ -243,7 +243,7 @@ void CapturePanel::RowConfigPath() {
 }
 
 void CapturePanel::RowOutputPath() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto availableWidth = ImGui::GetContentRegionAvail().x;
   ImGui::Text(Labels::CAPTURE_OUTPUT_PATH);
   ImGui::SameLine();
@@ -276,7 +276,7 @@ void CapturePanel::RowOutputPath() {
 }
 
 void CapturePanel::CaptureStream() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   context.SetGITSLogText("");
 
@@ -287,7 +287,7 @@ void CapturePanel::CaptureStream() {
   std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
   if (executablePath.empty()) {
     LOG_ERROR << "No target application was selected for capture";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -295,7 +295,7 @@ void CapturePanel::CaptureStream() {
   const auto gitsBasePath = context.GetPathSafe(Path::GITS_BASE);
   if (gitsBasePath.empty()) {
     LOG_ERROR << "No GITS base path for capture was selected";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -303,7 +303,7 @@ void CapturePanel::CaptureStream() {
   std::filesystem::path captureConfigPath = context.GetPathSafe(Path::CONFIG, GitsAction::CAPTURE);
   if (captureConfigPath.empty()) {
     LOG_ERROR << "No config for capture was selected";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -311,14 +311,14 @@ void CapturePanel::CaptureStream() {
   if (!FileActions::Exists(gitsBasePath)) {
     LOG_ERROR << "Selected GITS base path for capture: " << gitsBasePath.string()
               << " doesn't exist";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
 
   if (context.SelectedApiForCapture == Api::UNKNOWN) {
     LOG_ERROR << "No API was selected for capture";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -329,7 +329,7 @@ void CapturePanel::CaptureStream() {
            << stringForApi.at(context.SelectedApiForCapture);
   if (!capture_actions::CopyRecorderFiles(gitsBasePath, executablePath.parent_path(),
                                           context.SelectedApiForCapture)) {
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -341,7 +341,7 @@ void CapturePanel::CaptureStream() {
   if (recorderDirectoryName.empty() || !FileActions::Exists(recorderDirectory)) {
     LOG_ERROR << "Recorder directory for selected API: " << recorderDirectory.string()
               << " doesn't exist";
-    context.BtnsSideBar->SelectEntry(Context::SideBarItem::APP_LOG);
+    context.BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::APP_LOG);
 
     return;
   }
@@ -416,7 +416,7 @@ void CapturePanel::FileDropCallback(const Event& e) {
 void CapturePanel::ContextCallback(const Event& e) {
   const ContextEvent& contextEvent = static_cast<const ContextEvent&>(e);
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   auto& configurationForMode = context.ConfigurationForAction(GitsAction::CAPTURE);
 
   if (contextEvent.EventType == ContextEvent::Type::InMemoryConfigurationChanged) {

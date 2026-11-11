@@ -10,14 +10,14 @@
 
 #include "imgui.h"
 
-#include "context.h"
+#include "launcherContext.h"
 #include "baseContext.h"
 #include "baseCommon.h"
 #include "launcherLabels.h"
 
 namespace {
 bool ArePluginsSupported() {
-  auto& context = gits::gui::Context::GetInstance();
+  auto& context = gits::gui::LauncherContext::GetInstance();
   const auto api = context.SelectedAction == gits::gui::GitsAction::CAPTURE
                        ? context.SelectedApiForCapture
                        : context.GetStreamAPI();
@@ -73,7 +73,7 @@ void OptionsPanel::Render() {
 }
 
 void OptionsPanel::RenderSimple() {
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
 
   switch (context.SelectedAction) {
   case GitsAction::CAPTURE:

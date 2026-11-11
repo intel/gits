@@ -76,7 +76,7 @@ ResourceDumpPanel::ResourceDumpPanel() : BasePanel() {
 void ResourceDumpPanel::Render() {
   using LB = Labels::ResourceDumpPanel;
 
-  auto& context = Context::GetInstance();
+  auto& context = LauncherContext::GetInstance();
   const float indent = ImGuiHelper::WidthOf(ImGuiHelper::Widgets::Button, "  ");
 
   auto inputWidth =

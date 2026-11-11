@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "context.h"
+#include "launcherContext.h"
 
 #include "imgui.h"
 #include <filesystem>
@@ -63,21 +63,21 @@ constexpr const char* REGISTRY_KEYS_FILE_NAME = "registryKeys.yml";
 
 } // namespace
 
-BaseConfig* Context::GetBaseConfiguration() {
+BaseConfig* LauncherContext::GetBaseConfiguration() {
   return LauncherConfiguration;
 }
 
-void Context::UpdateFixedLauncherArguments() {
+void LauncherContext::UpdateFixedLauncherArguments() {
   FixedLauncherArguments = "";
   FixedLauncherArguments += TheMainWindow->GetCLIArguments();
 }
 
-bool Context::MainActionAllowed() {
+bool LauncherContext::MainActionAllowed() {
   return false;
 }
 
 #ifdef _WIN32
-std::filesystem::path Context::GetRegistryKeysYamlPath() const {
+std::filesystem::path LauncherContext::GetRegistryKeysYamlPath() const {
   auto& baseContext = BaseContext::GetBaseInstance();
   const auto gitsBasePath = baseContext.GetPathSafe(Path::GITS_BASE);
   if (gitsBasePath.empty()) {
@@ -88,29 +88,29 @@ std::filesystem::path Context::GetRegistryKeysYamlPath() const {
 }
 #endif
 
-bool Context::IsPlayback() {
+bool LauncherContext::IsPlayback() {
   auto& baseContext = BaseContext::GetBaseInstance();
   return baseContext.SelectedAction == GitsAction::PLAYBACK;
 }
 
-bool Context::IsCapture() {
+bool LauncherContext::IsCapture() {
   auto& baseContext = BaseContext::GetBaseInstance();
   return baseContext.SelectedAction == GitsAction::CAPTURE;
 }
 
-void Context::ChangeMode(GitsAction gitsAction) {
+void LauncherContext::ChangeMode(GitsAction gitsAction) {
   auto& baseContext = BaseContext::GetBaseInstance();
   baseContext.SelectedAction = gitsAction;
   //based on selected action / API
-  BtnsSideBar->SetVisible(Context::SideBarItem::LABEL_STREAM, IsPlayback());
-  BtnsSideBar->SetVisible(Context::SideBarItem::STATS, IsPlayback());
-  BtnsSideBar->SetVisible(Context::SideBarItem::RESOURCE_DUMP,
+  BtnsSideBar->SetVisible(LauncherContext::SideBarItem::LABEL_STREAM, IsPlayback());
+  BtnsSideBar->SetVisible(LauncherContext::SideBarItem::STATS, IsPlayback());
+  BtnsSideBar->SetVisible(LauncherContext::SideBarItem::RESOURCE_DUMP,
                           IsPlayback() && baseContext.GetStreamAPI() == Api::DIRECTX);
   // TODO Module entries are unconditionally visible. Gating them the way
   // RESOURCE_DUMP is gated belongs to the module itself, once a module can
   // declare which APIs and modes it supports.
 
-  BtnsSideBar->SelectEntry(Context::SideBarItem::OPTIONS);
+  BtnsSideBar->SelectEntry(LauncherContext::SideBarItem::OPTIONS);
 
   UpdateFixedLauncherArguments();
   gits::gui::gui_actions::LoadConfigFromMemory(gitsAction);
@@ -124,7 +124,7 @@ void Context::ChangeMode(GitsAction gitsAction) {
   EventBus::GetInstance().publish<AppEvent>(AppEvent::Type::ModeChanged);
 }
 
-Context::Context() : BtnsSideBar(nullptr) {
+LauncherContext::LauncherContext() : BtnsSideBar(nullptr) {
 #ifdef _WIN32
   IsAdminMode = IsElevated();
 #endif
