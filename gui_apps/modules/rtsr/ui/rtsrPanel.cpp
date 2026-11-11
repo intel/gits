@@ -18,7 +18,7 @@
 #include <imgui.h>
 #include <implot.h>
 
-GITS_GUI_REGISTER_MODULE(Rtsr,
+GITS_GUI_REGISTER_MODULE("rtsr",
                          ::gits::gui::RtsrPanel,
                          ::gits::rtsr::MODULE_NAME,
                          ::gits::rtsr::MODULE_NAME_HINT)
@@ -98,23 +98,20 @@ void RtsrPanel::OnRtsrEvent(const RtsrEvent& event) {
   m_PerformancePanel.OnRtsrEvent(event);
 }
 
-ModuleId RtsrPanel::GetID() const {
-  return ModuleId::Rtsr;
-}
-
-std::string RtsrPanel::GetName() const {
+const char* RtsrPanel::GetName() const {
   return rtsr::MODULE_NAME;
 }
 
-std::string RtsrPanel::GetNameHint() const {
+const char* RtsrPanel::GetNameHint() const {
   return rtsr::MODULE_NAME_HINT;
 }
 
-std::vector<std::string> RtsrPanel::Plugins(Api api) const {
+const std::vector<std::string>& RtsrPanel::Plugins(Api api) const {
+  static const std::vector<std::string> plugins{rtsr::PLUGIN_NAME};
   if (api == Api::DIRECTX || api == Api::VULKAN) {
-    return {rtsr::PLUGIN_NAME};
+    return plugins;
   }
-  return {};
+  return ModuleBasePanel::Plugins(api);
 }
 
 bool RtsrPanel::Activate() {

@@ -81,6 +81,10 @@ BaseContext& BaseContext::GetBaseInstance() {
   return *Instance;
 }
 
+void BaseContext::SetBaseInstance(BaseContext& context) {
+  Instance = &context;
+}
+
 namespace {
 // These are here just to satisfy the GITS Configuration constructor interface
 // TODO: Could something be changed in regards to initialization of the GITS Configuration struct?

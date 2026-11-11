@@ -130,7 +130,7 @@ void ContentPanel::Render() {
         auto selection = registry.BtnsModules->Selected();
         if (auto* module = ModuleRegistry::GetInstance().Find(selection)) {
           renderDummy = false;
-          ImGui::BeginChild(module->GetName().c_str(), ImVec2(area.x, area.y), true);
+          ImGui::BeginChild(module->GetName(), ImVec2(area.x, area.y), true);
           module->Render();
           ImGui::EndChild();
         }

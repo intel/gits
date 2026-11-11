@@ -145,19 +145,22 @@ public:
 
   // Singleton
   static EventBus& GetInstance() {
-    static EventBus instance;
+    return *Current();
+  }
 
-    return instance;
+  // Every binary has its own instance; a Studio module points its copy at Studio's bus before
+  // it creates its panel.
+  static void SetInstance(EventBus& bus) {
+    Current() = &bus;
   }
 
   template <typename T>
   void subscribe(const EventHandler& handler) {
-    std::lock_guard guard{m_EventBusMutex};
     static_assert(std::is_base_of_v<Event, T>, "T must derive from Event");
     // NOTE: direct comparison of std::function objects is not generally
     // supported/portable. We accept duplicate handlers; callers that need
     // precise unsubscribe semantics should keep the returned token (future).
-    subscribers_[std::type_index(typeid(T))].push_back(handler);
+    AddSubscriber(std::type_index(typeid(T)), handler);
   }
 
   // Generic subscribe with type filtering
@@ -179,33 +182,14 @@ public:
 
   template <typename T>
   void unsubscribe(const EventHandler& handler) {
-    std::lock_guard guard{m_EventBusMutex};
     static_assert(std::is_base_of_v<Event, T>, "T must derive from Event");
-    auto it = subscribers_.find(std::type_index(typeid(T)));
-    if (it != subscribers_.end()) {
-      auto& handlers = it->second;
-      handlers.erase(std::remove_if(handlers.begin(), handlers.end(),
-                                    [&](const EventHandler& h) {
-                                      // best-effort: compare target type and function pointer target
-                                      if (h.target_type() != handler.target_type()) {
-                                        return false;
-                                      }
-                                      auto pa = h.template target<void (*)(const Event&)>();
-                                      auto pb = handler.template target<void (*)(const Event&)>();
-                                      if (pa && pb) {
-                                        return *pa == *pb;
-                                      }
-                                      return false;
-                                    }),
-                     handlers.end());
-    }
+    RemoveSubscriber(std::type_index(typeid(T)), handler);
   }
 
   template <typename T>
   void publish(const T& event) {
-    std::lock_guard guard{m_EventQueueMutex};
     static_assert(std::is_base_of_v<Event, T>, "T must derive from Event");
-    m_EventQueue.push(std::make_unique<T>(event));
+    Enqueue(std::make_unique<T>(event));
   }
 
   template <typename T>
@@ -259,6 +243,48 @@ public:
 
 private:
   EventBus(){};
+
+  static EventBus*& Current() {
+    static EventBus instance;
+    static EventBus* current = &instance;
+    return current;
+  }
+
+  // A Studio module calls the templates above on Studio's bus, but every binary has its own C++
+  // runtime. These are virtual so that only code of the binary that created the bus changes its
+  // containers.
+  virtual void AddSubscriber(std::type_index type, const EventHandler& handler) {
+    std::lock_guard guard{m_EventBusMutex};
+    subscribers_[type].push_back(handler);
+  }
+
+  virtual void RemoveSubscriber(std::type_index type, const EventHandler& handler) {
+    std::lock_guard guard{m_EventBusMutex};
+    auto it = subscribers_.find(type);
+    if (it != subscribers_.end()) {
+      auto& handlers = it->second;
+      handlers.erase(std::remove_if(handlers.begin(), handlers.end(),
+                                    [&](const EventHandler& h) {
+                                      // best-effort: compare target type and function pointer target
+                                      if (h.target_type() != handler.target_type()) {
+                                        return false;
+                                      }
+                                      auto pa = h.template target<void (*)(const Event&)>();
+                                      auto pb = handler.template target<void (*)(const Event&)>();
+                                      if (pa && pb) {
+                                        return *pa == *pb;
+                                      }
+                                      return false;
+                                    }),
+                     handlers.end());
+    }
+  }
+
+  virtual void Enqueue(std::unique_ptr<Event> event) {
+    std::lock_guard guard{m_EventQueueMutex};
+    m_EventQueue.push(std::move(event));
+  }
+
   std::unordered_map<std::type_index, std::vector<EventHandler>> subscribers_;
   std::queue<std::unique_ptr<Event>> m_EventQueue;
   std::queue<std::unique_ptr<Event>>

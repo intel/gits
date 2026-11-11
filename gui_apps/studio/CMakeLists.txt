@@ -113,12 +113,18 @@ target_compile_options(gits_studio PRIVATE
 
 target_compile_definitions(gits_studio PRIVATE IMGUI_IMPL_VULKAN_NO_PROTOTYPES)
 
-target_link_libraries(gits_studio PRIVATE imgui_common log common stream gui_common ${CMAKE_DL_LIBS})
-gui_modules_link(gits_studio)
+target_link_libraries(gits_studio PRIVATE imgui_common log common stream gui_common module_common ${CMAKE_DL_LIBS})
 if(NOT WIN64)
 target_link_libraries(gits_studio PRIVATE glfw)
 endif()
 add_dependencies(gits_studio config_codegen generate_font_header)
+# The build-tree studio runs from GUI_STUDIO_RUNTIME_DIR, where gui_module() copies every module
+# built in this tree; building the studio builds them all.
+set_target_properties(gits_studio PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${GUI_STUDIO_RUNTIME_DIR}")
+get_property(module_targets GLOBAL PROPERTY GUI_MODULE_TARGETS)
+if(module_targets)
+  add_dependencies(gits_studio ${module_targets})
+endif()
 add_custom_command(TARGET gits_studio POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
     $<TARGET_FILE:dxil-spirv-c-shared>

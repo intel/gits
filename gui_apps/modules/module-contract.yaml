@@ -1,0 +1,143 @@
+# ===================== begin_copyright_notice ============================
+#
+# Copyright (C) 2023-2026 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#
+# ===================== end_copyright_notice ==============================
+
+# The Studio module contract in structured form. README.md describes it in prose.
+
+name: gits-studio-module
+purpose: "Studio UI module built as a DLL and loaded by gitsStudio at runtime"
+
+compatibility:
+  coupling: build-tree
+  requirement: "Module and gitsStudio come from the same source tree, toolchain and build configuration, and are deployed together."
+  checks: none
+
+platforms:
+  windows-x64:
+    library: module.dll
+
+directory:
+  roots:
+    - "<studio-executable-directory>/Modules"
+    - "<gits-base-path>/Modules, used when the first root does not exist"
+  module_directory: "<root>/<id>; by convention the folder is named after the module id"
+  library: module.dll
+  optional_files:
+    - module.pdb
+    - "DLLs the module imports; also looked up next to gitsStudio.exe and in System32"
+  build_tree: "Every module built in the tree is copied into Modules/<id> next to the build-tree gitsStudio.exe"
+  unload: never
+
+export:
+  name: GitsGuiModule
+  linkage: C
+  signature: "void GitsGuiModule(const ModuleContext* context, ModuleRegistration* registration)"
+  generated_by: "GITS_GUI_REGISTER_MODULE(\"id\", PanelType, name, nameHint), once per module, at global scope"
+  effect:
+    - "Binds the module to Studio (BindModule)."
+    - "Returns the module's registration."
+
+registration:
+  type: ModuleRegistration
+  fields:
+    Id: "const char*; the module's id, owned by the DLL; unique among modules, ignoring case; lowercase by convention, like a plugin name"
+    Create: "std::unique_ptr<ModuleBasePanel> (*)(); creates the root panel"
+    Name: "const char*; sidebar label, owned by the DLL"
+    NameHint: "const char*; sidebar tooltip, owned by the DLL"
+
+root_panel:
+  base: ModuleBasePanel
+  construction: "Default-constructible. Created once by Studio, destroyed at shutdown."
+  required_methods:
+    - GetName
+    - GetNameHint
+    - Render
+    - Activate
+    - Deactivate
+    - IsActive
+  optional_methods:
+    - Plugins
+  returns:
+    GetName: "const char*; owned by the module"
+    GetNameHint: "const char*; owned by the module"
+    Plugins: "const std::vector<std::string>&; a list the module keeps, empty by default"
+  constraints:
+    - "One module per DLL."
+    - "The destructor stops everything Activate started."
+
+module_context:
+  type: ModuleContext
+  ownership: "Owned by Studio; valid for the rest of the process."
+  fields:
+    ImGui: "ImGuiContext*; Studio's ImGui context"
+    ImGuiAlloc: "ImGuiMemAllocFunc; Studio's ImGui allocator"
+    ImGuiFree: "ImGuiMemFreeFunc; Studio's ImGui deallocator"
+    ImGuiAllocUserData: "void*; user data of Studio's ImGui allocator"
+    LogAppender: "plog::IAppender*; Studio's logger"
+    LogLevel: "gits::LogLevel; Studio's log level"
+    Events: "EventBus*; Studio's event bus"
+    Base: "BaseContext*; Studio's base context"
+
+shared_with_studio:
+  imgui: "Context and allocator, installed with ImGui::SetCurrentContext and ImGui::SetAllocatorFunctions"
+  log: "Module logger chained to Studio's appender"
+  event_bus: "EventBus::GetInstance() returns Studio's bus (EventBus::SetInstance)"
+  base_context: "BaseContext::GetBaseInstance() returns Studio's context (BaseContext::SetBaseInstance)"
+
+not_shared:
+  - "Other Studio singletons, for example StudioContext::GetInstance()"
+  - "ImGui helper state, for example ImGuiHelper::CurrentUIScale() and the fonts"
+  - "The heap of the C and C++ runtime"
+
+memory:
+  heap: "Studio and each module DLL have their own; memory is freed by the binary that allocated it"
+  rules:
+    - "Inside the module, the standard library is used as usual."
+    - "Nothing Studio would free or resize is handed to it: no std::string, std::vector or other owning object by value, and no malloc memory."
+    - "The BaseContext is read, never changed."
+    - "Subscribing and publishing on the EventBus need no care: Studio's bus stores handlers and events with its own code, and each is destroyed by the code that created it."
+
+lifecycle:
+  - "Studio initializes its log, configuration, contexts, EventBus and ImGui context."
+  - "Building the content panel calls ModuleRegistry::CreateModules, which loads every Modules/<id>/module.dll."
+  - "Studio calls GitsGuiModule; the module binds to Studio and returns its registration."
+  - "Studio registers the module and creates its root panel."
+  - "If exactly one module is loaded, Studio activates it."
+  - "The sidebar button activates and deactivates the module; the selected module is rendered."
+  - "At shutdown, Studio destroys the panels."
+  - "The DLLs stay loaded until the process exits."
+
+rules:
+  module:
+    - "Call ImGui only from Render."
+    - "Use the EventBus through EventBus::GetInstance and read the BaseContext through BaseContext::GetBaseInstance, never from static initializers."
+    - "Subscribe on the EventBus once, for the panel's whole life."
+    - "Stop worker threads, servers and sockets in Deactivate and in the destructor."
+  forbidden:
+    - "Create or destroy an ImGui context, or change ImGui's allocator or fonts."
+    - "Hand Studio an object it would have to free, such as a std::string or std::vector by value, or malloc memory."
+    - "Change the BaseContext."
+    - "Use Studio singletons other than the shared ones."
+    - "Unload a module DLL."
+
+errors:
+  skipped_at_load:
+    - "A module whose id is empty or already used by another module: logged, and not added to the sidebar."
+  caught_by_studio:
+    - "Exceptions from the panel factory: the module is dropped from the sidebar."
+    - "Exceptions from Activate: the sidebar button stays unchecked."
+    - "Exceptions from Deactivate and Plugins: logged."
+  not_guarded:
+    - Render
+
+build:
+  helpers:
+    gui_module: "gui_module(target id): Windows x64 only; links imgui_addons; names the output module.dll; copies it into Modules/<id> next to the build-tree gitsStudio.exe whenever the module is built"
+    gui_module_install: "gui_module_install(target): installs module.dll and module.pdb into Modules/<id>, component gits_studio"
+  registration: "add_subdirectory(<folder>) inside if(WIN64) in gui_apps/modules/CMakeLists.txt"
+  studio: "Building gits_studio builds every module registered with gui_module"
+  example: gui_apps/modules/hello_module

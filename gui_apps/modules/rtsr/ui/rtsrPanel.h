@@ -37,15 +37,14 @@ public:
 
   void Render() override;
 
-  ModuleId GetID() const override;
-  std::string GetName() const override;
-  std::string GetNameHint() const override;
+  const char* GetName() const override;
+  const char* GetNameHint() const override;
 
   bool Activate() override;
   bool Deactivate() override;
   bool IsActive() override;
 
-  std::vector<std::string> Plugins(Api api) const override;
+  const std::vector<std::string>& Plugins(Api api) const override;
 
 private:
   void OnRtsrEvent(const RtsrEvent& event);

@@ -49,8 +49,7 @@ void StudioApp::CreateUI() {
   auto& registry = ModuleRegistry::GetInstance();
   // for now it's only one module in here, so let's just acticvate it...
   if (registry.Modules().size() == 1) {
-    //registry.BtnsModules->SelectEntry(ModuleId::Rtsr);
-    registry.EnableModule(registry.Modules()[0]->GetID());
+    registry.EnableModule(registry.Ids().front());
   }
 };
 

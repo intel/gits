@@ -46,6 +46,9 @@ class MainWindow;
 class BaseContext {
 public:
   static BaseContext& GetBaseInstance();
+  // Every binary has its own instance pointer; a Studio module points its copy at Studio's
+  // context before it creates its panel.
+  static void SetBaseInstance(BaseContext& context);
 
   struct GitsActionConfiguration {
     bool ConfigurationDirty = false;
