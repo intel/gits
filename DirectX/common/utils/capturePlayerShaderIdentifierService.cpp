@@ -26,7 +26,10 @@ void CapturePlayerShaderIdentifierService::AddCaptureShaderIdentifier(
 }
 
 void CapturePlayerShaderIdentifierService::AddPlayerShaderIdentifier(
-    CommandKey commandKey, ShaderIdentifier playerIdentifier, LPWSTR exportName) {
+    CommandKey commandKey,
+    ShaderIdentifier playerIdentifier,
+    LPWSTR exportName,
+    uint64_t patchMask) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   auto itByCommandKey = m_ShaderIdentifiersByCommandKey.find(commandKey);
@@ -34,11 +37,18 @@ void CapturePlayerShaderIdentifierService::AddPlayerShaderIdentifier(
 
   auto it = m_ShaderIdentifiers.find(itByCommandKey->second);
   if (it != m_ShaderIdentifiers.end()) {
+    // Exports sharing a capture identifier may have different local root signatures
+    uint64_t mergedPatchMask = it->second.PatchMask | patchMask;
+    if (mergedPatchMask != it->second.PatchMask) {
+      it->second.PatchMask = mergedPatchMask;
+      m_Changed = true;
+    }
+    m_ShaderIdentifiersByCommandKey.erase(itByCommandKey);
     return;
   }
 
   m_ShaderIdentifiers[itByCommandKey->second] =
-      ShaderIdentifierMapping{itByCommandKey->second, playerIdentifier};
+      ShaderIdentifierMapping{itByCommandKey->second, playerIdentifier, patchMask};
   m_ShaderIdentifiersByCommandKey.erase(itByCommandKey);
   m_Changed = true;
 

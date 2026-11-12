@@ -59,6 +59,7 @@ void GpuPatchLayer::Pre(IUnknownReleaseCommand& c) {
     m_AddressService.DestroyInterface(c.m_Object.Key);
     m_DescriptorHandleService.DestroyHeap(c.m_Object.Key);
     m_CommandListService.Remove(c.m_Object.Key);
+    m_LocalRootSignatureService.DestroyInterface(c.m_Object.Key);
 
     const auto mappingsIt = m_CurrentMappingsByCommandList.find(c.m_Object.Key);
     if (mappingsIt != m_CurrentMappingsByCommandList.end()) {
@@ -133,8 +134,25 @@ void GpuPatchLayer::Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& 
   }
   CapturePlayerShaderIdentifierService::ShaderIdentifier shaderIdentifier;
   memcpy(shaderIdentifier.data(), c.m_Result.Value, shaderIdentifier.size());
-  m_ShaderIdentifierService.AddPlayerShaderIdentifier(c.Key, shaderIdentifier,
-                                                      c.m_pExportName.Value);
+  m_ShaderIdentifierService.AddPlayerShaderIdentifier(
+      c.Key, shaderIdentifier, c.m_pExportName.Value,
+      m_LocalRootSignatureService.GetPatchMask(c.m_Object.Key, c.m_pExportName.Value));
+}
+
+void GpuPatchLayer::Post(ID3D12DeviceCreateRootSignatureCommand& c) {
+  m_LocalRootSignatureService.CreateRootSignature(c);
+}
+
+void GpuPatchLayer::Post(ID3D12Device5CreateStateObjectCommand& c) {
+  m_LocalRootSignatureService.CreateStateObject(c);
+}
+
+void GpuPatchLayer::Post(ID3D12Device7AddToStateObjectCommand& c) {
+  m_LocalRootSignatureService.AddToStateObject(c);
+}
+
+void GpuPatchLayer::Post(IUnknownQueryInterfaceCommand& c) {
+  m_LocalRootSignatureService.QueryInterface(c);
 }
 
 void GpuPatchLayer::Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& c) {

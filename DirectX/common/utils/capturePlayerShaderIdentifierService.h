@@ -24,10 +24,22 @@ namespace DirectX {
 class CapturePlayerShaderIdentifierService {
 public:
   using ShaderIdentifier = std::array<uint8_t, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
+
+  // Bit k of a patch mask is set if the 8-byte slot k of the shader record's local root arguments
+  // holds a descriptor handle or GPU virtual address that may be translated, cleared if it holds
+  // something else (e.g. root constants). PATCH_MASK_ALL means the layout is unknown: all slots,
+  // including slots past PATCH_MASK_SLOT_COUNT, may be translated.
+  static constexpr uint64_t PATCH_MASK_ALL = ~0ull;
+  static constexpr unsigned PATCH_MASK_SLOT_COUNT = 64;
+
+  // Must match ShaderIdentifierMapping in the binding table patch shader
   struct ShaderIdentifierMapping {
     ShaderIdentifier CaptureIdentifier;
     ShaderIdentifier PlayerIdentifier;
+    uint64_t PatchMask{PATCH_MASK_ALL};
   };
+  static_assert(sizeof(ShaderIdentifierMapping) ==
+                2 * D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(uint64_t));
 
 public:
   void AddCaptureShaderIdentifier(CommandKey commandKey,
@@ -35,7 +47,8 @@ public:
                                   LPWSTR exportName);
   void AddPlayerShaderIdentifier(CommandKey commandKey,
                                  ShaderIdentifier playerIdentifier,
-                                 LPWSTR exportName);
+                                 LPWSTR exportName,
+                                 uint64_t patchMask);
   bool GetMappings(std::vector<ShaderIdentifierMapping>& mappings);
   std::wstring GetExportNameByCaptureIdentifier(ShaderIdentifier identifier) {
     std::lock_guard<std::mutex> lock(m_Mutex);

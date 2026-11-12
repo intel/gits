@@ -367,6 +367,7 @@ struct ShaderIdentifierMapping
 {
   uint64_t4 captureIdentifier;
   uint64_t4 playerIdentifier;
+  uint64_t patchMask;
 };
 StructuredBuffer<ShaderIdentifierMapping> shaderIdentifierMappings : register(t1);
 
@@ -413,6 +414,10 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
   captureIdentifier.y = bindingTable[bindingTableOffset + 1];
   captureIdentifier.z = bindingTable[bindingTableOffset + 2];
   captureIdentifier.w = bindingTable[bindingTableOffset + 3];
+  // Bit k allows translating bindingTable[bindingTableOffset + 4 + k], see
+  // CapturePlayerShaderIdentifierService::PATCH_MASK_ALL
+  const uint64_t patchMaskAll = ~(uint64_t)0;
+  uint64_t patchMask = patchMaskAll;
   if (shaderIdentiferCount) {
     int first = 0;
     int last = shaderIdentiferCount - 1;
@@ -424,6 +429,7 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
         bindingTable[bindingTableOffset + 1] = mapping.playerIdentifier.y;
         bindingTable[bindingTableOffset + 2] = mapping.playerIdentifier.z;
         bindingTable[bindingTableOffset + 3] = mapping.playerIdentifier.w;
+        patchMask = mapping.patchMask;
         break;
       } else if (greaterThan_uint64_t4(captureIdentifier, mapping.captureIdentifier)) {
         first = mid + 1;
@@ -433,6 +439,11 @@ void gits_patch(uint3 gId : SV_GroupID, uint3 dtId : SV_DispatchThreadID,
     }
   }
   for (uint i = 4; i < recordSize; ++i) {
+    uint slot = i - 4;
+    bool patchable = slot < 64 ? ((patchMask >> slot) & 1) != 0 : patchMask == patchMaskAll;
+    if (!patchable) {
+      continue;
+    }
     uint64_t captureAddress = bindingTable[bindingTableOffset + i];
     if (!captureAddress) {
       continue;

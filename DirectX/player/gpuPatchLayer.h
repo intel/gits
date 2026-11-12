@@ -17,6 +17,7 @@
 #include "capturePlayerDescriptorHandleService.h"
 #include "gpuPatchDumpService.h"
 #include "resourceStateTracker.h"
+#include "gpuPatchLocalRootSignatureService.h"
 
 #include <d3d12.h>
 #include <map>
@@ -40,6 +41,10 @@ public:
   void Post(ID3D12ResourceGetGPUVirtualAddressCommand& command) override;
   void Pre(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
   void Post(ID3D12StateObjectPropertiesGetShaderIdentifierCommand& command) override;
+  void Post(ID3D12DeviceCreateRootSignatureCommand& command) override;
+  void Post(ID3D12Device5CreateStateObjectCommand& command) override;
+  void Post(ID3D12Device7AddToStateObjectCommand& command) override;
+  void Post(IUnknownQueryInterfaceCommand& command) override;
   void Pre(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
   void Post(ID3D12DescriptorHeapGetGPUDescriptorHandleForHeapStartCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
@@ -209,6 +214,7 @@ private:
   GpuPatchCommandListService m_CommandListService;
   GpuPatchDumpService m_DumpService;
   ResourceStateTracker m_ResourceStateTracker;
+  GpuPatchLocalRootSignatureService m_LocalRootSignatureService;
 
   std::unordered_map<ObjectKey, std::unique_ptr<PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>>>
       m_CommandSignatures;
