@@ -37,7 +37,7 @@ PlayerManager& PlayerManager::Get() {
 PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
-    m_MultithreadedObjectCreationService.Shutdown();
+    m_MultithreadedShaderCompilationService.Shutdown();
     m_LayerManager.Reset();
     m_PluginService.reset();
   } catch (...) {
@@ -84,6 +84,14 @@ PlayerManager::PlayerManager() {
   m_LayerManager.LoadLayers(*this, *m_PluginService.get());
 
   m_ExecuteCommands = Configurator::Get().common.player.execute;
+}
+
+void PlayerManager::CompleteAllShaderCompilations() {
+  for (const auto& [key, output] : m_MultithreadedShaderCompilationService.CompleteAll()) {
+    if (output.result == S_OK) {
+      AddObject(key, static_cast<IUnknown*>(output.object));
+    }
+  }
 }
 
 void PlayerManager::AddObject(ObjectKey objectKey, IUnknown* object) {

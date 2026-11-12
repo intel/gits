@@ -55,8 +55,13 @@ void ReplayCustomizationLayer::Pre(IUnknownReleaseCommand& c) {
   if (c.Skip) {
     return;
   }
+
+  // Internal references may inflate the live Release object count.
+  // Capture the stream result to use for object-map cleanup.
+  m_StreamReleaseResult = c.m_Result.Value;
+
   // DXGI requires SetFullscreenState(FALSE) to be called on the swap chain when it is released
-  if (c.m_Object.Value && c.m_Result.Value == 0 &&
+  if (c.m_Object.Value && m_StreamReleaseResult == 0 &&
       m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key)) {
     Microsoft::WRL::ComPtr<IDXGISwapChain> swapChain;
     HRESULT hr = c.m_Object.Value->QueryInterface(IID_PPV_ARGS(&swapChain));
@@ -70,7 +75,7 @@ void ReplayCustomizationLayer::Post(IUnknownReleaseCommand& c) {
   if (c.Skip) {
     return;
   }
-  if (c.m_Result.Value == 0) {
+  if (m_StreamReleaseResult == 0) {
     m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key);
     m_Manager.GetDescriptorHandleService().DestroyDescriptorHeap(c.m_Object.Key);
     m_Manager.GetMapTrackingService().DestroyResource(c.m_Object.Key);
@@ -78,7 +83,7 @@ void ReplayCustomizationLayer::Post(IUnknownReleaseCommand& c) {
     m_Manager.RemoveObject(c.m_Object.Key);
     m_Manager.GetHeapAllocationService().DestroyHeapAllocation(c.m_Object.Key);
   }
-  m_PipelineLibraryService.ReleasePipelineState(c.m_Object.Key, c.m_Result.Value);
+  m_PipelineLibraryService.ReleasePipelineState(c.m_Object.Key, m_StreamReleaseResult);
 }
 
 void ReplayCustomizationLayer::Post(IUnknownAddRefCommand& c) {
@@ -1922,13 +1927,7 @@ void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetCreatePipelineStateOptionsComm
     return;
   }
   // Flush multithreaded shader compilation
-  const auto& results = m_Manager.GetMultithreadedObjectCreationService().CompleteAll();
-  for (const auto& [key, output] : results) {
-    if (output.result != S_OK) {
-      continue;
-    }
-    m_Manager.AddObject(key, static_cast<IUnknown*>(output.object));
-  }
+  m_Manager.CompleteAllShaderCompilations();
 }
 
 void ReplayCustomizationLayer::Pre(NvAPI_D3D12_SetNvShaderExtnSlotSpaceCommand& c) {

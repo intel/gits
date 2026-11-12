@@ -12,8 +12,8 @@
 #include "configurationLib.h"
 #include "replayCustomizationLayer.h"
 #include "gpuPatchLayer.h"
-#include "multithreadedObjectCreationLayer.h"
-#include "multithreadedObjectAwaitLayer.h"
+#include "multithreadedShaderCompilationResolveLayer.h"
+#include "multithreadedShaderCompilationScheduleLayer.h"
 #include "dstorage/directStorageLayer.h"
 #include "dllOverrideUseLayer.h"
 #include "debugInfoLayerAuto.h"
@@ -87,8 +87,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // Create individual layers
   std::unique_ptr<Layer> replayCustomizationLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
-  std::unique_ptr<Layer> multithreadedObjectCreationLayer;
-  std::unique_ptr<Layer> multithreadedObjectAwaitLayer;
+  std::unique_ptr<Layer> multithreadedShaderCompilationResolveLayer;
+  std::unique_ptr<Layer> multithreadedShaderCompilationScheduleLayer;
   std::unique_ptr<Layer> directStorageLayer;
   std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> debugHelperLayer;
@@ -125,10 +125,10 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
           .directx.player.multithreadedShaderCompilation = false;
     }
     if (cfg.player.multithreadedShaderCompilation) {
-      multithreadedObjectCreationLayer =
-          std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
-      multithreadedObjectAwaitLayer =
-          std::make_unique<MultithreadedObjectAwaitLayer>(playerManager);
+      multithreadedShaderCompilationResolveLayer =
+          std::make_unique<MultithreadedShaderCompilationResolveLayer>(playerManager);
+      multithreadedShaderCompilationScheduleLayer =
+          std::make_unique<MultithreadedShaderCompilationScheduleLayer>(playerManager);
     }
   }
 
@@ -141,7 +141,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
   enablePreLayer(skipCallsOnConfigLayer);
   enablePreLayer(skipCallsOnResultLayer);
-  enablePreLayer(multithreadedObjectAwaitLayer.get());
+  enablePreLayer(multithreadedShaderCompilationResolveLayer.get());
   enablePreLayer(debugHelperLayer.get());
   enablePreLayer(traceLayer);
   enablePreLayer(portabilityLayer);
@@ -159,7 +159,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   enablePreLayer(debugInfoLayer.get());
   enablePreLayer(recordingLayer);
   enablePreLayer(logDxErrorLayer.get());
-  enablePreLayer(multithreadedObjectCreationLayer.get());
+  enablePreLayer(multithreadedShaderCompilationScheduleLayer.get());
   enablePreLayer(directStorageLayer.get());
   enablePreLayer(accelerationStructuresDumpLayer);
   enablePreLayer(imGuiHUDLayer.get());
@@ -217,8 +217,8 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   };
   retainLayer(std::move(replayCustomizationLayer));
   retainLayer(std::move(gpuPatchLayer));
-  retainLayer(std::move(multithreadedObjectCreationLayer));
-  retainLayer(std::move(multithreadedObjectAwaitLayer));
+  retainLayer(std::move(multithreadedShaderCompilationResolveLayer));
+  retainLayer(std::move(multithreadedShaderCompilationScheduleLayer));
   retainLayer(std::move(debugInfoLayer));
   retainLayer(std::move(debugHelperLayer));
   retainLayer(std::move(logDxErrorLayer));

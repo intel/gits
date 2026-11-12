@@ -20,10 +20,12 @@ source_group("" FILES ${ROOT_SRC})
 set(PLAYER_SRC
   ${SRC_DIR}/replayCustomizationLayer.h
   ${SRC_DIR}/replayCustomizationLayer.cpp
-  ${SRC_DIR}/multithreadedObjectCreationLayer.h
-  ${SRC_DIR}/multithreadedObjectCreationLayer.cpp
-  ${SRC_DIR}/multithreadedObjectAwaitLayer.h
-  ${SRC_DIR}/multithreadedObjectAwaitLayer.cpp
+  ${SRC_DIR}/multithreadedShaderCompilationResolveLayer.h
+  ${SRC_DIR}/multithreadedShaderCompilationResolveLayer.cpp
+  ${SRC_DIR}/multithreadedShaderCompilationScheduleLayer.h
+  ${SRC_DIR}/multithreadedShaderCompilationScheduleLayer.cpp
+  ${SRC_DIR}/multithreadedShaderCompilationService.h
+  ${SRC_DIR}/multithreadedShaderCompilationService.cpp
   ${SRC_DIR}/dllOverrideUseLayer.h
   ${SRC_DIR}/dllOverrideUseLayer.cpp
   ${SRC_DIR}/interfaceArgumentUpdaters.h
@@ -54,8 +56,6 @@ set(SERVICES_SRC
   ${SRC_DIR}/xefgDispatchTableAuto.h
   ${SRC_DIR}/xessService.h
   ${SRC_DIR}/xessService.cpp
-  ${SRC_DIR}/multithreadedObjectCreationService.h
-  ${SRC_DIR}/multithreadedObjectCreationService.cpp
   ${SRC_DIR}/contextMapService.h
 )
 source_group("services" FILES ${SERVICES_SRC})

@@ -10,29 +10,36 @@
 
 #include "layerAuto.h"
 #include "playerManager.h"
+#include "multithreadedShaderCompilationService.h"
+
+#include <functional>
+#include <vector>
 
 namespace gits {
 namespace DirectX {
 
-class PlayerManager;
-
-class MultithreadedObjectCreationLayer : public Layer {
+class MultithreadedShaderCompilationScheduleLayer : public Layer {
 public:
-  MultithreadedObjectCreationLayer(PlayerManager& manager);
+  MultithreadedShaderCompilationScheduleLayer(PlayerManager& manager);
 
-  void Pre(ID3D12DeviceCreateComputePipelineStateCommand& command) override;
   void Pre(ID3D12DeviceCreateGraphicsPipelineStateCommand& command) override;
+  void Pre(ID3D12DeviceCreateComputePipelineStateCommand& command) override;
   void Pre(ID3D12Device2CreatePipelineStateCommand& command) override;
+  void Pre(ID3D12Device5CreateStateObjectCommand& command) override;
   void Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& command) override;
   void Pre(ID3D12PipelineLibraryLoadComputePipelineCommand& command) override;
   void Pre(ID3D12PipelineLibrary1LoadPipelineCommand& command) override;
-  void Pre(ID3D12Device5CreateStateObjectCommand& command) override;
 
 private:
   template <typename CommandT>
-  void ScheduleCreate(CommandT& c);
+  bool CanSchedule(const CommandT& c) const;
   template <typename CommandT>
-  void ScheduleLoad(CommandT& c);
+  void ScheduleLibraryLoad(CommandT& c, IUnknown* rootSignature);
+  void Enqueue(ObjectKey key,
+               bool& skip,
+               void**& outputValue,
+               std::vector<IUnknown*> keepAlive,
+               std::function<HRESULT(void**)> create);
 
 private:
   PlayerManager& m_Manager;

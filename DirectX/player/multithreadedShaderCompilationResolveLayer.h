@@ -11,16 +11,15 @@
 #include "layerAuto.h"
 #include "playerManager.h"
 
+#include <map>
+
 namespace gits {
 namespace DirectX {
 
-class PlayerManager;
-
-class MultithreadedObjectAwaitLayer : public Layer {
+class MultithreadedShaderCompilationResolveLayer : public Layer {
 public:
-  MultithreadedObjectAwaitLayer(PlayerManager& manager);
+  MultithreadedShaderCompilationResolveLayer(PlayerManager& manager);
 
-  // Wait for the completion of all objects
   void Pre(StateRestoreEndCommand& command) override;
 
   void Pre(IUnknownAddRefCommand& command) override;
@@ -32,6 +31,7 @@ public:
   void Pre(ID3D12ObjectSetPrivateDataInterfaceCommand& command) override;
   void Pre(ID3D12DeviceChildGetDeviceCommand& command) override;
   void Pre(ID3D12PipelineStateGetCachedBlobCommand& command) override;
+
   void Pre(ID3D12DeviceCreateCommandListCommand& command) override;
   void Pre(ID3D12GraphicsCommandListResetCommand& command) override;
   void Pre(ID3D12GraphicsCommandListClearStateCommand& command) override;
@@ -41,6 +41,7 @@ public:
   void Pre(ID3D12DeviceEvictCommand& command) override;
   void Pre(ID3D12Device1SetResidencyPriorityCommand& command) override;
   void Pre(ID3D12Device3EnqueueMakeResidentCommand& command) override;
+
   void Pre(ID3D12Device5CreateStateObjectCommand& command) override;
   void Pre(ID3D12Device7AddToStateObjectCommand& command) override;
   void Pre(ID3D12PipelineLibraryLoadGraphicsPipelineCommand& command) override;
@@ -48,18 +49,18 @@ public:
   void Pre(ID3D12PipelineLibrary1LoadPipelineCommand& command) override;
 
 private:
-  std::optional<MultithreadedObjectCreationService::ObjectCreationOutput> CollectResult(
-      ObjectKey objectKey);
-  bool CompleteObject(ObjectKey key, bool forceCompletePendingObject = false);
+  bool ResolveObject(ObjectKey key);
+  bool ResolvePending(ObjectKey key);
   template <typename T>
-  void CompleteArgument(InterfaceArgument<T>& commandObject);
+  void ResolveArgument(InterfaceArgument<T>& argument);
   template <typename T>
-  void CompleteArrayArgument(InterfaceArrayArgument<T>& commandObjects);
+  void ResolveArrayArgument(InterfaceArrayArgument<T>& arrayArgument);
+  void ResolveExistingCollections(const std::map<unsigned, ObjectKey>& interfaceKeysBySubobject,
+                                  const D3D12_STATE_OBJECT_DESC* desc,
+                                  bool& requiresUpdate);
 
 private:
   PlayerManager& m_Manager;
-  std::unordered_map<ObjectKey, MultithreadedObjectCreationService::ObjectCreationOutput>
-      m_PreCollectedOutputs;
 };
 
 } // namespace DirectX

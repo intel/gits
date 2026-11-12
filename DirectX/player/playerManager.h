@@ -17,7 +17,7 @@
 #include "adapterService.h"
 #include "intelExtensionsService.h"
 #include "xessService.h"
-#include "multithreadedObjectCreationService.h"
+#include "multithreadedShaderCompilationService.h"
 #include "pipelineLibraryService.h"
 #include "contextMapService.h"
 #include "playerLayerManager.h"
@@ -79,13 +79,14 @@ public:
   XessService& GetXessService() {
     return m_XessService;
   }
-  MultithreadedObjectCreationService& GetMultithreadedObjectCreationService() {
-    return m_MultithreadedObjectCreationService;
+  MultithreadedShaderCompilationService& GetMultithreadedShaderCompilationService() {
+    return m_MultithreadedShaderCompilationService;
   }
   PipelineLibraryService& GetPipelineLibraryService() {
     return m_PipelineLibraryService;
   }
 
+  void CompleteAllShaderCompilations();
   void AddObject(ObjectKey objectKey, IUnknown* object);
   void RemoveObject(ObjectKey objectKey);
   IUnknown* FindObject(ObjectKey objectKey);
@@ -128,7 +129,7 @@ private:
   IntelExtensionsService m_IntelExtensionsService;
   std::unique_ptr<PluginService> m_PluginService;
   XessService m_XessService;
-  MultithreadedObjectCreationService m_MultithreadedObjectCreationService;
+  MultithreadedShaderCompilationService m_MultithreadedShaderCompilationService;
   PipelineLibraryService m_PipelineLibraryService;
 
   HMODULE m_D3d12CoreDll{};
