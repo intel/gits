@@ -92,10 +92,14 @@ void ExecuteIndirectDump::ExecuteIndirect(
     GITS_ASSERT(info);
     unsigned offset = address - info->CaptureStart;
 
+    D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    D3D12_RESOURCE_DESC desc = info->Resource->GetDesc();
+    if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+      expectedState = D3D12_RESOURCE_STATE_COMMON;
+    }
     D3D12_RESOURCE_STATES state =
         GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, command.m_Object.Value,
-                                info->Resource, offset, info->Key,
-                                D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+                                info->Resource, offset, info->Key, expectedState)
             .State;
 
     ExecuteIndirectDumpInfo* dumpInfo = new ExecuteIndirectDumpInfo();

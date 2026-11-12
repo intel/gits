@@ -216,10 +216,14 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
         commandList->ResourceBarrier(1, &patchBufferBarrier);
       }
 
-      BarrierState currentState =
-          GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, commandList,
-                                  c.m_pDesc.Value->Inputs.InstanceDescs, instanceDescs,
-                                  instanceDescsKey, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = instanceDescs->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
+      BarrierState currentState = GetAdjustedCurrentState(
+          m_ResourceStateTracker, m_AddressService, commandList,
+          c.m_pDesc.Value->Inputs.InstanceDescs, instanceDescs, instanceDescsKey, expectedState);
       ResourceStateEnhanced resourceStateEnhanced(commandList, instanceDescs, currentState);
       resourceStateEnhanced.SetState(D3D12_RESOURCE_STATE_COPY_SOURCE);
 
@@ -329,10 +333,15 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
     m_InstancesAopStagingBuffers[instancesAoPBufferIndex]->Unmap(0, nullptr);
 
     {
-      BarrierState resourceState =
-          GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, commandList,
-                                  c.m_pDesc.Value->Inputs.InstanceDescs, instanceDescs,
-                                  instanceDescsKey, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = instanceDescs->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
+
+      BarrierState resourceState = GetAdjustedCurrentState(
+          m_ResourceStateTracker, m_AddressService, commandList,
+          c.m_pDesc.Value->Inputs.InstanceDescs, instanceDescs, instanceDescsKey, expectedState);
 
       unsigned offset = c.m_pDesc.InputOffsets[0];
       m_DumpService.DumpInstancesArrayOfPointers(commandList, instanceDescs, instanceDescsKey,
@@ -413,10 +422,15 @@ void GpuPatchLayer::Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStr
           commandList->ResourceBarrier(1, &barrier);
         }
 
-        BarrierState currentState = GetAdjustedCurrentState(
-            m_ResourceStateTracker, m_AddressService, commandList,
-            c.m_pDesc.Value->Inputs.InstanceDescs, instanceInfo.resource, instanceDescsKey,
-            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        D3D12_RESOURCE_DESC desc = instanceInfo.resource->GetDesc();
+        if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+          expectedState = D3D12_RESOURCE_STATE_COMMON;
+        }
+        BarrierState currentState =
+            GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, commandList,
+                                    c.m_pDesc.Value->Inputs.InstanceDescs, instanceInfo.resource,
+                                    instanceDescsKey, expectedState);
         ResourceStateEnhanced resourceStateEnhanced(commandList, instanceInfo.resource,
                                                     currentState);
         resourceStateEnhanced.SetState(D3D12_RESOURCE_STATE_COPY_SOURCE);
@@ -554,9 +568,14 @@ void GpuPatchLayer::PatchDispatchRays(ID3D12GraphicsCommandList* commandList,
         commandList->ResourceBarrier(1, &barrier);
       }
 
-      BarrierState currentState = GetAdjustedCurrentState(
-          m_ResourceStateTracker, m_AddressService, commandList, startAddress, info->Resource,
-          info->Key, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = info->Resource->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
+      BarrierState currentState =
+          GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, commandList,
+                                  startAddress, info->Resource, info->Key, expectedState);
       ResourceStateEnhanced resourceStateEnhanced(commandList, info->Resource, currentState);
       resourceStateEnhanced.SetState(D3D12_RESOURCE_STATE_COPY_SOURCE);
 

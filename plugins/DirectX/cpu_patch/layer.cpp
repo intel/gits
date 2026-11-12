@@ -55,10 +55,14 @@ void CpuPatchLayer::Pre(
       unsigned size =
           command.m_pDesc.Value->Inputs.NumDescs * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
 
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = instanceDescs->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
       D3D12_RESOURCE_STATES state =
           GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, command.m_Object.Value,
-                                  instanceDescs, offset, instanceDescsKey,
-                                  D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+                                  instanceDescs, offset, instanceDescsKey, expectedState)
               .State;
 
       m_InstancesDump->BuildTlas(command.m_Object.Value, instanceDescs, offset, size, state,
@@ -80,10 +84,14 @@ void CpuPatchLayer::Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) 
       ID3D12Resource* resource = m_ResourceByKey[resourceKey];
       GITS_ASSERT(resource);
 
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = resource->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
       D3D12_RESOURCE_STATES state =
           GetAdjustedCurrentState(m_ResourceStateTracker, m_AddressService, command.m_Object.Value,
-                                  resource, offset, resourceKey,
-                                  D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+                                  resource, offset, resourceKey, expectedState)
               .State;
 
       if (stride == 0) {

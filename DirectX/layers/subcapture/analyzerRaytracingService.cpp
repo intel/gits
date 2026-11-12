@@ -221,10 +221,15 @@ void AnalyzerRaytracingService::BuildTlas(
         offsets[i] /= sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
       }
 
-      BarrierState currentState = GetAdjustedCurrentState(
-          m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
-          c.m_pDesc.Value->Inputs.InstanceDescs, instanceInfo.resource, c.m_pDesc.InputKeys[0],
-          D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+      D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+      D3D12_RESOURCE_DESC desc = instanceInfo.resource->GetDesc();
+      if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+        expectedState = D3D12_RESOURCE_STATE_COMMON;
+      }
+      BarrierState currentState =
+          GetAdjustedCurrentState(m_ResourceStateTracker, m_GpuAddressService, c.m_Object.Value,
+                                  c.m_pDesc.Value->Inputs.InstanceDescs, instanceInfo.resource,
+                                  c.m_pDesc.InputKeys[0], expectedState);
 
       m_InstancesDump.BuildTlasArrayOfPointers(c.m_Object.Value, instanceInfo.resource, startOffset,
                                                size, currentState, c.Key, offsets);
@@ -285,9 +290,14 @@ void AnalyzerRaytracingService::DumpBindingTable(ID3D12GraphicsCommandList* comm
 
   ObjectKey rootSignatureKey = m_CommandListService.GetComputeRootSignatureKey(commandListKey);
 
-  BarrierState currentState = GetAdjustedCurrentState(
-      m_ResourceStateTracker, m_GpuAddressService, commandList, address, resource, resourceKey,
-      D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+  D3D12_RESOURCE_STATES expectedState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+  D3D12_RESOURCE_DESC desc = resource->GetDesc();
+  if (desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE) {
+    expectedState = D3D12_RESOURCE_STATE_COMMON;
+  }
+  BarrierState currentState =
+      GetAdjustedCurrentState(m_ResourceStateTracker, m_GpuAddressService, commandList, address,
+                              resource, resourceKey, expectedState);
 
   m_BindingTablesDump.DumpBindingTable(commandList, resource, offset, size, stride, currentState,
                                        stateObjectInfo, itDescriptorHeaps->second,
