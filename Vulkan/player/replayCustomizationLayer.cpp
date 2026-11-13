@@ -54,7 +54,41 @@ thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceLayer
 thread_local std::vector<const char*> ReplayCustomizationLayer::tl_instanceExtensionNames;
 thread_local std::vector<const char*> ReplayCustomizationLayer::tl_deviceExtensionNames;
 
+namespace {
+
+thread_local std::vector<VkBaseInStructure*> tl_instancepNextNodes;
+
+void SnapshotPNextChain(const VkInstanceCreateInfo* createInfo) {
+  auto& nodes = tl_instancepNextNodes;
+  nodes.clear();
+  auto* node =
+      const_cast<VkBaseInStructure*>(reinterpret_cast<const VkBaseInStructure*>(createInfo->pNext));
+  while (node) {
+    nodes.push_back(node);
+    node = const_cast<VkBaseInStructure*>(node->pNext);
+  }
+}
+
+void RestorePNextChain(VkInstanceCreateInfo* createInfo) {
+  auto& nodes = tl_instancepNextNodes;
+  if (nodes.empty()) {
+    createInfo->pNext = nullptr;
+    return;
+  }
+  createInfo->pNext = nodes.front();
+  for (size_t i = 1; i < nodes.size(); ++i) {
+    nodes[i - 1]->pNext = nodes[i];
+  }
+  nodes.back()->pNext = nullptr;
+  nodes.clear();
+}
+
+} // namespace
+
 void ReplayCustomizationLayer::Post(vkCreateInstanceCommand& command) {
+  if (command.m_pCreateInfo.Value) {
+    RestorePNextChain(command.m_pCreateInfo.Value);
+  }
   // A failed create leaves pInstance untouched, so dereferencing it would fault.
   if (command.m_Return.Value != VK_SUCCESS || !command.m_pInstance.Value) {
     return;
@@ -876,6 +910,7 @@ void ReplaceWin32SurfaceExtension(VkInstanceCreateInfo* createInfo) {
 
 void ReplayCustomizationLayer::Pre(vkCreateInstanceCommand& command) {
   if (command.m_pCreateInfo.Value) {
+    SnapshotPNextChain(command.m_pCreateInfo.Value);
     RedirectDebugCallbacksInPNext(command.m_pCreateInfo.Value->pNext);
 
     // Drop layers and extensions the user asked to suppress from the recorded
