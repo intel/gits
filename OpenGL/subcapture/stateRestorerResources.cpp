@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <iterator>
 #include <set>
+#include <sstream>
 #include <vector>
 
 namespace gits::opengl {
@@ -137,19 +138,64 @@ TextureLevel QueryLevel(GLenum imageTarget, GLint level) {
   return info;
 }
 
+// Stops the subcapture when a compressed image cannot be read exactly, since writing it from
+// another read could change its blocks.
+void FailCompressedRead(GLuint texture, GLint level, const char* step, GLenum error) {
+  std::ostringstream message;
+  message << "Subcapture: " << step << " to read level " << level << " of compressed texture "
+          << texture << " raised GL error 0x" << std::hex << error << std::dec << ".";
+  if (error == GL_OUT_OF_MEMORY) {
+    message << " The replay system ran out of GPU memory; record the subcapture on a system with "
+               "more GPU memory.";
+  } else {
+    message << " Its compressed blocks cannot be read exactly on this system.";
+  }
+  GITS_ASSERT(false, message.str());
+}
+
+// The compressed formats glCopyImageSubData can copy to and from uncompressed ones: those of its
+// copy compatibility classes, with the S3TC formats of GL_EXT_texture_compression_s3tc and
+// GL_EXT_texture_sRGB.
+bool Copyable(GLenum format) {
+  switch (format) {
+  case GL_COMPRESSED_RED_RGTC1:
+  case GL_COMPRESSED_SIGNED_RED_RGTC1:
+  case GL_COMPRESSED_RG_RGTC2:
+  case GL_COMPRESSED_SIGNED_RG_RGTC2:
+  case GL_COMPRESSED_RGBA_BPTC_UNORM:
+  case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
+  case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
+  case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+  case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+  case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+  case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+  case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+  case GL_COMPRESSED_SRGB_S3TC_DXT1_EXT:
+  case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT:
+  case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT:
+  case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Compressed images read with glGetCompressedTexImage can differ from the uploaded data. Their
 // blocks copied into the texels of an uncompressed texture of the same size read back exactly.
-// Images that are not a whole number of blocks are read directly.
-void ReadCompressedImage(GLenum target,
-                         GLuint texture,
-                         GLenum imageTarget,
-                         GLint level,
-                         const TextureLevel& info,
-                         std::vector<uint8_t>& data,
-                         bool copy) {
+// Images in formats glCopyImageSubData cannot copy, or that are not a whole number of blocks,
+// are read directly. A failed allocation or copy stops the subcapture. Returns the number of GL
+// errors raised before the copy, which the copy's own errors must be told apart from.
+int ReadCompressedImage(GLenum target,
+                        GLuint texture,
+                        GLenum imageTarget,
+                        GLint level,
+                        const TextureLevel& info,
+                        std::vector<uint8_t>& data,
+                        bool copy,
+                        bool handles) {
   GLint blockWidth = 0;
   GLint blockHeight = 0;
-  if (copy) {
+  if (copy && Copyable(static_cast<GLenum>(info.InternalFormat))) {
     const auto format = static_cast<GLenum>(info.InternalFormat);
     GL_FN(glGetInternalformativ)
     (GL_TEXTURE_2D, format, GL_TEXTURE_COMPRESSED_BLOCK_WIDTH, 1, &blockWidth);
@@ -168,7 +214,7 @@ void ReadCompressedImage(GLenum target,
   const size_t blockSize = blocks > 0 && data.size() % blocks == 0 ? data.size() / blocks : 0;
   if (blockSize != 8 && blockSize != 16) {
     GL_FN(glGetCompressedTexImage)(imageTarget, level, data.data());
-    return;
+    return 0;
   }
   const bool wide = blockSize == 16;
   const GLint face =
@@ -178,22 +224,51 @@ void ReadCompressedImage(GLenum target,
   const GLsizei maxLayers = std::max(GetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS), 1);
   const size_t layerSize = static_cast<size_t>(columns) * rows * blockSize;
   const GLuint bound = GetName(GL_TEXTURE_BINDING_2D_ARRAY);
+  int errors = 0;
+  while (errors < 64 && GL_FN(glGetError)() != GL_NO_ERROR) {
+    ++errors;
+  }
+  // glCopyImageSubData requires a complete texture, so only the level read is in use meanwhile.
+  // A texture with a handle was complete when the handle was created, and GL rejects changing
+  // its parameters or defining its images again since, so it is copied as it is.
+  GLint baseLevel = 0;
+  GLint maxLevel = 0;
+  if (!handles) {
+    GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_BASE_LEVEL, &baseLevel);
+    GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_MAX_LEVEL, &maxLevel);
+    GL_FN(glTexParameteri)(target, GL_TEXTURE_BASE_LEVEL, level);
+    GL_FN(glTexParameteri)(target, GL_TEXTURE_MAX_LEVEL, level);
+  }
   for (GLsizei first = 0; first < layers; first += maxLayers) {
     const GLsizei count = std::min(maxLayers, layers - first);
     GLuint uncompressed = 0;
     GL_FN(glGenTextures)(1, &uncompressed);
     GL_FN(glBindTexture)(GL_TEXTURE_2D_ARRAY, uncompressed);
+    // Integer textures are complete only with nearest filtering.
+    GL_FN(glTexParameteri)(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    GL_FN(glTexParameteri)(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     GL_FN(glTexStorage3D)
     (GL_TEXTURE_2D_ARRAY, 1, wide ? GL_RGBA32UI : GL_RG32UI, columns, rows, count);
+    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+      FailCompressedRead(texture, level, "allocating a texture", error);
+    }
     GL_FN(glCopyImageSubData)
     (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
      width, height, count);
+    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+      FailCompressedRead(texture, level, "copying the blocks", error);
+    }
     GL_FN(glGetTexImage)
     (GL_TEXTURE_2D_ARRAY, 0, wide ? GL_RGBA_INTEGER : GL_RG_INTEGER, GL_UNSIGNED_INT,
      data.data() + first * layerSize);
     GL_FN(glDeleteTextures)(1, &uncompressed);
   }
   GL_FN(glBindTexture)(GL_TEXTURE_2D_ARRAY, bound);
+  if (!handles) {
+    GL_FN(glTexParameteri)(target, GL_TEXTURE_BASE_LEVEL, baseLevel);
+    GL_FN(glTexParameteri)(target, GL_TEXTURE_MAX_LEVEL, maxLevel);
+  }
+  return errors;
 }
 
 // Levels above log2 of the maximum size are invalid to query.
@@ -710,6 +785,25 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
   const bool subImageReadback =
       m_Version.AtLeast(4, 5) || HasExtension("GL_ARB_get_texture_sub_image");
   const GLint levels = MaxLevels(target);
+  // A texture with mutable storage whose levels have different formats, one of them compressed,
+  // can read back its compressed images wrong without a GL error, decompressed or not, so those
+  // are written from their kept uploads.
+  bool mixedFormats = false;
+  if (!immutable) {
+    std::set<GLint> formats;
+    bool compressed = false;
+    for (GLint level = 0; level < levels; ++level) {
+      for (size_t face = 0; face < (cubeMap ? std::size(CUBE_MAP_FACES) : 1); ++face) {
+        const TextureLevel info = QueryLevel(cubeMap ? CUBE_MAP_FACES[face] : target, level);
+        if (info.Width != 0) {
+          formats.insert(info.InternalFormat);
+          compressed = compressed || info.Compressed;
+        }
+      }
+    }
+    mixedFormats = compressed && formats.size() > 1;
+  }
+  const ObjectState* object = m_State.Object(key);
   for (GLint level = 0; level < levels; ++level) {
     for (size_t face = 0; face < (cubeMap ? std::size(CUBE_MAP_FACES) : 1); ++face) {
       const GLenum imageTarget = cubeMap ? CUBE_MAP_FACES[face] : target;
@@ -768,11 +862,29 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
       PixelFormat pixelFormat{};
       if (info.Compressed) {
         data.resize(static_cast<size_t>(std::max(info.CompressedSize, 0)));
-        const bool copy = m_Version.AtLeast(4, 3) ||
-                          (m_Version.AtLeast(3, 0) && HasExtension("GL_ARB_copy_image") &&
-                           HasExtension("GL_ARB_texture_storage") &&
-                           HasExtension("GL_ARB_internalformat_query2"));
-        ReadCompressedImage(target, name, imageTarget, level, info, data, copy);
+        const CompressedImage* kept =
+            mixedFormats && object != nullptr
+                ? m_State.FindCompressedImage(object->Owner, name, imageTarget, level)
+                : nullptr;
+        if (kept != nullptr && kept->InternalFormat == static_cast<GLenum>(info.InternalFormat) &&
+            kept->Width == info.Width && kept->Height == std::max(info.Height, 1) &&
+            kept->Depth == std::max(info.Depth, 1) && kept->Data.size() == data.size()) {
+          data = kept->Data;
+        } else {
+          if (mixedFormats) {
+            std::ostringstream message;
+            message << "Subcapture: cannot restore texture " << key << ", level " << level
+                    << " exactly: its levels have different formats, so its compressed image can "
+                       "read back wrong, and no matching upload of it is kept.";
+            GITS_ASSERT(false, message.str());
+          }
+          const bool copy = m_Version.AtLeast(4, 3) ||
+                            (m_Version.AtLeast(3, 0) && HasExtension("GL_ARB_copy_image") &&
+                             HasExtension("GL_ARB_texture_storage") &&
+                             HasExtension("GL_ARB_internalformat_query2"));
+          m_RaisedErrors += ReadCompressedImage(target, name, imageTarget, level, info, data, copy,
+                                                m_State.HandleCreated(key));
+        }
       } else {
         pixelFormat = ReadbackFormat(imageTarget, level, m_Version.Compatibility);
         data.resize(width * height * depth * pixelFormat.PixelSize);
@@ -1003,6 +1115,14 @@ void StateRestorer::RestoreTextureParameters(GLenum target) {
     command.m_target.Value = target;
     command.m_pname.Value = GL_TEXTURE_SRGB_DECODE_EXT;
     GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_SRGB_DECODE_EXT, &command.m_param.Value);
+    Emit<glTexParameteriCommandSerializer>(command);
+  }
+  // Written after the images, so the restored levels are not generated again.
+  if (m_Version.Compatibility && target != GL_TEXTURE_RECTANGLE) {
+    glTexParameteriCommand command;
+    command.m_target.Value = target;
+    command.m_pname.Value = GL_GENERATE_MIPMAP;
+    GL_FN(glGetTexParameteriv)(target, GL_GENERATE_MIPMAP, &command.m_param.Value);
     Emit<glTexParameteriCommandSerializer>(command);
   }
   std::vector<GLenum> floatParameters(std::begin(FLOAT_PARAMETERS), std::end(FLOAT_PARAMETERS));

@@ -200,7 +200,7 @@ void StateRestorer::Restore() {
     RestoreSharedObjects(shareGroup);
     EndReadback();
     RestoreDisplayLists(shareGroup);
-    if (const int errors = DrainErrors()) {
+    if (const int errors = DrainErrors() + std::exchange(m_RaisedErrors, 0)) {
       LOG_WARNING << "Subcapture: restoring shared objects of context " << current->Context
                   << " raised " << errors << " GL errors";
     }
@@ -227,7 +227,7 @@ void StateRestorer::Restore() {
         command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
       }
     }
-    if (const int errors = DrainErrors()) {
+    if (const int errors = DrainErrors() + std::exchange(m_RaisedErrors, 0)) {
       LOG_WARNING << "Subcapture: restoring state of context " << key << " raised " << errors
                   << " GL errors";
     }

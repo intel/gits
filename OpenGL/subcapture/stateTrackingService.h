@@ -114,6 +114,8 @@ struct ObjectState {
   // context that deleted it.
   ObjectSnapshot Snapshot;
   GITSKey DeletedIn{};
+  // Whether a texture or image handle of the texture was ever created.
+  bool HandleCreated{};
 };
 
 struct ProgramState {
@@ -152,6 +154,10 @@ struct ListCompileState {
 struct DisplayList {
   std::vector<std::shared_ptr<StoredCommand>> Commands;
   std::vector<GITSKey> Buffers;
+  // Whether glNewList also executed the commands, with GL_COMPILE_AND_EXECUTE.
+  bool Executed{};
+  // Whether the list can change texture images or calls other lists, which can.
+  bool ChangesTextures{};
 };
 
 // A bindless texture or image handle of `Texture`, and `Sampler` for a texture sampler handle.
@@ -169,6 +175,15 @@ struct FontLists {
   GLuint First{};
   GLuint Count{};
   std::vector<std::shared_ptr<StoredCommand>> Commands;
+};
+
+// An image of a compressed texture level, as the application uploaded it whole.
+struct CompressedImage {
+  GLenum InternalFormat{};
+  GLsizei Width{};
+  GLsizei Height{};
+  GLsizei Depth{};
+  std::vector<uint8_t> Data;
 };
 
 // Tracks what state restore needs from the commands replayed before the subcapture range.
@@ -229,6 +244,21 @@ public:
     return m_ViewOriginals.contains(texture);
   }
   ProgramState* Program(GITSKey program);
+  // A texture whose levels have different formats can read back its compressed images wrong, so
+  // the last whole upload of each compressed image is kept, by share group, texture name, image
+  // target and level, until a command can change that image.
+  void KeepCompressedImage(
+      GITSKey shareGroup, GLuint texture, GLenum imageTarget, GLint level, CompressedImage image);
+  // Forgets the kept compressed images of `shareGroup`, only those of `texture`, `imageTarget`
+  // and `level` where given.
+  void ForgetCompressedImages(GITSKey shareGroup,
+                              std::optional<GLuint> texture = std::nullopt,
+                              std::optional<GLenum> imageTarget = std::nullopt,
+                              std::optional<GLint> level = std::nullopt);
+  const CompressedImage* FindCompressedImage(GITSKey shareGroup,
+                                             GLuint texture,
+                                             GLenum imageTarget,
+                                             GLint level) const;
 
   void CreateSync(uint32_t threadId, GITSKey key);
   void DeleteSync(GITSKey key);
@@ -246,15 +276,28 @@ public:
   void MakeNonResident(uint32_t threadId, GLuint64 handle);
   // Whether a handle of the texture or sampler `object` is resident in any context.
   bool HasResidentHandle(GITSKey object) const;
+  // Whether a texture or image handle of the texture was ever created, which makes its parameters
+  // immutable even after the handle is deleted with its sampler.
+  bool HandleCreated(GITSKey texture) const;
 
   // `newList` is written in place of the glNewList that starts the list.
   void BeginList(uint32_t threadId,
                  GLuint list,
+                 bool executed,
                  ListCompileState compileState,
                  std::shared_ptr<StoredCommand> newList);
   bool CompilingList(uint32_t threadId) const {
     return m_CompilingLists.contains(threadId);
   }
+  // Whether a list compiles on `threadId` with GL_COMPILE, so its commands do not execute.
+  bool CompilingOnly(uint32_t threadId) const {
+    const auto compiling = m_CompilingLists.find(threadId);
+    return compiling != m_CompilingLists.end() && !compiling->second.second.Executed;
+  }
+  void MarkListChangesTextures(uint32_t threadId);
+  // Whether executing `list`, or any list of `shareGroup` when none is given, can change texture
+  // images.
+  bool ListChangesTextures(GITSKey shareGroup, std::optional<GLuint> list) const;
   void AddListCommand(uint32_t threadId, std::shared_ptr<StoredCommand> command);
   void EndList(uint32_t threadId, ListCompileState reset);
   void CreateFontLists(uint32_t threadId,
@@ -341,6 +384,7 @@ private:
   // The original of each tracked view.
   std::multiset<GITSKey> m_ViewOriginals;
   std::unordered_map<GITSKey, ProgramState> m_Programs;
+  std::map<std::tuple<GITSKey, GLuint, GLenum, GLint>, CompressedImage> m_CompressedImages;
   // Sync object key to its share group.
   std::map<GITSKey, GITSKey> m_Syncs;
   std::map<GITSKey, ArbProgramState> m_ArbPrograms;

@@ -200,6 +200,8 @@ private:
   SubcaptureRecorder& m_Recorder;
   const AnalyzerResults& m_Analysis;
   bool m_Collecting{false};
+  // GL errors taken from the error flags before a readback that checks its own error.
+  int m_RaisedErrors{};
   std::unordered_set<GITSKey> m_Required;
   // Set while capturing commands instead of writing them.
   std::vector<std::shared_ptr<StoredCommand>>* m_Capture{};

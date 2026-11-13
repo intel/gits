@@ -16,6 +16,7 @@
 #include "uniformLocationMapService.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -67,6 +68,23 @@ std::vector<std::pair<GLenum, std::string>> AttachedShaders(GLuint program) {
     linked.emplace_back(static_cast<GLenum>(type), ShaderSource(shaders[i]));
   }
   return linked;
+}
+
+GLuint TextureName(GITSKey key) {
+  return ObjectNameMapService::Get().TryGetHandle(GLObjectKind::Texture, key);
+}
+
+GLenum TextureTargetOf(GLenum imageTarget) {
+  return imageTarget >= GL_TEXTURE_CUBE_MAP_POSITIVE_X &&
+                 imageTarget <= GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+             ? GL_TEXTURE_CUBE_MAP
+             : imageTarget;
+}
+
+// The texture bound to the target of `imageTarget`; 0 for a proxy target, which has no image.
+GLuint BoundTexture(GLenum imageTarget) {
+  const TextureTarget* entry = FindTextureTarget(TextureTargetOf(imageTarget));
+  return entry != nullptr ? GetName(entry->Binding) : 0;
 }
 
 bool Linked(GLuint program) {
@@ -337,11 +355,14 @@ void StateTrackingLayer::DeleteReadBack(GLObjectKind kind,
                                         uint32_t threadId,
                                         const HandleArrayArgument<GLuint>& names) {
   const bool beforeRange = m_Range.CurrentFrame() < m_Range.StartFrame();
-  const GITSKey context = m_State.CurrentShareGroup(threadId).second;
+  const auto [shareGroup, context] = m_State.CurrentShareGroup(threadId);
   for (GITSKey key : names.Key) {
     ObjectSnapshot snapshot;
     if (beforeRange) {
       snapshot = StateRestorer(m_State, m_Recorder, m_Analysis).CaptureDeleted(threadId, kind, key);
+    }
+    if (kind == GLObjectKind::Texture) {
+      m_State.ForgetCompressedImages(shareGroup, TextureName(key));
     }
     const GLuint name = snapshot.Kept() ? ObjectNameMapService::Get().TryGetHandle(kind, key) : 0;
     m_State.DeleteObject(kind, key, name, std::move(snapshot), context);
@@ -536,6 +557,566 @@ void StateTrackingLayer::Pre(glDeleteTexturesCommand& command) {
 
 void StateTrackingLayer::Pre(glDeleteTexturesEXTCommand& command) {
   DeleteReadBack(GLObjectKind::Texture, command.m_ThreadId, command.m_textures);
+}
+
+void StateTrackingLayer::KeepCompressedImage(uint32_t threadId,
+                                             GLuint texture,
+                                             GLenum imageTarget,
+                                             GLint level,
+                                             CompressedImage image,
+                                             GLsizei imageSize,
+                                             const ArrayArgument<uint8_t>& data) {
+  if (!TextureCommandExecutes(threadId, true)) {
+    return;
+  }
+  const bool bound = texture == 0;
+  if (bound) {
+    texture = BoundTexture(imageTarget);
+  }
+  if (texture == 0) {
+    return;
+  }
+  const GITSKey shareGroup = m_State.CurrentShareGroup(threadId).first;
+  if (bound ? GeneratesBoundLevels(threadId, imageTarget, level)
+            : GeneratesTextureLevels(threadId, texture, imageTarget, level)) {
+    m_State.ForgetCompressedImages(shareGroup, texture);
+  }
+  if (imageSize > 0 && data.Data.size() == static_cast<size_t>(imageSize)) {
+    image.Data = data.Data;
+  }
+  m_State.KeepCompressedImage(shareGroup, texture, imageTarget, level, std::move(image));
+}
+
+template <typename CommandT>
+void StateTrackingLayer::KeepBoundCompressedImage(const CommandT& command,
+                                                  GLsizei height,
+                                                  GLsizei depth) {
+  KeepCompressedImage(command.m_ThreadId, 0, command.m_target.Value, command.m_level.Value,
+                      {command.m_internalformat.Value, command.m_width.Value, height, depth},
+                      command.m_imageSize.Value, command.m_data);
+}
+
+template <typename CommandT>
+void StateTrackingLayer::KeepTextureCompressedImage(const CommandT& command,
+                                                    GLsizei height,
+                                                    GLsizei depth) {
+  const GLuint texture =
+      ObjectNameMapService::Get().TryGetHandle(GLObjectKind::Texture, command.m_texture.Key);
+  if (texture == 0) {
+    return;
+  }
+  KeepCompressedImage(command.m_ThreadId, texture, command.m_target.Value, command.m_level.Value,
+                      {command.m_internalformat.Value, command.m_width.Value, height, depth},
+                      command.m_imageSize.Value, command.m_bits);
+}
+
+bool StateTrackingLayer::Compatibility(uint32_t threadId) {
+  const GITSKey context = m_State.CurrentShareGroup(threadId).second;
+  const auto known = m_Compatibility.find(context);
+  if (known != m_Compatibility.end()) {
+    return known->second;
+  }
+  int major = 0;
+  int minor = 0;
+  if (const auto* version = reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION));
+      version != nullptr) {
+    std::sscanf(version, "%d.%d", &major, &minor);
+  }
+  const bool compatibility =
+      major < 3 || (major == 3 && minor < 2) ||
+      (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
+  m_Compatibility.emplace(context, compatibility);
+  return compatibility;
+}
+
+bool StateTrackingLayer::GeneratesLevels(uint32_t threadId,
+                                         GLint level,
+                                         const std::function<GLint(GLenum)>& parameter) {
+  return m_Range.CurrentFrame() < m_Range.StartFrame() && Compatibility(threadId) &&
+         parameter(GL_GENERATE_MIPMAP) != GL_FALSE && parameter(GL_TEXTURE_BASE_LEVEL) == level;
+}
+
+bool StateTrackingLayer::GeneratesBoundLevels(uint32_t threadId, GLenum imageTarget, GLint level) {
+  return BoundTexture(imageTarget) != 0 &&
+         GeneratesLevels(threadId, level, [imageTarget](GLenum pname) {
+           GLint value = 0;
+           GL_FN(glGetTexParameteriv)(TextureTargetOf(imageTarget), pname, &value);
+           return value;
+         });
+}
+
+bool StateTrackingLayer::GeneratesTextureLevels(uint32_t threadId,
+                                                GLuint texture,
+                                                GLenum imageTarget,
+                                                GLint level) {
+  return texture != 0 && FindTextureTarget(TextureTargetOf(imageTarget)) != nullptr &&
+         GeneratesLevels(threadId, level, [texture, imageTarget](GLenum pname) {
+           GLint value = 0;
+           GL_FN(glGetTextureParameterivEXT)(texture, TextureTargetOf(imageTarget), pname, &value);
+           return value;
+         });
+}
+
+bool StateTrackingLayer::GeneratesUnitLevels(uint32_t threadId,
+                                             GLenum unit,
+                                             GLenum imageTarget,
+                                             GLint level) {
+  return FindTextureTarget(TextureTargetOf(imageTarget)) != nullptr &&
+         GeneratesLevels(threadId, level, [unit, imageTarget](GLenum pname) {
+           GLint value = 0;
+           GL_FN(glGetMultiTexParameterivEXT)(unit, TextureTargetOf(imageTarget), pname, &value);
+           return value;
+         });
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage1DCommand& command) {
+  KeepBoundCompressedImage(command, 1, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage1DARBCommand& command) {
+  KeepBoundCompressedImage(command, 1, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage2DCommand& command) {
+  KeepBoundCompressedImage(command, command.m_height.Value, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage2DARBCommand& command) {
+  KeepBoundCompressedImage(command, command.m_height.Value, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage3DCommand& command) {
+  KeepBoundCompressedImage(command, command.m_height.Value, command.m_depth.Value);
+}
+
+void StateTrackingLayer::Post(glCompressedTexImage3DARBCommand& command) {
+  KeepBoundCompressedImage(command, command.m_height.Value, command.m_depth.Value);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureImage1DEXTCommand& command) {
+  KeepTextureCompressedImage(command, 1, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureImage2DEXTCommand& command) {
+  KeepTextureCompressedImage(command, command.m_height.Value, 1);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureImage3DEXTCommand& command) {
+  KeepTextureCompressedImage(command, command.m_height.Value, command.m_depth.Value);
+}
+
+bool StateTrackingLayer::TextureCommandExecutes(uint32_t threadId, bool listable) {
+  if (listable && m_State.CompilingList(threadId)) {
+    m_State.MarkListChangesTextures(threadId);
+  }
+  return m_Range.CurrentFrame() < m_Range.StartFrame() &&
+         !(listable && m_State.CompilingOnly(threadId));
+}
+
+void StateTrackingLayer::ForgetCompressedImages(uint32_t threadId,
+                                                bool listable,
+                                                std::optional<GLuint> texture,
+                                                std::optional<GLenum> imageTarget,
+                                                std::optional<GLint> level) {
+  if (TextureCommandExecutes(threadId, listable) && (!texture || *texture != 0)) {
+    m_State.ForgetCompressedImages(m_State.CurrentShareGroup(threadId).first, texture, imageTarget,
+                                   level);
+  }
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetBoundCompressedImage(const CommandT& command) {
+  const GLenum target = command.m_target.Value;
+  const GLint level = command.m_level.Value;
+  if (GeneratesBoundLevels(command.m_ThreadId, target, level)) {
+    ForgetCompressedImages(command.m_ThreadId, true, BoundTexture(target));
+  } else {
+    ForgetCompressedImages(command.m_ThreadId, true, BoundTexture(target), target, level);
+  }
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetBoundCompressedImages(const CommandT& command) {
+  ForgetCompressedImages(command.m_ThreadId, false, BoundTexture(command.m_target.Value));
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetTextureCompressedImage(const CommandT& command) {
+  const GLuint texture = TextureName(command.m_texture.Key);
+  const GLenum target = command.m_target.Value;
+  const GLint level = command.m_level.Value;
+  if (GeneratesTextureLevels(command.m_ThreadId, texture, target, level)) {
+    ForgetCompressedImages(command.m_ThreadId, true, texture);
+  } else {
+    ForgetCompressedImages(command.m_ThreadId, true, texture, target, level);
+  }
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetTextureCompressedLevel(const CommandT& command) {
+  ForgetCompressedImages(command.m_ThreadId, false, TextureName(command.m_texture.Key),
+                         std::nullopt, command.m_level.Value);
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetTextureSubImageLevel(const CommandT& command) {
+  const GLuint texture = TextureName(command.m_texture.Key);
+  const GLint level = command.m_level.Value;
+  const bool generates =
+      texture != 0 && GeneratesLevels(command.m_ThreadId, level, [texture](GLenum pname) {
+        GLint value = 0;
+        GL_FN(glGetTextureParameteriv)(texture, pname, &value);
+        return value;
+      });
+  if (generates) {
+    ForgetCompressedImages(command.m_ThreadId, false, texture);
+  } else {
+    ForgetCompressedImages(command.m_ThreadId, false, texture, std::nullopt, level);
+  }
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetTextureCompressedImages(const CommandT& command) {
+  ForgetCompressedImages(command.m_ThreadId, false, TextureName(command.m_texture.Key));
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetCopyDestinationCompressedImages(const CommandT& command) {
+  if (command.m_dstTarget.Value != GL_RENDERBUFFER) {
+    ForgetCompressedImages(command.m_ThreadId, false, TextureName(command.m_dstName.Key),
+                           std::nullopt, command.m_dstLevel.Value);
+  }
+}
+
+template <typename CommandT>
+void StateTrackingLayer::ForgetUnitCompressedImage(const CommandT& command) {
+  const GLenum target = command.m_target.Value;
+  const GLint level = command.m_level.Value;
+  if (GeneratesUnitLevels(command.m_ThreadId, command.m_texunit.Value, target, level)) {
+    ForgetCompressedImages(command.m_ThreadId, true, std::nullopt);
+  } else {
+    ForgetCompressedImages(command.m_ThreadId, true, std::nullopt, target, level);
+  }
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage1DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage1DARBCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage2DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage2DARBCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage3DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTexSubImage3DARBCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage1DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage1DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage2DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage2DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage3DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexSubImage3DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage1DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage1DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage2DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage2DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage3DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexSubImage3DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glGenerateMipmapCommand& command) {
+  ForgetBoundCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glGenerateMipmapEXTCommand& command) {
+  ForgetBoundCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glTexImage1DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexImage2DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexImage3DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTexImage3DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexImage1DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexImage1DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexImage2DCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTexImage2DEXTCommand& command) {
+  ForgetBoundCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage1DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage1DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage2DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage2DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage3DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCompressedTextureSubImage3DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage1DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage1DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage2DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage2DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage3DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glTextureSubImage3DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage1DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage1DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage2DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage2DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage3DCommand& command) {
+  ForgetTextureSubImageLevel(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureSubImage3DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glGenerateTextureMipmapCommand& command) {
+  ForgetTextureCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glGenerateTextureMipmapEXTCommand& command) {
+  ForgetTextureCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glClearTexImageCommand& command) {
+  ForgetTextureCompressedLevel(command);
+}
+
+void StateTrackingLayer::Post(glClearTexImageEXTCommand& command) {
+  ForgetTextureCompressedLevel(command);
+}
+
+void StateTrackingLayer::Post(glClearTexSubImageCommand& command) {
+  ForgetTextureCompressedLevel(command);
+}
+
+void StateTrackingLayer::Post(glClearTexSubImageEXTCommand& command) {
+  ForgetTextureCompressedLevel(command);
+}
+
+void StateTrackingLayer::Post(glTextureImage1DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTextureImage2DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glTextureImage3DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureImage1DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyTextureImage2DEXTCommand& command) {
+  ForgetTextureCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyImageSubDataCommand& command) {
+  ForgetCopyDestinationCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glCopyImageSubDataEXTCommand& command) {
+  ForgetCopyDestinationCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glCopyImageSubDataNVCommand& command) {
+  ForgetCopyDestinationCompressedImages(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexImage3DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexSubImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexSubImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCompressedMultiTexSubImage3DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexImage3DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexSubImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexSubImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glMultiTexSubImage3DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyMultiTexImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyMultiTexImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyMultiTexSubImage1DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyMultiTexSubImage2DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glCopyMultiTexSubImage3DEXTCommand& command) {
+  ForgetUnitCompressedImage(command);
+}
+
+void StateTrackingLayer::Post(glGenerateMultiTexMipmapEXTCommand& command) {
+  ForgetCompressedImages(command.m_ThreadId, false, std::nullopt);
+}
+
+void StateTrackingLayer::Post(MappedTextureDataMetaCommand& command) {
+  const size_t count = std::min(command.m_Textures.Value.size(), command.m_Levels.Data.size());
+  for (size_t i = 0; i < count; ++i) {
+    ForgetCompressedImages(command.m_ThreadId, false, command.m_Textures.Value[i], std::nullopt,
+                           command.m_Levels.Data[i]);
+  }
 }
 
 // ---- Renderbuffers ------------------------------------------------------
@@ -953,7 +1534,7 @@ void StateTrackingLayer::Post(glNewListCommand& command) {
   glNewListCommand compile = command;
   compile.m_mode.Value = GL_COMPILE;
   m_State.BeginList(
-      command.m_ThreadId, command.m_list.Value,
+      command.m_ThreadId, command.m_list.Value, command.m_mode.Value == GL_COMPILE_AND_EXECUTE,
       StateRestorer(m_State, m_Recorder, m_Analysis).CaptureListCompileState(command.m_ThreadId),
       Store<glNewListCommandSerializer>(compile));
 }
@@ -962,6 +1543,25 @@ void StateTrackingLayer::Post(glEndListCommand& command) {
   if (m_State.CompilingList(command.m_ThreadId)) {
     m_State.EndList(command.m_ThreadId,
                     StateRestorer(m_State, m_Recorder, m_Analysis).ResetListCompileState());
+  }
+}
+
+// The texture commands of a list change images only when it executes, on the textures bound then,
+// so executing a list that can change them forgets the kept compressed images of the share group.
+void StateTrackingLayer::Post(glCallListCommand& command) {
+  const uint32_t threadId = command.m_ThreadId;
+  if (m_State.CompilingList(threadId) ||
+      m_State.ListChangesTextures(m_State.CurrentShareGroup(threadId).first,
+                                  command.m_list.Value)) {
+    ForgetCompressedImages(threadId, true, std::nullopt);
+  }
+}
+
+void StateTrackingLayer::Post(glCallListsCommand& command) {
+  const uint32_t threadId = command.m_ThreadId;
+  if (m_State.CompilingList(threadId) ||
+      m_State.ListChangesTextures(m_State.CurrentShareGroup(threadId).first, std::nullopt)) {
+    ForgetCompressedImages(threadId, true, std::nullopt);
   }
 }
 

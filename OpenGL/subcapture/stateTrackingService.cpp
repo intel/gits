@@ -419,6 +419,36 @@ ProgramState* StateTrackingService::Program(GITSKey program) {
   return &m_Programs[program];
 }
 
+void StateTrackingService::KeepCompressedImage(
+    GITSKey shareGroup, GLuint texture, GLenum imageTarget, GLint level, CompressedImage image) {
+  m_CompressedImages[{shareGroup, texture, imageTarget, level}] = std::move(image);
+}
+
+void StateTrackingService::ForgetCompressedImages(GITSKey shareGroup,
+                                                  std::optional<GLuint> texture,
+                                                  std::optional<GLenum> imageTarget,
+                                                  std::optional<GLint> level) {
+  auto it = texture ? m_CompressedImages.lower_bound({shareGroup, *texture, 0, 0})
+                    : m_CompressedImages.lower_bound({shareGroup, 0, 0, 0});
+  while (it != m_CompressedImages.end() && std::get<0>(it->first) == shareGroup &&
+         (!texture || std::get<1>(it->first) == *texture)) {
+    if ((!imageTarget || std::get<2>(it->first) == *imageTarget) &&
+        (!level || std::get<3>(it->first) == *level)) {
+      it = m_CompressedImages.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+const CompressedImage* StateTrackingService::FindCompressedImage(GITSKey shareGroup,
+                                                                 GLuint texture,
+                                                                 GLenum imageTarget,
+                                                                 GLint level) const {
+  const auto it = m_CompressedImages.find({shareGroup, texture, imageTarget, level});
+  return it != m_CompressedImages.end() ? &it->second : nullptr;
+}
+
 const ObjectState* StateTrackingService::Object(GITSKey key) const {
   const auto object = m_Objects.find(key);
   return object != m_Objects.end() ? &object->second : nullptr;
@@ -459,6 +489,7 @@ void StateTrackingService::DeleteArbProgram(GITSKey key) {
 void StateTrackingService::CreateHandle(GLuint64 handle, BindlessHandle state) {
   const auto texture = m_Objects.find(state.Texture);
   if (handle != 0 && texture != m_Objects.end()) {
+    texture->second.HandleCreated = true;
     m_Handles[{texture->second.Owner, handle}] = std::move(state);
   }
 }
@@ -492,6 +523,11 @@ bool StateTrackingService::HasResidentHandle(GITSKey object) const {
   return false;
 }
 
+bool StateTrackingService::HandleCreated(GITSKey texture) const {
+  const auto object = m_Objects.find(texture);
+  return object != m_Objects.end() && object->second.HandleCreated;
+}
+
 void StateTrackingService::DeleteHandles(GITSKey object) {
   for (auto handle = m_Handles.begin(); handle != m_Handles.end();) {
     if (handle->second.Texture != object && handle->second.Sampler != object) {
@@ -509,13 +545,34 @@ void StateTrackingService::DeleteHandles(GITSKey object) {
 
 void StateTrackingService::BeginList(uint32_t threadId,
                                      GLuint list,
+                                     bool executed,
                                      ListCompileState compileState,
                                      std::shared_ptr<StoredCommand> newList) {
   auto& compiling = m_CompilingLists[threadId];
   compiling.first = {OwnerFor(GLObjectKind::Program, threadId), list};
+  compiling.second = {};
   compiling.second.Commands = std::move(compileState.Commands);
   compiling.second.Commands.push_back(std::move(newList));
   compiling.second.Buffers = std::move(compileState.Buffers);
+  compiling.second.Executed = executed;
+}
+
+void StateTrackingService::MarkListChangesTextures(uint32_t threadId) {
+  const auto compiling = m_CompilingLists.find(threadId);
+  if (compiling != m_CompilingLists.end()) {
+    compiling->second.second.ChangesTextures = true;
+  }
+}
+
+bool StateTrackingService::ListChangesTextures(GITSKey shareGroup,
+                                               std::optional<GLuint> list) const {
+  if (list) {
+    const auto it = m_DisplayLists.find({shareGroup, *list});
+    return it != m_DisplayLists.end() && it->second.ChangesTextures;
+  }
+  return std::any_of(m_DisplayLists.begin(), m_DisplayLists.end(), [&](const auto& entry) {
+    return entry.first.first == shareGroup && entry.second.ChangesTextures;
+  });
 }
 
 void StateTrackingService::AddListCommand(uint32_t threadId,

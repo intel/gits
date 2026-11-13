@@ -14,6 +14,9 @@
 #include "subcaptureRange.h"
 #include "subcaptureRecorder.h"
 
+#include <functional>
+#include <unordered_map>
+
 namespace gits::opengl {
 
 // Feeds StateTrackingService from replayed commands, before the subcapture range starts. Tracks
@@ -109,6 +112,94 @@ public:
   void Post(glTextureViewOESCommand& command) override;
   void Pre(glDeleteTexturesCommand& command) override;
   void Pre(glDeleteTexturesEXTCommand& command) override;
+  void Post(glCompressedTexImage1DCommand& command) override;
+  void Post(glCompressedTexImage1DARBCommand& command) override;
+  void Post(glCompressedTexImage2DCommand& command) override;
+  void Post(glCompressedTexImage2DARBCommand& command) override;
+  void Post(glCompressedTexImage3DCommand& command) override;
+  void Post(glCompressedTexImage3DARBCommand& command) override;
+  void Post(glCompressedTextureImage1DEXTCommand& command) override;
+  void Post(glCompressedTextureImage2DEXTCommand& command) override;
+  void Post(glCompressedTextureImage3DEXTCommand& command) override;
+  void Post(glCompressedTexSubImage1DCommand& command) override;
+  void Post(glCompressedTexSubImage1DARBCommand& command) override;
+  void Post(glCompressedTexSubImage2DCommand& command) override;
+  void Post(glCompressedTexSubImage2DARBCommand& command) override;
+  void Post(glCompressedTexSubImage3DCommand& command) override;
+  void Post(glCompressedTexSubImage3DARBCommand& command) override;
+  void Post(glTexSubImage1DCommand& command) override;
+  void Post(glTexSubImage1DEXTCommand& command) override;
+  void Post(glTexSubImage2DCommand& command) override;
+  void Post(glTexSubImage2DEXTCommand& command) override;
+  void Post(glTexSubImage3DCommand& command) override;
+  void Post(glTexSubImage3DEXTCommand& command) override;
+  void Post(glCopyTexSubImage1DCommand& command) override;
+  void Post(glCopyTexSubImage1DEXTCommand& command) override;
+  void Post(glCopyTexSubImage2DCommand& command) override;
+  void Post(glCopyTexSubImage2DEXTCommand& command) override;
+  void Post(glCopyTexSubImage3DCommand& command) override;
+  void Post(glCopyTexSubImage3DEXTCommand& command) override;
+  void Post(glGenerateMipmapCommand& command) override;
+  void Post(glGenerateMipmapEXTCommand& command) override;
+  void Post(glTexImage1DCommand& command) override;
+  void Post(glTexImage2DCommand& command) override;
+  void Post(glTexImage3DCommand& command) override;
+  void Post(glTexImage3DEXTCommand& command) override;
+  void Post(glCopyTexImage1DCommand& command) override;
+  void Post(glCopyTexImage1DEXTCommand& command) override;
+  void Post(glCopyTexImage2DCommand& command) override;
+  void Post(glCopyTexImage2DEXTCommand& command) override;
+  void Post(glCompressedTextureSubImage1DCommand& command) override;
+  void Post(glCompressedTextureSubImage1DEXTCommand& command) override;
+  void Post(glCompressedTextureSubImage2DCommand& command) override;
+  void Post(glCompressedTextureSubImage2DEXTCommand& command) override;
+  void Post(glCompressedTextureSubImage3DCommand& command) override;
+  void Post(glCompressedTextureSubImage3DEXTCommand& command) override;
+  void Post(glTextureSubImage1DCommand& command) override;
+  void Post(glTextureSubImage1DEXTCommand& command) override;
+  void Post(glTextureSubImage2DCommand& command) override;
+  void Post(glTextureSubImage2DEXTCommand& command) override;
+  void Post(glTextureSubImage3DCommand& command) override;
+  void Post(glTextureSubImage3DEXTCommand& command) override;
+  void Post(glCopyTextureSubImage1DCommand& command) override;
+  void Post(glCopyTextureSubImage1DEXTCommand& command) override;
+  void Post(glCopyTextureSubImage2DCommand& command) override;
+  void Post(glCopyTextureSubImage2DEXTCommand& command) override;
+  void Post(glCopyTextureSubImage3DCommand& command) override;
+  void Post(glCopyTextureSubImage3DEXTCommand& command) override;
+  void Post(glGenerateTextureMipmapCommand& command) override;
+  void Post(glGenerateTextureMipmapEXTCommand& command) override;
+  void Post(glClearTexImageCommand& command) override;
+  void Post(glClearTexImageEXTCommand& command) override;
+  void Post(glClearTexSubImageCommand& command) override;
+  void Post(glClearTexSubImageEXTCommand& command) override;
+  void Post(glTextureImage1DEXTCommand& command) override;
+  void Post(glTextureImage2DEXTCommand& command) override;
+  void Post(glTextureImage3DEXTCommand& command) override;
+  void Post(glCopyTextureImage1DEXTCommand& command) override;
+  void Post(glCopyTextureImage2DEXTCommand& command) override;
+  void Post(glCopyImageSubDataCommand& command) override;
+  void Post(glCopyImageSubDataEXTCommand& command) override;
+  void Post(glCopyImageSubDataNVCommand& command) override;
+  void Post(glCompressedMultiTexImage1DEXTCommand& command) override;
+  void Post(glCompressedMultiTexImage2DEXTCommand& command) override;
+  void Post(glCompressedMultiTexImage3DEXTCommand& command) override;
+  void Post(glCompressedMultiTexSubImage1DEXTCommand& command) override;
+  void Post(glCompressedMultiTexSubImage2DEXTCommand& command) override;
+  void Post(glCompressedMultiTexSubImage3DEXTCommand& command) override;
+  void Post(glMultiTexImage1DEXTCommand& command) override;
+  void Post(glMultiTexImage2DEXTCommand& command) override;
+  void Post(glMultiTexImage3DEXTCommand& command) override;
+  void Post(glMultiTexSubImage1DEXTCommand& command) override;
+  void Post(glMultiTexSubImage2DEXTCommand& command) override;
+  void Post(glMultiTexSubImage3DEXTCommand& command) override;
+  void Post(glCopyMultiTexImage1DEXTCommand& command) override;
+  void Post(glCopyMultiTexImage2DEXTCommand& command) override;
+  void Post(glCopyMultiTexSubImage1DEXTCommand& command) override;
+  void Post(glCopyMultiTexSubImage2DEXTCommand& command) override;
+  void Post(glCopyMultiTexSubImage3DEXTCommand& command) override;
+  void Post(glGenerateMultiTexMipmapEXTCommand& command) override;
+  void Post(MappedTextureDataMetaCommand& command) override;
 
   // ---- Renderbuffers ----------------------------------------------------
   void Post(glGenRenderbuffersCommand& command) override;
@@ -186,6 +277,8 @@ public:
   // ---- Display lists ----------------------------------------------------
   void Post(glNewListCommand& command) override;
   void Post(glEndListCommand& command) override;
+  void Post(glCallListCommand& command) override;
+  void Post(glCallListsCommand& command) override;
   void Post(glDeleteListsCommand& command) override;
   void Post(wglUseFontBitmapsACommand& command) override;
   void Post(wglUseFontBitmapsWCommand& command) override;
@@ -261,6 +354,61 @@ private:
   // it rejects the view, so a view is tracked only if its name became a texture.
   template <typename SerializerT, typename CommandT>
   void SetView(const CommandT& command);
+  // Keeps a whole compressed image the application uploaded to `texture`, the texture bound to
+  // the target of `imageTarget` when 0. An image uploaded from a pixel unpack buffer is kept
+  // without data, as one whose blocks are unknown.
+  void KeepCompressedImage(uint32_t threadId,
+                           GLuint texture,
+                           GLenum imageTarget,
+                           GLint level,
+                           CompressedImage image,
+                           GLsizei imageSize,
+                           const ArrayArgument<uint8_t>& data);
+  template <typename CommandT>
+  void KeepBoundCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
+  template <typename CommandT>
+  void KeepTextureCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
+  // Whether a texture command on `threadId` executes before the range. A `listable` command,
+  // one GL compiles into a display list, does not execute while a list compiles in GL_COMPILE
+  // mode, and marks the list as one that can change texture images. A command GL executes at
+  // once is not part of the list.
+  bool TextureCommandExecutes(uint32_t threadId, bool listable);
+  // A command before the range that can change an image of a texture makes the compressed
+  // images kept for it stale: those of the image target and level it writes, of the level only,
+  // or all of them. A command on a texture unit of GL_EXT_direct_state_access forgets those of
+  // every texture of the share group, as does executing a display list.
+  void ForgetCompressedImages(uint32_t threadId,
+                              bool listable,
+                              std::optional<GLuint> texture,
+                              std::optional<GLenum> imageTarget = std::nullopt,
+                              std::optional<GLint> level = std::nullopt);
+  template <typename CommandT>
+  void ForgetBoundCompressedImage(const CommandT& command);
+  template <typename CommandT>
+  void ForgetBoundCompressedImages(const CommandT& command);
+  template <typename CommandT>
+  void ForgetTextureCompressedImage(const CommandT& command);
+  template <typename CommandT>
+  void ForgetTextureCompressedLevel(const CommandT& command);
+  template <typename CommandT>
+  void ForgetTextureSubImageLevel(const CommandT& command);
+  // Whether the current context of `threadId` has the compatibility profile.
+  bool Compatibility(uint32_t threadId);
+  // Whether a command executing before the range that writes `level` of a texture makes GL
+  // generate its other levels: GL_GENERATE_MIPMAP is set and `level` is its base level.
+  // `parameter` reads an integer parameter of the texture.
+  bool GeneratesLevels(uint32_t threadId,
+                       GLint level,
+                       const std::function<GLint(GLenum)>& parameter);
+  bool GeneratesBoundLevels(uint32_t threadId, GLenum imageTarget, GLint level);
+  bool GeneratesTextureLevels(uint32_t threadId, GLuint texture, GLenum imageTarget, GLint level);
+  bool GeneratesUnitLevels(uint32_t threadId, GLenum unit, GLenum imageTarget, GLint level);
+  template <typename CommandT>
+  void ForgetTextureCompressedImages(const CommandT& command);
+  template <typename CommandT>
+  void ForgetCopyDestinationCompressedImages(const CommandT& command);
+  template <typename CommandT>
+  void ForgetUnitCompressedImage(const CommandT& command);
 
   StateTrackingService& m_State;
   SubcaptureRecorder& m_Recorder;
@@ -268,6 +416,7 @@ private:
   const SubcaptureRange& m_Range;
   // Whether the name of the view being created was not a texture before the call.
   bool m_ViewNameUnused{};
+  std::unordered_map<GITSKey, bool> m_Compatibility;
 };
 
 } // namespace gits::opengl
