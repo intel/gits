@@ -182,9 +182,10 @@ bool Copyable(GLenum format) {
 
 // Compressed images read with glGetCompressedTexImage can differ from the uploaded data. Their
 // blocks copied into the texels of an uncompressed texture of the same size read back exactly.
-// Images in formats glCopyImageSubData cannot copy, or that are not a whole number of blocks,
-// are read directly. A failed allocation or copy stops the subcapture. Returns the number of GL
-// errors raised before the copy, which the copy's own errors must be told apart from.
+// The copy covers the whole image, so it can end inside the last blocks, as for levels smaller
+// than a block. Images in formats glCopyImageSubData cannot copy are read directly. A failed
+// allocation or copy stops the subcapture. Returns the number of GL errors raised before the
+// copy, which the copy's own errors must be told apart from.
 int ReadCompressedImage(GLenum target,
                         GLuint texture,
                         GLenum imageTarget,
@@ -205,10 +206,9 @@ int ReadCompressedImage(GLenum target,
   const GLsizei width = info.Width;
   const GLsizei height = std::max(info.Height, 1);
   const GLsizei layers = std::max(info.Depth, 1);
-  const bool whole =
-      blockWidth > 0 && blockHeight > 0 && width % blockWidth == 0 && height % blockHeight == 0;
-  const GLsizei columns = whole ? width / blockWidth : 0;
-  const GLsizei rows = whole ? height / blockHeight : 0;
+  const bool blocked = blockWidth > 0 && blockHeight > 0;
+  const GLsizei columns = blocked ? (width + blockWidth - 1) / blockWidth : 0;
+  const GLsizei rows = blocked ? (height + blockHeight - 1) / blockHeight : 0;
   // The block size follows from the image size.
   const size_t blocks = static_cast<size_t>(columns) * rows * layers;
   const size_t blockSize = blocks > 0 && data.size() % blocks == 0 ? data.size() / blocks : 0;
@@ -252,10 +252,19 @@ int ReadCompressedImage(GLenum target,
     if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
       FailCompressedRead(texture, level, "allocating a texture", error);
     }
-    GL_FN(glCopyImageSubData)
-    (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
-     width, height, count);
-    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+    const auto copyBlocks = [&](GLsizei copyWidth, GLsizei copyHeight) {
+      GL_FN(glCopyImageSubData)
+      (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+       copyWidth, copyHeight, count);
+      return GL_FN(glGetError)();
+    };
+    // The region can end inside the last blocks at the image edge or be rounded up to whole
+    // blocks; both copy the same blocks, so the rounded one is copied when the first is rejected.
+    GLenum error = copyBlocks(width, height);
+    if (error == GL_INVALID_VALUE && (width % blockWidth != 0 || height % blockHeight != 0)) {
+      error = copyBlocks(columns * blockWidth, rows * blockHeight);
+    }
+    if (error != GL_NO_ERROR) {
       FailCompressedRead(texture, level, "copying the blocks", error);
     }
     GL_FN(glGetTexImage)
