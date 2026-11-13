@@ -33,6 +33,8 @@ public:
   // Skip
   void Pre(IDStorageQueue1EnqueueSetEventCommand& c) override;
   void Pre(IDStorageCustomDecompressionQueueSetRequestResultsCommand& c) override;
+  void Pre(IDStorageCompressionCodecCompressBufferCommand& c) override;
+  void Pre(IDStorageCompressionCodecDecompressBufferCommand& c) override;
 
 private:
   using Buffer = std::vector<std::byte>;

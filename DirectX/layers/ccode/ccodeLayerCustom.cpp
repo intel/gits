@@ -754,6 +754,18 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p,
   p.skip();
 }
 
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            IDStorageCompressionCodecCompressBufferCommand& c) {
+  // Data buffers are recorded as capture-time addresses, not contents
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            IDStorageCompressionCodecDecompressBufferCommand& c) {
+  // Data buffers are recorded as capture-time addresses, not contents
+  p.skip();
+}
+
 void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayIsCompleteCommand& c) {
   using namespace ccode;
   if (!c.m_Result.Value) {

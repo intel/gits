@@ -125,6 +125,16 @@ void DirectStorageLayer::Pre(IDStorageCustomDecompressionQueueSetRequestResultsC
   c.Skip = true;
 }
 
+void DirectStorageLayer::Pre(IDStorageCompressionCodecCompressBufferCommand& c) {
+  // Data buffers are recorded as capture-time addresses, not contents
+  c.Skip = true;
+}
+
+void DirectStorageLayer::Pre(IDStorageCompressionCodecDecompressBufferCommand& c) {
+  // Data buffers are recorded as capture-time addresses, not contents
+  c.Skip = true;
+}
+
 void DirectStorageLayer::Pre(IDStorageQueueSubmitCommand& c) {
   auto queueKey = c.m_Object.Key;
   ClearCompletedBatches(queueKey);

@@ -113,6 +113,8 @@ private:
   void preProcess(ccode::CommandPrinter& p, IDStorageFactoryOpenFileCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageQueue1EnqueueSetEventCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageCustomDecompressionQueueSetRequestResultsCommand& c);
+  void preProcess(ccode::CommandPrinter& p, IDStorageCompressionCodecCompressBufferCommand& c);
+  void preProcess(ccode::CommandPrinter& p, IDStorageCompressionCodecDecompressBufferCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayIsCompleteCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayGetHResultCommand& c);
   void preProcess(ccode::CommandPrinter& p, ID3D12ShaderCacheSession1FindValue1Command& c);
