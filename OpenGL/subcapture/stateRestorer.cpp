@@ -32,6 +32,7 @@ struct Capability {
   GLenum Cap;
   int Major;
   int Minor;
+  const char* Extension{};
 };
 
 constexpr Capability CAPABILITIES[] = {
@@ -58,8 +59,8 @@ constexpr Capability CAPABILITIES[] = {
     {GL_PROGRAM_POINT_SIZE, 3, 2},
     {GL_TEXTURE_CUBE_MAP_SEAMLESS, 3, 2},
     {GL_SAMPLE_MASK, 3, 2},
-    {GL_SAMPLE_SHADING, 4, 0},
-    {GL_PRIMITIVE_RESTART_FIXED_INDEX, 4, 3},
+    {GL_SAMPLE_SHADING, 4, 0, "GL_ARB_sample_shading"},
+    {GL_PRIMITIVE_RESTART_FIXED_INDEX, 4, 3, "GL_ARB_ES3_compatibility"},
 };
 
 constexpr GLenum UNPACK_STATE[] = {
@@ -82,28 +83,30 @@ struct QueryTarget {
   bool Indexed;
   int Major;
   int Minor;
+  const char* Extension{};
 };
 
+constexpr const char* PIPELINE_STATISTICS = "GL_ARB_pipeline_statistics_query";
 constexpr QueryTarget QUERY_TARGETS[] = {
     {GL_SAMPLES_PASSED, false, 1, 5},
-    {GL_ANY_SAMPLES_PASSED, false, 3, 3},
-    {GL_ANY_SAMPLES_PASSED_CONSERVATIVE, false, 4, 3},
-    {GL_TIME_ELAPSED, false, 3, 3},
+    {GL_ANY_SAMPLES_PASSED, false, 3, 3, "GL_ARB_occlusion_query2"},
+    {GL_ANY_SAMPLES_PASSED_CONSERVATIVE, false, 4, 3, "GL_ARB_ES3_compatibility"},
+    {GL_TIME_ELAPSED, false, 3, 3, "GL_ARB_timer_query"},
     {GL_PRIMITIVES_GENERATED, true, 3, 0},
     {GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, true, 3, 0},
-    {GL_TRANSFORM_FEEDBACK_OVERFLOW, false, 4, 6},
-    {GL_TRANSFORM_FEEDBACK_STREAM_OVERFLOW, true, 4, 6},
-    {GL_VERTICES_SUBMITTED, false, 4, 6},
-    {GL_PRIMITIVES_SUBMITTED, false, 4, 6},
-    {GL_VERTEX_SHADER_INVOCATIONS, false, 4, 6},
-    {GL_TESS_CONTROL_SHADER_PATCHES, false, 4, 6},
-    {GL_TESS_EVALUATION_SHADER_INVOCATIONS, false, 4, 6},
-    {GL_GEOMETRY_SHADER_INVOCATIONS, false, 4, 6},
-    {GL_GEOMETRY_SHADER_PRIMITIVES_EMITTED, false, 4, 6},
-    {GL_FRAGMENT_SHADER_INVOCATIONS, false, 4, 6},
-    {GL_COMPUTE_SHADER_INVOCATIONS, false, 4, 6},
-    {GL_CLIPPING_INPUT_PRIMITIVES, false, 4, 6},
-    {GL_CLIPPING_OUTPUT_PRIMITIVES, false, 4, 6},
+    {GL_TRANSFORM_FEEDBACK_OVERFLOW, false, 4, 6, "GL_ARB_transform_feedback_overflow_query"},
+    {GL_TRANSFORM_FEEDBACK_STREAM_OVERFLOW, true, 4, 6, "GL_ARB_transform_feedback_overflow_query"},
+    {GL_VERTICES_SUBMITTED, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_PRIMITIVES_SUBMITTED, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_VERTEX_SHADER_INVOCATIONS, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_TESS_CONTROL_SHADER_PATCHES, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_TESS_EVALUATION_SHADER_INVOCATIONS, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_GEOMETRY_SHADER_INVOCATIONS, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_GEOMETRY_SHADER_PRIMITIVES_EMITTED, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_FRAGMENT_SHADER_INVOCATIONS, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_COMPUTE_SHADER_INVOCATIONS, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_CLIPPING_INPUT_PRIMITIVES, false, 4, 6, PIPELINE_STATISTICS},
+    {GL_CLIPPING_OUTPUT_PRIMITIVES, false, 4, 6, PIPELINE_STATISTICS},
 };
 
 struct BufferTarget {
@@ -111,6 +114,7 @@ struct BufferTarget {
   GLenum Binding;
   int Major;
   int Minor;
+  const char* Extension{};
 };
 
 constexpr BufferTarget BUFFER_TARGETS[] = {
@@ -121,11 +125,14 @@ constexpr BufferTarget BUFFER_TARGETS[] = {
     {GL_COPY_READ_BUFFER, GL_COPY_READ_BUFFER_BINDING, 3, 1},
     {GL_COPY_WRITE_BUFFER, GL_COPY_WRITE_BUFFER_BINDING, 3, 1},
     {GL_UNIFORM_BUFFER, GL_UNIFORM_BUFFER_BINDING, 3, 1},
-    {GL_DRAW_INDIRECT_BUFFER, GL_DRAW_INDIRECT_BUFFER_BINDING, 4, 0},
-    {GL_ATOMIC_COUNTER_BUFFER, GL_ATOMIC_COUNTER_BUFFER_BINDING, 4, 2},
-    {GL_DISPATCH_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER_BINDING, 4, 3},
-    {GL_SHADER_STORAGE_BUFFER, GL_SHADER_STORAGE_BUFFER_BINDING, 4, 3},
-    {GL_QUERY_BUFFER, GL_QUERY_BUFFER_BINDING, 4, 4},
+    {GL_DRAW_INDIRECT_BUFFER, GL_DRAW_INDIRECT_BUFFER_BINDING, 4, 0, "GL_ARB_draw_indirect"},
+    {GL_ATOMIC_COUNTER_BUFFER, GL_ATOMIC_COUNTER_BUFFER_BINDING, 4, 2,
+     "GL_ARB_shader_atomic_counters"},
+    {GL_DISPATCH_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER_BINDING, 4, 3,
+     "GL_ARB_compute_shader"},
+    {GL_SHADER_STORAGE_BUFFER, GL_SHADER_STORAGE_BUFFER_BINDING, 4, 3,
+     "GL_ARB_shader_storage_buffer_object"},
+    {GL_QUERY_BUFFER, GL_QUERY_BUFFER_BINDING, 4, 4, "GL_ARB_query_buffer_object"},
 };
 
 struct IndexedBufferTarget {
@@ -136,6 +143,7 @@ struct IndexedBufferTarget {
   GLenum MaxBindings;
   int Major;
   int Minor;
+  const char* Extension{};
 };
 
 constexpr IndexedBufferTarget INDEXED_BUFFER_TARGETS[] = {
@@ -145,9 +153,11 @@ constexpr IndexedBufferTarget INDEXED_BUFFER_TARGETS[] = {
     {GL_UNIFORM_BUFFER, GL_UNIFORM_BUFFER_BINDING, GL_UNIFORM_BUFFER_START, GL_UNIFORM_BUFFER_SIZE,
      GL_MAX_UNIFORM_BUFFER_BINDINGS, 3, 1},
     {GL_ATOMIC_COUNTER_BUFFER, GL_ATOMIC_COUNTER_BUFFER_BINDING, GL_ATOMIC_COUNTER_BUFFER_START,
-     GL_ATOMIC_COUNTER_BUFFER_SIZE, GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, 4, 2},
+     GL_ATOMIC_COUNTER_BUFFER_SIZE, GL_MAX_ATOMIC_COUNTER_BUFFER_BINDINGS, 4, 2,
+     "GL_ARB_shader_atomic_counters"},
     {GL_SHADER_STORAGE_BUFFER, GL_SHADER_STORAGE_BUFFER_BINDING, GL_SHADER_STORAGE_BUFFER_START,
-     GL_SHADER_STORAGE_BUFFER_SIZE, GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, 4, 3},
+     GL_SHADER_STORAGE_BUFFER_SIZE, GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS, 4, 3,
+     "GL_ARB_shader_storage_buffer_object"},
 };
 
 constexpr GLenum HINTS[] = {
@@ -513,7 +523,10 @@ bool StateRestorer::Attached(
   if (!vertexArrays.empty()) {
     const GLuint bound = GetName(GL_VERTEX_ARRAY_BINDING);
     const GLint attributes = GetInteger(GL_MAX_VERTEX_ATTRIBS);
-    const GLint bindings = m_Version.AtLeast(4, 3) ? GetInteger(GL_MAX_VERTEX_ATTRIB_BINDINGS) : 0;
+    const GLint bindings = Supports(4, 3, "GL_ARB_vertex_attrib_binding")
+                               ? GetInteger(GL_MAX_VERTEX_ATTRIB_BINDINGS)
+                               : 0;
+    const bool bindingBuffers = m_Version.AtLeast(4, 4);
     for (size_t i = 0; i < vertexArrays.size() && !attached; ++i) {
       const GLuint vertexArray = vertexArrays[i];
       if ((unboundOnly && vertexArray == bound) || !GL_FN(glIsVertexArray)(vertexArray)) {
@@ -526,8 +539,7 @@ bool StateRestorer::Attached(
                        static_cast<GLuint>(index), GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING)) == name;
       }
       for (GLint index = 0; index < bindings && !attached; ++index) {
-        attached = static_cast<GLuint>(GetIntegerIndexed(GL_VERTEX_BINDING_BUFFER,
-                                                         static_cast<GLuint>(index))) == name;
+        attached = VertexBindingBuffer(static_cast<GLuint>(index), bindingBuffers) == name;
       }
     }
     GL_FN(glBindVertexArray)(bound);
@@ -587,6 +599,7 @@ ListCompileState StateRestorer::CaptureListCompileState(uint32_t threadId) {
   if (!m_Version.Compatibility) {
     return state;
   }
+  ReadExtensions();
   m_UnmappedNames = m_State.CurrentShareGroup(threadId);
   m_Capture = &state.Commands;
   if (m_Version.AtLeast(2, 0)) {
@@ -1106,7 +1119,7 @@ void StateRestorer::RestoreDefaultFramebuffer() {
 
 void StateRestorer::RestoreContextState() {
   for (const Capability& capability : CAPABILITIES) {
-    if (m_Version.AtLeast(capability.Major, capability.Minor)) {
+    if (Supports(capability.Major, capability.Minor, capability.Extension)) {
       EmitCapability(capability.Cap, GL_FN(glIsEnabled)(capability.Cap) != GL_FALSE);
     }
   }
@@ -1248,7 +1261,7 @@ void StateRestorer::RestoreContextState() {
       polygonMode.m_mode.Value = modes[1];
       Emit<glPolygonModeCommandSerializer>(polygonMode);
     }
-    if (m_Version.AtLeast(4, 6)) {
+    if (Supports(4, 6, "GL_ARB_polygon_offset_clamp")) {
       glPolygonOffsetClampCommand polygonOffset;
       polygonOffset.m_factor.Value = GetFloat(GL_POLYGON_OFFSET_FACTOR);
       polygonOffset.m_units.Value = GetFloat(GL_POLYGON_OFFSET_UNITS);
@@ -1290,6 +1303,10 @@ void StateRestorer::RestoreContextState() {
     glMinSampleShadingCommand command;
     command.m_value.Value = GetFloat(GL_MIN_SAMPLE_SHADING_VALUE);
     Emit<glMinSampleShadingCommandSerializer>(command);
+  } else if (HasExtension("GL_ARB_sample_shading")) {
+    glMinSampleShadingARBCommand command;
+    command.m_value.Value = GetFloat(GL_MIN_SAMPLE_SHADING_VALUE);
+    Emit<glMinSampleShadingARBCommandSerializer>(command);
   }
   if (m_Version.AtLeast(1, 4)) {
     glPointParameterfCommand command;
@@ -1336,7 +1353,7 @@ void StateRestorer::RestoreContextState() {
     command.m_mode.Value = GetInteger(GL_PROVOKING_VERTEX);
     Emit<glProvokingVertexCommandSerializer>(command);
   }
-  if (m_Version.AtLeast(4, 0)) {
+  if (Supports(4, 0, "GL_ARB_tessellation_shader")) {
     glPatchParameteriCommand command;
     command.m_pname.Value = GL_PATCH_VERTICES;
     command.m_value.Value = GetInteger(GL_PATCH_VERTICES);
@@ -1400,22 +1417,35 @@ void StateRestorer::RestoreDrawBufferState() {
     colorMask.m_b.Value = mask[2];
     colorMask.m_a.Value = mask[3];
     Emit<glColorMaskiCommandSerializer>(colorMask);
-    if (!m_Version.AtLeast(4, 0)) {
-      continue;
+    if (m_Version.AtLeast(4, 0)) {
+      RestoreDrawBufferBlend<glBlendFuncSeparateiCommand, glBlendFuncSeparateiCommandSerializer,
+                             glBlendEquationSeparateiCommand,
+                             glBlendEquationSeparateiCommandSerializer>(index);
+    } else if (HasExtension("GL_ARB_draw_buffers_blend")) {
+      RestoreDrawBufferBlend<
+          glBlendFuncSeparateiARBCommand, glBlendFuncSeparateiARBCommandSerializer,
+          glBlendEquationSeparateiARBCommand, glBlendEquationSeparateiARBCommandSerializer>(index);
     }
-    glBlendFuncSeparateiCommand func;
-    func.m_buf.Value = index;
-    func.m_srcRGB.Value = GetIntegerIndexed(GL_BLEND_SRC_RGB, index);
-    func.m_dstRGB.Value = GetIntegerIndexed(GL_BLEND_DST_RGB, index);
-    func.m_srcAlpha.Value = GetIntegerIndexed(GL_BLEND_SRC_ALPHA, index);
-    func.m_dstAlpha.Value = GetIntegerIndexed(GL_BLEND_DST_ALPHA, index);
-    Emit<glBlendFuncSeparateiCommandSerializer>(func);
-    glBlendEquationSeparateiCommand equation;
-    equation.m_buf.Value = index;
-    equation.m_modeRGB.Value = GetIntegerIndexed(GL_BLEND_EQUATION_RGB, index);
-    equation.m_modeAlpha.Value = GetIntegerIndexed(GL_BLEND_EQUATION_ALPHA, index);
-    Emit<glBlendEquationSeparateiCommandSerializer>(equation);
   }
+}
+
+template <typename FuncCommand,
+          typename FuncSerializer,
+          typename EquationCommand,
+          typename EquationSerializer>
+void StateRestorer::RestoreDrawBufferBlend(GLuint index) {
+  FuncCommand func;
+  func.m_buf.Value = index;
+  func.m_srcRGB.Value = GetIntegerIndexed(GL_BLEND_SRC_RGB, index);
+  func.m_dstRGB.Value = GetIntegerIndexed(GL_BLEND_DST_RGB, index);
+  func.m_srcAlpha.Value = GetIntegerIndexed(GL_BLEND_SRC_ALPHA, index);
+  func.m_dstAlpha.Value = GetIntegerIndexed(GL_BLEND_DST_ALPHA, index);
+  Emit<FuncSerializer>(func);
+  EquationCommand equation;
+  equation.m_buf.Value = index;
+  equation.m_modeRGB.Value = GetIntegerIndexed(GL_BLEND_EQUATION_RGB, index);
+  equation.m_modeAlpha.Value = GetIntegerIndexed(GL_BLEND_EQUATION_ALPHA, index);
+  Emit<EquationSerializer>(equation);
 }
 
 // Current values of generic vertex attributes, which disabled attribute arrays read. Attribute 0
@@ -1440,9 +1470,10 @@ void StateRestorer::RestoreVertexAttributeValues() {
 // A query begun before the range can end in it. Active queries begin again last, so nothing else
 // the restore draws counts in them.
 void StateRestorer::RestoreActiveQueries() {
-  const GLint streams = m_Version.AtLeast(4, 0) ? GetInteger(GL_MAX_VERTEX_STREAMS) : 1;
+  const GLint streams =
+      Supports(4, 0, "GL_ARB_transform_feedback3") ? GetInteger(GL_MAX_VERTEX_STREAMS) : 1;
   for (const QueryTarget& target : QUERY_TARGETS) {
-    if (!m_Version.AtLeast(target.Major, target.Minor)) {
+    if (!Supports(target.Major, target.Minor, target.Extension)) {
       continue;
     }
     for (GLint i = 0; i < (target.Indexed ? streams : 1); ++i) {
@@ -1478,7 +1509,7 @@ void StateRestorer::RestoreActiveQueries() {
 void StateRestorer::RestoreIndexedBuffers(bool transformFeedback) {
   for (const IndexedBufferTarget& target : INDEXED_BUFFER_TARGETS) {
     if ((target.Target == GL_TRANSFORM_FEEDBACK_BUFFER) != transformFeedback ||
-        !m_Version.AtLeast(target.Major, target.Minor)) {
+        !Supports(target.Major, target.Minor, target.Extension)) {
       continue;
     }
     const GLint bindings = GetInteger(target.MaxBindings);
@@ -1571,7 +1602,7 @@ void StateRestorer::RestoreBindings() {
     Emit<glBindTransformFeedbackCommandSerializer>(command);
   }
   for (const BufferTarget& target : BUFFER_TARGETS) {
-    if (m_Version.AtLeast(target.Major, target.Minor)) {
+    if (Supports(target.Major, target.Minor, target.Extension)) {
       glBindBufferCommand command;
       command.m_target.Value = target.Target;
       command.m_buffer.Key = KeyOf(GLObjectKind::Buffer, GetName(target.Binding));
@@ -1582,12 +1613,12 @@ void StateRestorer::RestoreBindings() {
   const GLint activeTexture = GetInteger(GL_ACTIVE_TEXTURE);
   const GLint units = GetInteger(m_Version.AtLeast(2, 0) ? GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS
                                                          : GL_MAX_TEXTURE_UNITS);
-  const bool samplers = m_Version.AtLeast(3, 3);
+  const bool samplers = Supports(3, 3, "GL_ARB_sampler_objects");
   for (GLint unit = 0; unit < units; ++unit) {
     GL_FN(glActiveTexture)(GL_TEXTURE0 + static_cast<GLenum>(unit));
     std::vector<std::pair<GLenum, GITSKey>> textures;
     for (const TextureTarget& target : TEXTURE_TARGETS) {
-      if (!m_Version.AtLeast(target.Major, target.Minor)) {
+      if (!Supports(target.Major, target.Minor, target.Extension)) {
         continue;
       }
       const GITSKey key = KeyOf(GLObjectKind::Texture, GetName(target.Binding));
@@ -1623,7 +1654,7 @@ void StateRestorer::RestoreBindings() {
     Emit<glActiveTextureCommandSerializer>(command);
   }
 
-  if (m_Version.AtLeast(4, 2)) {
+  if (Supports(4, 2, "GL_ARB_shader_image_load_store")) {
     const GLint imageUnits = GetInteger(GL_MAX_IMAGE_UNITS);
     for (GLint i = 0; i < imageUnits; ++i) {
       const auto unit = static_cast<GLuint>(i);
@@ -1644,7 +1675,7 @@ void StateRestorer::RestoreBindings() {
     }
   }
 
-  if (m_Version.AtLeast(4, 1)) {
+  if (Supports(4, 1, "GL_ARB_separate_shader_objects")) {
     if (const GLuint pipeline = GetName(GL_PROGRAM_PIPELINE_BINDING)) {
       glBindProgramPipelineCommand command;
       command.m_pipeline.Key = KeyOf(GLObjectKind::ProgramPipeline, pipeline);
@@ -1656,7 +1687,7 @@ void StateRestorer::RestoreBindings() {
     glUseProgramCommand command;
     command.m_program.Key = KeyOf(GLObjectKind::Program, program);
     Emit<glUseProgramCommandSerializer>(command);
-    if (program != 0 && m_Version.AtLeast(4, 0)) {
+    if (program != 0 && Supports(4, 0, "GL_ARB_shader_subroutine")) {
       RestoreSubroutines(program);
     }
   }

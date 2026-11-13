@@ -444,6 +444,7 @@ std::vector<GITSKey> StateRestorer::DetachedDeleted(uint32_t threadId) {
     return detached;
   }
   ReadVersion();
+  ReadExtensions();
   std::erase_if(detached, [&](GITSKey key) {
     const ObjectState& object = *m_State.Object(key);
     return m_State.HasResidentHandle(key) || m_State.Viewed(key) ||
@@ -1100,7 +1101,7 @@ void StateRestorer::RestoreTextureParameters(GLenum target) {
     GL_FN(glGetTexParameteriv)(target, pname, &command.m_param.Value);
     Emit<glTexParameteriCommandSerializer>(command);
   }
-  if (m_Version.AtLeast(4, 3)) {
+  if (Supports(4, 3, "GL_ARB_stencil_texturing")) {
     glTexParameteriCommand command;
     command.m_target.Value = target;
     command.m_pname.Value = GL_DEPTH_STENCIL_TEXTURE_MODE;

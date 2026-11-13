@@ -108,6 +108,11 @@ private:
   GLuint NameOf(GLObjectKind kind, GITSKey key) const;
   GLenum TargetOf(GITSKey texture) const;
   bool HasExtension(const char* name) const;
+  // Drivers can report the requested context version and expose later features as extensions, so
+  // a feature is checked by the version that made it core or the extension that defines it.
+  bool Supports(int major, int minor, const char* extension) const {
+    return m_Version.AtLeast(major, minor) || (extension != nullptr && HasExtension(extension));
+  }
   std::vector<GLenum> ArbProgramTargets() const;
   void BeginReadback();
   void EndReadback();
@@ -188,6 +193,11 @@ private:
       GITSKey shareGroup, GITSKey context, GLObjectKind kind, GLuint name, bool unboundOnly);
   void RestoreContextState();
   void RestoreDrawBufferState();
+  template <typename FuncCommand,
+            typename FuncSerializer,
+            typename EquationCommand,
+            typename EquationSerializer>
+  void RestoreDrawBufferBlend(GLuint index);
   void RestoreVertexAttributeValues();
   void RestoreCompatibilityState();
   void RestoreFixedFunctionTransforms();

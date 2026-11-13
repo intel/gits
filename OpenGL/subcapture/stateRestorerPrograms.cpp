@@ -285,7 +285,8 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
       Emit<glUniformBlockBindingCommandSerializer>(command);
     }
   }
-  if (m_Version.AtLeast(4, 3)) {
+  if (m_Version.AtLeast(4, 3) || (HasExtension("GL_ARB_shader_storage_buffer_object") &&
+                                  HasExtension("GL_ARB_program_interface_query"))) {
     GLint blocks = 0;
     GL_FN(glGetProgramInterfaceiv)(program, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &blocks);
     for (GLint i = 0; i < blocks; ++i) {
@@ -313,7 +314,7 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
 void StateRestorer::RestoreSubroutines(GLuint program) {
   std::vector<GLenum> stages{GL_VERTEX_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER,
                              GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-  if (m_Version.AtLeast(4, 3)) {
+  if (Supports(4, 3, "GL_ARB_compute_shader")) {
     stages.push_back(GL_COMPUTE_SHADER);
   }
   for (GLenum stage : stages) {

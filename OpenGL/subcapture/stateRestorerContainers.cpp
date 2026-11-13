@@ -84,9 +84,9 @@ void StateRestorer::RestoreVertexAttributes() {
   const GLint attributes =
       std::min(GetInteger(GL_MAX_VERTEX_ATTRIBS), MAX_RESTORED_VERTEX_ATTRIBUTES);
   const bool integer = m_Version.AtLeast(3, 0);
-  const bool divisor = m_Version.AtLeast(3, 3);
-  const bool doubles = m_Version.AtLeast(4, 1);
-  const bool separateFormat = m_Version.AtLeast(4, 4);
+  const bool divisor = Supports(3, 3, "GL_ARB_instanced_arrays");
+  const bool doubles = Supports(4, 1, "GL_ARB_vertex_attrib_64bit");
+  const bool separateFormat = Supports(4, 3, "GL_ARB_vertex_attrib_binding");
   for (GLint i = 0; i < attributes; ++i) {
     const auto index = static_cast<GLuint>(i);
     const auto buffer =
@@ -140,10 +140,17 @@ void StateRestorer::RestoreVertexAttributes() {
     }
     if (divisor && !separateFormat) {
       if (const GLint value = GetVertexAttribute(index, GL_VERTEX_ATTRIB_ARRAY_DIVISOR)) {
-        glVertexAttribDivisorCommand command;
-        command.m_index.Value = index;
-        command.m_divisor.Value = static_cast<GLuint>(value);
-        Emit<glVertexAttribDivisorCommandSerializer>(command);
+        if (m_Version.AtLeast(3, 3)) {
+          glVertexAttribDivisorCommand command;
+          command.m_index.Value = index;
+          command.m_divisor.Value = static_cast<GLuint>(value);
+          Emit<glVertexAttribDivisorCommandSerializer>(command);
+        } else {
+          glVertexAttribDivisorARBCommand command;
+          command.m_index.Value = index;
+          command.m_divisor.Value = static_cast<GLuint>(value);
+          Emit<glVertexAttribDivisorARBCommandSerializer>(command);
+        }
       }
     }
   }
@@ -209,10 +216,10 @@ void StateRestorer::RestoreVertexAttributeFormat(GLuint index, bool hasBuffer) {
 
 void StateRestorer::RestoreVertexBufferBindings() {
   const GLint bindings = GetInteger(GL_MAX_VERTEX_ATTRIB_BINDINGS);
+  const bool bindingBuffers = m_Version.AtLeast(4, 4);
   for (GLint i = 0; i < bindings; ++i) {
     const auto index = static_cast<GLuint>(i);
-    if (const auto buffer =
-            static_cast<GLuint>(GetIntegerIndexed(GL_VERTEX_BINDING_BUFFER, index))) {
+    if (const GLuint buffer = VertexBindingBuffer(index, bindingBuffers)) {
       glBindVertexBufferCommand command;
       command.m_bindingindex.Value = index;
       command.m_buffer.Key = KeyOf(GLObjectKind::Buffer, buffer);
@@ -251,7 +258,7 @@ void StateRestorer::RestoreProgramPipeline(GITSKey key, GLuint name) {
       {GL_GEOMETRY_SHADER, GL_GEOMETRY_SHADER_BIT},
       {GL_FRAGMENT_SHADER, GL_FRAGMENT_SHADER_BIT},
   };
-  if (m_Version.AtLeast(4, 3)) {
+  if (Supports(4, 3, "GL_ARB_compute_shader")) {
     stages.push_back({GL_COMPUTE_SHADER, GL_COMPUTE_SHADER_BIT});
   }
   for (const Stage& stage : stages) {

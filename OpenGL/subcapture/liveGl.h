@@ -62,11 +62,26 @@ inline GLint GetVertexAttribute(GLuint index, GLenum pname) {
   return value;
 }
 
+// The buffer of a vertex buffer binding of the bound vertex array. Before GL 4.4 it can be queried
+// only through an attribute reading the binding, so attribute 0 reads it meanwhile.
+inline GLuint VertexBindingBuffer(GLuint binding, bool bindingBuffers) {
+  if (bindingBuffers) {
+    return static_cast<GLuint>(GetIntegerIndexed(GL_VERTEX_BINDING_BUFFER, binding));
+  }
+  const auto original = static_cast<GLuint>(GetVertexAttribute(0, GL_VERTEX_ATTRIB_BINDING));
+  GL_FN(glVertexAttribBinding)(0, binding);
+  const auto buffer =
+      static_cast<GLuint>(GetVertexAttribute(0, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING));
+  GL_FN(glVertexAttribBinding)(0, original);
+  return buffer;
+}
+
 struct TextureTarget {
   GLenum Target;
   GLenum Binding;
   int Major;
   int Minor;
+  const char* Extension{};
 };
 
 inline constexpr TextureTarget TEXTURE_TARGETS[] = {
@@ -80,7 +95,8 @@ inline constexpr TextureTarget TEXTURE_TARGETS[] = {
     {GL_TEXTURE_BUFFER, GL_TEXTURE_BINDING_BUFFER, 3, 1},
     {GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_BINDING_2D_MULTISAMPLE, 3, 2},
     {GL_TEXTURE_2D_MULTISAMPLE_ARRAY, GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY, 3, 2},
-    {GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, 4, 0},
+    {GL_TEXTURE_CUBE_MAP_ARRAY, GL_TEXTURE_BINDING_CUBE_MAP_ARRAY, 4, 0,
+     "GL_ARB_texture_cube_map_array"},
 };
 
 inline const TextureTarget* FindTextureTarget(GLenum target) {
