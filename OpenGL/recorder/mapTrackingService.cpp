@@ -49,6 +49,7 @@ void RecordMappedDataMetaCommand(uint64_t key,
                                  GLuint buffer,
                                  GLintptr offset,
                                  GLsizeiptr length,
+                                 GLbitfield access,
                                  const std::vector<uint8_t>& bytes) {
   BufferShadowService::Get().OnMappedBytes(shareGroup, buffer, static_cast<uint64_t>(offset),
                                            bytes);
@@ -57,6 +58,7 @@ void RecordMappedDataMetaCommand(uint64_t key,
   UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
   command.m_Offset.Value = static_cast<uint64_t>(offset);
   command.m_Length.Value = static_cast<uint64_t>(length);
+  command.m_Access.Value = access;
   command.m_Data = ArrayArgument<uint8_t>(bytes.data(), bytes.size());
   command.m_Key = key;
   CaptureManager::Get().RecordCommand(command, new MappedDataMetaSerializer(command));
@@ -495,14 +497,19 @@ void* MapTrackingService::TranslateShadowPointerQuery(GLuint buffer, void* point
 }
 
 MapTrackingService::MappedBufferUpdate MapTrackingService::MakeMappedUpdate(
-    const MappedRange& range, MapRelativeRange interval, std::vector<uint8_t> bytes) {
-  return MappedBufferUpdate{range.Map,       range.Offset + interval.Offset,
-                            interval.Length, range.IsRange,
-                            range.Access,    std::move(bytes)};
+    MappedRange& range, MapRelativeRange interval, std::vector<uint8_t> bytes) {
+  const bool first = !std::exchange(range.Updated, true);
+  return MappedBufferUpdate{range.Map,
+                            range.Offset + interval.Offset,
+                            interval.Length,
+                            range.IsRange,
+                            range.Access,
+                            std::move(bytes),
+                            first};
 }
 
 MapTrackingService::MappedBufferUpdate MapTrackingService::PrepareFlushMappedUpdate(
-    const MappedRange& range, MapRelativeRange interval) {
+    MappedRange& range, MapRelativeRange interval) {
   const auto start = static_cast<size_t>(interval.Offset);
   const auto count = static_cast<size_t>(interval.Length);
   auto bytes = range.Source.Snapshot(start, count);
@@ -517,20 +524,27 @@ void MapTrackingService::RecordOrSkipMappedUpdate(uint64_t key,
     CaptureManager::Get().SkipCommandKey(key);
     return;
   }
-  RecordMappedDataMetaCommand(key, update->Map.ShareGroup, update->Map.Buffer, update->Offset,
-                              update->Length, update->Bytes);
+  // A replay map covers only the update's interval, which the update overwrites, so only
+  // invalidating the whole buffer would discard bytes of another update.
+  constexpr GLbitfield invalidation = GL_MAP_INVALIDATE_BUFFER_BIT;
+  RecordMappedDataMetaCommand(
+      key, update->Map.ShareGroup, update->Map.Buffer, update->Offset, update->Length,
+      update->First ? update->Access : update->Access & ~invalidation, update->Bytes);
   NoteUpdate(update->IsRange, update->Access, update->Length);
 }
 
 void MapTrackingService::FlushMappedRange(GLuint buffer,
                                           GLintptr offset,
                                           GLsizeiptr length,
-                                          uint64_t key,
                                           const std::function<void()>& realFlush) {
   const uint64_t shareGroup = CurrentShareGroup();
   std::optional<MappedBufferUpdate> update;
+  uint64_t key = 0;
   {
     std::unique_lock<std::mutex> lock(m_MappedBuffersMutex);
+    // The key is reserved under the lock that selects the first update of a mapping, so the
+    // update that keeps the invalidation bits also replays first.
+    key = CaptureManager::Get().CreateCommandKey();
     const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
     if (it == m_MappedBuffers.end()) {
       lock.unlock();
@@ -538,7 +552,7 @@ void MapTrackingService::FlushMappedRange(GLuint buffer,
       RecordOrSkipMappedUpdate(key, std::nullopt);
       return;
     }
-    const MappedRange& range = it->second;
+    MappedRange& range = it->second;
     GITS_ASSERT((range.Access & GL_MAP_FLUSH_EXPLICIT_BIT) != 0,
                 "Cannot flush a buffer mapping created without GL_MAP_FLUSH_EXPLICIT_BIT: "
                 "the application call is invalid and GITS does not support it.");

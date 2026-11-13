@@ -32,6 +32,7 @@ void TraceLayer::Pre(MappedDataMetaCommand& command) {
   printer.Add(command.m_Buffer);
   printer.Add(command.m_Offset);
   printer.Add(command.m_Length);
+  printer.AddEnum(command.m_Access.Value, GLenumApi::GL, GLenumGroup::MapBufferAccessMask);
   printer.Add(command.m_Data);
   printer.Finish(m_Flush);
 }

@@ -292,9 +292,8 @@ void APIENTRY CustomWrapper_FlushMappedBufferRange(GLenum target,
     realFlush(target, offset, length);
     return;
   }
-  const uint64_t key = CaptureManager::Get().CreateCommandKey();
   MapTrackingService::Get().FlushMappedRange(MapTrackingService::Get().ResolveBoundBuffer(target),
-                                             offset, length, key,
+                                             offset, length,
                                              [=] { realFlush(target, offset, length); });
 }
 
@@ -321,8 +320,7 @@ void APIENTRY CustomWrapper_FlushMappedNamedBufferRange(GLuint buffer,
     realFlush(buffer, offset, length);
     return;
   }
-  const uint64_t key = CaptureManager::Get().CreateCommandKey();
-  MapTrackingService::Get().FlushMappedRange(buffer, offset, length, key,
+  MapTrackingService::Get().FlushMappedRange(buffer, offset, length,
                                              [=] { realFlush(buffer, offset, length); });
 }
 

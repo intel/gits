@@ -25,7 +25,8 @@ namespace gits::opengl {
 // format. Carries the snapshot taken "update on unmap only" (Decision 2): the buffer's identity
 // (by GITSKey - m_Buffer.Value is never serialized, exactly like every other HandleArgument<T> -
 // so replay resolves to whichever buffer the player itself created, not the recorder's raw
-// GLuint), the mapped range's offset/length within that buffer, and the captured bytes. Replayed
+// GLuint), the mapped range's offset/length within that buffer, the application's map access
+// bits, and the captured bytes. Replayed
 // by MappedDataMetaRunner (player/include/mappedDataMetaRunner.h), registered by
 // OpenGLCommandFactory for CommandId::ID_META_MAPPED_DATA - mirrors UnsupportedCommand/
 // UnsupportedCommandRunner's structural precedent (a hand-written meta-command with a
@@ -42,6 +43,7 @@ public:
   HandleArgument<GLuint> m_Buffer{};
   Argument<uint64_t> m_Offset{};
   Argument<uint64_t> m_Length{};
+  Argument<GLbitfield> m_Access{};
   ArrayArgument<uint8_t> m_Data{};
 };
 
@@ -64,7 +66,8 @@ public:
 // generic overload already used this exact 1-byte-flag + 8-byte-count + raw-bytes layout).
 inline uint64_t GetSize(const MappedDataMetaCommand& command) {
   return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Buffer) +
-         GetSize(command.m_Offset) + GetSize(command.m_Length) + GetSize(command.m_Data);
+         GetSize(command.m_Offset) + GetSize(command.m_Length) + GetSize(command.m_Access) +
+         GetSize(command.m_Data);
 }
 
 inline void Encode(const MappedDataMetaCommand& command, char* dest) {
@@ -74,6 +77,7 @@ inline void Encode(const MappedDataMetaCommand& command, char* dest) {
   Encode(dest, offset, command.m_Buffer);
   Encode(dest, offset, command.m_Offset);
   Encode(dest, offset, command.m_Length);
+  Encode(dest, offset, command.m_Access);
   Encode(dest, offset, command.m_Data);
 }
 
@@ -84,6 +88,7 @@ inline void Decode(const char* src, MappedDataMetaCommand& command) {
   Decode(src, offset, command.m_Buffer);
   Decode(src, offset, command.m_Offset);
   Decode(src, offset, command.m_Length);
+  Decode(src, offset, command.m_Access);
   Decode(src, offset, command.m_Data);
 }
 

@@ -29,6 +29,9 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
                 << " did not resolve to a live buffer - skipping this buffer-map update";
     return;
   }
+  GITS_ASSERT(command.m_Data.Data.size() == command.m_Length.Value,
+              "MappedDataMeta payload size does not match its mapped length; streams recorded "
+              "before map access bits were stored must be recorded again");
 
   // Temporarily bind the resolved buffer to GL_COPY_WRITE_BUFFER (no rendering-pipeline
   // meaning of its own) rather than whichever target originally recorded this map, so this
@@ -41,11 +44,17 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
   auto realBindBuffer = player::g_DispatchTable.glBindBuffer.load(std::memory_order_acquire);
   realBindBuffer(GL_COPY_WRITE_BUFFER, buffer);
 
+  // Synchronization and invalidation follow the application's map: an unsynchronized map that
+  // invalidated the buffer wrote to storage no earlier draw still reads. The recorder keeps the
+  // invalidation bits only on the first update of a mapping, so later ones keep its bytes.
+  constexpr GLbitfield replayed =
+      GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+  const GLbitfield access = GL_MAP_WRITE_BIT | (command.m_Access.Value & replayed);
   auto realMapBufferRange =
       player::g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* pointer =
       realMapBufferRange(GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(command.m_Offset.Value),
-                         static_cast<GLsizeiptr>(command.m_Length.Value), GL_MAP_WRITE_BIT);
+                         static_cast<GLsizeiptr>(command.m_Length.Value), access);
   GLboolean unmapResult = GL_TRUE;
   if (pointer != nullptr) {
     std::memcpy(pointer, command.m_Data.Data.data(), command.m_Data.Data.size());

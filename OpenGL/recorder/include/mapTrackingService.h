@@ -101,10 +101,10 @@ public:
   // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
   // target, for an untracked target or one with nothing bound.
   GLuint ResolveBoundBuffer(GLenum target);
+  // Reserves the ordering key of the flush's update itself.
   void FlushMappedRange(GLuint buffer,
                         GLintptr offset,
                         GLsizeiptr length,
-                        uint64_t key,
                         const std::function<void()>& realFlush);
   void* TranslateShadowPointerQuery(GLuint buffer, void* pointer);
 
@@ -201,6 +201,9 @@ private:
     bool IsRange{true}; // Whether it is a range mapping or a whole-buffer mapping.
     CaptureRangePolicy RangePolicy;
     Key Map{0, 0};
+    // Whether an update of this mapping was taken. Only the first update of a mapping carries
+    // its invalidation bits, so a later update does not discard the bytes of earlier ones.
+    bool Updated{false};
   };
 
   struct MappedBufferUpdate {
@@ -210,12 +213,13 @@ private:
     bool IsRange{true};
     GLbitfield Access{0};
     std::vector<uint8_t> Bytes;
+    bool First{true}; // Whether it is the first update of its mapping.
   };
 
-  MappedBufferUpdate MakeMappedUpdate(const MappedRange& range,
+  MappedBufferUpdate MakeMappedUpdate(MappedRange& range,
                                       MapRelativeRange interval,
                                       std::vector<uint8_t> bytes);
-  MappedBufferUpdate PrepareFlushMappedUpdate(const MappedRange& range, MapRelativeRange interval);
+  MappedBufferUpdate PrepareFlushMappedUpdate(MappedRange& range, MapRelativeRange interval);
   // After the real GL call, record the captured update at the reserved key or skip that key.
   void RecordOrSkipMappedUpdate(uint64_t key, const std::optional<MappedBufferUpdate>& update);
 
