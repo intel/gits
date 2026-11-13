@@ -24,6 +24,7 @@ namespace gits::opengl {
 class AnalyzerLayer : public Layer {
 public:
   explicit AnalyzerLayer(const SubcaptureRange& range) : Layer("Analyzer"), m_Range(range) {}
+  ~AnalyzerLayer() override;
 
 % for name in analyzed:
   void Pre(${name}Command& command) override;

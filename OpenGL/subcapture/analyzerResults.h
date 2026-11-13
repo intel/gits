@@ -15,8 +15,8 @@
 
 namespace gits::opengl {
 
-// The analysis file of an optimized subcapture: the objects the range names. The analysis pass
-// writes it, and the recording pass restores the contents of only those objects and of the
+// The analysis file of a subcapture: the objects the range names. The analysis pass writes it,
+// and with Optimize the recording pass restores the contents of only those objects and of the
 // objects they depend on at the start of the range.
 class AnalyzerResults {
 public:
@@ -31,7 +31,7 @@ public:
     return m_Objects;
   }
 
-  // True when Optimize is set and no complete analysis file exists yet.
+  // True when no complete analysis file exists yet.
   static bool NeedsAnalysis();
   static void Write(const std::unordered_set<GITSKey>& objects);
 

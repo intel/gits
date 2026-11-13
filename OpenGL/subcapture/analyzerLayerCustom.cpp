@@ -9,8 +9,20 @@
 #include "analyzerLayerAuto.h"
 
 #include "analyzerResults.h"
+#include "log.h"
 
 namespace gits::opengl {
+
+// The frames not played can use objects an interrupted analysis did not see, so it is not
+// written as complete.
+AnalyzerLayer::~AnalyzerLayer() {
+  try {
+    if (m_Range.InRange()) {
+      LOG_ERROR << "Subcapture: analysis terminated prematurely, inside the subcapture range";
+    }
+  } catch (...) {
+  }
+}
 
 void AnalyzerLayer::Pre(MappedDataMetaCommand& command) {
   if (Collecting(command.m_ThreadId)) {

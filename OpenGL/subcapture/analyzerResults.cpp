@@ -45,7 +45,7 @@ AnalyzerResults::AnalyzerResults() {
 }
 
 bool AnalyzerResults::NeedsAnalysis() {
-  return Configurator::Get().common.player.subcapture.optimize && !IsComplete(FileName());
+  return !IsComplete(FileName());
 }
 
 void AnalyzerResults::Write(const std::unordered_set<GITSKey>& objects) {

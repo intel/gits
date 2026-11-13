@@ -50,10 +50,10 @@ void PlayerLayerManager::LoadLayers() {
   std::unique_ptr<RecordingLayer> recordingLayer;
   const auto& subcaptureCfg = Configurator::Get().common.player.subcapture;
   const bool subcapture = subcaptureCfg.enabled && !subcaptureCfg.frames.empty();
-  // An optimized subcapture of a range needing state restore first runs an analysis pass,
-  // which writes no stream.
-  if (subcapture && SubcaptureRange(subcaptureCfg.frames).StartFrame() > 1 &&
-      AnalyzerResults::NeedsAnalysis()) {
+  // A subcapture first runs an analysis pass, which writes no stream, as on DirectX and Vulkan.
+  // Optimize only decides whether the recording pass restores just the objects the analysis
+  // found or every live object.
+  if (subcapture && AnalyzerResults::NeedsAnalysis()) {
     analyzerLayer = std::make_unique<AnalyzerLayer>(SubcaptureRange(subcaptureCfg.frames));
     m_PreLayers.push_back(analyzerLayer.get());
     LOG_INFO << "Subcapture: analysis pass, run again to record the subcapture";
