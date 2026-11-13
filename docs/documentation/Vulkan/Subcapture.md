@@ -86,8 +86,8 @@ larger sub-capture. The analysis pass then only notes the first swapchain image 
 acquires, without the per-command and ray tracing analysis.
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2   # analysis pass
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize false C:\path\to\full_trace.gits2   # recording pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits2   # analysis pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits2   # recording pass
 ```
 
 ## Ray tracing and opacity micromaps
