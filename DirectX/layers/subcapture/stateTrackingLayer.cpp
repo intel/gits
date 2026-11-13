@@ -2492,10 +2492,19 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c
   if (m_StateRestored) {
     return;
   }
-  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
-                                                          c.m_pBarriers.ResourceKeys);
-  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
-                                                          c.m_pBarriers.ResourceAfterKeys);
+  for (unsigned i = 0; i < c.m_NumBarriers.Value; ++i) {
+    const D3D12_RESOURCE_BARRIER& barrier = c.m_pBarriers.Value[i];
+    if (barrier.Type == D3D12_RESOURCE_BARRIER_TYPE_TRANSITION &&
+        (barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_RENDER_TARGET ||
+         barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_UNORDERED_ACCESS ||
+         barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_DEPTH_WRITE ||
+         barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_COPY_DEST ||
+         barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_RESOLVE_DEST ||
+         barrier.Transition.StateAfter & D3D12_RESOURCE_STATE_STREAM_OUT)) {
+      m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
+                                                              c.m_pBarriers.ResourceKeys[i]);
+    }
+  }
   m_ResourceStateTrackingService.ResourceBarrier(c.m_Object.Key, c.m_pBarriers.Value,
                                                  c.m_pBarriers.ResourceKeys,
                                                  c.m_pBarriers.ResourceAfterKeys);
@@ -3162,22 +3171,40 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  std::vector<ObjectKey> resourceKeys;
-  resourceKeys.reserve(c.m_pBarrierGroups.ObjectKeys.size());
-  unsigned objectKeyIndex = 0;
+
+  unsigned barrierResourceIndex = 0;
   for (unsigned i = 0; i < c.m_NumBarrierGroups.Value; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = c.m_pBarrierGroups.Value[i];
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
       continue;
     }
-    if (barrierGroup.Type != D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
-      resourceKeys.insert(
-          resourceKeys.end(), c.m_pBarrierGroups.ObjectKeys.begin() + objectKeyIndex,
-          c.m_pBarrierGroups.ObjectKeys.begin() + objectKeyIndex + barrierGroup.NumBarriers);
+    if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        const D3D12_TEXTURE_BARRIER& barrier = barrierGroup.pTextureBarriers[j];
+        if (barrier.AccessAfter & D3D12_BARRIER_ACCESS_RENDER_TARGET ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_UNORDERED_ACCESS ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_COPY_DEST ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_RESOLVE_DEST) {
+          m_ResourceUsageTrackingService.CommandListResourceUsage(
+              c.m_Object.Key, c.m_pBarrierGroups.ObjectKeys[barrierResourceIndex + j]);
+        }
+      }
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
+      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
+        const D3D12_BUFFER_BARRIER& barrier = barrierGroup.pBufferBarriers[j];
+        if (barrier.AccessAfter & D3D12_BARRIER_ACCESS_RENDER_TARGET ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_UNORDERED_ACCESS ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_COPY_DEST ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_STREAM_OUTPUT ||
+            barrier.AccessAfter & D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE) {
+          m_ResourceUsageTrackingService.CommandListResourceUsage(
+              c.m_Object.Key, c.m_pBarrierGroups.ObjectKeys[barrierResourceIndex + j]);
+        }
+      }
     }
-    objectKeyIndex += barrierGroup.NumBarriers;
+    barrierResourceIndex += barrierGroup.NumBarriers;
   }
-  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, resourceKeys);
 
   m_ResourceStateTrackingService.ResourceBarrier(c.m_Object.Key, c.m_pBarrierGroups.Value,
                                                  c.m_NumBarrierGroups.Value,
