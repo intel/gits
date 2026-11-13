@@ -1092,6 +1092,74 @@ FastOStream& operator<<(FastOStream& stream,
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+
+  unsigned keyIndex = 0;
+  auto printAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
+    if (keyIndex >= arg.DataKeys.size()) {
+      stream << "0x";
+      PrintHex(stream, address);
+      return;
+    }
+    stream << "{";
+    PrintObjectKey(stream, arg.DataKeys[keyIndex]);
+    stream << ", " << arg.DataOffsets[keyIndex] << "}";
+    ++keyIndex;
+  };
+  auto printAddressAndStride = [&](const D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE& value) {
+    stream << "{";
+    printAddress(value.StartAddress);
+    stream << ", " << value.StrideInBytes << "}";
+  };
+
+  stream << "[";
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    const D3D12_RTAS_OPERATION_DESC& desc = arg.Value[i];
+    stream << "D3D12_RTAS_OPERATION_DESC{" << desc.Inputs << ", ";
+    if (!desc.pBatchedOperationData) {
+      stream << "nullptr";
+    } else if (desc.Inputs.Type == D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS) {
+      const D3D12_RTAS_PARTITIONED_TLAS_OPERATION_DATA& data = *desc.pPartitionedTlasOperationData;
+      stream << "D3D12_RTAS_PARTITIONED_TLAS_OPERATION_DATA{";
+      printAddress(data.SourceAccelerationStructureData);
+      stream << ", ";
+      printAddress(data.DestAccelerationStructureData);
+      stream << ", ";
+      printAddress(data.ScratchAccelerationStructureData);
+      stream << ", ";
+      printAddress(data.IndirectPartitionedTlasOpCount);
+      stream << ", ";
+      printAddress(data.IndirectPartitionedTlasOps);
+      stream << "}";
+    } else {
+      const D3D12_RTAS_BATCHED_OPERATION_DATA& data = *desc.pBatchedOperationData;
+      stream << "D3D12_RTAS_BATCHED_OPERATION_DATA{" << data.AddressResolutionFlags << ", ";
+      printAddress(data.BatchResultData);
+      stream << ", ";
+      printAddress(data.BatchScratchData);
+      stream << ", ";
+      printAddressAndStride(data.ResultAddressArray);
+      stream << ", ";
+      printAddressAndStride(data.ResultSizeArray);
+      stream << ", ";
+      printAddressAndStride(data.IndirectArgumentArray);
+      stream << ", ";
+      printAddress(data.IndirectArgumentArraySize);
+      stream << ", ";
+      printAddress(data.ToolsInfo);
+      stream << "}";
+    }
+    stream << "}";
+  }
+  return stream << "]";
+}
+
 FastOStream& operator<<(
     FastOStream& stream,
     ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg) {
@@ -1176,7 +1244,8 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
   if (!arg.Value) {
     return stream << "nullptr";
   }
-  unsigned resourceKeyIndex{};
+  unsigned objectKeyIndex{};
+  unsigned descriptorIndex{};
   stream << "D3D12_BARRIER_GROUP[";
   for (unsigned i = 0; i < arg.Size; ++i) {
     if (i > 0) {
@@ -1204,7 +1273,7 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
         stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
                << barrier.AccessBefore << ", " << barrier.AccessAfter << ", "
                << barrier.LayoutBefore << ", " << barrier.LayoutAfter << ", ";
-        PrintObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
+        PrintObjectKey(stream, arg.ObjectKeys[objectKeyIndex++]);
         stream << ", " << barrier.Subresources << ", " << barrier.Flags << "}";
       }
       stream << "]";
@@ -1217,12 +1286,165 @@ FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg)
         const D3D12_BUFFER_BARRIER& barrier = arg.Value[i].pBufferBarriers[j];
         stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
                << barrier.AccessBefore << ", " << barrier.AccessAfter << ", ";
-        PrintObjectKey(stream, arg.ResourceKeys[resourceKeyIndex++]);
+        PrintObjectKey(stream, arg.ObjectKeys[objectKeyIndex++]);
         stream << ", " << barrier.Offset << ", " << barrier.Size << "}";
+      }
+      stream << "]";
+    } else if (arg.Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      stream << "D3D12_DESCRIPTOR_HEAP_BARRIER[";
+      for (unsigned j = 0; j < arg.Value[i].NumBarriers; ++j) {
+        if (j > 0) {
+          stream << ", ";
+        }
+        const D3D12_DESCRIPTOR_HEAP_BARRIER& barrier = arg.Value[i].pDescriptorHeapBarriers[j];
+        stream << "{" << barrier.SyncBefore << ", " << barrier.SyncAfter << ", "
+               << barrier.AccessBefore << ", " << barrier.AccessAfter << ", {";
+        PrintObjectKey(stream, arg.ObjectKeys[objectKeyIndex++]);
+        stream << ", " << arg.DescriptorIndexes[descriptorIndex++] << "}, "
+               << barrier.NumDescriptors << "}";
       }
       stream << "]";
     }
     stream << "}";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, D3D12_TEXTURE_COPY_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "D3D12_TEXTURE_COPY_DESC[";
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    const D3D12_TEXTURE_COPY_DESC& desc = arg.Value[i];
+    stream << "{" << desc.Type << ", " << desc.NumRegions << ", D3D12_TEXTURE_COPY_REGION[";
+    for (unsigned j = 0; desc.pCopyRegions && j < desc.NumRegions; ++j) {
+      if (j > 0) {
+        stream << ", ";
+      }
+      stream << desc.pCopyRegions[j];
+    }
+    stream << "], {";
+    if (desc.Type == D3D12_TEXTURE_COPY_DESC_TYPE_TEXTURE_TO_TEXTURE) {
+      PrintObjectKey(stream, arg.DestOrBufferKeys[i]);
+      stream << ", " << desc.TextureTextureCopy.DestSubresourceIndex << ", ";
+      PrintObjectKey(stream, arg.SourceOrTextureKeys[i]);
+      stream << ", " << desc.TextureTextureCopy.SourceSubresourceIndex;
+    } else {
+      PrintObjectKey(stream, arg.DestOrBufferKeys[i]);
+      stream << ", ";
+      PrintObjectKey(stream, arg.SourceOrTextureKeys[i]);
+      stream << ", " << desc.BufferTextureCopy.SubresourceIndex << ", "
+             << desc.BufferTextureCopy.PlacedFootprint;
+    }
+    stream << "}}";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, D3D12_CLEAR_TEXTURE_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "D3D12_CLEAR_TEXTURE_DESC[";
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    const D3D12_CLEAR_TEXTURE_DESC& desc = arg.Value[i];
+    stream << "{";
+    PrintObjectKey(stream, arg.ResourceKeys[i]);
+    stream << ", " << desc.SubresourceIndex << ", " << desc.ClearValue << ", " << desc.Format
+           << ", " << desc.pRegion << "}";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, D3D12_FILL_BUFFER_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "D3D12_FILL_BUFFER_DESC[";
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    const D3D12_FILL_BUFFER_DESC& desc = arg.Value[i];
+    stream << "{";
+    PrintObjectKey(stream, arg.ResourceKeys[i]);
+    stream << ", " << desc.Offset << ", " << desc.FillValue << ", " << desc.Format << ", "
+           << desc.RawPatternSizeInBytes << ", " << desc.RepeatCount << "}";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, BoxArraysArgument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "D3D12_BOX*[";
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    if (!arg.Sizes[i]) {
+      stream << "nullptr";
+      continue;
+    }
+    stream << "D3D12_BOX[";
+    for (unsigned j = 0; j < arg.Sizes[i]; ++j) {
+      if (j > 0) {
+        stream << ", ";
+      }
+      stream << arg.Value[i][j];
+    }
+    stream << "]";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, CastableFormatArraysArgument& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "DXGI_FORMAT*[";
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    if (!arg.Sizes[i]) {
+      stream << "nullptr";
+      continue;
+    }
+    stream << "DXGI_FORMAT[";
+    for (unsigned j = 0; j < arg.Sizes[i]; ++j) {
+      if (j > 0) {
+        stream << ", ";
+      }
+      stream << arg.Value[i][j];
+    }
+    stream << "]";
+  }
+  return stream << "]";
+}
+
+FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg) {
+  if (!arg.Value) {
+    return stream << "nullptr";
+  }
+  stream << "D3D12_COPY_DESCRIPTORS_RANGE[";
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (i > 0) {
+      stream << ", ";
+    }
+    stream << "{" << arg.Value[i].NumDescriptors << ", D3D12_GPU_DESCRIPTOR_HANDLE{";
+    PrintObjectKey(stream, arg.DestHeapKeys[i]);
+    stream << ", " << arg.DestIndexes[i] << "}, D3D12_GPU_DESCRIPTOR_HANDLE{";
+    PrintObjectKey(stream, arg.SourceHeapKeys[i]);
+    stream << ", " << arg.SourceIndexes[i] << "}}";
   }
   return stream << "]";
 }

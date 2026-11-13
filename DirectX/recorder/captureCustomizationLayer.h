@@ -32,12 +32,15 @@ public:
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
   void Pre(ID3D12Device10CreateCommittedResource3Command& command) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Pre(ID3D12Device16CreateCommittedResource4Command& command) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& command) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
   void Post(ID3D12Device4CreateReservedResource1Command& command) override;
   void Post(ID3D12Device10CreateReservedResource2Command& command) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& command) override;
   void Pre(ID3D12DeviceCreateHeapCommand& command) override;
   void Post(ID3D12DeviceCreateHeapCommand& command) override;
   void Pre(ID3D12Device4CreateHeap1Command& command) override;
@@ -94,6 +97,9 @@ public:
   void Pre(ID3D12Device1SetEventOnMultipleFenceCompletionCommand& command) override;
   void Post(ID3D12DeviceOpenSharedHandleCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList7BarrierCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList11WaitBarrierCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList11SignalBarrierCommand& command) override;
   void Pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&
@@ -101,6 +107,9 @@ public:
   void Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4DispatchRaysCommand& command) override;
   void Pre(ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& command) override;
+  void Pre(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& command) override;
+  void Pre(ID3D12Resource3GetCastableFormatsCommand& command) override;
+  void Pre(ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext2Command& command) override;
@@ -151,6 +160,7 @@ private:
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg,
                                        D3D12_DESCRIPTOR_HEAP_TYPE heapType);
+  void FillDescriptorHeapBarriers(D3D12_BARRIER_GROUPs_Argument& arg);
 
   static thread_local HeapInfo m_HeapInfo;
   CaptureManager& m_Manager;

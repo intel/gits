@@ -115,6 +115,20 @@ private:
   void preProcess(ccode::CommandPrinter& p, IDStorageCustomDecompressionQueueSetRequestResultsCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayIsCompleteCommand& c);
   void preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayGetHResultCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12ShaderCacheSession1FindValue1Command& c);
+  void preProcess(ccode::CommandPrinter& p,
+                  ID3D12StateObjectDatabase1EnumeratePipelineStatesCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12StateObjectDatabase1EnumerateStateObjectsCommand& c);
+  void preProcess(ccode::CommandPrinter& p,
+                  ID3D12StateObjectDatabase1GetStateObjectDependenciesCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12StateObjectDatabase1GetApplicationDesc1Command& c);
+  void preProcess(ccode::CommandPrinter& p,
+                  ID3D12StateObjectDatabase1FindPipelineStateDesc1Command& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12StateObjectDatabase1FindStateObjectDesc1Command& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12DeviceDumpFileSetDumpFileCallbacksCommand& c);
+  void preProcess(ccode::CommandPrinter& p, ID3D12Resource3GetCastableFormatsCommand& c);
+  void preProcess(ccode::CommandPrinter& p,
+                  ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& c);
   
   // Custom command post process
   // Used after the arguments have been processed and the command is ready to be printed
@@ -135,12 +149,14 @@ private:
   void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateCommittedResource1Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device8CreateCommittedResource2Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreateCommittedResource3Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device16CreateCommittedResource4Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateReservedResourceCommand& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateReservedResource1Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreateReservedResource2Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreatePlacedResourceCommand& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device8CreatePlacedResource1Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device10CreatePlacedResource2Command& c);
+  void postProcess(ccode::CommandPrinter& p, ID3D12Device16CreatePlacedResource3Command& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12DeviceCreateHeapCommand& c);
   void postProcess(ccode::CommandPrinter& p, ID3D12Device4CreateHeap1Command& c);
   void postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreateHeapCommand& c);

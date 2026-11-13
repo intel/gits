@@ -45,6 +45,15 @@ void ResourcePlacementCaptureNoExecute::GetResourceAllocation(const D3D12_RESOUR
   m_ResourceDescToAllocation[baseDesc] = {sizeInBytes, alignment};
 }
 
+void ResourcePlacementCaptureNoExecute::GetResourceAllocation(const D3D12_RESOURCE_DESC2& desc,
+                                                              uint64_t sizeInBytes,
+                                                              uint64_t alignment) {
+  D3D12_RESOURCE_DESC baseDesc{desc.Dimension,        desc.Alignment, desc.Width,  desc.Height,
+                               desc.DepthOrArraySize, desc.MipLevels, desc.Format, desc.SampleDesc,
+                               desc.Layout,           desc.Flags};
+  m_ResourceDescToAllocation[baseDesc] = {sizeInBytes, alignment};
+}
+
 void ResourcePlacementCaptureNoExecute::StoreResourcePlacement() {
   std::filesystem::path filePath = Configurator::IsPlayer()
                                        ? Configurator::Get().common.player.streamDir

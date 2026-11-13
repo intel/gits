@@ -109,59 +109,67 @@ void AddressPinningUseLayer::Pre(ID3D12Device13OpenExistingHeapFromAddress1Comma
 }
 
 void AddressPinningUseLayer::Pre(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12Device4CreateCommittedResource1Command& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12Device4CreateCommittedResource1Command& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12Device8CreateCommittedResource2Command& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12Device8CreateCommittedResource2Command& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12Device10CreateCommittedResource3Command& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12Device10CreateCommittedResource3Command& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
+}
+
+void AddressPinningUseLayer::Pre(ID3D12Device16CreateCommittedResource4Command& command) {
+  PreResource(command, command.m_pResourceDesc.Value);
+}
+
+void AddressPinningUseLayer::Post(ID3D12Device16CreateCommittedResource4Command& command) {
+  PostResource(command, command.m_pResourceDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12DeviceCreateReservedResourceCommand& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12DeviceCreateReservedResourceCommand& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12Device4CreateReservedResource1Command& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12Device4CreateReservedResource1Command& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12Device10CreateReservedResource2Command& command) {
-  PreResource(command);
+  PreResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Post(ID3D12Device10CreateReservedResource2Command& command) {
-  PostResource(command);
+  PostResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningUseLayer::Pre(ID3D12DeviceCreatePlacedResourceCommand& command) {
@@ -224,10 +232,30 @@ void AddressPinningUseLayer::Post(ID3D12Device10CreatePlacedResource2Command& co
   }
 }
 
-template <typename CommandT>
-void AddressPinningUseLayer::PreResource(CommandT& command) {
-  if (command.m_Result.Value != S_OK ||
-      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+void AddressPinningUseLayer::Pre(ID3D12Device16CreatePlacedResource3Command& command) {
+  if (command.m_Result.Value != S_OK) {
+    return;
+  }
+
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pResourceDesc.Value->Flags &= ~D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  }
+}
+
+void AddressPinningUseLayer::Post(ID3D12Device16CreatePlacedResource3Command& command) {
+  if (command.m_Result.Value != S_OK) {
+    return;
+  }
+
+  if (m_ChangedHeaps.count(command.m_pHeap.Key)) {
+    command.m_pResourceDesc.Value->Flags |= D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+  }
+}
+
+template <typename CommandT, typename ResourceDescT>
+void AddressPinningUseLayer::PreResource(CommandT& command, const ResourceDescT* desc) {
+  if (command.m_Result.Value != S_OK || !desc ||
+      desc->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 
@@ -238,10 +266,10 @@ void AddressPinningUseLayer::PreResource(CommandT& command) {
   m_DeviceTools->SetNextAllocationAddress(it->second.StartAddress);
 }
 
-template <typename CommandT>
-void AddressPinningUseLayer::PostResource(CommandT& command) {
-  if (command.m_Result.Value != S_OK ||
-      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+template <typename CommandT, typename ResourceDescT>
+void AddressPinningUseLayer::PostResource(CommandT& command, const ResourceDescT* desc) {
+  if (command.m_Result.Value != S_OK || !desc ||
+      desc->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 

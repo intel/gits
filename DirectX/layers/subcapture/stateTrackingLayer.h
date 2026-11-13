@@ -104,9 +104,11 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& c) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& c) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& c) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& c) override;
   void Post(ID3D12Device4CreateReservedResource1Command& c) override;
   void Post(ID3D12Device10CreateReservedResource2Command& c) override;
@@ -222,8 +224,26 @@ public:
   void Post(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& Command) override;
   void Post(ID3D12GraphicsCommandList6DispatchMeshCommand& Command) override;
   void Post(ID3D12GraphicsCommandList7BarrierCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) override;
+  void Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) override;
+  void Post(ID3D12Device16CreateShaderCacheSession1Command& c) override;
+  void Post(ID3D12StateObjectDatabaseFactory1CreateStateObjectDatabaseFromFile1Command& c) override;
+  void Post(ID3D12GraphicsCommandList12CopyBufferRegionsCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12CopyTextureRegionsCommand& Command) override;
+  void Post(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12CopyResourcesCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12CopyTilesAsyncCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12ClearBoundDepthStencilViewCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand& Command) override;
+  void Post(ID3D12GraphicsCommandList12FillBuffersCommand& Command) override;
   void Post(ID3D12SDKConfiguration1CreateDeviceFactoryCommand& Command) override;
   void Post(ID3D12DeviceFactoryCreateDeviceCommand& Command) override;
+  void Post(ID3D12DeviceFactoryGetConfigurationInterfaceCommand& c) override;
+  void Post(ID3D12AsyncCommandsFallbackSetFallbackLayerEnabledCommand& c) override;
+  void Post(ID3D12StateObjectDatabaseCaptureEnableCaptureCommand& c) override;
   void Post(ID3D12Device5CreateMetaCommandCommand& c) override;
   void Post(ID3D12ApplicationIdentitySetApplicationIdentityCommand& c) override;
   void Post(xessD3D12CreateContextCommand& c) override;
@@ -280,6 +300,7 @@ private:
   bool IsResourceHeapMappable(ObjectKey heapKey, const D3D12_TEXTURE_LAYOUT& textureLayout);
   bool IsResourceBarrierRestricted(D3D12_RESOURCE_FLAGS flags);
   void ReleaseSwapChainBuffers(ObjectKey key, unsigned referenceCount);
+  void LogInterfaceNotHandled(REFIID riid);
 
 private:
   bool m_StateRestored{};

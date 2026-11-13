@@ -49,21 +49,6 @@ void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
 void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
                                                        const D3D12_RESOURCE_DESC1& desc,
                                                        ID3D12Device* device) {
-  if (!m_PlacementDataLoaded) {
-    return;
-  }
-
-  const ResourcePlacementInfo* placementInfo = FindPlacementData(resourceKey);
-
-  if (!placementInfo) {
-    static bool logged = false;
-    if (!logged) {
-      LOG_ERROR << "Portability - No resource placement data for resource: O" << resourceKey;
-      logged = true;
-    }
-    return;
-  }
-
   if (desc.Format == DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE ||
       desc.Format == DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE) {
     if (desc.SamplerFeedbackMipRegion.Width || desc.SamplerFeedbackMipRegion.Height ||
@@ -79,11 +64,33 @@ void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
   D3D12_RESOURCE_DESC baseDesc{desc.Dimension,        desc.Alignment, desc.Width,  desc.Height,
                                desc.DepthOrArraySize, desc.MipLevels, desc.Format, desc.SampleDesc,
                                desc.Layout,           desc.Flags};
+  CreatePlacedResource(resourceKey, baseDesc, device);
+}
 
-  AllocationInfo info{};
-  info.Pre = {placementInfo->Size, placementInfo->Alignment};
-  info.Post = QueryAllocationFromDevice(device, baseDesc, resourceKey);
-  CheckCompatibility(info, baseDesc, resourceKey);
+void ResourcePlacementAssertions::CreatePlacedResource(ObjectKey resourceKey,
+                                                       const D3D12_RESOURCE_DESC2& desc,
+                                                       ID3D12Device* device) {
+  if (desc.LayoutGuid != GUID{}) {
+    static bool logged = false;
+    if (!logged) {
+      LOG_WARNING << "Portability - Incompatibility in LayoutGuid not checked";
+      logged = true;
+    }
+    return;
+  }
+
+  D3D12_RESOURCE_DESC1 desc1{desc.Dimension,
+                             desc.Alignment,
+                             desc.Width,
+                             desc.Height,
+                             desc.DepthOrArraySize,
+                             desc.MipLevels,
+                             desc.Format,
+                             desc.SampleDesc,
+                             desc.Layout,
+                             desc.Flags,
+                             desc.SamplerFeedbackMipRegion};
+  CreatePlacedResource(resourceKey, desc1, device);
 }
 
 const ResourcePlacementInfo* ResourcePlacementAssertions::FindPlacementData(ObjectKey resourceKey) {

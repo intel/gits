@@ -25,12 +25,14 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& command) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
   void Post(ID3D12Device4CreateReservedResource1Command& command) override;
   void Post(ID3D12Device10CreateReservedResource2Command& command) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& command) override;
   void Post(ID3D12DeviceCreateHeapCommand& command) override;
   void Post(ID3D12Device4CreateHeap1Command& command) override;
   void Post(INTC_D3D12_CreateHeapCommand& command) override;
@@ -42,11 +44,11 @@ public:
 private:
   void StoreAddressRanges();
 
-  template <typename CommandT>
-  void HandleResource(CommandT& command);
+  template <typename CommandT, typename ResourceDescT>
+  void HandleResource(CommandT& command, const ResourceDescT* desc);
 
-  template <typename CommandT>
-  void HandlePlacedResource(CommandT& command);
+  template <typename CommandT, typename ResourceDescT>
+  void HandlePlacedResource(CommandT& command, const ResourceDescT* desc);
 
   template <typename CommandT>
   void HandleHeap(CommandT& command);

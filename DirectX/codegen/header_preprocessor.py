@@ -103,6 +103,7 @@ def encode_sal(in_lines):
         '__in_ecount', '__in_ecount_opt', '__RPC__deref_out',
         '__RPC__deref_out_opt', '__RPC__in', '_Always_', '_COM_Outptr_',
         '_COM_Outptr_opt_', '_COM_Outptr_opt_result_maybenull_',
+        '_COM_Outptr_result_maybenull_',
         '_Field_size_bytes_full_', '_Field_size_bytes_full_opt_',
         '_Field_size_full_', '_Field_size_full_opt_', '_Field_z_', '_In_',
         '_In_opt_', '_In_range_', '_In_reads_', '_In_reads_bytes_',
@@ -114,7 +115,7 @@ def encode_sal(in_lines):
         '_Outptr_opt_result_bytebuffer_', '_Field_size_', '_In_opt_count_',
         '_In_count_', '_Field_size_opt_', '_Maybenull_', '_Field_size_bytes_',
         '_In_opt_z_',
-        '_Out_writes_to_'
+        '_Out_writes_to_', '_Field_size_bytes_opt_', '_Inout_count_'
     ]
 
     out_lines = []

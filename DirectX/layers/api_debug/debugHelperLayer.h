@@ -22,9 +22,11 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& c) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& c) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& c) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& c) override;
   void Post(ID3D12Device4CreateReservedResource1Command& c) override;
   void Post(ID3D12Device10CreateReservedResource2Command& c) override;

@@ -26,6 +26,7 @@ struct INTCExtensionVersion;
 
 #include <vector>
 #include <map>
+#include <array>
 #include <cstdint>
 
 namespace gits {
@@ -642,17 +643,52 @@ struct ArrayArgument<D3D12_META_COMMAND_DESC> {
   bool Copy{};
 };
 
+unsigned GetRtasOperationInputsDescSize(D3D12_RTAS_OPERATION_TYPE type);
+unsigned GetRtasOperationDataSize(D3D12_RTAS_OPERATION_TYPE type);
+
+template <>
+struct PointerArgument<D3D12_RTAS_OPERATION_INPUTS> {
+  PointerArgument(const D3D12_RTAS_OPERATION_INPUTS* value_)
+      : Value(const_cast<D3D12_RTAS_OPERATION_INPUTS*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg);
+  PointerArgument& operator=(const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>&) = delete;
+  ~PointerArgument();
+  D3D12_RTAS_OPERATION_INPUTS* Value{};
+  bool Copy{};
+};
+
+template <>
+struct ArrayArgument<D3D12_RTAS_OPERATION_DESC> {
+  ArrayArgument(const D3D12_RTAS_OPERATION_DESC* value_, size_t size_)
+      : Value(const_cast<D3D12_RTAS_OPERATION_DESC*>(value_)), Size(size_) {}
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_RTAS_OPERATION_DESC>&) = delete;
+  ~ArrayArgument();
+  D3D12_RTAS_OPERATION_DESC* Value{};
+  size_t Size{};
+  std::vector<ObjectKey> DataKeys{};
+  std::vector<unsigned> DataOffsets{};
+  bool Copy{};
+};
+
 struct D3D12_BARRIER_GROUPs_Argument {
   D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUP* value_, unsigned size_)
       : Value(const_cast<D3D12_BARRIER_GROUP*>(value_)), Size(size_) {
-    unsigned numResourceKeys{};
+    unsigned numObjectKeys{};
+    unsigned numDescriptorIndexes{};
     for (unsigned i = 0; i < Size; ++i) {
       if (Value[i].Type == D3D12_BARRIER_TYPE_GLOBAL) {
         continue;
       }
-      numResourceKeys += Value[i].NumBarriers;
+      numObjectKeys += Value[i].NumBarriers;
+      if (Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+        numDescriptorIndexes += Value[i].NumBarriers;
+      }
     }
-    ResourceKeys.resize(numResourceKeys);
+    ObjectKeys.resize(numObjectKeys);
+    DescriptorIndexes.resize(numDescriptorIndexes);
   }
   D3D12_BARRIER_GROUPs_Argument() {}
   D3D12_BARRIER_GROUPs_Argument(const D3D12_BARRIER_GROUPs_Argument& arg);
@@ -660,7 +696,93 @@ struct D3D12_BARRIER_GROUPs_Argument {
   ~D3D12_BARRIER_GROUPs_Argument();
   D3D12_BARRIER_GROUP* Value{};
   size_t Size{};
+  // Per barrier key of the resource or, for D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP, the descriptor heap
+  std::vector<ObjectKey> ObjectKeys{};
+  std::vector<unsigned> DescriptorIndexes{};
+  bool Copy{};
+};
+
+struct D3D12_TEXTURE_COPY_DESCs_Argument {
+  D3D12_TEXTURE_COPY_DESCs_Argument(const D3D12_TEXTURE_COPY_DESC* value_, unsigned size_)
+      : Value(const_cast<D3D12_TEXTURE_COPY_DESC*>(value_)), Size(size_) {
+    DestOrBufferKeys.resize(size_);
+    SourceOrTextureKeys.resize(size_);
+  }
+  D3D12_TEXTURE_COPY_DESCs_Argument() {}
+  D3D12_TEXTURE_COPY_DESCs_Argument(const D3D12_TEXTURE_COPY_DESCs_Argument& arg);
+  D3D12_TEXTURE_COPY_DESCs_Argument& operator=(const D3D12_TEXTURE_COPY_DESCs_Argument&) = delete;
+  ~D3D12_TEXTURE_COPY_DESCs_Argument();
+  D3D12_TEXTURE_COPY_DESC* Value{};
+  size_t Size{};
+  std::vector<ObjectKey> DestOrBufferKeys{};
+  std::vector<ObjectKey> SourceOrTextureKeys{};
+  bool Copy{};
+};
+
+struct D3D12_CLEAR_TEXTURE_DESCs_Argument {
+  D3D12_CLEAR_TEXTURE_DESCs_Argument(const D3D12_CLEAR_TEXTURE_DESC* value_, unsigned size_)
+      : Value(const_cast<D3D12_CLEAR_TEXTURE_DESC*>(value_)), Size(size_) {
+    ResourceKeys.resize(size_);
+  }
+  D3D12_CLEAR_TEXTURE_DESCs_Argument() {}
+  D3D12_CLEAR_TEXTURE_DESCs_Argument(const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg);
+  D3D12_CLEAR_TEXTURE_DESCs_Argument& operator=(const D3D12_CLEAR_TEXTURE_DESCs_Argument&) = delete;
+  ~D3D12_CLEAR_TEXTURE_DESCs_Argument();
+  D3D12_CLEAR_TEXTURE_DESC* Value{};
+  size_t Size{};
   std::vector<ObjectKey> ResourceKeys{};
+  bool Copy{};
+};
+
+struct D3D12_FILL_BUFFER_DESCs_Argument {
+  D3D12_FILL_BUFFER_DESCs_Argument(const D3D12_FILL_BUFFER_DESC* value_, unsigned size_)
+      : Value(const_cast<D3D12_FILL_BUFFER_DESC*>(value_)), Size(size_) {
+    ResourceKeys.resize(size_);
+  }
+  D3D12_FILL_BUFFER_DESCs_Argument() {}
+  D3D12_FILL_BUFFER_DESCs_Argument(const D3D12_FILL_BUFFER_DESCs_Argument& arg);
+  D3D12_FILL_BUFFER_DESCs_Argument& operator=(const D3D12_FILL_BUFFER_DESCs_Argument&) = delete;
+  ~D3D12_FILL_BUFFER_DESCs_Argument();
+  D3D12_FILL_BUFFER_DESC* Value{};
+  size_t Size{};
+  std::vector<ObjectKey> ResourceKeys{};
+  bool Copy{};
+};
+
+struct BoxArraysArgument {
+  BoxArraysArgument(const D3D12_BOX* const* value_, const UINT* sizes_, UINT renderTargetMask)
+      : Value(const_cast<const D3D12_BOX**>(value_)) {
+    for (unsigned i = 0; value_ && sizes_ && i < Sizes.size(); ++i) {
+      if ((renderTargetMask & (1u << i)) && value_[i]) {
+        Sizes[i] = sizes_[i];
+      }
+    }
+  }
+  BoxArraysArgument() {}
+  BoxArraysArgument(const BoxArraysArgument& arg);
+  BoxArraysArgument& operator=(const BoxArraysArgument&) = delete;
+  ~BoxArraysArgument();
+  const D3D12_BOX** Value{};
+  std::array<UINT, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT> Sizes{};
+  bool Copy{};
+};
+
+struct CastableFormatArraysArgument {
+  CastableFormatArraysArgument(const DXGI_FORMAT* const* value_, const UINT32* sizes_, UINT count)
+      : Value(const_cast<const DXGI_FORMAT**>(value_)) {
+    if (value_) {
+      Sizes.resize(count);
+      for (unsigned i = 0; sizes_ && i < count; ++i) {
+        Sizes[i] = value_[i] ? sizes_[i] : 0;
+      }
+    }
+  }
+  CastableFormatArraysArgument() {}
+  CastableFormatArraysArgument(const CastableFormatArraysArgument& arg);
+  CastableFormatArraysArgument& operator=(const CastableFormatArraysArgument&) = delete;
+  ~CastableFormatArraysArgument();
+  const DXGI_FORMAT** Value{};
+  std::vector<UINT32> Sizes{};
   bool Copy{};
 };
 
@@ -679,6 +801,138 @@ struct ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO> {
   std::vector<unsigned> DestOffset{};
   std::vector<ObjectKey> SourceKey{};
   std::vector<unsigned> SourceOffset{};
+  bool Copy{};
+};
+
+template <>
+struct ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE> {
+  ArrayArgument(const D3D12_COPY_DESCRIPTORS_RANGE* value_, size_t size_)
+      : Value(const_cast<D3D12_COPY_DESCRIPTORS_RANGE*>(value_)), Size(size_) {
+    DestHeapKeys.resize(Size);
+    DestIndexes.resize(Size);
+    SourceHeapKeys.resize(Size);
+    SourceIndexes.resize(Size);
+  }
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>&) = delete;
+  ~ArrayArgument();
+  D3D12_COPY_DESCRIPTORS_RANGE* Value{};
+  size_t Size{};
+  std::vector<ObjectKey> DestHeapKeys{};
+  std::vector<unsigned> DestIndexes{};
+  std::vector<ObjectKey> SourceHeapKeys{};
+  std::vector<unsigned> SourceIndexes{};
+  bool Copy{};
+};
+
+// T is a key structure with a pKey buffer of KeySize bytes
+template <typename T>
+struct KeyPointerArgument {
+  KeyPointerArgument(const T* value_) : Value(const_cast<T*>(value_)) {}
+  KeyPointerArgument() {}
+  KeyPointerArgument(const KeyPointerArgument& arg) {
+    if (!arg.Value) {
+      return;
+    }
+    Value = new T(*arg.Value);
+    if (arg.Value->pKey) {
+      char* key = new char[arg.Value->KeySize];
+      memcpy(key, arg.Value->pKey, arg.Value->KeySize);
+      Value->pKey = key;
+    }
+    Copy = true;
+  }
+  KeyPointerArgument& operator=(const KeyPointerArgument&) = delete;
+  ~KeyPointerArgument() {
+    if (Copy) {
+      delete[] static_cast<const char*>(Value->pKey);
+      delete Value;
+    }
+  }
+  T* Value{};
+  bool Copy{};
+};
+
+template <>
+struct PointerArgument<D3D12_CACHE_VALUE_KEY> : KeyPointerArgument<D3D12_CACHE_VALUE_KEY> {
+  using KeyPointerArgument::KeyPointerArgument;
+};
+
+template <>
+struct PointerArgument<D3D12_DATABASE_GROUP_KEY> : KeyPointerArgument<D3D12_DATABASE_GROUP_KEY> {
+  using KeyPointerArgument::KeyPointerArgument;
+};
+
+template <>
+struct PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>
+    : KeyPointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY> {
+  using KeyPointerArgument::KeyPointerArgument;
+};
+
+template <>
+struct PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>
+    : KeyPointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY> {
+  using KeyPointerArgument::KeyPointerArgument;
+};
+
+template <>
+struct ArrayArgument<D3D12_DATABASE_GROUP_KEY> {
+  ArrayArgument(const D3D12_DATABASE_GROUP_KEY* value_, size_t size_)
+      : Value(const_cast<D3D12_DATABASE_GROUP_KEY*>(value_)), Size(size_) {}
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_DATABASE_GROUP_KEY>&) = delete;
+  ~ArrayArgument();
+  D3D12_DATABASE_GROUP_KEY* Value{};
+  size_t Size{};
+  bool Copy{};
+};
+
+template <>
+struct ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE> {
+  ArrayArgument(const D3D12_CACHE_TYPED_CONST_VALUE* value_, size_t size_)
+      : Value(const_cast<D3D12_CACHE_TYPED_CONST_VALUE*>(value_)), Size(size_) {}
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>&) = delete;
+  ~ArrayArgument();
+  D3D12_CACHE_TYPED_CONST_VALUE* Value{};
+  size_t Size{};
+  bool Copy{};
+};
+
+template <>
+struct ArrayArgument<D3D12_CACHE_TYPED_VALUE> {
+  // The call may update the values, so the caller provided buffers are remembered to bound the
+  // amount of data stored after the call
+  ArrayArgument(const D3D12_CACHE_TYPED_VALUE* value_, size_t size_)
+      : Value(const_cast<D3D12_CACHE_TYPED_VALUE*>(value_)), Size(size_) {
+    for (unsigned i = 0; value_ && i < size_; ++i) {
+      ProvidedValues.push_back(value_[i].Value);
+    }
+  }
+  ArrayArgument() {}
+  ArrayArgument(const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg);
+  ArrayArgument& operator=(const ArrayArgument<D3D12_CACHE_TYPED_VALUE>&) = delete;
+  ~ArrayArgument();
+  // Size in bytes of the data pointed by the value at index
+  UINT GetStoredValueSize(unsigned index) const;
+  D3D12_CACHE_TYPED_VALUE* Value{};
+  size_t Size{};
+  std::vector<D3D12_CACHE_VALUE> ProvidedValues{};
+  bool Copy{};
+};
+
+template <>
+struct PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1> {
+  PointerArgument(const D3D12_SHADER_CACHE_SESSION_DESC1* value_)
+      : Value(const_cast<D3D12_SHADER_CACHE_SESSION_DESC1*>(value_)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg);
+  PointerArgument& operator=(const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>&) = delete;
+  ~PointerArgument();
+  D3D12_SHADER_CACHE_SESSION_DESC1* Value{};
   bool Copy{};
 };
 

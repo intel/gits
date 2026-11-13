@@ -48,10 +48,12 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& c) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& c) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& c) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& c) override;
   void Post(INTC_D3D12_CreateCommittedResourceCommand& c) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& c) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& c) override;
   void Post(INTC_D3D12_CreatePlacedResourceCommand& c) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& c) override;
   void Post(ID3D12Device4CreateReservedResource1Command& c) override;
@@ -59,6 +61,8 @@ public:
   void Post(INTC_D3D12_CreateReservedResourceCommand& c) override;
   void Post(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
   void Post(ID3D12GraphicsCommandList7BarrierCommand& c) override;
+  void Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) override;
+  void Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) override;
 
 private:
   std::wstring m_DumpPath;

@@ -41,6 +41,16 @@ void ResourceDumpService::CreateResource(ObjectKey resourceKey,
   m_Resources[resourceKey] = resource;
 }
 
+void ResourceDumpService::CreateResource(ObjectKey resourceKey,
+                                         ID3D12Resource* resource,
+                                         D3D12_BARRIER_LAYOUT initialLayout) {
+  if (!m_ResourceKeys.Contains(resourceKey)) {
+    return;
+  }
+  m_ResourceStateTracker.AddResource(resource, resourceKey, initialLayout);
+  m_Resources[resourceKey] = resource;
+}
+
 void ResourceDumpService::DestroyResource(ObjectKey resourceKey) {
   if (!m_ResourceKeys.Contains(resourceKey)) {
     return;
@@ -108,6 +118,24 @@ void ResourceDumpService::CommandListCall(CommandKey callKey,
 void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c) {
   m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarriers.Value,
                                          c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
+}
+
+void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ObjectKeys.data());
+}
+
+void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ObjectKeys.data());
+}
+
+void ResourceDumpService::ResourceBarrier(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ObjectKeys.data());
 }
 
 void ResourceDumpService::ExecuteCommandLists(CommandKey key,

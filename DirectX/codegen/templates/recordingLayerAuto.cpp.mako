@@ -19,7 +19,8 @@ custom = [
     'IDXGISwapChain1Present1',
     'IDXGIAdapter3QueryVideoMemoryInfo',
     'ID3D12GraphicsCommandListReset',
-    'ID3D12FenceGetCompletedValue'
+    'ID3D12FenceGetCompletedValue',
+    'ID3D12CommandListRaytracing2ExecuteIndirectRTASOperations'
 ]
 %>\
 %for function in functions:

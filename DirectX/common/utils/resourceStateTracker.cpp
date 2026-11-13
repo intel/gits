@@ -96,7 +96,7 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
 void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                                            D3D12_BARRIER_GROUP* barriers,
                                            unsigned barriersNum,
-                                           ObjectKey* resourceKeys) {
+                                           ObjectKey* objectKeys) {
   ResourceStatesByKey* resourceStatesByCommandList =
       commandList ? &m_ResourceStatesByCommandList[commandList] : nullptr;
 
@@ -122,11 +122,13 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
     return states;
   };
 
-  unsigned resourceKeyIndex = 0;
+  unsigned objectKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
-    if (barriers[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
-      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++resourceKeyIndex) {
-        ResourceStates* states = getResourceStates(resourceKeys[resourceKeyIndex]);
+    if (barriers[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += barriers[i].NumBarriers;
+    } else if (barriers[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
+      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++objectKeyIndex) {
+        ResourceStates* states = getResourceStates(objectKeys[objectKeyIndex]);
         if (!states) {
           continue;
         }
@@ -135,8 +137,8 @@ void ResourceStateTracker::ResourceBarrier(ID3D12GraphicsCommandList* commandLis
         states->SubresourceStates[0].Access = barrier.AccessAfter;
       }
     } else if (barriers[i].Type == D3D12_BARRIER_TYPE_TEXTURE) {
-      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++resourceKeyIndex) {
-        ResourceStates* states = getResourceStates(resourceKeys[resourceKeyIndex]);
+      for (unsigned j = 0; j < barriers[i].NumBarriers; ++j, ++objectKeyIndex) {
+        ResourceStates* states = getResourceStates(objectKeys[objectKeyIndex]);
         if (!states) {
           continue;
         }

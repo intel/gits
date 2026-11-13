@@ -776,6 +776,19 @@ ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(
         command->m_pCastableFormats.Value, IID_PPV_ARGS(&auxiliaryResource));
     GITS_ASSERT(hr == S_OK);
   } else if (resourceObjectState->CreationCommand->GetId() ==
+             CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3) {
+    auto* command = static_cast<ID3D12Device16CreatePlacedResource3Command*>(
+        resourceObjectState->CreationCommand.get());
+    Microsoft::WRL::ComPtr<ID3D12Device16> device;
+    HRESULT hr = m_Device->QueryInterface(IID_PPV_ARGS(&device));
+    GITS_ASSERT(hr == S_OK);
+    hr = device->CreatePlacedResource3(
+        command->m_pHeap.Value, command->m_HeapOffset.Value, command->m_pResourceDesc.Value,
+        ResourceStateTrackingService::GetCopySourceLayout(command->m_pResourceDesc.Value->Flags),
+        command->m_pOptimizedClearValue.Value, command->m_NumCastableFormats.Value,
+        command->m_pCastableFormats.Value, IID_PPV_ARGS(&auxiliaryResource));
+    GITS_ASSERT(hr == S_OK);
+  } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {
     auto* command = static_cast<INTC_D3D12_CreatePlacedResourceCommand*>(
         resourceObjectState->CreationCommand.get());
@@ -848,9 +861,31 @@ ObjectKey ResourceContentRestore::CreateSubcaptureAuxiliaryPlacedResource(
     c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
     c.m_NumCastableFormats.Value = command->m_NumCastableFormats.Value;
     c.m_pCastableFormats.Value = command->m_pCastableFormats.Value;
+    c.m_pCastableFormats.Size = command->m_pCastableFormats.Size;
     c.m_riid.Value = command->m_riid.Value;
     c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
     m_StateService.GetRecorder().Record(ID3D12Device10CreatePlacedResource2Serializer(c));
+    auxiliaryResourceKey = c.m_ppvResource.Key;
+  } else if (resourceObjectState->CreationCommand->GetId() ==
+             CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3) {
+    auto* command = static_cast<ID3D12Device16CreatePlacedResource3Command*>(
+        resourceObjectState->CreationCommand.get());
+
+    ID3D12Device16CreatePlacedResource3Command c;
+    c.Key = m_StateService.GetUniqueCommandKey();
+    c.m_Object.Key = command->m_Object.Key;
+    c.m_pHeap.Key = command->m_pHeap.Key;
+    c.m_HeapOffset.Value = command->m_HeapOffset.Value;
+    c.m_pResourceDesc.Value = command->m_pResourceDesc.Value;
+    c.m_InitialLayout.Value =
+        ResourceStateTrackingService::GetCopyDestLayout(command->m_pResourceDesc.Value->Flags);
+    c.m_pOptimizedClearValue.Value = command->m_pOptimizedClearValue.Value;
+    c.m_NumCastableFormats.Value = command->m_NumCastableFormats.Value;
+    c.m_pCastableFormats.Value = command->m_pCastableFormats.Value;
+    c.m_pCastableFormats.Size = command->m_pCastableFormats.Size;
+    c.m_riid.Value = command->m_riid.Value;
+    c.m_ppvResource.Key = m_StateService.GetUniqueObjectKey();
+    m_StateService.GetRecorder().Record(ID3D12Device16CreatePlacedResource3Serializer(c));
     auxiliaryResourceKey = c.m_ppvResource.Key;
   } else if (resourceObjectState->CreationCommand->GetId() ==
              CommandId::INTC_D3D12_CREATEPLACEDRESOURCE) {

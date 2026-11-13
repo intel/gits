@@ -162,6 +162,19 @@ void CaptureGpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
       *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
 }
 
+void CaptureGpuPatchLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value != S_OK ||
+      c.m_pResourceDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (c.m_InitialLayout.Value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
+    m_GenericReadResources.insert(c.m_ppvResource.Key);
+  }
+  m_ResourcesByKey[c.m_ppvResource.Key] =
+      *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
+}
+
 void CaptureGpuPatchLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
@@ -200,6 +213,19 @@ void CaptureGpuPatchLayer::Post(ID3D12Device8CreateCommittedResource2Command& c)
 
 void CaptureGpuPatchLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
   if (c.m_Result.Value != S_OK || c.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (c.m_InitialLayout.Value == D3D12_BARRIER_LAYOUT_GENERIC_READ) {
+    m_GenericReadResources.insert(c.m_ppvResource.Key);
+  }
+  m_ResourcesByKey[c.m_ppvResource.Key] =
+      *reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value);
+}
+
+void CaptureGpuPatchLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.m_Result.Value != S_OK ||
+      c.m_pResourceDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);

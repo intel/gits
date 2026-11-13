@@ -354,6 +354,91 @@ void PortabilityLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   }
 }
 
+void PortabilityLayer::Pre(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+
+  const D3D12_RESOURCE_DESC2* resourceDesc = c.m_pResourceDesc.Value;
+  if (m_UseResourcePlacementData) {
+    GITS_ASSERT(!resourceDesc || resourceDesc->Layout != D3D12_TEXTURE_LAYOUT_GUID,
+                "Portability - resource placement data not handled for resources with "
+                "D3D12_TEXTURE_LAYOUT_GUID");
+    m_ResourcePlacementPlayback.CreatePlacedResource(c.m_ppvResource.Key, c.m_HeapOffset.Value);
+    return;
+  }
+  if (m_ForcePlacedToCommittedResources && c.m_pHeap.Value && resourceDesc &&
+      c.m_ppvResource.Value) {
+    const D3D12_HEAP_DESC heapDesc = c.m_pHeap.Value->GetDesc();
+    const D3D12_RESOURCE_DESC baseDesc = {
+        resourceDesc->Dimension, resourceDesc->Alignment,        resourceDesc->Width,
+        resourceDesc->Height,    resourceDesc->DepthOrArraySize, resourceDesc->MipLevels,
+        resourceDesc->Format,    resourceDesc->SampleDesc,       resourceDesc->Layout,
+        resourceDesc->Flags};
+    if (!CanReplacePlacedResourceWithCommitted(heapDesc, baseDesc)) {
+      FailPlacedToCommittedIncompatibility("CreatePlacedResource3 -> CreateCommittedResource4",
+                                           c.Key, c.m_pHeap.Key, heapDesc, baseDesc);
+      return;
+    }
+
+    HRESULT hr =
+        CreateCommittedResource4(c.m_pHeap.Value, resourceDesc, c.m_InitialLayout.Value,
+                                 c.m_pOptimizedClearValue.Value, c.m_NumCastableFormats.Value,
+                                 c.m_pCastableFormats.Value, c.m_riid.Value, c.m_ppvResource.Value);
+    if (hr == S_OK) {
+      c.m_Result.Value = S_OK;
+      RegisterForcedPlacedResource(c);
+      c.m_pHeap.Value = nullptr;
+      c.Skip = true;
+    } else {
+      FailPlacedToCommittedCreation("CreatePlacedResource3 -> CreateCommittedResource4", c.Key,
+                                    c.m_pHeap.Key, c.m_HeapOffset.Value, baseDesc,
+                                    c.m_InitialLayout.Value, hr);
+      return;
+    }
+  }
+  if (m_PortabilityAssertions && !IsStateRestoreKey(c.m_ppvResource.Key) && c.m_ppvResource.Value &&
+      resourceDesc) {
+    m_ResourcePlacementAssertions.CreatePlacedResource(c.m_ppvResource.Key, *resourceDesc,
+                                                       c.m_Object.Value);
+  }
+}
+
+void PortabilityLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  if (m_ForcePlacedToCommittedResources && c.Skip) {
+    m_ForcedCommittedResources.insert(c.m_ppvResource.Key);
+  }
+  const D3D12_RESOURCE_DESC2* resourceDesc = c.m_pResourceDesc.Value;
+  if (!m_StoreResourcePlacementDataNoExecute && !m_StoreResourcePlacementData) {
+    return;
+  }
+  GITS_ASSERT(!resourceDesc || resourceDesc->Layout != D3D12_TEXTURE_LAYOUT_GUID,
+              "Portability - resource placement data not handled for resources with "
+              "D3D12_TEXTURE_LAYOUT_GUID");
+  if (m_StoreResourcePlacementDataNoExecute) {
+    if (!resourceDesc) {
+      return;
+    }
+    D3D12_RESOURCE_DESC desc = {
+        resourceDesc->Dimension, resourceDesc->Alignment,        resourceDesc->Width,
+        resourceDesc->Height,    resourceDesc->DepthOrArraySize, resourceDesc->MipLevels,
+        resourceDesc->Format,    resourceDesc->SampleDesc,       resourceDesc->Layout,
+        resourceDesc->Flags};
+    m_ResourcePlacementCaptureNoExecute.CreatePlacedResource(
+        c.m_pHeap.Key, c.m_ppvResource.Key, c.m_HeapOffset.Value, c.m_Object.Value, desc);
+    return;
+  }
+  if (m_StoreResourcePlacementData) {
+    D3D12_RESOURCE_DESC desc =
+        (*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value))->GetDesc();
+    m_ResourcePlacementCapture.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
+                                                    c.m_HeapOffset.Value, c.m_Object.Value, desc);
+  }
+}
+
 void PortabilityLayer::Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
   c.m_pInfo.Value->ResultDataMaxSizeInBytes *= m_AccelerationStructurePadding;
   c.m_pInfo.Value->ScratchDataSizeInBytes =
@@ -441,6 +526,23 @@ void PortabilityLayer::Pre(ID3D12Device8GetResourceAllocationInfo2Command& c) {
 }
 
 void PortabilityLayer::Pre(ID3D12Device12GetResourceAllocationInfo3Command& c) {
+  if (c.m_numResourceDescs.Value == 1) {
+    if (m_StoreResourcePlacementDataNoExecute) {
+      m_ResourcePlacementCaptureNoExecute.GetResourceAllocation(
+          c.m_pResourceDescs.Value[0], c.m_Result.Value.SizeInBytes, c.m_Result.Value.Alignment);
+    }
+  } else if (c.m_pResourceAllocationInfo1.Value) {
+    for (unsigned i = 0; i < c.m_numResourceDescs.Value; ++i) {
+      if (m_StoreResourcePlacementDataNoExecute) {
+        m_ResourcePlacementCaptureNoExecute.GetResourceAllocation(
+            c.m_pResourceDescs.Value[i], c.m_pResourceAllocationInfo1.Value[i].SizeInBytes,
+            c.m_pResourceAllocationInfo1.Value[i].Alignment);
+      }
+    }
+  }
+}
+
+void PortabilityLayer::Pre(ID3D12Device16GetResourceAllocationInfo4Command& c) {
   if (c.m_numResourceDescs.Value == 1) {
     if (m_StoreResourcePlacementDataNoExecute) {
       m_ResourcePlacementCaptureNoExecute.GetResourceAllocation(
@@ -744,6 +846,88 @@ HRESULT PortabilityLayer::CreateCommittedResource3(ID3D12Heap* heap,
     D3D12_RESOURCE_STATES targetState = BarrierLayoutToResourceState(initialLayout);
     if (targetState != D3D12_RESOURCE_STATE_COMMON) {
       TransitionResource(device10.Get(), static_cast<ID3D12Resource*>(*ppvResource),
+                         D3D12_RESOURCE_STATE_COMMON, targetState);
+    }
+  }
+
+  return S_OK;
+}
+
+HRESULT PortabilityLayer::CreateCommittedResource4(ID3D12Heap* heap,
+                                                   const D3D12_RESOURCE_DESC2* desc,
+                                                   D3D12_BARRIER_LAYOUT initialLayout,
+                                                   const D3D12_CLEAR_VALUE* clearValue,
+                                                   UINT32 numCastableFormats,
+                                                   const DXGI_FORMAT* pCastableFormats,
+                                                   REFIID riid,
+                                                   void** ppvResource) {
+  if (!heap || !desc || !ppvResource) {
+    return E_INVALIDARG;
+  }
+
+  Microsoft::WRL::ComPtr<ID3D12Device16> device16;
+  HRESULT hr = heap->GetDevice(IID_PPV_ARGS(&device16));
+  if (FAILED(hr) || !device16) {
+    return FAILED(hr) ? hr : E_FAIL;
+  }
+
+  const D3D12_HEAP_DESC heapDesc = heap->GetDesc();
+
+  D3D12_RESOURCE_DESC2 adjustedDesc = *desc;
+  D3D12_RESOURCE_DESC baseDesc = {
+      adjustedDesc.Dimension, adjustedDesc.Alignment,        adjustedDesc.Width,
+      adjustedDesc.Height,    adjustedDesc.DepthOrArraySize, adjustedDesc.MipLevels,
+      adjustedDesc.Format,    adjustedDesc.SampleDesc,       adjustedDesc.Layout,
+      adjustedDesc.Flags};
+  AdjustResourceFlagsForCommitted(heapDesc, baseDesc, adjustedDesc.Flags);
+  baseDesc.Flags = adjustedDesc.Flags;
+
+  D3D12_RESOURCE_STATES initialState = BarrierLayoutToResourceState(initialLayout);
+  D3D12_HEAP_FLAGS committedHeapFlags = GetCompatibleHeapFlags(heapDesc, baseDesc);
+  D3D12_HEAP_PROPERTIES properties = GetCompatibleHeapProperties(heapDesc, baseDesc, initialState);
+  D3D12_RESOURCE_STATES creationState =
+      GetCompatibleInitialState(properties, baseDesc, initialState);
+
+  D3D12_BARRIER_LAYOUT creationLayout = initialLayout;
+  if (creationState != initialState) {
+    creationLayout = D3D12_BARRIER_LAYOUT_COMMON;
+  }
+  if (adjustedDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER &&
+      properties.Type == D3D12_HEAP_TYPE_DEFAULT && creationLayout != D3D12_BARRIER_LAYOUT_COMMON) {
+    creationLayout = D3D12_BARRIER_LAYOUT_COMMON;
+  }
+
+  const D3D12_CLEAR_VALUE* clearValueAdjusted = GetCompatibleClearValue(baseDesc, clearValue);
+
+  hr = device16->CreateCommittedResource4(&properties, committedHeapFlags, &adjustedDesc,
+                                          creationLayout, clearValueAdjusted, nullptr,
+                                          numCastableFormats, pCastableFormats, riid, ppvResource);
+  if (FAILED(hr)) {
+    LOG_ERROR << "CreateCommittedResource4: CreateCommittedResource4 failed 0x" << std::hex << hr
+              << std::dec << " | HeapType=" << properties.Type
+              << " CPUPageProperty=" << properties.CPUPageProperty
+              << " MemoryPoolPreference=" << properties.MemoryPoolPreference
+              << " OriginalHeapFlags=0x" << std::hex << heapDesc.Flags << " CommittedHeapFlags=0x"
+              << committedHeapFlags << std::dec << " | Dimension=" << adjustedDesc.Dimension
+              << " Format=" << adjustedDesc.Format << " Width=" << adjustedDesc.Width
+              << " Height=" << adjustedDesc.Height
+              << " DepthOrArraySize=" << adjustedDesc.DepthOrArraySize
+              << " MipLevels=" << adjustedDesc.MipLevels << " Alignment=" << adjustedDesc.Alignment
+              << " Layout=" << adjustedDesc.Layout << " OriginalResourceFlags=0x" << std::hex
+              << desc->Flags << " AdjustedResourceFlags=0x" << adjustedDesc.Flags << std::dec
+              << " SampleCount=" << adjustedDesc.SampleDesc.Count
+              << " SampleQuality=" << adjustedDesc.SampleDesc.Quality
+              << " | initialLayout=" << static_cast<int>(initialLayout)
+              << " creationLayout=" << static_cast<int>(creationLayout)
+              << " numCastableFormats=" << numCastableFormats
+              << " | clearValue=" << (clearValueAdjusted ? "yes" : "null");
+    return hr;
+  }
+
+  if (creationLayout != initialLayout && *ppvResource) {
+    D3D12_RESOURCE_STATES targetState = BarrierLayoutToResourceState(initialLayout);
+    if (targetState != D3D12_RESOURCE_STATE_COMMON) {
+      TransitionResource(device16.Get(), static_cast<ID3D12Resource*>(*ppvResource),
                          D3D12_RESOURCE_STATE_COMMON, targetState);
     }
   }

@@ -56,6 +56,21 @@ void ResourceDumpLayer::Post(ID3D12GraphicsCommandListResourceBarrierCommand& c)
   m_ResourceDumpService.CommandListCall(c.Key, c.m_Object.Value);
 }
 
+void ResourceDumpLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  m_ResourceDumpService.ResourceBarrier(c);
+  m_ResourceDumpService.CommandListCall(c.Key, c.m_Object.Value);
+}
+
+void ResourceDumpLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  m_ResourceDumpService.ResourceBarrier(c);
+  m_ResourceDumpService.CommandListCall(c.Key, c.m_Object.Value);
+}
+
+void ResourceDumpLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  m_ResourceDumpService.ResourceBarrier(c);
+  m_ResourceDumpService.CommandListCall(c.Key, c.m_Object.Value);
+}
+
 void ResourceDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
   if (c.m_Result.Value == S_OK) {
     m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
@@ -81,7 +96,19 @@ void ResourceDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
 }
 
 void ResourceDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
-  LOG_ERROR << "Resource dumping: ID3D12Device10::CreateCommittedResource3 not handled";
+  if (c.m_Result.Value == S_OK) {
+    m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
+                                         static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                         c.m_InitialLayout.Value);
+  }
+}
+
+void ResourceDumpLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
+                                         static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                         c.m_InitialLayout.Value);
+  }
 }
 
 void ResourceDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
@@ -101,7 +128,19 @@ void ResourceDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void ResourceDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
-  LOG_ERROR << "Resource dumping: ID3D12Device10::CreatePlacedResource2 not handled";
+  if (c.m_Result.Value == S_OK) {
+    m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
+                                         static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                         c.m_InitialLayout.Value);
+  }
+}
+
+void ResourceDumpLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
+                                         static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                         c.m_InitialLayout.Value);
+  }
 }
 
 void ResourceDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -121,7 +160,11 @@ void ResourceDumpLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
 }
 
 void ResourceDumpLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
-  LOG_ERROR << "Resource dumping: ID3D12Device10::CreateReservedResource2 not handled";
+  if (c.m_Result.Value == S_OK) {
+    m_ResourceDumpService.CreateResource(c.m_ppvResource.Key,
+                                         static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                         c.m_InitialLayout.Value);
+  }
 }
 
 } // namespace DirectX

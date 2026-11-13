@@ -136,6 +136,7 @@ FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS>& arg);
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC>& arg);
+FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg);
 FastOStream& operator<<(
     FastOStream& stream,
     ArrayArgument<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC>& arg);
@@ -145,6 +146,12 @@ FastOStream& operator<<(
 FastOStream& operator<<(FastOStream& stream,
                         PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
 FastOStream& operator<<(FastOStream& stream, D3D12_BARRIER_GROUPs_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, D3D12_TEXTURE_COPY_DESCs_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, D3D12_CLEAR_TEXTURE_DESCs_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, D3D12_FILL_BUFFER_DESCs_Argument& arg);
+FastOStream& operator<<(FastOStream& stream, BoxArraysArgument& arg);
+FastOStream& operator<<(FastOStream& stream, CastableFormatArraysArgument& arg);
+FastOStream& operator<<(FastOStream& stream, ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg);
 FastOStream& operator<<(FastOStream& stream, PointerArgument<D3D12_DISPATCH_RAYS_DESC>& arg);
 FastOStream& operator<<(FastOStream& stream, DML_BINDING_TABLE_DESC_Argument& arg);
 FastOStream& operator<<(FastOStream& stream, DML_GRAPH_DESC_Argument& arg);

@@ -1510,7 +1510,8 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
   std::ostringstream ss;
   ss << info.type << " " << info.name << "[" << arg.Size << "] = {};" << std::endl;
 
-  unsigned resourceKeyIndex = 0;
+  unsigned objectKeyIndex = 0;
+  unsigned descriptorIndex = 0;
   for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& group = arg.Value[i];
     const std::string groupIndex = std::to_string(i);
@@ -1525,6 +1526,8 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
         ss << info.name << "[" << i << "].pTextureBarriers = nullptr;" << std::endl;
       } else if (group.Type == D3D12_BARRIER_TYPE_BUFFER) {
         ss << info.name << "[" << i << "].pBufferBarriers = nullptr;" << std::endl;
+      } else if (group.Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+        ss << info.name << "[" << i << "].pDescriptorHeapBarriers = nullptr;" << std::endl;
       }
       continue;
     }
@@ -1564,7 +1567,7 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
         ss << barriersName << "[" << j << "].LayoutAfter = " << toStr(barrier.LayoutAfter) << ";"
            << std::endl;
         ss << barriersName << "[" << j
-           << "].pResource = " << objKeyToPtrStr(arg.ResourceKeys[resourceKeyIndex++]) << ";"
+           << "].pResource = " << objKeyToPtrStr(arg.ObjectKeys[objectKeyIndex++]) << ";"
            << std::endl;
         {
           CppParameterInfo groupElementInfo(info.type, info.name);
@@ -1600,12 +1603,35 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
         ss << barriersName << "[" << j << "].AccessAfter = " << toStr(barrier.AccessAfter) << ";"
            << std::endl;
         ss << barriersName << "[" << j
-           << "].pResource = " << objKeyToPtrStr(arg.ResourceKeys[resourceKeyIndex++]) << ";"
+           << "].pResource = " << objKeyToPtrStr(arg.ObjectKeys[objectKeyIndex++]) << ";"
            << std::endl;
         ss << barriersName << "[" << j << "].Offset = " << barrier.Offset << ";" << std::endl;
         ss << barriersName << "[" << j << "].Size = " << barrier.Size << ";" << std::endl;
       }
       ss << info.name << "[" << i << "].pBufferBarriers = " << barriersName << ";" << std::endl;
+    } else if (group.Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      const std::string barriersName = info.name + "_descriptorHeapBarriers" + groupIndex;
+      ss << "D3D12_DESCRIPTOR_HEAP_BARRIER " << barriersName << "[" << group.NumBarriers
+         << "] = {};" << std::endl;
+      for (unsigned j = 0; j < group.NumBarriers; ++j) {
+        const D3D12_DESCRIPTOR_HEAP_BARRIER& barrier = group.pDescriptorHeapBarriers[j];
+        ss << barriersName << "[" << j << "].SyncBefore = " << toStr(barrier.SyncBefore) << ";"
+           << std::endl;
+        ss << barriersName << "[" << j << "].SyncAfter = " << toStr(barrier.SyncAfter) << ";"
+           << std::endl;
+        ss << barriersName << "[" << j << "].AccessBefore = " << toStr(barrier.AccessBefore) << ";"
+           << std::endl;
+        ss << barriersName << "[" << j << "].AccessAfter = " << toStr(barrier.AccessAfter) << ";"
+           << std::endl;
+        ss << barriersName << "[" << j << "].BaseDescriptor.ptr = "
+           << descriptorHeapHandleStr(arg.ObjectKeys[objectKeyIndex++],
+                                      arg.DescriptorIndexes[descriptorIndex++], "GpuHandle")
+           << ";" << std::endl;
+        ss << barriersName << "[" << j << "].NumDescriptors = " << barrier.NumDescriptors << ";"
+           << std::endl;
+      }
+      ss << info.name << "[" << i << "].pDescriptorHeapBarriers = " << barriersName << ";"
+         << std::endl;
     } else {
       GITS_ASSERT(false, "Unknown D3D12_BARRIER_GROUP type");
     }
@@ -1614,6 +1640,324 @@ void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
   out.initialization = ss.str();
   out.value = info.name;
   out.decorator = "";
+}
+
+void argumentToCpp(D3D12_TEXTURE_COPY_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  std::ostringstream ssDescs;
+  ssDescs << "D3D12_TEXTURE_COPY_DESC " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
+    const D3D12_TEXTURE_COPY_DESC& desc = arg.Value[i];
+    const std::string descName = info.name + "[" + std::to_string(i) + "]";
+    ssDescs << descName << ".Type = " << toStr(desc.Type) << ";" << std::endl;
+    ssDescs << descName << ".NumRegions = " << desc.NumRegions << ";" << std::endl;
+
+    if (desc.pCopyRegions && desc.NumRegions) {
+      const std::string regionsName = info.name + "_regions" + std::to_string(i);
+      ss << "D3D12_TEXTURE_COPY_REGION " << regionsName << "[" << desc.NumRegions << "] = {};"
+         << std::endl;
+      for (unsigned j = 0; j < desc.NumRegions; ++j) {
+        const D3D12_TEXTURE_COPY_REGION& region = desc.pCopyRegions[j];
+        const std::string regionName = regionsName + "[" + std::to_string(j) + "]";
+        ss << regionName << ".DestX = " << region.DestX << ";" << std::endl;
+        ss << regionName << ".DestY = " << region.DestY << ";" << std::endl;
+        ss << regionName << ".DestZ = " << region.DestZ << ";" << std::endl;
+        if (region.pSourceBox) {
+          const std::string boxName = regionsName + "_box" + std::to_string(j);
+          const D3D12_BOX& box = *region.pSourceBox;
+          ss << "D3D12_BOX " << boxName << " = {" << box.left << ", " << box.top << ", "
+             << box.front << ", " << box.right << ", " << box.bottom << ", " << box.back << "};"
+             << std::endl;
+          ss << regionName << ".pSourceBox = &" << boxName << ";" << std::endl;
+        }
+      }
+      ssDescs << descName << ".pCopyRegions = " << regionsName << ";" << std::endl;
+    }
+
+    if (desc.Type == D3D12_TEXTURE_COPY_DESC_TYPE_TEXTURE_TO_TEXTURE) {
+      const D3D12_TEXTURE_TEXTURE_COPY_DESC& copy = desc.TextureTextureCopy;
+      ssDescs << descName
+              << ".TextureTextureCopy.pDest = " << objKeyToPtrStr(arg.DestOrBufferKeys[i]) << ";"
+              << std::endl;
+      ssDescs << descName
+              << ".TextureTextureCopy.DestSubresourceIndex = " << copy.DestSubresourceIndex << ";"
+              << std::endl;
+      ssDescs << descName
+              << ".TextureTextureCopy.pSource = " << objKeyToPtrStr(arg.SourceOrTextureKeys[i])
+              << ";" << std::endl;
+      ssDescs << descName
+              << ".TextureTextureCopy.SourceSubresourceIndex = " << copy.SourceSubresourceIndex
+              << ";" << std::endl;
+    } else {
+      const D3D12_BUFFER_TEXTURE_COPY_DESC& copy = desc.BufferTextureCopy;
+      ssDescs << descName
+              << ".BufferTextureCopy.pBuffer = " << objKeyToPtrStr(arg.DestOrBufferKeys[i]) << ";"
+              << std::endl;
+      ssDescs << descName
+              << ".BufferTextureCopy.pTexture = " << objKeyToPtrStr(arg.SourceOrTextureKeys[i])
+              << ";" << std::endl;
+      ssDescs << descName << ".BufferTextureCopy.SubresourceIndex = " << copy.SubresourceIndex
+              << ";" << std::endl;
+      CppParameterInfo footprintInfo("D3D12_PLACED_SUBRESOURCE_FOOTPRINT",
+                                     info.name + "_footprint");
+      footprintInfo.parentIndices.push_back(static_cast<unsigned>(i));
+      CppParameterOutput footprintOut;
+      toCpp(copy.PlacedFootprint, footprintInfo, footprintOut);
+      ss << footprintOut.initialization;
+      ssDescs << descName << ".BufferTextureCopy.PlacedFootprint = " << footprintOut.value << ";"
+              << std::endl;
+    }
+  }
+
+  ss << ssDescs.str();
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(D3D12_CLEAR_TEXTURE_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  std::ostringstream ssDescs;
+  ssDescs << "D3D12_CLEAR_TEXTURE_DESC " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
+    const D3D12_CLEAR_TEXTURE_DESC& desc = arg.Value[i];
+    const std::string descName = info.name + "[" + std::to_string(i) + "]";
+    ssDescs << descName << ".pTexture = " << objKeyToPtrStr(arg.ResourceKeys[i]) << ";"
+            << std::endl;
+    ssDescs << descName << ".SubresourceIndex = " << desc.SubresourceIndex << ";" << std::endl;
+
+    CppParameterInfo clearValueInfo("D3D12_CLEAR_DATA",
+                                    info.name + "_clearValue" + std::to_string(i));
+    CppParameterOutput clearValueOut;
+    toCpp(desc.ClearValue, clearValueInfo, clearValueOut);
+    ss << clearValueOut.initialization;
+    ssDescs << descName << ".ClearValue = " << clearValueOut.value << ";" << std::endl;
+
+    ssDescs << descName << ".Format = " << toStr(desc.Format) << ";" << std::endl;
+    if (desc.pRegion) {
+      const std::string boxName = info.name + "_region" + std::to_string(i);
+      const D3D12_BOX& box = *desc.pRegion;
+      ss << "D3D12_BOX " << boxName << " = {" << box.left << ", " << box.top << ", " << box.front
+         << ", " << box.right << ", " << box.bottom << ", " << box.back << "};" << std::endl;
+      ssDescs << descName << ".pRegion = &" << boxName << ";" << std::endl;
+    }
+  }
+
+  ss << ssDescs.str();
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(D3D12_FILL_BUFFER_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  std::ostringstream ssDescs;
+  ssDescs << "D3D12_FILL_BUFFER_DESC " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
+    const D3D12_FILL_BUFFER_DESC& desc = arg.Value[i];
+    const std::string descName = info.name + "[" + std::to_string(i) + "]";
+    ssDescs << descName << ".pBuffer = " << objKeyToPtrStr(arg.ResourceKeys[i]) << ";" << std::endl;
+    ssDescs << descName << ".Offset = " << desc.Offset << ";" << std::endl;
+
+    CppParameterInfo fillValueInfo("D3D12_CLEAR_DATA",
+                                   info.name + "_fillValue" + std::to_string(i));
+    CppParameterOutput fillValueOut;
+    toCpp(desc.FillValue, fillValueInfo, fillValueOut);
+    ss << fillValueOut.initialization;
+    ssDescs << descName << ".FillValue = " << fillValueOut.value << ";" << std::endl;
+
+    ssDescs << descName << ".Format = " << toStr(desc.Format) << ";" << std::endl;
+    ssDescs << descName << ".RawPatternSizeInBytes = " << desc.RawPatternSizeInBytes << ";"
+            << std::endl;
+    ssDescs << descName << ".RepeatCount = " << desc.RepeatCount << ";" << std::endl;
+  }
+
+  ss << ssDescs.str();
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  std::ostringstream ssDescs;
+  ssDescs << "D3D12_RTAS_OPERATION_DESC " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  unsigned dataIndex = 0;
+  auto appendAddress = [&](const std::string& field) {
+    GITS_ASSERT(dataIndex < arg.DataKeys.size());
+    appendGpuVirtualAddress(ss, field, arg.DataKeys[dataIndex], arg.DataOffsets[dataIndex]);
+    ++dataIndex;
+  };
+  for (size_t i = 0; i < arg.Size; ++i) {
+    const D3D12_RTAS_OPERATION_DESC& desc = arg.Value[i];
+    const std::string descName = info.name + "[" + std::to_string(i) + "]";
+
+    CppParameterInfo inputsInfo("D3D12_RTAS_OPERATION_INPUTS", info.name + "_inputs");
+    inputsInfo.parentIndices.push_back(static_cast<unsigned>(i));
+    CppParameterOutput inputsOut;
+    toCpp(desc.Inputs, inputsInfo, inputsOut);
+    ss << inputsOut.initialization;
+    ssDescs << descName << ".Inputs = " << inputsOut.value << ";" << std::endl;
+
+    if (!desc.pBatchedOperationData) {
+      continue;
+    }
+    const std::string dataName = info.name + "_data" + std::to_string(i);
+    if (desc.Inputs.Type == D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS) {
+      ss << "D3D12_RTAS_PARTITIONED_TLAS_OPERATION_DATA " << dataName << " = {};" << std::endl;
+      appendAddress(dataName + ".SourceAccelerationStructureData");
+      appendAddress(dataName + ".DestAccelerationStructureData");
+      appendAddress(dataName + ".ScratchAccelerationStructureData");
+      appendAddress(dataName + ".IndirectPartitionedTlasOpCount");
+      appendAddress(dataName + ".IndirectPartitionedTlasOps");
+      ssDescs << descName << ".pPartitionedTlasOperationData = &" << dataName << ";" << std::endl;
+    } else {
+      const D3D12_RTAS_BATCHED_OPERATION_DATA& data = *desc.pBatchedOperationData;
+      ss << "D3D12_RTAS_BATCHED_OPERATION_DATA " << dataName << " = {};" << std::endl;
+      ss << dataName << ".AddressResolutionFlags = "
+         << enumFlagsToCpp(toStr(data.AddressResolutionFlags),
+                           "D3D12_RTAS_OPERATION_ADDRESS_RESOLUTION_FLAGS")
+         << ";" << std::endl;
+      appendAddress(dataName + ".BatchResultData");
+      appendAddress(dataName + ".BatchScratchData");
+      appendAddress(dataName + ".ResultAddressArray.StartAddress");
+      ss << dataName
+         << ".ResultAddressArray.StrideInBytes = " << data.ResultAddressArray.StrideInBytes << ";"
+         << std::endl;
+      appendAddress(dataName + ".ResultSizeArray.StartAddress");
+      ss << dataName << ".ResultSizeArray.StrideInBytes = " << data.ResultSizeArray.StrideInBytes
+         << ";" << std::endl;
+      appendAddress(dataName + ".IndirectArgumentArray.StartAddress");
+      ss << dataName
+         << ".IndirectArgumentArray.StrideInBytes = " << data.IndirectArgumentArray.StrideInBytes
+         << ";" << std::endl;
+      appendAddress(dataName + ".IndirectArgumentArraySize");
+      appendAddress(dataName + ".ToolsInfo");
+      ssDescs << descName << ".pBatchedOperationData = &" << dataName << ";" << std::endl;
+    }
+  }
+
+  ss << ssDescs.str();
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(BoxArraysArgument& arg, CppParameterInfo& info, CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Sizes.empty()) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (!arg.Sizes[i]) {
+      continue;
+    }
+    const std::string boxesName = info.name + "_" + std::to_string(i);
+    ss << "D3D12_BOX " << boxesName << "[" << arg.Sizes[i] << "] = {};" << std::endl;
+    for (unsigned j = 0; j < arg.Sizes[i]; ++j) {
+      const D3D12_BOX& box = arg.Value[i][j];
+      ss << boxesName << "[" << j << "] = {" << box.left << ", " << box.top << ", " << box.front
+         << ", " << box.right << ", " << box.bottom << ", " << box.back << "};" << std::endl;
+    }
+  }
+  ss << "const D3D12_BOX* " << info.name << "[" << arg.Sizes.size() << "] = {};" << std::endl;
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (arg.Sizes[i]) {
+      ss << info.name << "[" << i << "] = " << info.name << "_" << i << ";" << std::endl;
+    }
+  }
+
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(CastableFormatArraysArgument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Sizes.empty()) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (!arg.Sizes[i]) {
+      continue;
+    }
+    const std::string formatsName = info.name + "_" + std::to_string(i);
+    ss << "DXGI_FORMAT " << formatsName << "[" << arg.Sizes[i] << "] = {};" << std::endl;
+    for (unsigned j = 0; j < arg.Sizes[i]; ++j) {
+      ss << formatsName << "[" << j << "] = " << toStr(arg.Value[i][j]) << ";" << std::endl;
+    }
+  }
+  ss << "const DXGI_FORMAT* " << info.name << "[" << arg.Sizes.size() << "] = {};" << std::endl;
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (arg.Sizes[i]) {
+      ss << info.name << "[" << i << "] = " << info.name << "_" << i << ";" << std::endl;
+    }
+  }
+
+  out.initialization = ss.str();
+  out.value = info.name;
+}
+void argumentToCpp(ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out) {
+  out.decorator = "";
+  if (!arg.Value || arg.Size == 0) {
+    out.initialization = "";
+    out.value = "nullptr";
+    return;
+  }
+
+  std::ostringstream ss;
+  ss << "D3D12_COPY_DESCRIPTORS_RANGE " << info.name << "[" << arg.Size << "] = {};" << std::endl;
+  for (size_t i = 0; i < arg.Size; ++i) {
+    ss << info.name << "[" << i << "].NumDescriptors = " << arg.Value[i].NumDescriptors << ";"
+       << std::endl;
+    ss << info.name << "[" << i << "].DestRangeStart.ptr = "
+       << descriptorHeapHandleStr(arg.DestHeapKeys[i], arg.DestIndexes[i], "GpuHandle") << ";"
+       << std::endl;
+    ss << info.name << "[" << i << "].SrcRangeStart.ptr = "
+       << descriptorHeapHandleStr(arg.SourceHeapKeys[i], arg.SourceIndexes[i], "GpuHandle") << ";"
+       << std::endl;
+  }
+
+  out.initialization = ss.str();
+  out.value = info.name;
 }
 void argumentToCpp(DML_BINDING_TABLE_DESC_Argument& arg,
                    CppParameterInfo& info,
@@ -2446,27 +2790,6 @@ void argumentToCpp(
   out.initialization = ss.str();
   out.value = std::move(name);
   out.decorator = info.isPtr ? "&" : "";
-}
-
-void argumentToCpp(Argument<D3D12StateObjectFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out) {
-  GITS_ASSERT(false, "argumentToCpp not implemented for "
-                     "Argument<D3D12StateObjectFunc>");
-}
-
-void argumentToCpp(Argument<D3D12ApplicationDescFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out) {
-  GITS_ASSERT(false, "argumentToCpp not implemented for "
-                     "Argument<D3D12ApplicationDescFunc>");
-}
-
-void argumentToCpp(Argument<D3D12PipelineStateFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out) {
-  GITS_ASSERT(false, "argumentToCpp not implemented for "
-                     "Argument<D3D12PipelineStateFunc>");
 }
 
 void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,

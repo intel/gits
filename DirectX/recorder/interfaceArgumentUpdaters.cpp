@@ -394,7 +394,7 @@ UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInte
   m_Unwrapped.resize(arg.Size);
   arg.Value = m_Unwrapped.data();
 
-  unsigned resourceKeyIndex = 0;
+  unsigned objectKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     const D3D12_BARRIER_GROUP& barrierGroup = value[i];
@@ -414,7 +414,7 @@ UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInte
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pTextureBarriers[j].pResource);
-        arg.ResourceKeys[resourceKeyIndex++] = wrapper->GetKey();
+        arg.ObjectKeys[objectKeyIndex++] = wrapper->GetKey();
         m_UnwrappedTextureBarrierGroups.back()->push_back(barrierGroup.pTextureBarriers[j]);
         m_UnwrappedTextureBarrierGroups.back()->back().pResource =
             wrapper->GetWrappedObject<ID3D12Resource>();
@@ -426,14 +426,78 @@ UpdateInterfaceT<D3D12_BARRIER_GROUPs_Argument, D3D12_BARRIER_GROUP>::UpdateInte
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         IUnknownWrapper* wrapper =
             reinterpret_cast<IUnknownWrapper*>(barrierGroup.pBufferBarriers[j].pResource);
-        arg.ResourceKeys[resourceKeyIndex++] = wrapper->GetKey();
+        arg.ObjectKeys[objectKeyIndex++] = wrapper->GetKey();
         m_UnwrappedBufferBarrierGroups.back()->push_back(barrierGroup.pBufferBarriers[j]);
         m_UnwrappedBufferBarrierGroups.back()->back().pResource =
             wrapper->GetWrappedObject<ID3D12Resource>();
       }
       barrierGroupUnwrapped.pBufferBarriers = m_UnwrappedBufferBarrierGroups.back()->data();
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += barrierGroup.NumBarriers;
     }
   }
+}
+
+UpdateInterfaceT<D3D12_TEXTURE_COPY_DESCs_Argument, D3D12_TEXTURE_COPY_DESC>::UpdateInterfaceT(
+    D3D12_TEXTURE_COPY_DESCs_Argument& arg, const D3D12_TEXTURE_COPY_DESC* value) {
+  if (!value) {
+    return;
+  }
+
+  auto unwrap = [](ID3D12Resource*& resource, ObjectKey& key) {
+    if (resource) {
+      IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(resource);
+      key = wrapper->GetKey();
+      resource = wrapper->GetWrappedObject<ID3D12Resource>();
+    }
+  };
+
+  m_Unwrapped.assign(value, value + arg.Size);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    D3D12_TEXTURE_COPY_DESC& desc = m_Unwrapped[i];
+    if (desc.Type == D3D12_TEXTURE_COPY_DESC_TYPE_TEXTURE_TO_TEXTURE) {
+      unwrap(desc.TextureTextureCopy.pDest, arg.DestOrBufferKeys[i]);
+      unwrap(desc.TextureTextureCopy.pSource, arg.SourceOrTextureKeys[i]);
+    } else {
+      unwrap(desc.BufferTextureCopy.pBuffer, arg.DestOrBufferKeys[i]);
+      unwrap(desc.BufferTextureCopy.pTexture, arg.SourceOrTextureKeys[i]);
+    }
+  }
+  arg.Value = m_Unwrapped.data();
+}
+
+UpdateInterfaceT<D3D12_CLEAR_TEXTURE_DESCs_Argument, D3D12_CLEAR_TEXTURE_DESC>::UpdateInterfaceT(
+    D3D12_CLEAR_TEXTURE_DESCs_Argument& arg, const D3D12_CLEAR_TEXTURE_DESC* value) {
+  if (!value) {
+    return;
+  }
+
+  m_Unwrapped.assign(value, value + arg.Size);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (m_Unwrapped[i].pTexture) {
+      IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(m_Unwrapped[i].pTexture);
+      arg.ResourceKeys[i] = wrapper->GetKey();
+      m_Unwrapped[i].pTexture = wrapper->GetWrappedObject<ID3D12Resource>();
+    }
+  }
+  arg.Value = m_Unwrapped.data();
+}
+
+UpdateInterfaceT<D3D12_FILL_BUFFER_DESCs_Argument, D3D12_FILL_BUFFER_DESC>::UpdateInterfaceT(
+    D3D12_FILL_BUFFER_DESCs_Argument& arg, const D3D12_FILL_BUFFER_DESC* value) {
+  if (!value) {
+    return;
+  }
+
+  m_Unwrapped.assign(value, value + arg.Size);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (m_Unwrapped[i].pBuffer) {
+      IUnknownWrapper* wrapper = reinterpret_cast<IUnknownWrapper*>(m_Unwrapped[i].pBuffer);
+      arg.ResourceKeys[i] = wrapper->GetKey();
+      m_Unwrapped[i].pBuffer = wrapper->GetWrappedObject<ID3D12Resource>();
+    }
+  }
+  arg.Value = m_Unwrapped.data();
 }
 
 UpdateInterfaceT<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS>::UpdateInterfaceT(

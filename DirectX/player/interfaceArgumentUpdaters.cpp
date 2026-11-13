@@ -277,7 +277,7 @@ void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
     return;
   }
 
-  unsigned resourceKeyIndex = 0;
+  unsigned objectKeyIndex = 0;
 
   for (unsigned i = 0; i < arg.Size; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = arg.Value[i];
@@ -288,16 +288,59 @@ void UpdateInterface(PlayerManager& manager, D3D12_BARRIER_GROUPs_Argument& arg)
           const_cast<D3D12_TEXTURE_BARRIER*>(barrierGroup.pTextureBarriers);
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         barriers[j].pResource =
-            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[resourceKeyIndex++]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ObjectKeys[objectKeyIndex++]));
       }
     } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
       D3D12_BUFFER_BARRIER* barriers =
           const_cast<D3D12_BUFFER_BARRIER*>(barrierGroup.pBufferBarriers);
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         barriers[j].pResource =
-            static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[resourceKeyIndex++]));
+            static_cast<ID3D12Resource*>(manager.FindObject(arg.ObjectKeys[objectKeyIndex++]));
       }
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += barrierGroup.NumBarriers;
     }
+  }
+}
+
+void UpdateInterface(PlayerManager& manager, D3D12_TEXTURE_COPY_DESCs_Argument& arg) {
+  if (!arg.Value || !manager.ExecuteCommands()) {
+    return;
+  }
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    D3D12_TEXTURE_COPY_DESC& desc = arg.Value[i];
+    ID3D12Resource* destOrBuffer =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.DestOrBufferKeys[i]));
+    ID3D12Resource* sourceOrTexture =
+        static_cast<ID3D12Resource*>(manager.FindObject(arg.SourceOrTextureKeys[i]));
+    if (desc.Type == D3D12_TEXTURE_COPY_DESC_TYPE_TEXTURE_TO_TEXTURE) {
+      desc.TextureTextureCopy.pDest = destOrBuffer;
+      desc.TextureTextureCopy.pSource = sourceOrTexture;
+    } else {
+      desc.BufferTextureCopy.pBuffer = destOrBuffer;
+      desc.BufferTextureCopy.pTexture = sourceOrTexture;
+    }
+  }
+}
+
+void UpdateInterface(PlayerManager& manager, D3D12_CLEAR_TEXTURE_DESCs_Argument& arg) {
+  if (!arg.Value || !manager.ExecuteCommands()) {
+    return;
+  }
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    arg.Value[i].pTexture = static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[i]));
+  }
+}
+
+void UpdateInterface(PlayerManager& manager, D3D12_FILL_BUFFER_DESCs_Argument& arg) {
+  if (!arg.Value || !manager.ExecuteCommands()) {
+    return;
+  }
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    arg.Value[i].pBuffer = static_cast<ID3D12Resource*>(manager.FindObject(arg.ResourceKeys[i]));
   }
 }
 

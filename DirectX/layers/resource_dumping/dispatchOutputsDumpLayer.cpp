@@ -47,6 +47,9 @@ DispatchOutputsDumpLayer::~DispatchOutputsDumpLayer() {
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -58,6 +61,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& 
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -69,6 +75,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -80,6 +89,23 @@ void DispatchOutputsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
+  if (m_InAnalysis) {
+    m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                             c.m_ppvResource.Key);
+  } else {
+    m_DispatchOutputsDumpService.CreateResource(
+        static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), c.m_ppvResource.Key,
+        c.m_InitialLayout.Value);
+  }
+}
+
+void DispatchOutputsDumpLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -102,6 +128,9 @@ void DispatchOutputsDumpLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -113,6 +142,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) 
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -124,6 +156,23 @@ void DispatchOutputsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
+  if (m_InAnalysis) {
+    m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                             c.m_ppvResource.Key);
+  } else {
+    m_DispatchOutputsDumpService.CreateResource(
+        static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), c.m_ppvResource.Key,
+        c.m_InitialLayout.Value);
+  }
+}
+
+void DispatchOutputsDumpLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -146,6 +195,9 @@ void DispatchOutputsDumpLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -157,6 +209,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -168,6 +223,9 @@ void DispatchOutputsDumpLayer::Post(ID3D12Device4CreateReservedResource1Command&
 }
 
 void DispatchOutputsDumpLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   if (m_InAnalysis) {
     m_DispatchOutputsAnalyzer.CreateResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                              c.m_ppvResource.Key);
@@ -519,7 +577,19 @@ void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandListResourceBarrierComm
 
 void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   if (!m_InAnalysis) {
-    m_DispatchOutputsDumpService.Barrier(c);
+    m_DispatchOutputsDumpService.Barrier(c.m_Object.Value, c.m_pBarrierGroups);
+  }
+}
+
+void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  if (!m_InAnalysis) {
+    m_DispatchOutputsDumpService.Barrier(c.m_Object.Value, c.m_pBarrierGroups);
+  }
+}
+
+void DispatchOutputsDumpLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  if (!m_InAnalysis) {
+    m_DispatchOutputsDumpService.Barrier(c.m_Object.Value, c.m_pBarrierGroups);
   }
 }
 

@@ -343,6 +343,187 @@ void toCpp(const D3D12_CLEAR_VALUE& value, CppParameterInfo& info, CppParameterO
   out.decorator = "";
 }
 
+void toCpp(const D3D12_CLEAR_DATA& value, CppParameterInfo& info, CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  for (int i = 0; i < 4; ++i) {
+    ss << name << ".Uints[" << i << "] = " << value.Uints[i] << ";" << std::endl;
+  }
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::ostringstream ss;
+  CppParameterInfo clusterLimitsInfo("D3D12_RTAS_CLUSTER_LIMITS", "clusterLimits", info);
+  CppParameterOutput clusterLimitsOut;
+  toCpp(value.ClusterLimits, clusterLimitsInfo, clusterLimitsOut);
+  ss << clusterLimitsOut.initialization;
+
+  std::string name = info.getIndexedName();
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".ClusterLimits = " << clusterLimitsOut.decorator << clusterLimitsOut.value << ";"
+     << std::endl;
+  ss << name << ".Flags = " << enumFlagsToCpp(toStr(value.Flags), "D3D12_RTAS_OPERATION_FLAGS")
+     << ";" << std::endl;
+  ss << name << ".Mode = " << enumFlagsToCpp(toStr(value.Mode), "D3D12_RTAS_OPERATION_MODE") << ";"
+     << std::endl;
+  ss << name
+     << ".VertexFormat = " << enumFlagsToCpp(toStr(value.VertexFormat), "D3D12_VERTEX_FORMAT")
+     << ";" << std::endl;
+  ss << name << ".IndexFormat = " << enumFlagsToCpp(toStr(value.IndexFormat), "D3D12_INDEX_FORMAT")
+     << ";" << std::endl;
+  ss << name << ".GeometryIndexAndFlagsIndexFormat = "
+     << enumFlagsToCpp(toStr(value.GeometryIndexAndFlagsIndexFormat), "D3D12_INDEX_FORMAT") << ";"
+     << std::endl;
+  ss << name << ".OpacityMicromapIndexFormat = "
+     << enumFlagsToCpp(toStr(value.OpacityMicromapIndexFormat), "D3D12_INDEX_FORMAT") << ";"
+     << std::endl;
+  if (value.VertexFormat == D3D12_VERTEX_FORMAT_COMPRESSED1) {
+    ss << name << ".MaxCompressedClusterPositionsSize = " << value.MaxCompressedClusterPositionsSize
+       << ";" << std::endl;
+  } else {
+    ss << name << ".MinPositionTruncateBitCount = " << value.MinPositionTruncateBitCount << ";"
+       << std::endl;
+  }
+
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_RTAS_OPERATION_INPUTS& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  std::ostringstream ssUnion;
+
+  auto unionMemberToCpp = [&](const auto* member, const char* type, const char* field) {
+    CppParameterInfo memberInfo(type, name + "_" + field, info);
+    memberInfo.isPtr = true;
+    CppParameterOutput memberOut;
+    toCpp(member, memberInfo, memberOut);
+    ss << memberOut.initialization;
+    ssUnion << name << "." << field << " = " << memberOut.decorator << memberOut.value << ";"
+            << std::endl;
+  };
+
+  switch (value.Type) {
+  case D3D12_RTAS_OPERATION_TYPE_MOVE_CLUSTER_OBJECTS:
+    unionMemberToCpp(value.pClusterMovesDesc, "D3D12_RTAS_CLUSTER_MOVES_DESC", "pClusterMovesDesc");
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_BLAS_FROM_CLAS:
+    unionMemberToCpp(value.pClasDesc, "D3D12_RTAS_CLAS_INPUTS_DESC", "pClasDesc");
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLAS_FROM_TRIANGLES:
+    unionMemberToCpp(value.pClusterTrianglesDesc, "D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC",
+                     "pClusterTrianglesDesc");
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLUSTER_TEMPLATES_FROM_TRIANGLES:
+    unionMemberToCpp(value.pClusterTemplateTrianglesDesc,
+                     "D3D12_RTAS_CLUSTER_TEMPLATE_TRIANGLES_INPUTS_DESC",
+                     "pClusterTemplateTrianglesDesc");
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_INSTANTIATE_CLUSTER_TEMPLATES:
+    unionMemberToCpp(value.pInstantiateClusterTemplateDesc,
+                     "D3D12_RTAS_INSTANTIATE_CLUSTER_TEMPLATE_INPUTS_DESC",
+                     "pInstantiateClusterTemplateDesc");
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS:
+    unionMemberToCpp(value.pPartitionedTLASInputsDesc, "D3D12_RTAS_PARTITIONED_TLAS_INPUTS_DESC",
+                     "pPartitionedTLASInputsDesc");
+    break;
+  default:
+    GITS_ASSERT(false, "Unknown D3D12_RTAS_OPERATION_TYPE");
+    break;
+  }
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".Type = " << toStr(value.Type) << ";" << std::endl;
+  ss << ssUnion.str();
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_RTAS_OPERATION_DESC& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  GITS_ASSERT(false, "Not implemented");
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  ss << info.type << " " << name << " = {};" << std::endl;
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_SHADER_CACHE_SESSION_DESC1& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  std::ostringstream ssUnion;
+
+  auto unionMemberToCpp = [&](const auto& member, const char* type, const char* field) {
+    CppParameterInfo memberInfo(type, name + "_" + field, info);
+    CppParameterOutput memberOut;
+    toCpp(member, memberInfo, memberOut);
+    ss << memberOut.initialization;
+    ssUnion << name << "." << field << " = " << memberOut.value << ";" << std::endl;
+  };
+
+  switch (value.Mode) {
+  case D3D12_SHADER_CACHE_MODE_MEMORY:
+    unionMemberToCpp(value.Memory, "D3D12_SHADER_CACHE_SESSION_MEMORY_DESC", "Memory");
+    break;
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    unionMemberToCpp(value.Disk, "D3D12_SHADER_CACHE_SESSION_DISK_DESC", "Disk");
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    unionMemberToCpp(value.File, "D3D12_SHADER_CACHE_SESSION_FILE_DESC", "File");
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    unionMemberToCpp(value.Registered, "D3D12_SHADER_CACHE_SESSION_REGISTERED_DESC", "Registered");
+    break;
+  default:
+    GITS_ASSERT(false, "Unknown D3D12_SHADER_CACHE_MODE");
+    break;
+  }
+
+  if (!info.isArrayElement) {
+    ss << info.type << " " << name << " = {};" << std::endl;
+  }
+  ss << name << ".Mode = " << toStr(value.Mode) << ";" << std::endl;
+  ss << ssUnion.str();
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
+void toCpp(const D3D12_MLIR_PROGRAM_BINDING& value,
+           CppParameterInfo& info,
+           CppParameterOutput& out) {
+  GITS_ASSERT(false, "Not implemented");
+  std::string name = info.getIndexedName();
+  std::ostringstream ss;
+  ss << info.type << " " << name << " = {};" << std::endl;
+  out.initialization = ss.str();
+  out.value = std::move(name);
+  out.decorator = "";
+}
+
 void toCpp(const D3D12_ROOT_PARAMETER1& value, CppParameterInfo& info, CppParameterOutput& out) {
   std::string name = info.getIndexedName();
   std::ostringstream ss;

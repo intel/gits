@@ -47,7 +47,7 @@ public:
   void ResourceBarrier(ID3D12GraphicsCommandList* commandList,
                        D3D12_BARRIER_GROUP* barriers,
                        unsigned barriersNum,
-                       ObjectKey* resourceKeys);
+                       ObjectKey* objectKeys);
   void ExecuteCommandLists(ID3D12GraphicsCommandList** commandLists, unsigned commandListNum);
   BarrierState GetResourceState(ID3D12GraphicsCommandList* commandList, ObjectKey resourceKey);
   BarrierState GetSubresourceState(ID3D12GraphicsCommandList* commandList,

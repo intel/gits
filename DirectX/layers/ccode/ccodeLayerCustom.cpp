@@ -776,6 +776,60 @@ void CCodeLayer::preProcess(ccode::CommandPrinter& p, IDStorageStatusArrayGetHRe
   p.setPreCommand(ss.str());
 }
 
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12ShaderCacheSession1FindValue1Command& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1EnumeratePipelineStatesCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1EnumerateStateObjectsCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1GetStateObjectDependenciesCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1GetApplicationDesc1Command& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1FindPipelineStateDesc1Command& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12StateObjectDatabase1FindStateObjectDesc1Command& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12DeviceDumpFileSetDumpFileCallbacksCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p, ID3D12Resource3GetCastableFormatsCommand& c) {
+  p.skip();
+}
+
+void CCodeLayer::preProcess(ccode::CommandPrinter& p,
+                            ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& c) {
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "CCode - GPU virtual addresses in ExecuteIndirectRTASOperations argument buffers "
+                 "are not patched in generated code";
+    logged = true;
+  }
+}
+
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, IDXGIFactoryCreateSwapChainCommand& c) {
   createSwapChain(p, c.m_ppSwapChain.Key, c.m_pDevice.Key);
 }
@@ -911,6 +965,11 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12Device16CreateCommittedResource4Command& c) {
+  createResource(p, c.m_ppvResource.Key);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12DeviceCreateReservedResourceCommand& c) {
   createResource(p, c.m_ppvResource.Key);
 }
@@ -937,6 +996,12 @@ void CCodeLayer::postProcess(ccode::CommandPrinter& p,
 void CCodeLayer::postProcess(ccode::CommandPrinter& p,
                              ID3D12Device10CreatePlacedResource2Command& c) {
   createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value);
+}
+
+void CCodeLayer::postProcess(ccode::CommandPrinter& p,
+                             ID3D12Device16CreatePlacedResource3Command& c) {
+  createPlacedResource(p, c.m_ppvResource.Key, c.m_pHeap.Key, c.m_HeapOffset.Value,
+                       "pResourceDesc.Flags");
 }
 
 void CCodeLayer::postProcess(ccode::CommandPrinter& p, INTC_D3D12_CreatePlacedResourceCommand& c) {

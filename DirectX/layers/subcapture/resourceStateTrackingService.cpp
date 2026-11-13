@@ -38,21 +38,20 @@ void ResourceStateTrackingService::ResourceBarrier(ObjectKey commandListKey,
 void ResourceStateTrackingService::ResourceBarrier(ObjectKey commandListKey,
                                                    D3D12_BARRIER_GROUP* barriers,
                                                    unsigned barriersNum,
-                                                   std::vector<ObjectKey>& resourceKeys) {
+                                                   std::vector<ObjectKey>& objectKeys) {
   ResourceBarriers resourceBarriers;
-  unsigned resourceKeyIndex = 0;
+  unsigned objectKeyIndex = 0;
   for (unsigned i = 0; i < barriersNum; ++i) {
     D3D12_BARRIER_GROUP& barrierGroup = barriers[i];
     if (barrierGroup.Type == D3D12_BARRIER_TYPE_TEXTURE) {
       for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
         resourceBarriers.Layouts.push_back(barrierGroup.pTextureBarriers[j]);
-        resourceBarriers.ResourceKeys.push_back(resourceKeys[resourceKeyIndex]);
-        ++resourceKeyIndex;
+        resourceBarriers.ResourceKeys.push_back(objectKeys[objectKeyIndex]);
+        ++objectKeyIndex;
       }
-    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER) {
-      for (unsigned j = 0; j < barrierGroup.NumBarriers; ++j) {
-        ++resourceKeyIndex;
-      }
+    } else if (barrierGroup.Type == D3D12_BARRIER_TYPE_BUFFER ||
+               barrierGroup.Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += barrierGroup.NumBarriers;
     }
   }
   m_BarriersByCommandList[commandListKey].push_back(std::move(resourceBarriers));
@@ -440,12 +439,12 @@ void ResourceStateTrackingService::RestoreResourceStates(
       D3D12_BARRIER_GROUP barrierGroup{};
       barrierCommand.m_pBarrierGroups.Value = &barrierGroup;
       barrierCommand.m_pBarrierGroups.Size = 1;
-      barrierCommand.m_pBarrierGroups.ResourceKeys.resize(1);
+      barrierCommand.m_pBarrierGroups.ObjectKeys.resize(1);
       barrierGroup.Type = D3D12_BARRIER_TYPE_TEXTURE;
       barrierGroup.NumBarriers = 1;
       barrierGroup.pTextureBarriers = &barrier;
 
-      barrierCommand.m_pBarrierGroups.ResourceKeys[0] = resourceKey;
+      barrierCommand.m_pBarrierGroups.ObjectKeys[0] = resourceKey;
       m_StateService.GetRecorder().Record(
           ID3D12GraphicsCommandList7BarrierSerializer(barrierCommand));
     };

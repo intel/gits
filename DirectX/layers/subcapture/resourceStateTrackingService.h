@@ -54,7 +54,7 @@ public:
   void ResourceBarrier(ObjectKey commandListKey,
                        D3D12_BARRIER_GROUP* barriers,
                        unsigned barriersNum,
-                       std::vector<ObjectKey>& resourceKeys);
+                       std::vector<ObjectKey>& objectKeys);
   void ExecuteCommandLists(std::vector<ObjectKey>& commandListKeys);
   void DestroyResource(ObjectKey resourceKey);
   ResourceStates& GetResourceStates(ObjectKey resourceKey);

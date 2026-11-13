@@ -241,7 +241,8 @@ void StateTrackingLayer::Post(IUnknownQueryInterfaceCommand& c) {
     state->CreationCommand.reset(new IUnknownQueryInterfaceCommand(c));
     m_StateService.StoreState(state);
   } else if ((riid == __uuidof(IDStorageCustomDecompressionQueue)) ||
-             (riid == __uuidof(IDStorageCustomDecompressionQueue1))) {
+             (riid == __uuidof(IDStorageCustomDecompressionQueue1)) ||
+             (riid == IID_ID3D12CommandListGpuCopyDescriptors)) {
     ObjectState* state = new ObjectState();
     state->ParentKey = c.m_Object.Key;
     state->LinkedLifetimeKey = c.m_Object.Key;
@@ -250,6 +251,33 @@ void StateTrackingLayer::Post(IUnknownQueryInterfaceCommand& c) {
     SetAsChildInParent(state->ParentKey, state->Key);
     state->CreationCommand.reset(new IUnknownQueryInterfaceCommand(c));
     m_StateService.StoreState(state);
+  } else {
+    LogInterfaceNotHandled(riid);
+  }
+}
+
+void StateTrackingLayer::LogInterfaceNotHandled(REFIID riid) {
+  struct UnhandledInterface {
+    const IID& Iid;
+    const char* Name;
+    bool Logged;
+  };
+  static UnhandledInterface unhandledInterfaces[] = {
+      {IID_ID3D12DeviceTools2, "ID3D12DeviceTools2"},
+      {IID_ID3D12DeviceDumpFile, "ID3D12DeviceDumpFile"},
+      {IID_ID3D12DeviceExecuteTileMappings, "ID3D12DeviceExecuteTileMappings"},
+      {IID_ID3D12DeviceRaytracing2, "ID3D12DeviceRaytracing2"},
+      {IID_ID3D12CommandListRaytracing2, "ID3D12CommandListRaytracing2"},
+      {IID_ID3D12ResourceOpaqueTextureLayout, "ID3D12ResourceOpaqueTextureLayout"},
+  };
+  for (UnhandledInterface& unhandled : unhandledInterfaces) {
+    if (riid == unhandled.Iid) {
+      if (!unhandled.Logged) {
+        LOG_ERROR << unhandled.Name << " not handled in subcapture!";
+        unhandled.Logged = true;
+      }
+      return;
+    }
   }
 }
 
@@ -1323,6 +1351,42 @@ void StateTrackingLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) 
   }
 }
 
+void StateTrackingLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  ResourceState* state = new ResourceState();
+  state->ParentKey = c.m_Object.Key;
+  state->Key = c.m_ppvResource.Key;
+  state->Object = static_cast<IUnknown*>(*c.m_ppvResource.Value);
+  state->CreationCommand.reset(new ID3D12Device16CreateCommittedResource4Command(c));
+
+  state->DeviceKey = c.m_Object.Key;
+  state->InitialLayout = c.m_InitialLayout.Value;
+  state->Dimension = c.m_pResourceDesc.Value->Dimension;
+  state->SampleCount = c.m_pResourceDesc.Value->SampleDesc.Count;
+  state->IsMappable =
+      IsResourceHeapMappable(*c.m_pHeapProperties.Value, c.m_pResourceDesc.Value->Layout);
+  state->DenyShaderResource =
+      c.m_pResourceDesc.Value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+
+  m_StateService.StoreState(state);
+
+  m_ResourceUsageTrackingService.AddResource(state->Key);
+
+  m_ResourceStateTrackingService.AddResource(state->DeviceKey,
+                                             static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                             state->Key, state->InitialLayout, !state->IsMappable);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  if (c.m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+    m_ResidencyService.CreateNotResident(state->Key, state->DeviceKey);
+  }
+}
+
 void StateTrackingLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (m_StateRestored) {
     return;
@@ -1449,6 +1513,47 @@ void StateTrackingLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
   m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                            c.m_pDesc.Value->Flags, c.m_InitialLayout.Value);
+}
+
+void StateTrackingLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  ResourceState* state = new ResourceState();
+  state->ParentKey = c.m_pHeap.Key;
+  state->Key = c.m_ppvResource.Key;
+  state->Object = static_cast<IUnknown*>(*c.m_ppvResource.Value);
+  state->CreationCommand.reset(new ID3D12Device16CreatePlacedResource3Command(c));
+
+  state->DeviceKey = c.m_Object.Key;
+  state->InitialLayout = c.m_InitialLayout.Value;
+  state->Dimension = c.m_pResourceDesc.Value->Dimension;
+  state->SampleCount = c.m_pResourceDesc.Value->SampleDesc.Count;
+  state->IsMappable = IsResourceHeapMappable(c.m_pHeap.Key, c.m_pResourceDesc.Value->Layout);
+  state->DenyShaderResource =
+      c.m_pResourceDesc.Value->Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+  state->BarrierRestricted = IsResourceBarrierRestricted(c.m_pResourceDesc.Value->Flags);
+  state->HeapKey = c.m_pHeap.Key;
+
+  m_StateService.StoreState(state);
+
+  m_ResourceHeaps[c.m_pHeap.Key].insert(c.m_ppvResource.Key);
+
+  m_ResourceUsageTrackingService.AddResource(state->Key);
+
+  m_ResourceForCBVRestoreService.AddResourceCreationCommand(
+      state->Key, state->HeapKey, new ID3D12Device16CreatePlacedResource3Command(c));
+
+  m_ResourceStateTrackingService.AddResource(
+      state->DeviceKey, static_cast<ID3D12Resource*>(*c.m_ppvResource.Value), state->Key,
+      state->InitialLayout, !(state->IsMappable || state->BarrierRestricted));
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+  m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
+                                           c.m_pResourceDesc.Value->Flags, c.m_InitialLayout.Value);
 }
 
 void StateTrackingLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
@@ -2061,6 +2166,7 @@ void StateTrackingLayer::Post(ID3D12Device1SetResidencyPriorityCommand& c) {
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1 &&
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2 &&
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3 &&
+        state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE16_CREATECOMMITTEDRESOURCE4 &&
         state->CreationCommand->GetId() != CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE &&
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE_CREATEHEAP &&
         state->CreationCommand->GetId() != CommandId::ID_ID3D12DEVICE4_CREATEHEAP1 &&
@@ -2300,7 +2406,11 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandListCopyTilesCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pTiledResource.Key);
+  ObjectKey destKey =
+      c.m_Flags.Value & D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER
+          ? c.m_pBuffer.Key
+          : c.m_pTiledResource.Key;
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, destKey);
   CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
   command->CommandSerializer.reset(new ID3D12GraphicsCommandListCopyTilesSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
@@ -3052,18 +3162,216 @@ void StateTrackingLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   if (m_StateRestored) {
     return;
   }
-  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
-                                                          c.m_pBarrierGroups.ResourceKeys);
+  std::vector<ObjectKey> resourceKeys;
+  resourceKeys.reserve(c.m_pBarrierGroups.ObjectKeys.size());
+  unsigned objectKeyIndex = 0;
+  for (unsigned i = 0; i < c.m_NumBarrierGroups.Value; ++i) {
+    const D3D12_BARRIER_GROUP& barrierGroup = c.m_pBarrierGroups.Value[i];
+    if (barrierGroup.Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      continue;
+    }
+    if (barrierGroup.Type != D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      resourceKeys.insert(
+          resourceKeys.end(), c.m_pBarrierGroups.ObjectKeys.begin() + objectKeyIndex,
+          c.m_pBarrierGroups.ObjectKeys.begin() + objectKeyIndex + barrierGroup.NumBarriers);
+    }
+    objectKeyIndex += barrierGroup.NumBarriers;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, resourceKeys);
 
   m_ResourceStateTrackingService.ResourceBarrier(c.m_Object.Key, c.m_pBarrierGroups.Value,
                                                  c.m_NumBarrierGroups.Value,
-                                                 c.m_pBarrierGroups.ResourceKeys);
+                                                 c.m_pBarrierGroups.ObjectKeys);
   m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
                                          c.m_NumBarrierGroups.Value,
-                                         c.m_pBarrierGroups.ResourceKeys.data());
+                                         c.m_pBarrierGroups.ObjectKeys.data());
 
   CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
   command->CommandSerializer.reset(new ID3D12GraphicsCommandList7BarrierSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  GITS_ASSERT(false, "ID3D12GraphicsCommandList11::WaitBarrier before subcapture range is not "
+                     "supported!");
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  GITS_ASSERT(false, "ID3D12GraphicsCommandList11::SignalBarrier before subcapture range is not "
+                     "supported!");
+}
+
+void StateTrackingLayer::Post(ID3D12Device16CreateShaderCacheSession1Command& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12Device16::CreateShaderCacheSession1 not handled in subcapture!";
+    logged = true;
+  }
+}
+
+void StateTrackingLayer::Post(
+    ID3D12StateObjectDatabaseFactory1CreateStateObjectDatabaseFromFile1Command& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12StateObjectDatabaseFactory1::CreateStateObjectDatabaseFromFile1 not "
+                 "handled in subcapture!";
+    logged = true;
+  }
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12CopyBufferRegionsCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_ppDestBuffers.Keys);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(new ID3D12GraphicsCommandList12CopyBufferRegionsSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12CopyTextureRegionsCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  for (unsigned i = 0; i < c.m_NumCopyDescs.Value; ++i) {
+    ObjectKey destKey =
+        c.m_pCopyDescs.Value[i].Type == D3D12_TEXTURE_COPY_DESC_TYPE_BUFFER_TO_TEXTURE
+            ? c.m_pCopyDescs.SourceOrTextureKeys[i]
+            : c.m_pCopyDescs.DestOrBufferKeys[i];
+    m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, destKey);
+  }
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(new ID3D12GraphicsCommandList12CopyTextureRegionsSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12CommandListGpuCopyDescriptors::CopyDescriptors not handled in subcapture!";
+    logged = true;
+  }
+  ObjectState* interfaceState = m_StateService.GetState(c.m_Object.Key);
+  GITS_ASSERT(interfaceState);
+  ObjectKey commandListKey = interfaceState->ParentKey;
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, commandListKey);
+  command->CommandSerializer.reset(
+      new ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(commandListKey));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12CopyResourcesCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_ppDestResources.Keys);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(new ID3D12GraphicsCommandList12CopyResourcesSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12CopyTilesAsyncCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  ObjectKey destKey =
+      c.m_Flags.Value & D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER
+          ? c.m_pBuffer.Key
+          : c.m_pTiledResource.Key;
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, destKey);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(new ID3D12GraphicsCommandList12CopyTilesAsyncSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pDestResource.Key);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(
+      new ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key, c.m_pDestBuffer.Key);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(
+      new ID3D12GraphicsCommandList12ResolveQueryDataAsyncSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12ClearBoundDepthStencilViewCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(
+      new ID3D12GraphicsCommandList12ClearBoundDepthStencilViewSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(
+      new ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
+                                                          c.m_pClearDescs.ResourceKeys);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(
+      new ID3D12GraphicsCommandList12ClearTextureSubresourcesSerializer(c));
+  CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
+  state->Commands.push_back(command);
+}
+
+void StateTrackingLayer::Post(ID3D12GraphicsCommandList12FillBuffersCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  m_ResourceUsageTrackingService.CommandListResourceUsage(c.m_Object.Key,
+                                                          c.m_pFillDescs.ResourceKeys);
+  CommandListCommand* command = new CommandListCommand(c.GetId(), c.Key, c.m_Object.Key);
+  command->CommandSerializer.reset(new ID3D12GraphicsCommandList12FillBuffersSerializer(c));
   CommandListState* state = static_cast<CommandListState*>(m_StateService.GetState(c.m_Object.Key));
   state->Commands.push_back(command);
 }
@@ -3098,6 +3406,44 @@ void StateTrackingLayer::Post(ID3D12DeviceFactoryCreateDeviceCommand& c) {
   state->CreationCommand.reset(new ID3D12DeviceFactoryCreateDeviceCommand(c));
   m_StateService.StoreState(state);
   m_StateService.KeepState(state->ParentKey);
+}
+
+void StateTrackingLayer::Post(ID3D12DeviceFactoryGetConfigurationInterfaceCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  ObjectState* state = new ObjectState();
+  state->ParentKey = c.m_Object.Key;
+  state->Key = c.m_ppv.Key;
+  state->Object = static_cast<IUnknown*>(*c.m_ppv.Value);
+  state->CreationCommand.reset(new ID3D12DeviceFactoryGetConfigurationInterfaceCommand(c));
+  m_StateService.StoreState(state);
+  m_StateService.KeepState(state->ParentKey);
+}
+
+void StateTrackingLayer::Post(ID3D12AsyncCommandsFallbackSetFallbackLayerEnabledCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12AsyncCommandsFallback::SetFallbackLayerEnabled not handled in subcapture!";
+    logged = true;
+  }
+}
+
+void StateTrackingLayer::Post(ID3D12StateObjectDatabaseCaptureEnableCaptureCommand& c) {
+  if (m_StateRestored) {
+    return;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12StateObjectDatabaseCapture::EnableCapture not handled in subcapture!";
+    logged = true;
+  }
 }
 
 void StateTrackingLayer::Post(ID3D12Device5CreateMetaCommandCommand& c) {

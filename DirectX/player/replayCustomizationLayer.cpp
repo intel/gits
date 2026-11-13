@@ -19,6 +19,7 @@
 #include <setupapi.h>
 #include <ntddvdeo.h>
 #include <igdext.h>
+#include <algorithm>
 #include <chrono>
 
 namespace gits {
@@ -764,8 +765,17 @@ void ReplayCustomizationLayer::Post(ID3D12Device10CreateCommittedResource3Comman
   m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
 }
 
+void ReplayCustomizationLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
+    return;
+  }
+
+  ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+}
+
 void ReplayCustomizationLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
-  if (c.Skip || m_UseAddressPinning) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
     return;
   }
 
@@ -774,7 +784,7 @@ void ReplayCustomizationLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c
 }
 
 void ReplayCustomizationLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
-  if (c.Skip || m_UseAddressPinning) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
     return;
   }
 
@@ -783,7 +793,7 @@ void ReplayCustomizationLayer::Post(ID3D12Device4CreateReservedResource1Command&
 }
 
 void ReplayCustomizationLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
-  if (c.Skip || m_UseAddressPinning) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
     return;
   }
 
@@ -824,8 +834,19 @@ void ReplayCustomizationLayer::Post(ID3D12Device10CreatePlacedResource2Command& 
                                                         c.m_pHeap.Key, heap, c.m_HeapOffset.Value);
 }
 
+void ReplayCustomizationLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
+    return;
+  }
+
+  ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+  ID3D12Heap* heap = static_cast<ID3D12Heap*>(c.m_pHeap.Value);
+  m_Manager.GetGpuAddressService().CreatePlacedResource(c.m_ppvResource.Key, resource,
+                                                        c.m_pHeap.Key, heap, c.m_HeapOffset.Value);
+}
+
 void ReplayCustomizationLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
-  if (c.Skip || m_UseAddressPinning) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
     return;
   }
 
@@ -834,7 +855,7 @@ void ReplayCustomizationLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
 }
 
 void ReplayCustomizationLayer::Post(ID3D12Device4CreateHeap1Command& c) {
-  if (c.Skip || m_UseAddressPinning) {
+  if (c.Skip || c.m_Result.Value != S_OK || m_UseAddressPinning) {
     return;
   }
 
@@ -1049,6 +1070,24 @@ void ReplayCustomizationLayer::Pre(ID3D12DeviceCheckFeatureSupportCommand& c) {
   if (c.m_Feature.Value == D3D12_FEATURE_FEATURE_LEVELS) {
     std::memset(c.m_pFeatureSupportData.Value, 0, c.m_FeatureSupportDataSize.Value);
   }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Device16CheckFeatureSupport1Command& c) {
+  c.Skip = true;
+  // The data may contain pointers (from capture) that have not been encoded in the stream
+  if (c.m_Feature.Value == D3D12_FEATURE_FEATURE_LEVELS) {
+    std::memset(c.m_pFeatureSupportData.Value, 0, c.m_FeatureSupportDataSize.Value);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(
+    ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  // GPU virtual addresses in the operation data and in GPU memory are not translated
+  GITS_ASSERT(m_UseAddressPinning,
+              "ExecuteIndirectRTASOperations replay requires --DirectX.Player.AddressPinning Use");
 }
 
 void ReplayCustomizationLayer::Pre(
@@ -1546,6 +1585,95 @@ void ReplayCustomizationLayer::Pre(ID3D12Device12GetResourceAllocationInfo3Comma
   c.Skip = true;
 }
 
+void ReplayCustomizationLayer::Pre(ID3D12Device16GetResourceAllocationInfo4Command& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12Resource3GetCastableFormatsCommand& c) {
+  if (c.Skip || !c.m_Object.Value || !c.m_pCastableFormats.Value) {
+    return;
+  }
+  m_CastableFormats.resize(c.m_Object.Value->GetCastableFormatsCount());
+  c.m_pCastableFormats.Value = m_CastableFormats.data();
+  c.m_pCastableFormats.Size = m_CastableFormats.size();
+}
+
+void ReplayCustomizationLayer::Pre(
+    ID3D12DeviceExecuteTileMappingsRegisterResourceLayoutsCommand& c) {
+  m_CapturedLayoutIndexes.clear();
+  if (c.m_pResourceLayoutIndexArray.Value) {
+    m_CapturedLayoutIndexes.assign(c.m_pResourceLayoutIndexArray.Value,
+                                   c.m_pResourceLayoutIndexArray.Value +
+                                       c.m_pResourceLayoutIndexArray.Size);
+  }
+}
+
+void ReplayCustomizationLayer::Post(
+    ID3D12DeviceExecuteTileMappingsRegisterResourceLayoutsCommand& c) {
+  if (c.Skip || FAILED(c.m_Result.Value) || !c.m_pResourceLayoutIndexArray.Value) {
+    return;
+  }
+  if (!std::equal(m_CapturedLayoutIndexes.begin(), m_CapturedLayoutIndexes.end(),
+                  c.m_pResourceLayoutIndexArray.Value)) {
+    // Layout indexes are written by the application into ExecuteTileMappings argument buffers
+    LOG_ERROR << "ID3D12DeviceExecuteTileMappings::RegisterResourceLayouts - layout indexes "
+                 "differ from capture. ExecuteTileMappings may use wrong layouts!";
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12DeviceExecuteTileMappingsRegisterHeapLayoutsCommand& c) {
+  m_CapturedLayoutIndexes.clear();
+  if (c.m_pTilePoolLayoutIndexArray.Value) {
+    m_CapturedLayoutIndexes.assign(c.m_pTilePoolLayoutIndexArray.Value,
+                                   c.m_pTilePoolLayoutIndexArray.Value +
+                                       c.m_pTilePoolLayoutIndexArray.Size);
+  }
+}
+
+void ReplayCustomizationLayer::Post(ID3D12DeviceExecuteTileMappingsRegisterHeapLayoutsCommand& c) {
+  if (c.Skip || FAILED(c.m_Result.Value) || !c.m_pTilePoolLayoutIndexArray.Value) {
+    return;
+  }
+  if (!std::equal(m_CapturedLayoutIndexes.begin(), m_CapturedLayoutIndexes.end(),
+                  c.m_pTilePoolLayoutIndexArray.Value)) {
+    // Layout indexes are written by the application into ExecuteTileMappings argument buffers
+    LOG_ERROR << "ID3D12DeviceExecuteTileMappings::RegisterHeapLayouts - layout indexes differ "
+                 "from capture. ExecuteTileMappings may use wrong layouts!";
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12DeviceDumpFileSetDumpFileCallbacksCommand& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12ShaderCacheSession1FindValue1Command& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1EnumeratePipelineStatesCommand& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1EnumerateStateObjectsCommand& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1GetStateObjectDependenciesCommand& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1GetApplicationDesc1Command& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1FindPipelineStateDesc1Command& c) {
+  c.Skip = true;
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12StateObjectDatabase1FindStateObjectDesc1Command& c) {
+  c.Skip = true;
+}
+
 void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandListResolveQueryDataCommand& c) {
   if (c.Skip) {
     return;
@@ -1652,6 +1780,76 @@ void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList4BeginRenderPassComm
         m_Manager.GetDescriptorHandleService().GetDescriptorHandle(
             c.m_pDepthStencil.DescriptorKey, ReplayDescriptorHandleService::HandleType::CpuHandle,
             c.m_pDepthStencil.DescriptorIndex);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  if (!c.Skip) {
+    UpdateDescriptorHeapBarriers(c.m_pBarrierGroups);
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  GITS_ASSERT(!m_NonIncrementalFenceWait || !c.m_NumFences.Value,
+              "NonIncrementalFenceWait - ID3D12GraphicsCommandList11::WaitBarrier fence wait not "
+              "handled. Replay with DirectX.Player.NonIncrementalFenceWait: false");
+  UpdateDescriptorHeapBarriers(c.m_pBarrierGroups);
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  GITS_ASSERT(!m_NonIncrementalFenceWait || !c.m_pFence.Value,
+              "NonIncrementalFenceWait - ID3D12GraphicsCommandList11::SignalBarrier fence signal "
+              "not handled. Replay with DirectX.Player.NonIncrementalFenceWait: false");
+  UpdateDescriptorHeapBarriers(c.m_pBarrierGroups);
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12TileMappingQueueSignalCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  GITS_ASSERT(!m_NonIncrementalFenceWait || !c.m_pFence.Value,
+              "NonIncrementalFenceWait - ID3D12TileMappingQueue::Signal fence signal not handled. "
+              "Replay with DirectX.Player.NonIncrementalFenceWait: false");
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12TileMappingQueueWaitCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  GITS_ASSERT(!m_NonIncrementalFenceWait || !c.m_pFence.Value,
+              "NonIncrementalFenceWait - ID3D12TileMappingQueue::Wait fence wait not handled. "
+              "Replay with DirectX.Player.NonIncrementalFenceWait: false");
+}
+
+void ReplayCustomizationLayer::UpdateDescriptorHeapBarriers(D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (arg.DescriptorIndexes.empty()) {
+    return;
+  }
+
+  unsigned objectKeyIndex = 0;
+  unsigned descriptorIndex = 0;
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    D3D12_BARRIER_GROUP& group = arg.Value[i];
+    if (group.Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      continue;
+    }
+    if (group.Type != D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += group.NumBarriers;
+      continue;
+    }
+    D3D12_DESCRIPTOR_HEAP_BARRIER* barriers =
+        const_cast<D3D12_DESCRIPTOR_HEAP_BARRIER*>(group.pDescriptorHeapBarriers);
+    for (unsigned j = 0; j < group.NumBarriers; ++j) {
+      barriers[j].BaseDescriptor.ptr = m_Manager.GetDescriptorHandleService().GetDescriptorHandle(
+          arg.ObjectKeys[objectKeyIndex++], ReplayDescriptorHandleService::HandleType::GpuHandle,
+          arg.DescriptorIndexes[descriptorIndex++]);
+    }
   }
 }
 
@@ -1849,6 +2047,21 @@ void ReplayCustomizationLayer::Pre(
             c.m_pDesc.SourceKey[i], c.m_pDesc.SourceOffset[i]);
       }
     }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& c) {
+  if (c.Skip || !c.m_pRanges.Value) {
+    return;
+  }
+  auto& descriptorHandleService = m_Manager.GetDescriptorHandleService();
+  for (unsigned i = 0; i < c.m_NumRanges.Value; ++i) {
+    c.m_pRanges.Value[i].DestRangeStart.ptr = descriptorHandleService.GetDescriptorHandle(
+        c.m_pRanges.DestHeapKeys[i], ReplayDescriptorHandleService::HandleType::GpuHandle,
+        c.m_pRanges.DestIndexes[i]);
+    c.m_pRanges.Value[i].SrcRangeStart.ptr = descriptorHandleService.GetDescriptorHandle(
+        c.m_pRanges.SourceHeapKeys[i], ReplayDescriptorHandleService::HandleType::GpuHandle,
+        c.m_pRanges.SourceIndexes[i]);
   }
 }
 

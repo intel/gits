@@ -310,6 +310,82 @@ public:
   Argument<UINT> m_DescCount{};
 };
 
+class ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsCommand : public Command {
+public:
+  ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsCommand(
+      unsigned threadId,
+      ID3D12GraphicsCommandList12* object,
+      UINT RenderTargetMask,
+      const D3D12_CLEAR_DATA* pClearValues,
+      const UINT* pNumRegions,
+      const D3D12_BOX* const* ppRegions)
+      : Command{CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_CLEARBOUNDRENDERTARGETVIEWS, threadId},
+        m_Object{object},
+        m_RenderTargetMask{RenderTargetMask},
+        m_pClearValues{pClearValues, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT},
+        m_pNumRegions{pNumRegions, D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT},
+        m_ppRegions{ppRegions, pNumRegions, RenderTargetMask} {}
+  ID3D12GraphicsCommandList12ClearBoundRenderTargetViewsCommand()
+      : Command(CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_CLEARBOUNDRENDERTARGETVIEWS) {}
+
+public:
+  InterfaceArgument<ID3D12GraphicsCommandList12> m_Object{};
+  Argument<UINT> m_RenderTargetMask{};
+  ArrayArgument<D3D12_CLEAR_DATA> m_pClearValues{};
+  ArrayArgument<UINT> m_pNumRegions{};
+  BoxArraysArgument m_ppRegions{};
+};
+
+class ID3D12Resource3GetCastableFormatsCommand : public Command {
+public:
+  ID3D12Resource3GetCastableFormatsCommand(unsigned threadId,
+                                           ID3D12Resource3* object,
+                                           DXGI_FORMAT* pCastableFormats)
+      : Command{CommandId::ID_ID3D12RESOURCE3_GETCASTABLEFORMATS, threadId},
+        m_Object{object},
+        m_pCastableFormats{pCastableFormats, 0} {}
+  ID3D12Resource3GetCastableFormatsCommand()
+      : Command(CommandId::ID_ID3D12RESOURCE3_GETCASTABLEFORMATS) {}
+
+public:
+  InterfaceArgument<ID3D12Resource3> m_Object{};
+  Argument<HRESULT> m_Result{};
+  ArrayArgument<DXGI_FORMAT> m_pCastableFormats{};
+};
+
+class ID3D12Device16GetResourceAllocationInfo4Command : public Command {
+public:
+  ID3D12Device16GetResourceAllocationInfo4Command(
+      unsigned threadId,
+      ID3D12Device16* object,
+      UINT visibleMask,
+      UINT numResourceDescs,
+      const D3D12_RESOURCE_DESC2* pResourceDescs,
+      const UINT32* pNumCastableFormats,
+      const DXGI_FORMAT** ppCastableFormats,
+      D3D12_RESOURCE_ALLOCATION_INFO1* pResourceAllocationInfo1)
+      : Command{CommandId::ID_ID3D12DEVICE16_GETRESOURCEALLOCATIONINFO4, threadId},
+        m_Object{object},
+        m_visibleMask{visibleMask},
+        m_numResourceDescs{numResourceDescs},
+        m_pResourceDescs{pResourceDescs, numResourceDescs},
+        m_pNumCastableFormats{pNumCastableFormats, numResourceDescs},
+        m_ppCastableFormats{ppCastableFormats, pNumCastableFormats, numResourceDescs},
+        m_pResourceAllocationInfo1{pResourceAllocationInfo1, numResourceDescs} {}
+  ID3D12Device16GetResourceAllocationInfo4Command()
+      : Command(CommandId::ID_ID3D12DEVICE16_GETRESOURCEALLOCATIONINFO4) {}
+
+public:
+  InterfaceArgument<ID3D12Device16> m_Object{};
+  Argument<D3D12_RESOURCE_ALLOCATION_INFO> m_Result{};
+  Argument<UINT> m_visibleMask{};
+  Argument<UINT> m_numResourceDescs{};
+  ArrayArgument<D3D12_RESOURCE_DESC2> m_pResourceDescs{};
+  ArrayArgument<UINT32> m_pNumCastableFormats{};
+  CastableFormatArraysArgument m_ppCastableFormats{};
+  ArrayArgument<D3D12_RESOURCE_ALLOCATION_INFO1> m_pResourceAllocationInfo1{};
+};
+
 class INTC_D3D12_GetSupportedVersionsCommand : public Command {
 public:
   INTC_D3D12_GetSupportedVersionsCommand(unsigned threadId,

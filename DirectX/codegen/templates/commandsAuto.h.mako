@@ -25,6 +25,9 @@ custom = [
     'ID3D12ResourceWriteToSubresource',
     'ID3D12ResourceReadFromSubresource',
     'ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrix',
+    'ID3D12GraphicsCommandList12ClearBoundRenderTargetViews',
+    'ID3D12Resource3GetCastableFormats',
+    'ID3D12Device16GetResourceAllocationInfo4',
     'IDMLDeviceCheckFeatureSupport'
 ]
 %>\

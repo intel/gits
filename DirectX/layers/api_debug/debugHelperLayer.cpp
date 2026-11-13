@@ -67,6 +67,13 @@ void DebugHelperLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
   SetD3D12ObjectName(*c.m_ppvResource.Value, c.m_ppvResource.Key);
 }
 
+void DebugHelperLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK) {
+    return;
+  }
+  SetD3D12ObjectName(*c.m_ppvResource.Value, c.m_ppvResource.Key);
+}
+
 void DebugHelperLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (c.Skip || c.m_Result.Value != S_OK) {
     return;
@@ -82,6 +89,13 @@ void DebugHelperLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
 }
 
 void DebugHelperLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (c.Skip || c.m_Result.Value != S_OK) {
+    return;
+  }
+  SetD3D12ObjectName(*c.m_ppvResource.Value, c.m_ppvResource.Key);
+}
+
+void DebugHelperLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
   if (c.Skip || c.m_Result.Value != S_OK) {
     return;
   }

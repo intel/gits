@@ -38,7 +38,8 @@ public:
   void CreateFence(ID3D12DeviceCreateFenceCommand& c);
   void EnqueueMakeResident(ID3D12Device3EnqueueMakeResidentCommand& c);
   void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
-  void Barrier(ID3D12GraphicsCommandList7BarrierCommand& c);
+  void Barrier(ID3D12GraphicsCommandList* commandList,
+               D3D12_BARRIER_GROUPs_Argument& barrierGroups);
   void Dispatch(ID3D12GraphicsCommandListDispatchCommand& c,
                 unsigned frame,
                 unsigned frameDispatch,

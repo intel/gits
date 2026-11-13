@@ -539,6 +539,244 @@ FastOStream& operator<<(FastOStream& stream, const D3D12_CLEAR_VALUE* value) {
   return stream;
 }
 
+FastOStream& operator<<(FastOStream& stream, const D3D12_CLEAR_DATA& value) {
+  stream << "D3D12_CLEAR_DATA{";
+  PrintStaticArray(stream, value.Floats) << ", ";
+  PrintStaticArray(stream, value.Uints);
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CLEAR_DATA* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_SHADER_CACHE_SESSION_FILE_DESC& value) {
+  stream << "D3D12_SHADER_CACHE_SESSION_FILE_DESC{";
+  PrintArray(stream, value.NumDescs, value.pDescs) << ", ";
+  stream << value.NumDescs << ", " << value.Flags;
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_SHADER_CACHE_SESSION_FILE_DESC* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_SHADER_CACHE_SESSION_DESC1& value) {
+  stream << "D3D12_SHADER_CACHE_SESSION_DESC1{" << value.Mode << ", ";
+  switch (value.Mode) {
+  case D3D12_SHADER_CACHE_MODE_MEMORY:
+    stream << value.Memory;
+    break;
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    stream << value.Disk;
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    stream << value.Registered;
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    stream << value.File;
+    break;
+  default:
+    stream << "unknown";
+    break;
+  }
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_SHADER_CACHE_SESSION_DESC1* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_VALUE_KEY& value) {
+  return stream << "D3D12_CACHE_VALUE_KEY{" << value.KeySize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_VALUE_KEY* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_VALUE& value) {
+  return stream << "D3D12_CACHE_VALUE{" << value.ValueSize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_VALUE* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_CONST_VALUE& value) {
+  return stream << "D3D12_CACHE_CONST_VALUE{" << value.ValueSize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_CACHE_CONST_VALUE* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_GROUP_KEY& value) {
+  return stream << "D3D12_DATABASE_GROUP_KEY{" << value.KeySize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_GROUP_KEY* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_ROOT_SIGNATURE_KEY& value) {
+  return stream << "D3D12_DATABASE_ROOT_SIGNATURE_KEY{" << value.KeySize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_ROOT_SIGNATURE_KEY* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_PIPELINE_STATE_KEY& value) {
+  return stream << "D3D12_DATABASE_PIPELINE_STATE_KEY{" << value.KeySize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_PIPELINE_STATE_KEY* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_STATE_OBJECT_KEY& value) {
+  return stream << "D3D12_DATABASE_STATE_OBJECT_KEY{" << value.KeySize << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_DATABASE_STATE_OBJECT_KEY* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream,
+                        const D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC& value) {
+  stream << "D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC{";
+  stream << value.ClusterLimits << ", ";
+  stream << value.Flags << ", ";
+  stream << value.Mode << ", ";
+  stream << value.VertexFormat << ", ";
+  stream << value.IndexFormat << ", ";
+  stream << value.GeometryIndexAndFlagsIndexFormat << ", ";
+  stream << value.OpacityMicromapIndexFormat << ", ";
+  if (value.VertexFormat == D3D12_VERTEX_FORMAT_COMPRESSED1) {
+    stream << value.MaxCompressedClusterPositionsSize;
+  } else {
+    stream << value.MinPositionTruncateBitCount;
+  }
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream,
+                        const D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_RTAS_OPERATION_INPUTS& value) {
+  stream << "D3D12_RTAS_OPERATION_INPUTS{" << value.Type << ", ";
+  switch (value.Type) {
+  case D3D12_RTAS_OPERATION_TYPE_MOVE_CLUSTER_OBJECTS:
+    stream << value.pClusterMovesDesc;
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_BLAS_FROM_CLAS:
+    stream << value.pClasDesc;
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLAS_FROM_TRIANGLES:
+    stream << value.pClusterTrianglesDesc;
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLUSTER_TEMPLATES_FROM_TRIANGLES:
+    stream << value.pClusterTemplateTrianglesDesc;
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_INSTANTIATE_CLUSTER_TEMPLATES:
+    stream << value.pInstantiateClusterTemplateDesc;
+    break;
+  case D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS:
+    stream << value.pPartitionedTLASInputsDesc;
+    break;
+  default:
+    stream << "unknown";
+    break;
+  }
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_RTAS_OPERATION_INPUTS* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_RTAS_OPERATION_DESC& value) {
+  stream << "D3D12_RTAS_OPERATION_DESC{" << value.Inputs << ", ";
+  if (value.Inputs.Type == D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS) {
+    stream << value.pPartitionedTlasOperationData;
+  } else {
+    stream << value.pBatchedOperationData;
+  }
+  return stream << "}";
+}
+
+FastOStream& operator<<(FastOStream& stream, const D3D12_RTAS_OPERATION_DESC* value) {
+  if (value) {
+    stream << *value;
+  } else {
+    stream << "nullptr";
+  }
+  return stream;
+}
+
 FastOStream& operator<<(FastOStream& stream, const D3D12_STREAM_OUTPUT_DESC& value) {
   return stream << &value;
 }

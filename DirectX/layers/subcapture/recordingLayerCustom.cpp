@@ -307,5 +307,18 @@ void RecordingLayer::Post(
   }
 }
 
+void RecordingLayer::Post(
+    ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& Command) {
+  static bool logged = false;
+  if (!logged) {
+    LOG_ERROR << "ID3D12CommandListRaytracing2::ExecuteIndirectRTASOperations not handled in "
+                 "subcapture";
+    logged = true;
+  }
+  if (m_SubcaptureRange.InRange()) {
+    m_Recorder.Record(ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsSerializer(Command));
+  }
+}
+
 } // namespace DirectX
 } // namespace gits

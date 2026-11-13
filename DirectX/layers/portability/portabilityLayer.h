@@ -44,6 +44,8 @@ public:
   void Post(ID3D12Device8CreatePlacedResource1Command& c) override;
   void Pre(ID3D12Device10CreatePlacedResource2Command& c) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& c) override;
+  void Pre(ID3D12Device16CreatePlacedResource3Command& c) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& c) override;
   void Post(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) override;
   void Post(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c)
       override;
@@ -53,6 +55,7 @@ public:
   void Pre(ID3D12Device4GetResourceAllocationInfo1Command& c) override;
   void Pre(ID3D12Device8GetResourceAllocationInfo2Command& c) override;
   void Pre(ID3D12Device12GetResourceAllocationInfo3Command& c) override;
+  void Pre(ID3D12Device16GetResourceAllocationInfo4Command& c) override;
   void Pre(ID3D12GraphicsCommandListResourceBarrierCommand& c) override;
 
 private:
@@ -73,6 +76,14 @@ private:
                                    void** ppvResource);
   HRESULT CreateCommittedResource3(ID3D12Heap* heap,
                                    const D3D12_RESOURCE_DESC1* desc,
+                                   D3D12_BARRIER_LAYOUT initialLayout,
+                                   const D3D12_CLEAR_VALUE* clearValue,
+                                   UINT32 numCastableFormats,
+                                   const DXGI_FORMAT* pCastableFormats,
+                                   REFIID riid,
+                                   void** ppvResource);
+  HRESULT CreateCommittedResource4(ID3D12Heap* heap,
+                                   const D3D12_RESOURCE_DESC2* desc,
                                    D3D12_BARRIER_LAYOUT initialLayout,
                                    const D3D12_CLEAR_VALUE* clearValue,
                                    UINT32 numCastableFormats,

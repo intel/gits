@@ -65,43 +65,51 @@ void AddressPinningStoreLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& 
   if (IsStateRestoreKey(command.m_ppvResource.Key)) {
     return;
   }
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device4CreateCommittedResource1Command& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device8CreateCommittedResource2Command& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device10CreateCommittedResource3Command& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
+}
+
+void AddressPinningStoreLayer::Post(ID3D12Device16CreateCommittedResource4Command& command) {
+  HandleResource(command, command.m_pResourceDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12DeviceCreateReservedResourceCommand& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device4CreateReservedResource1Command& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device10CreateReservedResource2Command& command) {
-  HandleResource(command);
+  HandleResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& command) {
-  HandlePlacedResource(command);
+  HandlePlacedResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device8CreatePlacedResource1Command& command) {
-  HandlePlacedResource(command);
+  HandlePlacedResource(command, command.m_pDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12Device10CreatePlacedResource2Command& command) {
-  HandlePlacedResource(command);
+  HandlePlacedResource(command, command.m_pDesc.Value);
+}
+
+void AddressPinningStoreLayer::Post(ID3D12Device16CreatePlacedResource3Command& command) {
+  HandlePlacedResource(command, command.m_pResourceDesc.Value);
 }
 
 void AddressPinningStoreLayer::Post(ID3D12DeviceCreateHeapCommand& command) {
@@ -144,22 +152,22 @@ void AddressPinningStoreLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c
   HandleGetGPUVirtualAddress(command);
 }
 
-template <typename CommandT>
-void AddressPinningStoreLayer::HandleResource(CommandT& command) {
-  if (command.m_Result.Value != S_OK ||
-      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+template <typename CommandT, typename ResourceDescT>
+void AddressPinningStoreLayer::HandleResource(CommandT& command, const ResourceDescT* desc) {
+  if (command.m_Result.Value != S_OK || !desc ||
+      desc->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
   D3D12_GPU_VIRTUAL_ADDRESS_RANGE range{};
-  range.SizeInBytes = command.m_pDesc.Value->Width;
+  range.SizeInBytes = desc->Width;
   m_ResourceAddressRanges[command.m_ppvResource.Key] = range;
 }
 
-template <typename CommandT>
-void AddressPinningStoreLayer::HandlePlacedResource(CommandT& command) {
-  if (command.m_Result.Value != S_OK ||
-      command.m_pDesc.Value->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+template <typename CommandT, typename ResourceDescT>
+void AddressPinningStoreLayer::HandlePlacedResource(CommandT& command, const ResourceDescT* desc) {
+  if (command.m_Result.Value != S_OK || !desc ||
+      desc->Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
 

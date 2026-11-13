@@ -1838,10 +1838,13 @@ unsigned GetSize(const D3D12_BARRIER_GROUPs_Argument& arg) {
       size += sizeof(D3D12_TEXTURE_BARRIER) * arg.Value[i].NumBarriers;
     } else if (arg.Value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
       size += sizeof(D3D12_BUFFER_BARRIER) * arg.Value[i].NumBarriers;
+    } else if (arg.Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      size += sizeof(D3D12_DESCRIPTOR_HEAP_BARRIER) * arg.Value[i].NumBarriers;
     }
   }
 
-  size += sizeof(ObjectKey) * arg.ResourceKeys.size();
+  size += sizeof(ObjectKey) * arg.ObjectKeys.size();
+  size += sizeof(unsigned) * arg.DescriptorIndexes.size();
 
   return size;
 }
@@ -1869,11 +1872,201 @@ void Encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& a
       memcpy(dest + offset, arg.Value[i].pBufferBarriers,
              sizeof(D3D12_BUFFER_BARRIER) * arg.Value[i].NumBarriers);
       offset += sizeof(D3D12_BUFFER_BARRIER) * arg.Value[i].NumBarriers;
+    } else if (arg.Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      memcpy(dest + offset, arg.Value[i].pDescriptorHeapBarriers,
+             sizeof(D3D12_DESCRIPTOR_HEAP_BARRIER) * arg.Value[i].NumBarriers);
+      offset += sizeof(D3D12_DESCRIPTOR_HEAP_BARRIER) * arg.Value[i].NumBarriers;
     }
   }
 
-  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(ObjectKey) * arg.ResourceKeys.size());
-  offset += sizeof(ObjectKey) * arg.ResourceKeys.size();
+  memcpy(dest + offset, arg.ObjectKeys.data(), sizeof(ObjectKey) * arg.ObjectKeys.size());
+  offset += sizeof(ObjectKey) * arg.ObjectKeys.size();
+
+  memcpy(dest + offset, arg.DescriptorIndexes.data(),
+         sizeof(unsigned) * arg.DescriptorIndexes.size());
+  offset += sizeof(unsigned) * arg.DescriptorIndexes.size();
+}
+
+unsigned GetSize(const D3D12_TEXTURE_COPY_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_TEXTURE_COPY_DESC) * arg.Size;
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (!arg.Value[i].pCopyRegions) {
+      continue;
+    }
+    size += sizeof(D3D12_TEXTURE_COPY_REGION) * arg.Value[i].NumRegions;
+    for (unsigned j = 0; j < arg.Value[i].NumRegions; ++j) {
+      if (arg.Value[i].pCopyRegions[j].pSourceBox) {
+        size += sizeof(D3D12_BOX);
+      }
+    }
+  }
+
+  size += 2 * sizeof(ObjectKey) * arg.Size;
+
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const D3D12_TEXTURE_COPY_DESCs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_TEXTURE_COPY_DESC) * arg.Size);
+  offset += sizeof(D3D12_TEXTURE_COPY_DESC) * arg.Size;
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (!arg.Value[i].pCopyRegions) {
+      continue;
+    }
+    memcpy(dest + offset, arg.Value[i].pCopyRegions,
+           sizeof(D3D12_TEXTURE_COPY_REGION) * arg.Value[i].NumRegions);
+    offset += sizeof(D3D12_TEXTURE_COPY_REGION) * arg.Value[i].NumRegions;
+    for (unsigned j = 0; j < arg.Value[i].NumRegions; ++j) {
+      if (arg.Value[i].pCopyRegions[j].pSourceBox) {
+        memcpy(dest + offset, arg.Value[i].pCopyRegions[j].pSourceBox, sizeof(D3D12_BOX));
+        offset += sizeof(D3D12_BOX);
+      }
+    }
+  }
+
+  memcpy(dest + offset, arg.DestOrBufferKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
+  memcpy(dest + offset, arg.SourceOrTextureKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
+}
+
+unsigned GetSize(const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_CLEAR_TEXTURE_DESC) * arg.Size;
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pRegion) {
+      size += sizeof(D3D12_BOX);
+    }
+  }
+
+  size += sizeof(ObjectKey) * arg.ResourceKeys.size();
+
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_CLEAR_TEXTURE_DESC) * arg.Size);
+  offset += sizeof(D3D12_CLEAR_TEXTURE_DESC) * arg.Size;
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pRegion) {
+      memcpy(dest + offset, arg.Value[i].pRegion, sizeof(D3D12_BOX));
+      offset += sizeof(D3D12_BOX);
+    }
+  }
+
+  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
+}
+
+unsigned GetSize(const D3D12_FILL_BUFFER_DESCs_Argument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_FILL_BUFFER_DESC) * arg.Size +
+         sizeof(ObjectKey) * arg.ResourceKeys.size();
+}
+
+void Encode(char* dest, unsigned& offset, const D3D12_FILL_BUFFER_DESCs_Argument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_FILL_BUFFER_DESC) * arg.Size);
+  offset += sizeof(D3D12_FILL_BUFFER_DESC) * arg.Size;
+
+  memcpy(dest + offset, arg.ResourceKeys.data(), sizeof(ObjectKey) * arg.Size);
+  offset += sizeof(ObjectKey) * arg.Size;
+}
+
+unsigned GetSize(const BoxArraysArgument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.Sizes) + sizeof(D3D12_BOX*) * arg.Sizes.size();
+  for (UINT boxCount : arg.Sizes) {
+    size += sizeof(D3D12_BOX) * boxCount;
+  }
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const BoxArraysArgument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.Sizes.data(), sizeof(arg.Sizes));
+  offset += sizeof(arg.Sizes);
+
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    const D3D12_BOX* boxes = arg.Sizes[i] ? arg.Value[i] : nullptr;
+    memcpy(dest + offset, &boxes, sizeof(boxes));
+    offset += sizeof(boxes);
+  }
+
+  for (unsigned i = 0; i < arg.Sizes.size(); ++i) {
+    if (arg.Sizes[i]) {
+      memcpy(dest + offset, arg.Value[i], sizeof(D3D12_BOX) * arg.Sizes[i]);
+      offset += sizeof(D3D12_BOX) * arg.Sizes[i];
+    }
+  }
+}
+
+unsigned GetSize(const CastableFormatArraysArgument& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size =
+      sizeof(void*) + sizeof(unsigned) + (sizeof(UINT32) + sizeof(DXGI_FORMAT*)) * arg.Sizes.size();
+  for (UINT32 formatCount : arg.Sizes) {
+    size += sizeof(DXGI_FORMAT) * formatCount;
+  }
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const CastableFormatArraysArgument& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  unsigned count = static_cast<unsigned>(arg.Sizes.size());
+  memcpy(dest + offset, &count, sizeof(count));
+  offset += sizeof(count);
+  memcpy(dest + offset, arg.Sizes.data(), sizeof(UINT32) * count);
+  offset += sizeof(UINT32) * count;
+
+  for (unsigned i = 0; i < count; ++i) {
+    const DXGI_FORMAT* formats = arg.Sizes[i] ? arg.Value[i] : nullptr;
+    memcpy(dest + offset, &formats, sizeof(formats));
+    offset += sizeof(formats);
+  }
+
+  for (unsigned i = 0; i < count; ++i) {
+    if (arg.Sizes[i]) {
+      memcpy(dest + offset, arg.Value[i], sizeof(DXGI_FORMAT) * arg.Sizes[i]);
+      offset += sizeof(DXGI_FORMAT) * arg.Sizes[i];
+    }
+  }
 }
 
 unsigned GetSize(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg) {
@@ -1908,6 +2101,269 @@ void Encode(char* dest,
   offset += arg.Size * sizeof(ObjectKey);
   memcpy(dest + offset, arg.SourceOffset.data(), arg.Size * sizeof(unsigned));
   offset += arg.Size * sizeof(unsigned);
+}
+
+unsigned GetSize(const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + arg.Size * sizeof(D3D12_COPY_DESCRIPTORS_RANGE) +
+         arg.Size * (2 * sizeof(ObjectKey) + 2 * sizeof(unsigned));
+}
+
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+
+  memcpy(dest + offset, arg.Value, arg.Size * sizeof(D3D12_COPY_DESCRIPTORS_RANGE));
+  offset += arg.Size * sizeof(D3D12_COPY_DESCRIPTORS_RANGE);
+
+  memcpy(dest + offset, arg.DestHeapKeys.data(), arg.Size * sizeof(ObjectKey));
+  offset += arg.Size * sizeof(ObjectKey);
+  memcpy(dest + offset, arg.DestIndexes.data(), arg.Size * sizeof(unsigned));
+  offset += arg.Size * sizeof(unsigned);
+
+  memcpy(dest + offset, arg.SourceHeapKeys.data(), arg.Size * sizeof(ObjectKey));
+  offset += arg.Size * sizeof(ObjectKey);
+  memcpy(dest + offset, arg.SourceIndexes.data(), arg.Size * sizeof(unsigned));
+  offset += arg.Size * sizeof(unsigned);
+}
+
+template <typename T>
+static unsigned GetKeyPointerArgumentSize(const KeyPointerArgument<T>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(T) + (arg.Value->pKey ? arg.Value->KeySize : 0);
+}
+
+template <typename T>
+static void EncodeKeyPointerArgument(char* dest,
+                                     unsigned& offset,
+                                     const KeyPointerArgument<T>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.Value, sizeof(T));
+  offset += sizeof(T);
+  if (arg.Value->pKey) {
+    memcpy(dest + offset, arg.Value->pKey, arg.Value->KeySize);
+    offset += arg.Value->KeySize;
+  }
+}
+
+unsigned GetSize(const PointerArgument<D3D12_CACHE_VALUE_KEY>& arg) {
+  return GetKeyPointerArgumentSize(arg);
+}
+
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_CACHE_VALUE_KEY>& arg) {
+  EncodeKeyPointerArgument(dest, offset, arg);
+}
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_GROUP_KEY>& arg) {
+  return GetKeyPointerArgumentSize(arg);
+}
+
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_DATABASE_GROUP_KEY>& arg) {
+  EncodeKeyPointerArgument(dest, offset, arg);
+}
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>& arg) {
+  return GetKeyPointerArgumentSize(arg);
+}
+
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>& arg) {
+  EncodeKeyPointerArgument(dest, offset, arg);
+}
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>& arg) {
+  return GetKeyPointerArgumentSize(arg);
+}
+
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>& arg) {
+  EncodeKeyPointerArgument(dest, offset, arg);
+}
+
+unsigned GetSize(const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.Size) + arg.Size * sizeof(D3D12_DATABASE_GROUP_KEY);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pKey) {
+      size += arg.Value[i].KeySize;
+    }
+  }
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  memcpy(dest + offset, arg.Value, arg.Size * sizeof(D3D12_DATABASE_GROUP_KEY));
+  offset += arg.Size * sizeof(D3D12_DATABASE_GROUP_KEY);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pKey) {
+      memcpy(dest + offset, arg.Value[i].pKey, arg.Value[i].KeySize);
+      offset += arg.Value[i].KeySize;
+    }
+  }
+}
+
+unsigned GetSize(const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint64_t size =
+      sizeof(void*) + sizeof(arg.Size) + arg.Size * sizeof(D3D12_CACHE_TYPED_CONST_VALUE);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].Value.pValue) {
+      size += arg.Value[i].Value.ValueSize;
+    }
+  }
+  GITS_ASSERT(size <= std::numeric_limits<unsigned>::max(),
+              "Cache values exceed the maximum size of a recorded command");
+  return static_cast<unsigned>(size);
+}
+
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  memcpy(dest + offset, arg.Value, arg.Size * sizeof(D3D12_CACHE_TYPED_CONST_VALUE));
+  offset += arg.Size * sizeof(D3D12_CACHE_TYPED_CONST_VALUE);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].Value.pValue) {
+      memcpy(dest + offset, arg.Value[i].Value.pValue, arg.Value[i].Value.ValueSize);
+      offset += static_cast<unsigned>(arg.Value[i].Value.ValueSize);
+    }
+  }
+}
+
+unsigned GetSize(const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint64_t size = sizeof(void*) + sizeof(arg.Size) +
+                  arg.Size * (sizeof(D3D12_CACHE_TYPED_VALUE) + sizeof(UINT));
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    size += arg.GetStoredValueSize(i);
+  }
+  GITS_ASSERT(size <= std::numeric_limits<unsigned>::max(),
+              "Cache values exceed the maximum size of a recorded command");
+  return static_cast<unsigned>(size);
+}
+
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  memcpy(dest + offset, arg.Value, arg.Size * sizeof(D3D12_CACHE_TYPED_VALUE));
+  offset += arg.Size * sizeof(D3D12_CACHE_TYPED_VALUE);
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    UINT storedSize = arg.GetStoredValueSize(i);
+    memcpy(dest + offset, &storedSize, sizeof(storedSize));
+    offset += sizeof(storedSize);
+    if (storedSize) {
+      memcpy(dest + offset, arg.Value[i].Value.pValue, storedSize);
+      offset += storedSize;
+    }
+  }
+}
+
+unsigned GetSize(const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(D3D12_SHADER_CACHE_SESSION_DESC1);
+  switch (arg.Value->Mode) {
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    if (arg.Value->Disk.pDirectory) {
+      size += sizeof(unsigned) + wcslen(arg.Value->Disk.pDirectory) * 2 + 2;
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    if (arg.Value->Registered.pComponentName) {
+      size += sizeof(unsigned) + wcslen(arg.Value->Registered.pComponentName) * 2 + 2;
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    if (arg.Value->File.pDescs) {
+      size += arg.Value->File.NumDescs * sizeof(D3D12_CACHE_FILE_DESC);
+      for (unsigned i = 0; i < arg.Value->File.NumDescs; ++i) {
+        if (arg.Value->File.pDescs[i].pPath) {
+          size += sizeof(unsigned) + wcslen(arg.Value->File.pDescs[i].pPath) * 2 + 2;
+        }
+      }
+    }
+    break;
+  default:
+    break;
+  }
+  return size;
+}
+
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_SHADER_CACHE_SESSION_DESC1));
+  offset += sizeof(D3D12_SHADER_CACHE_SESSION_DESC1);
+  switch (arg.Value->Mode) {
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    if (arg.Value->Disk.pDirectory) {
+      unsigned len = wcslen(arg.Value->Disk.pDirectory) * 2 + 2;
+      memcpy(dest + offset, &len, sizeof(len));
+      offset += sizeof(unsigned);
+      memcpy(dest + offset, arg.Value->Disk.pDirectory, len);
+      offset += len;
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    if (arg.Value->Registered.pComponentName) {
+      unsigned len = wcslen(arg.Value->Registered.pComponentName) * 2 + 2;
+      memcpy(dest + offset, &len, sizeof(len));
+      offset += sizeof(unsigned);
+      memcpy(dest + offset, arg.Value->Registered.pComponentName, len);
+      offset += len;
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    if (arg.Value->File.pDescs) {
+      unsigned descsSize = arg.Value->File.NumDescs * sizeof(D3D12_CACHE_FILE_DESC);
+      memcpy(dest + offset, arg.Value->File.pDescs, descsSize);
+      offset += descsSize;
+      for (unsigned i = 0; i < arg.Value->File.NumDescs; ++i) {
+        if (arg.Value->File.pDescs[i].pPath) {
+          unsigned len = wcslen(arg.Value->File.pDescs[i].pPath) * 2 + 2;
+          memcpy(dest + offset, &len, sizeof(len));
+          offset += sizeof(unsigned);
+          memcpy(dest + offset, arg.Value->File.pDescs[i].pPath, len);
+          offset += len;
+        }
+      }
+    }
+    break;
+  default:
+    break;
+  }
 }
 
 unsigned GetSize(const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg) {
@@ -2352,6 +2808,78 @@ void Encode(char* dest, unsigned& offset, const xess_d3d12_execute_params_t_Argu
 
   memcpy(dest + offset, &arg.DescriptorHeapKey, sizeof(arg.DescriptorHeapKey));
   offset += sizeof(arg.DescriptorHeapKey);
+}
+
+static void EncodeRtasOperationInputsDesc(char* dest,
+                                          unsigned& offset,
+                                          const D3D12_RTAS_OPERATION_INPUTS& inputs) {
+  if (inputs.pClasDesc) {
+    unsigned size = GetRtasOperationInputsDescSize(inputs.Type);
+    memcpy(dest + offset, inputs.pClasDesc, size);
+    offset += size;
+  }
+}
+
+unsigned GetSize(const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(D3D12_RTAS_OPERATION_INPUTS) +
+         (arg.Value->pClasDesc ? GetRtasOperationInputsDescSize(arg.Value->Type) : 0);
+}
+
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_RTAS_OPERATION_INPUTS));
+  offset += sizeof(D3D12_RTAS_OPERATION_INPUTS);
+  EncodeRtasOperationInputsDesc(dest, offset, *arg.Value);
+}
+
+unsigned GetSize(const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  unsigned size = sizeof(void*) + sizeof(arg.Size) + sizeof(D3D12_RTAS_OPERATION_DESC) * arg.Size;
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].Inputs.pClasDesc) {
+      size += GetRtasOperationInputsDescSize(arg.Value[i].Inputs.Type);
+    }
+    if (arg.Value[i].pBatchedOperationData) {
+      size += GetRtasOperationDataSize(arg.Value[i].Inputs.Type);
+    }
+  }
+  size += sizeof(unsigned) + (sizeof(ObjectKey) + sizeof(unsigned)) * arg.DataKeys.size();
+  return size;
+}
+
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg) {
+  if (EncodeNullPtr(dest, offset, arg)) {
+    return;
+  }
+  memcpy(dest + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+
+  memcpy(dest + offset, arg.Value, sizeof(D3D12_RTAS_OPERATION_DESC) * arg.Size);
+  offset += sizeof(D3D12_RTAS_OPERATION_DESC) * arg.Size;
+
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    EncodeRtasOperationInputsDesc(dest, offset, arg.Value[i].Inputs);
+    if (arg.Value[i].pBatchedOperationData) {
+      unsigned size = GetRtasOperationDataSize(arg.Value[i].Inputs.Type);
+      memcpy(dest + offset, arg.Value[i].pBatchedOperationData, size);
+      offset += size;
+    }
+  }
+
+  unsigned keysCount = static_cast<unsigned>(arg.DataKeys.size());
+  memcpy(dest + offset, &keysCount, sizeof(keysCount));
+  offset += sizeof(keysCount);
+  memcpy(dest + offset, arg.DataKeys.data(), sizeof(ObjectKey) * keysCount);
+  offset += sizeof(ObjectKey) * keysCount;
+  memcpy(dest + offset, arg.DataOffsets.data(), sizeof(unsigned) * keysCount);
+  offset += sizeof(unsigned) * keysCount;
 }
 
 unsigned GetSize(const ArrayArgument<D3D12_META_COMMAND_DESC>& arg) {

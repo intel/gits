@@ -110,7 +110,8 @@ void StateTrackingService::KeepState(ObjectKey objectKey) {
   if (state->CreationCommand.get() &&
       (state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE ||
        state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1 ||
-       state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2)) {
+       state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2 ||
+       state->CreationCommand->GetId() == CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3)) {
     ResourceState* resourceState = static_cast<ResourceState*>(state);
     KeepState(resourceState->HeapKey);
   }
@@ -224,12 +225,14 @@ void StateTrackingService::RestoreState(ObjectState* state) {
   case CommandId::ID_ID3D12DEVICE4_CREATECOMMITTEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE8_CREATECOMMITTEDRESOURCE2:
   case CommandId::ID_ID3D12DEVICE10_CREATECOMMITTEDRESOURCE3:
+  case CommandId::ID_ID3D12DEVICE16_CREATECOMMITTEDRESOURCE4:
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE:
     RestoreD3D12CommittedResource(state);
     break;
   case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
+  case CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3:
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE:
     RestoreD3D12PlacedResource(state);
     break;
@@ -755,6 +758,13 @@ void StateTrackingService::RestoreD3D12CommittedResource(ObjectState* state) {
         *resourceState, resourceState->Dimension, command->m_pDesc.Value->Flags);
     command->m_InitialLayout.Value = initialLayout;
   } break;
+  case CommandId::ID_ID3D12DEVICE16_CREATECOMMITTEDRESOURCE4: {
+    auto* command =
+        static_cast<ID3D12Device16CreateCommittedResource4Command*>(state->CreationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
+        *resourceState, resourceState->Dimension, command->m_pResourceDesc.Value->Flags);
+    command->m_InitialLayout.Value = initialLayout;
+  } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
     auto* command =
         static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
@@ -796,6 +806,13 @@ void StateTrackingService::RestoreD3D12PlacedResource(ObjectState* state) {
         static_cast<ID3D12Device10CreatePlacedResource2Command*>(state->CreationCommand.get());
     D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
         *resourceState, resourceState->Dimension, command->m_pDesc.Value->Flags);
+    command->m_InitialLayout.Value = initialLayout;
+  } break;
+  case CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3: {
+    auto* command =
+        static_cast<ID3D12Device16CreatePlacedResource3Command*>(state->CreationCommand.get());
+    D3D12_BARRIER_LAYOUT initialLayout = GetResourceInitialLayout(
+        *resourceState, resourceState->Dimension, command->m_pResourceDesc.Value->Flags);
     command->m_InitialLayout.Value = initialLayout;
   } break;
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {

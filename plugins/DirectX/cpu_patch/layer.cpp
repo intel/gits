@@ -330,6 +330,19 @@ void CpuPatchLayer::Post(ID3D12Device10CreateCommittedResource3Command& command)
   }
 }
 
+void CpuPatchLayer::Post(ID3D12Device16CreateCommittedResource4Command& command) {
+  if (command.m_Result.Value != S_OK) {
+    return;
+  }
+  if (m_Mode == Mode::Store) {
+    m_ResourceStateTracker.AddResource(
+        reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,
+        command.m_InitialLayout.Value);
+    m_ResourceByKey[command.m_ppvResource.Key] =
+        reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value);
+  }
+}
+
 void CpuPatchLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& command) {
   if (command.m_Result.Value != S_OK) {
     return;
@@ -379,6 +392,22 @@ void CpuPatchLayer::Post(ID3D12Device10CreatePlacedResource2Command& command) {
   }
   m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
                                         command.m_pDesc.Value->Flags,
+                                        command.m_InitialLayout.Value);
+  if (m_Mode == Mode::Store) {
+    m_ResourceStateTracker.AddResource(
+        reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value), command.m_ppvResource.Key,
+        command.m_InitialLayout.Value);
+    m_ResourceByKey[command.m_ppvResource.Key] =
+        reinterpret_cast<ID3D12Resource*>(*command.m_ppvResource.Value);
+  }
+}
+
+void CpuPatchLayer::Post(ID3D12Device16CreatePlacedResource3Command& command) {
+  if (command.m_Result.Value != S_OK) {
+    return;
+  }
+  m_AddressService.CreatePlacedResource(command.m_pHeap.Key, command.m_ppvResource.Key,
+                                        command.m_pResourceDesc.Value->Flags,
                                         command.m_InitialLayout.Value);
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.AddResource(
@@ -477,7 +506,23 @@ void CpuPatchLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& command) {
   if (m_Mode == Mode::Store) {
     m_ResourceStateTracker.ResourceBarrier(command.m_Object.Value, command.m_pBarrierGroups.Value,
                                            command.m_NumBarrierGroups.Value,
-                                           command.m_pBarrierGroups.ResourceKeys.data());
+                                           command.m_pBarrierGroups.ObjectKeys.data());
+  }
+}
+
+void CpuPatchLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& command) {
+  if (m_Mode == Mode::Store) {
+    m_ResourceStateTracker.ResourceBarrier(command.m_Object.Value, command.m_pBarrierGroups.Value,
+                                           command.m_NumBarrierGroups.Value,
+                                           command.m_pBarrierGroups.ObjectKeys.data());
+  }
+}
+
+void CpuPatchLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& command) {
+  if (m_Mode == Mode::Store) {
+    m_ResourceStateTracker.ResourceBarrier(command.m_Object.Value, command.m_pBarrierGroups.Value,
+                                           command.m_NumBarrierGroups.Value,
+                                           command.m_pBarrierGroups.ObjectKeys.data());
   }
 }
 

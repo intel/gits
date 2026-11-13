@@ -31,6 +31,9 @@ public:
   void GetResourceAllocation(const D3D12_RESOURCE_DESC1& desc,
                              uint64_t sizeInBytes,
                              uint64_t alignment);
+  void GetResourceAllocation(const D3D12_RESOURCE_DESC2& desc,
+                             uint64_t sizeInBytes,
+                             uint64_t alignment);
   void StoreResourcePlacement();
 
 private:

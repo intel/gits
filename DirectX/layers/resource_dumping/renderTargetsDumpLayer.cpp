@@ -502,21 +502,41 @@ void RenderTargetsDumpLayer::Post(IDXGISwapChain1Present1Command& c) {
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateCommittedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device4CreateCommittedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device8CreateCommittedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialResourceState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device10CreateCommittedResource3Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
@@ -527,16 +547,33 @@ void RenderTargetsDumpLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) 
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
+  m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
@@ -547,16 +584,25 @@ void RenderTargetsDumpLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12DeviceCreateReservedResourceCommand& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device4CreateReservedResource1Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
 }
 
 void RenderTargetsDumpLayer::Post(ID3D12Device10CreateReservedResource2Command& c) {
+  if (c.m_Result.Value != S_OK || !c.m_ppvResource.Value || !*c.m_ppvResource.Value) {
+    return;
+  }
   m_ResourceStateTracker.AddResource(static_cast<ID3D12Resource*>(*c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialLayout.Value);
 }
@@ -574,7 +620,19 @@ void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandListResourceBarrierComman
 void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
                                          c.m_NumBarrierGroups.Value,
-                                         c.m_pBarrierGroups.ResourceKeys.data());
+                                         c.m_pBarrierGroups.ObjectKeys.data());
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ObjectKeys.data());
+}
+
+void RenderTargetsDumpLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                         c.m_NumBarrierGroups.Value,
+                                         c.m_pBarrierGroups.ObjectKeys.data());
 }
 
 } // namespace DirectX

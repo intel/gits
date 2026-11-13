@@ -27,6 +27,9 @@ public:
   void CreatePlacedResource(ObjectKey resourceKey,
                             const D3D12_RESOURCE_DESC1& desc,
                             ID3D12Device* device);
+  void CreatePlacedResource(ObjectKey resourceKey,
+                            const D3D12_RESOURCE_DESC2& desc,
+                            ID3D12Device* device);
 
 private:
   struct AllocationInfo {

@@ -34,6 +34,12 @@ void argumentToCpp(Arg<T>& arg, CppParameterInfo& info, CppParameterOutput& out)
 }
 
 template <typename T>
+  requires std::is_function_v<std::remove_pointer_t<T>>
+void argumentToCpp(Argument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
+  GITS_ASSERT(false, "argumentToCpp not implemented for function pointer arguments");
+}
+
+template <typename T>
 void argumentToCpp(PointerArgument<T>& arg, CppParameterInfo& info, CppParameterOutput& out) {
   toCpp(arg.Value, info, out);
 }
@@ -238,6 +244,25 @@ void argumentToCpp(
 void argumentToCpp(D3D12_BARRIER_GROUPs_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
+void argumentToCpp(D3D12_TEXTURE_COPY_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(D3D12_CLEAR_TEXTURE_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(BoxArraysArgument& arg, CppParameterInfo& info, CppParameterOutput& out);
+void argumentToCpp(CastableFormatArraysArgument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(D3D12_FILL_BUFFER_DESCs_Argument& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
+void argumentToCpp(ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg,
+                   CppParameterInfo& info,
+                   CppParameterOutput& out);
 void argumentToCpp(DML_BINDING_TABLE_DESC_Argument& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);
@@ -284,15 +309,6 @@ void argumentToCpp(
     PointerArgument<NVAPI_RAYTRACING_EXECUTE_MULTI_INDIRECT_CLUSTER_OPERATION_PARAMS>& arg,
     CppParameterInfo& info,
     CppParameterOutput& out);
-void argumentToCpp(Argument<D3D12StateObjectFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out);
-void argumentToCpp(Argument<D3D12ApplicationDescFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out);
-void argumentToCpp(Argument<D3D12PipelineStateFunc>& arg,
-                   CppParameterInfo& info,
-                   CppParameterOutput& out);
 void argumentToCpp(PointerArgument<INTC_D3D12_COMPUTE_PIPELINE_STATE_DESC>& arg,
                    CppParameterInfo& info,
                    CppParameterOutput& out);

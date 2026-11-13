@@ -151,6 +151,8 @@ void Decode(char* src, unsigned& offset, D3D12_RESOURCE_BARRIERs_Argument& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_ROOT_SIGNATURE_DESC>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_VERSIONED_ROOT_SIGNATURE_DESC>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_COMMAND_SIGNATURE_DESC>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg);
+void Decode(char* src, unsigned& offset, ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg);
 void Decode(char* src, unsigned& offset, D3D12_INDEX_BUFFER_VIEW_Argument& arg);
 void Decode(char* src, unsigned& offset, D3D12_CONSTANT_BUFFER_VIEW_DESC_Argument& arg);
 void Decode(char* src, unsigned& offset, D3D12_VERTEX_BUFFER_VIEWs_Argument& arg);
@@ -159,6 +161,11 @@ void Decode(char* src, unsigned& offset, D3D12_WRITEBUFFERIMMEDIATE_PARAMETERs_A
 void Decode(char* src, unsigned& offset, D3D12_STATE_OBJECT_DESC_Argument& arg);
 void Decode(char* src, unsigned& offset, D3D12_PIPELINE_STATE_STREAM_DESC_Argument& arg);
 void Decode(char* src, unsigned& offset, D3D12_BARRIER_GROUPs_Argument& arg);
+void Decode(char* src, unsigned& offset, D3D12_TEXTURE_COPY_DESCs_Argument& arg);
+void Decode(char* src, unsigned& offset, D3D12_CLEAR_TEXTURE_DESCs_Argument& arg);
+void Decode(char* src, unsigned& offset, D3D12_FILL_BUFFER_DESCs_Argument& arg);
+void Decode(char* src, unsigned& offset, BoxArraysArgument& arg);
+void Decode(char* src, unsigned& offset, CastableFormatArraysArgument& arg);
 void Decode(char* src, unsigned& offset, DML_BINDING_DESC_Argument& arg);
 void Decode(char* src, unsigned& offset, DML_BINDING_DESCs_Argument& arg);
 void Decode(char* src, unsigned& offset, DML_BINDING_TABLE_DESC_Argument& arg);
@@ -194,6 +201,15 @@ void Decode(char* src, unsigned& offset, D3D12_SHADER_RESOURCE_VIEW_DESC_Argumen
 void Decode(char* src,
             unsigned& offset,
             ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+void Decode(char* src, unsigned& offset, ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_CACHE_VALUE_KEY>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>& arg);
+void Decode(char* src, unsigned& offset, ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+void Decode(char* src, unsigned& offset, ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg);
+void Decode(char* src, unsigned& offset, ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg);
+void Decode(char* src, unsigned& offset, PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
 void Decode(char* src, unsigned& offset, PointerArgument<INTC_D3D12_RESOURCE_DESC_0001>& arg);
 void Decode(char* src, unsigned& offset, xess_d3d12_init_params_t_Argument& arg);

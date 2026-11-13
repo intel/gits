@@ -14,7 +14,7 @@ namespace DirectX {
 
 %for interface in interfaces:
 %for function in interface.functions:
-%if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('ResourceBarrier'):
+%if interface.name.startswith('ID3D12GraphicsCommandList') and not function.name.startswith('ResourceBarrier') and not (interface.name == 'ID3D12GraphicsCommandList7' and function.name == 'Barrier') and not (interface.name == 'ID3D12GraphicsCommandList11' and function.name in ('WaitBarrier', 'SignalBarrier')):
 void ResourceDumpLayer::Post(${interface.name}${function.name}Command& c) {
   m_ResourceDumpService.CommandListCall(c.Key, c.m_Object.Value);
 }

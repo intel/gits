@@ -57,11 +57,13 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& command) override;
   void Post(INTC_D3D12_CreateCommittedResourceCommand& command) override;
 
   void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& command) override;
   void Post(INTC_D3D12_CreatePlacedResourceCommand& command) override;
 
   void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
@@ -73,6 +75,8 @@ public:
 
   void Post(ID3D12GraphicsCommandListResourceBarrierCommand& command) override;
   void Post(ID3D12GraphicsCommandList7BarrierCommand& command) override;
+  void Post(ID3D12GraphicsCommandList11WaitBarrierCommand& command) override;
+  void Post(ID3D12GraphicsCommandList11SignalBarrierCommand& command) override;
 
 private:
   enum class Mode {

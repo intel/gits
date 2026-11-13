@@ -294,10 +294,58 @@ void Encode(char* dest, unsigned& offset, const D3D12_SHADER_RESOURCE_VIEW_DESC_
 unsigned GetSize(const D3D12_BARRIER_GROUPs_Argument& arg);
 void Encode(char* dest, unsigned& offset, const D3D12_BARRIER_GROUPs_Argument& arg);
 
+unsigned GetSize(const D3D12_TEXTURE_COPY_DESCs_Argument& arg);
+void Encode(char* dest, unsigned& offset, const D3D12_TEXTURE_COPY_DESCs_Argument& arg);
+
+unsigned GetSize(const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg);
+void Encode(char* dest, unsigned& offset, const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg);
+
+unsigned GetSize(const D3D12_FILL_BUFFER_DESCs_Argument& arg);
+void Encode(char* dest, unsigned& offset, const D3D12_FILL_BUFFER_DESCs_Argument& arg);
+
+unsigned GetSize(const BoxArraysArgument& arg);
+void Encode(char* dest, unsigned& offset, const BoxArraysArgument& arg);
+
+unsigned GetSize(const CastableFormatArraysArgument& arg);
+void Encode(char* dest, unsigned& offset, const CastableFormatArraysArgument& arg);
+
 unsigned GetSize(const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
 void Encode(char* dest,
             unsigned& offset,
             const ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>& arg);
+
+unsigned GetSize(const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg);
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_CACHE_VALUE_KEY>& arg);
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_CACHE_VALUE_KEY>& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>& arg);
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_DATABASE_PIPELINE_STATE_KEY>& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>& arg);
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_DATABASE_STATE_OBJECT_KEY>& arg);
+
+unsigned GetSize(const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg);
+
+unsigned GetSize(const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg);
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg);
+
+unsigned GetSize(const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg);
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg);
+void Encode(char* dest,
+            unsigned& offset,
+            const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg);
 
 unsigned GetSize(const PointerArgument<D3D12_UNORDERED_ACCESS_VIEW_DESC>& arg);
 void Encode(char* dest,
@@ -349,6 +397,12 @@ void Encode(char* dest, unsigned& offset, const xess_d3d12_init_params_t_Argumen
 
 unsigned GetSize(const xess_d3d12_execute_params_t_Argument& arg);
 void Encode(char* dest, unsigned& offset, const xess_d3d12_execute_params_t_Argument& arg);
+
+unsigned GetSize(const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg);
+void Encode(char* dest, unsigned& offset, const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg);
+
+unsigned GetSize(const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg);
+void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg);
 
 unsigned GetSize(const ArrayArgument<D3D12_META_COMMAND_DESC>& arg);
 void Encode(char* dest, unsigned& offset, const ArrayArgument<D3D12_META_COMMAND_DESC>& arg);

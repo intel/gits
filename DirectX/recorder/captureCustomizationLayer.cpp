@@ -184,6 +184,24 @@ void CaptureCustomizationLayer::Post(ID3D12Device10CreateCommittedResource3Comma
   c.m_HeapFlags.Value = m_HeapInfo.Flags;
 }
 
+void CaptureCustomizationLayer::Pre(ID3D12Device16CreateCommittedResource4Command& c) {
+  m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
+  c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
+  // Modify D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS to enable writewatch
+  m_Manager.GetMapTrackingService().EnableWriteWatch(*c.m_pHeapProperties.Value,
+                                                     c.m_HeapFlags.Value);
+}
+
+void CaptureCustomizationLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+  }
+  // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
+  c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
+  c.m_HeapFlags.Value = m_HeapInfo.Flags;
+}
+
 void CaptureCustomizationLayer::Pre(INTC_D3D12_CreateCommittedResourceCommand& c) {
   m_HeapInfo = HeapInfo(c.m_pHeapProperties.Value, c.m_HeapFlags.Value);
   c.m_pHeapProperties.Value = &m_HeapInfo.Properties;
@@ -254,6 +272,15 @@ void CaptureCustomizationLayer::Post(ID3D12Device10CreatePlacedResource2Command&
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_pDesc.Value->Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
+  }
+}
+
+void CaptureCustomizationLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (c.m_Result.Value == S_OK) {
+    ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetGpuAddressService().CreatePlacedResource(
+        c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
+        c.m_pResourceDesc.Value->Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
   }
 }
 
@@ -784,6 +811,51 @@ void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList4BeginRenderPassCom
   }
 }
 
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList7BarrierCommand& c) {
+  FillDescriptorHeapBarriers(c.m_pBarrierGroups);
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  FillDescriptorHeapBarriers(c.m_pBarrierGroups);
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  FillDescriptorHeapBarriers(c.m_pBarrierGroups);
+}
+
+void CaptureCustomizationLayer::FillDescriptorHeapBarriers(D3D12_BARRIER_GROUPs_Argument& arg) {
+  if (arg.DescriptorIndexes.empty()) {
+    return;
+  }
+
+  unsigned objectKeyIndex = 0;
+  unsigned descriptorIndex = 0;
+  for (unsigned i = 0; i < arg.Size; ++i) {
+    const D3D12_BARRIER_GROUP& group = arg.Value[i];
+    if (group.Type == D3D12_BARRIER_TYPE_GLOBAL) {
+      continue;
+    }
+    if (group.Type != D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+      objectKeyIndex += group.NumBarriers;
+      continue;
+    }
+    for (unsigned j = 0; j < group.NumBarriers; ++j) {
+      size_t handle = group.pDescriptorHeapBarriers[j].BaseDescriptor.ptr;
+      CaptureDescriptorHandleService::HandleInfo info =
+          m_Manager.GetDescriptorHandleService().GetDescriptorHandleInfo(
+              D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+              CaptureDescriptorHandleService::HandleType::GpuHandle, handle);
+      if (!info.InterfaceKey) {
+        info = m_Manager.GetDescriptorHandleService().GetDescriptorHandleInfo(
+            D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+            CaptureDescriptorHandleService::HandleType::GpuHandle, handle);
+      }
+      arg.ObjectKeys[objectKeyIndex++] = info.InterfaceKey;
+      arg.DescriptorIndexes[descriptorIndex++] = info.Index;
+    }
+  }
+}
+
 void CaptureCustomizationLayer::Pre(
     ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c) {
   auto resolveInputsGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address) {
@@ -982,6 +1054,68 @@ void CaptureCustomizationLayer::Pre(
         c.m_pDesc.SourceOffset[i] = info.Offset;
       }
     }
+  }
+}
+
+void CaptureCustomizationLayer::Pre(
+    ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& c) {
+  if (!c.m_pDescs.Value) {
+    return;
+  }
+  auto resolveGpuAddress = [&](D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS = false) {
+    GpuAddressService::GpuAddressInfo info =
+        m_Manager.GetGpuAddressService().GetGpuAddressInfo(address, raytracingAS);
+    c.m_pDescs.DataKeys.push_back(info.ResourceKey);
+    c.m_pDescs.DataOffsets.push_back(info.Offset);
+  };
+
+  for (unsigned i = 0; i < c.m_NumOperationDescs.Value; ++i) {
+    const D3D12_RTAS_OPERATION_DESC& desc = c.m_pDescs.Value[i];
+    if (!desc.pBatchedOperationData) {
+      continue;
+    }
+    if (desc.Inputs.Type == D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS) {
+      const D3D12_RTAS_PARTITIONED_TLAS_OPERATION_DATA& data = *desc.pPartitionedTlasOperationData;
+      resolveGpuAddress(data.SourceAccelerationStructureData, true);
+      resolveGpuAddress(data.DestAccelerationStructureData, true);
+      resolveGpuAddress(data.ScratchAccelerationStructureData);
+      resolveGpuAddress(data.IndirectPartitionedTlasOpCount);
+      resolveGpuAddress(data.IndirectPartitionedTlasOps);
+    } else {
+      const D3D12_RTAS_BATCHED_OPERATION_DATA& data = *desc.pBatchedOperationData;
+      resolveGpuAddress(data.BatchResultData, true);
+      resolveGpuAddress(data.BatchScratchData);
+      resolveGpuAddress(data.ResultAddressArray.StartAddress);
+      resolveGpuAddress(data.ResultSizeArray.StartAddress);
+      resolveGpuAddress(data.IndirectArgumentArray.StartAddress);
+      resolveGpuAddress(data.IndirectArgumentArraySize);
+      resolveGpuAddress(data.ToolsInfo);
+    }
+  }
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12Resource3GetCastableFormatsCommand& c) {
+  if (c.m_pCastableFormats.Value) {
+    c.m_pCastableFormats.Size = c.m_Object.Value->GetCastableFormatsCount();
+  }
+}
+
+void CaptureCustomizationLayer::Pre(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& c) {
+  if (!c.m_pRanges.Value) {
+    return;
+  }
+  for (unsigned i = 0; i < c.m_NumRanges.Value; ++i) {
+    DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE> destHandle{
+        c.m_pRanges.Value[i].DestRangeStart};
+    FillGpuDescriptorHandleArgument(destHandle, c.m_DescriptorHeapsType.Value);
+    c.m_pRanges.DestHeapKeys[i] = destHandle.InterfaceKey;
+    c.m_pRanges.DestIndexes[i] = destHandle.Index;
+
+    DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE> sourceHandle{
+        c.m_pRanges.Value[i].SrcRangeStart};
+    FillGpuDescriptorHandleArgument(sourceHandle, c.m_DescriptorHeapsType.Value);
+    c.m_pRanges.SourceHeapKeys[i] = sourceHandle.InterfaceKey;
+    c.m_pRanges.SourceIndexes[i] = sourceHandle.Index;
   }
 }
 

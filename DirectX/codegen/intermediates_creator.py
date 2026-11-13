@@ -46,6 +46,7 @@ def decode_sal(param):
             '_Field_size_',
             '_In_opt_count_',
             '_In_count_',
+            '_Inout_count_',
             '_Field_size_bytes_'
             '_Field_size_opt_'
         ]
@@ -236,6 +237,7 @@ def postprocess(functions, interfaces, structures):
         'D3D12_RENDER_PASS_RENDER_TARGET_DESC',
         'D3D12_RENDER_PASS_DEPTH_STENCIL_DESC',        
         'D3D12_BARRIER_GROUP',
+        'D3D12_TEXTURE_COPY_DESC',
         'DML_BUFFER_BINDING',
         'DML_GRAPH_DESC',
         'DML_BINDING_DESC',
@@ -331,7 +333,8 @@ def parse_functions(header):
     }
     
     skip = {
-      'D3D12CreateVersionedRootSignatureDeserializerFromSubobjectInLibrary'
+      'D3D12CreateVersionedRootSignatureDeserializerFromSubobjectInLibrary',
+      'D3D12SDKLayersGetInterface'
     }
 
     for cxx_function in header.data.namespace.functions:

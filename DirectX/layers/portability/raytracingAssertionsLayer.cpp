@@ -347,6 +347,10 @@ void RaytracingAssertionsLayer::Post(ID3D12Device10CreateCommittedResource3Comma
   AddResource(c, c.m_InitialLayout.Value);
 }
 
+void RaytracingAssertionsLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  AddResource(c, c.m_InitialLayout.Value);
+}
+
 void RaytracingAssertionsLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
   if (c.Skip || c.m_Result.Value != S_OK || !c.m_ppvHeap.Value || !*c.m_ppvHeap.Value ||
       !c.m_pDesc.Value) {
@@ -372,6 +376,10 @@ void RaytracingAssertionsLayer::Post(ID3D12Device8CreatePlacedResource1Command& 
 }
 
 void RaytracingAssertionsLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
+  AddResource(c, c.m_InitialLayout.Value, c.m_pHeap.Key, c.m_HeapOffset.Value);
+}
+
+void RaytracingAssertionsLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
   AddResource(c, c.m_InitialLayout.Value, c.m_pHeap.Key, c.m_HeapOffset.Value);
 }
 
@@ -429,7 +437,27 @@ void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c
   }
   m_ResourceStates.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
                                    c.m_NumBarrierGroups.Value,
-                                   c.m_pBarrierGroups.ResourceKeys.data());
+                                   c.m_pBarrierGroups.ObjectKeys.data());
+  RecordScratchBarrier(c.m_Object.Key);
+}
+
+void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  m_ResourceStates.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                   c.m_NumBarrierGroups.Value,
+                                   c.m_pBarrierGroups.ObjectKeys.data());
+  RecordScratchBarrier(c.m_Object.Key);
+}
+
+void RaytracingAssertionsLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  if (c.Skip) {
+    return;
+  }
+  m_ResourceStates.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
+                                   c.m_NumBarrierGroups.Value,
+                                   c.m_pBarrierGroups.ObjectKeys.data());
   RecordScratchBarrier(c.m_Object.Key);
 }
 
@@ -958,7 +986,8 @@ void RaytracingAssertionsLayer::AddResource(Command& c,
     return;
   }
   auto* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
-  if (resource->GetDesc().Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
+  const D3D12_RESOURCE_DESC desc = resource->GetDesc();
+  if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER) {
     return;
   }
   const ObjectKey key = c.m_ppvResource.Key;
@@ -967,7 +996,7 @@ void RaytracingAssertionsLayer::AddResource(Command& c,
     GITS_ASSERT(hr == S_OK);
   }
   if (heapKey) {
-    m_AddressService.CreatePlacedResource(heapKey, key, c.m_pDesc.Value->Flags, initialState);
+    m_AddressService.CreatePlacedResource(heapKey, key, desc.Flags, initialState);
     m_ResourceHeapLocations[key] = {heapKey, heapOffset};
   } else {
     m_ResourceHeapLocations[key] = {key, 0};

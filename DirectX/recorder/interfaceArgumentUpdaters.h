@@ -215,6 +215,33 @@ private:
 };
 
 template <>
+class UpdateInterfaceT<D3D12_TEXTURE_COPY_DESCs_Argument, D3D12_TEXTURE_COPY_DESC> {
+public:
+  UpdateInterfaceT(D3D12_TEXTURE_COPY_DESCs_Argument& arg, const D3D12_TEXTURE_COPY_DESC* value);
+
+private:
+  std::vector<D3D12_TEXTURE_COPY_DESC> m_Unwrapped;
+};
+
+template <>
+class UpdateInterfaceT<D3D12_CLEAR_TEXTURE_DESCs_Argument, D3D12_CLEAR_TEXTURE_DESC> {
+public:
+  UpdateInterfaceT(D3D12_CLEAR_TEXTURE_DESCs_Argument& arg, const D3D12_CLEAR_TEXTURE_DESC* value);
+
+private:
+  std::vector<D3D12_CLEAR_TEXTURE_DESC> m_Unwrapped;
+};
+
+template <>
+class UpdateInterfaceT<D3D12_FILL_BUFFER_DESCs_Argument, D3D12_FILL_BUFFER_DESC> {
+public:
+  UpdateInterfaceT(D3D12_FILL_BUFFER_DESCs_Argument& arg, const D3D12_FILL_BUFFER_DESC* value);
+
+private:
+  std::vector<D3D12_FILL_BUFFER_DESC> m_Unwrapped;
+};
+
+template <>
 class UpdateInterfaceT<D3D12_EXTENSION_ARGUMENTS_Argument, D3D12_EXTENSION_ARGUMENTS> {
 public:
   UpdateInterfaceT(D3D12_EXTENSION_ARGUMENTS_Argument& arg, const D3D12_EXTENSION_ARGUMENTS* value);

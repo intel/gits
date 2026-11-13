@@ -127,10 +127,11 @@ void DispatchOutputsDumpService::ResourceBarrier(
                                          c.m_NumBarriers.Value, c.m_pBarriers.ResourceKeys.data());
 }
 
-void DispatchOutputsDumpService::Barrier(ID3D12GraphicsCommandList7BarrierCommand& c) {
-  m_ResourceStateTracker.ResourceBarrier(c.m_Object.Value, c.m_pBarrierGroups.Value,
-                                         c.m_NumBarrierGroups.Value,
-                                         c.m_pBarrierGroups.ResourceKeys.data());
+void DispatchOutputsDumpService::Barrier(ID3D12GraphicsCommandList* commandList,
+                                         D3D12_BARRIER_GROUPs_Argument& barrierGroups) {
+  m_ResourceStateTracker.ResourceBarrier(commandList, barrierGroups.Value,
+                                         static_cast<unsigned>(barrierGroups.Size),
+                                         barrierGroups.ObjectKeys.data());
 }
 
 bool DispatchOutputsDumpService::DumpComputeOutput(ID3D12GraphicsCommandList* commandList,

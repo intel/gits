@@ -1015,6 +1015,113 @@ void AnalyzerLayer::Post(ID3D12GraphicsCommandList7BarrierCommand& c) {
   }
 }
 
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList11WaitBarrierCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  GITS_ASSERT(!m_Optimize, "ID3D12GraphicsCommandList11::WaitBarrier is not supported in "
+                           "optimized subcapture!");
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList11SignalBarrierCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  GITS_ASSERT(!m_Optimize, "ID3D12GraphicsCommandList11::SignalBarrier is not supported in "
+                           "optimized subcapture!");
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12CopyBufferRegionsCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12CopyTextureRegionsCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  GITS_ASSERT(!m_Optimize, "ID3D12CommandListGpuCopyDescriptors::CopyDescriptors is not supported "
+                           "in optimized subcapture!");
+  m_AnalyzerService.NotifyObject(c.m_Object.Key);
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12CopyResourcesCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12CopyTilesAsyncCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12GraphicsCommandList12FillBuffersCommand& c) {
+  if (m_AnalyzerService.AfterRange()) {
+    return;
+  }
+  m_AnalyzerService.CommandListCommand(c.m_Object.Key);
+  if (m_Optimize) {
+    m_CommandListService.Command(c);
+  }
+}
+
 void AnalyzerLayer::Post(NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c) {
   if (m_AnalyzerService.AfterRange()) {
     return;
@@ -1791,6 +1898,34 @@ void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
                                                c.m_pDesc.Value->Flags, c.m_InitialLayout.Value);
     }
+  }
+}
+
+void AnalyzerLayer::Post(ID3D12Device16CreateCommittedResource4Command& c) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_Object.Key);
+  m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
+  m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_Object.Key);
+  m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                     c.m_ppvResource.Key, c.m_InitialLayout.Value);
+}
+
+void AnalyzerLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
+  if (m_AnalyzerService.AfterRange() || c.m_Result.Value != S_OK) {
+    return;
+  }
+  m_AnalyzerService.NotifyObject(c.m_Object.Key);
+  m_AnalyzerService.NotifyObject(c.m_pHeap.Key);
+  m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
+  m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
+  if (m_Optimize) {
+    m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
+                                       c.m_ppvResource.Key, c.m_InitialLayout.Value);
+    m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
+                                             c.m_pResourceDesc.Value->Flags,
+                                             c.m_InitialLayout.Value);
   }
 }
 

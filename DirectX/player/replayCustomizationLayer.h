@@ -87,12 +87,14 @@ public:
   void Post(ID3D12Device4CreateCommittedResource1Command& command) override;
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& command) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
   void Post(ID3D12Device4CreateReservedResource1Command& command) override;
   void Post(ID3D12Device10CreateReservedResource2Command& command) override;
   void Post(ID3D12DeviceCreatePlacedResourceCommand& command) override;
   void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& command) override;
   void Post(ID3D12DeviceCreateHeapCommand& command) override;
   void Post(ID3D12Device4CreateHeap1Command& command) override;
   void Post(INTC_D3D12_CreateHeapCommand& command) override;
@@ -115,6 +117,8 @@ public:
   void Pre(ID3D12GraphicsCommandListSOSetTargetsCommand& command) override;
   void Pre(ID3D12GraphicsCommandList2WriteBufferImmediateCommand& command) override;
   void Pre(ID3D12DeviceCheckFeatureSupportCommand& command) override;
+  void Pre(ID3D12Device16CheckFeatureSupport1Command& command) override;
+  void Pre(ID3D12CommandListRaytracing2ExecuteIndirectRTASOperationsCommand& command) override;
   void Pre(ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& command) override;
   void Pre(ID3D12Device1CreatePipelineLibraryCommand& command) override;
   void Pre(ID3D12ObjectGetPrivateDataCommand& command) override;
@@ -179,6 +183,20 @@ public:
   void Pre(ID3D12InfoQueueAddStorageFilterEntriesCommand& command) override;
   void Pre(ID3D12InfoQueuePushStorageFilterCommand& command) override;
   void Pre(ID3D12Device12GetResourceAllocationInfo3Command& command) override;
+  void Pre(ID3D12Device16GetResourceAllocationInfo4Command& command) override;
+  void Pre(ID3D12Resource3GetCastableFormatsCommand& command) override;
+  void Pre(ID3D12DeviceExecuteTileMappingsRegisterResourceLayoutsCommand& command) override;
+  void Post(ID3D12DeviceExecuteTileMappingsRegisterResourceLayoutsCommand& command) override;
+  void Pre(ID3D12DeviceExecuteTileMappingsRegisterHeapLayoutsCommand& command) override;
+  void Post(ID3D12DeviceExecuteTileMappingsRegisterHeapLayoutsCommand& command) override;
+  void Pre(ID3D12DeviceDumpFileSetDumpFileCallbacksCommand& command) override;
+  void Pre(ID3D12ShaderCacheSession1FindValue1Command& command) override;
+  void Pre(ID3D12StateObjectDatabase1EnumeratePipelineStatesCommand& command) override;
+  void Pre(ID3D12StateObjectDatabase1EnumerateStateObjectsCommand& command) override;
+  void Pre(ID3D12StateObjectDatabase1GetStateObjectDependenciesCommand& command) override;
+  void Pre(ID3D12StateObjectDatabase1GetApplicationDesc1Command& command) override;
+  void Pre(ID3D12StateObjectDatabase1FindPipelineStateDesc1Command& command) override;
+  void Pre(ID3D12StateObjectDatabase1FindStateObjectDesc1Command& command) override;
   void Pre(ID3D12GraphicsCommandListResolveQueryDataCommand& command) override;
   void Pre(ID3D12DeviceCreateCommandQueueCommand& command) override;
   void Pre(ID3D12DeviceCreateCommandAllocatorCommand& command) override;
@@ -187,6 +205,11 @@ public:
   void Pre(IDMLBindingTableResetCommand& command) override;
   void Pre(D3D12CreateVersionedRootSignatureDeserializerCommand& c) override;
   void Pre(ID3D12GraphicsCommandList4BeginRenderPassCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList7BarrierCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList11WaitBarrierCommand& command) override;
+  void Pre(ID3D12GraphicsCommandList11SignalBarrierCommand& command) override;
+  void Pre(ID3D12TileMappingQueueSignalCommand& command) override;
+  void Pre(ID3D12TileMappingQueueWaitCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& command) override;
   void Pre(ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand&
@@ -198,6 +221,7 @@ public:
   void Pre(ID3DBlobGetBufferSizeCommand& command) override;
   void Pre(ID3D12SDKConfigurationSetSDKVersionCommand& command) override;
   void Pre(ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixCommand& command) override;
+  void Pre(ID3D12CommandListGpuCopyDescriptorsCopyDescriptorsCommand& command) override;
   void Pre(INTC_D3D12_SetApplicationInfoCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContextCommand& command) override;
   void Pre(INTC_D3D12_CreateDeviceExtensionContext1Command& command) override;
@@ -235,6 +259,7 @@ private:
   void FillGpuAddressArgument(D3D12_GPU_VIRTUAL_ADDRESS_Argument& arg);
   void FillGpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_GPU_DESCRIPTOR_HANDLE>& arg);
   void FillCpuDescriptorHandleArgument(DescriptorHandleArgument<D3D12_CPU_DESCRIPTOR_HANDLE>& arg);
+  void UpdateDescriptorHeapBarriers(D3D12_BARRIER_GROUPs_Argument& arg);
   void WaitForFence(CommandKey commandKey,
                     ObjectKey fenceKey,
                     ID3D12Fence* fence,
@@ -268,6 +293,8 @@ private:
   std::unordered_map<ObjectKey, HWND> m_SwapChainCapturedWindows;
   std::unordered_set<ObjectKey> m_ExclusiveFullscreenSwapChains;
   GpuExecutionTracker m_GpuExecutionTracker;
+  std::vector<DXGI_FORMAT> m_CastableFormats;
+  std::vector<UINT> m_CapturedLayoutIndexes;
 };
 
 } // namespace DirectX

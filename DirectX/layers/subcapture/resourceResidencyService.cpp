@@ -58,6 +58,13 @@ void ResourceResidencyService::AddResource(ObjectKey resourceKey) {
       m_ResidencyKeys.insert(resourceKey);
     }
   } break;
+  case CommandId::ID_ID3D12DEVICE16_CREATECOMMITTEDRESOURCE4: {
+    auto* command =
+        static_cast<ID3D12Device16CreateCommittedResource4Command*>(state->CreationCommand.get());
+    if (command->m_HeapFlags.Value & D3D12_HEAP_FLAG_CREATE_NOT_RESIDENT) {
+      m_ResidencyKeys.insert(resourceKey);
+    }
+  } break;
   case CommandId::INTC_D3D12_CREATECOMMITTEDRESOURCE: {
     auto* command =
         static_cast<INTC_D3D12_CreateCommittedResourceCommand*>(state->CreationCommand.get());
@@ -68,6 +75,7 @@ void ResourceResidencyService::AddResource(ObjectKey resourceKey) {
   case CommandId::ID_ID3D12DEVICE_CREATEPLACEDRESOURCE:
   case CommandId::ID_ID3D12DEVICE8_CREATEPLACEDRESOURCE1:
   case CommandId::ID_ID3D12DEVICE10_CREATEPLACEDRESOURCE2:
+  case CommandId::ID_ID3D12DEVICE16_CREATEPLACEDRESOURCE3:
   case CommandId::INTC_D3D12_CREATEPLACEDRESOURCE: {
     ObjectKey heapKey = static_cast<ResourceState*>(state)->HeapKey;
     ObjectState* heapState = m_StateService.GetState(heapKey);

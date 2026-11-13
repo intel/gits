@@ -27,9 +27,15 @@ public:
   void CreateResource(ObjectKey resourceKey,
                       ID3D12Resource* resource,
                       D3D12_RESOURCE_STATES initialState);
+  void CreateResource(ObjectKey resourceKey,
+                      ID3D12Resource* resource,
+                      D3D12_BARRIER_LAYOUT initialLayout);
   void DestroyResource(ObjectKey resourceKey);
   void CommandListCall(CommandKey callKey, ID3D12GraphicsCommandList* commandList);
   void ResourceBarrier(ID3D12GraphicsCommandListResourceBarrierCommand& c);
+  void ResourceBarrier(ID3D12GraphicsCommandList7BarrierCommand& c);
+  void ResourceBarrier(ID3D12GraphicsCommandList11WaitBarrierCommand& c);
+  void ResourceBarrier(ID3D12GraphicsCommandList11SignalBarrierCommand& c);
   void ExecuteCommandLists(CommandKey key,
                            ObjectKey commandQueueKey,
                            ID3D12CommandQueue* commandQueue,

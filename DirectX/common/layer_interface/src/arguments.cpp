@@ -11,6 +11,8 @@
 #include <d3dx12/d3dx12_pipeline_state_stream.h>
 #include "log.h"
 
+#include <algorithm>
+
 namespace gits {
 namespace DirectX {
 
@@ -1601,6 +1603,91 @@ ArrayArgument<D3D12_META_COMMAND_DESC>::~ArrayArgument() {
   }
 }
 
+unsigned GetRtasOperationInputsDescSize(D3D12_RTAS_OPERATION_TYPE type) {
+  switch (type) {
+  case D3D12_RTAS_OPERATION_TYPE_MOVE_CLUSTER_OBJECTS:
+    return sizeof(D3D12_RTAS_CLUSTER_MOVES_DESC);
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_BLAS_FROM_CLAS:
+    return sizeof(D3D12_RTAS_CLAS_INPUTS_DESC);
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLAS_FROM_TRIANGLES:
+    return sizeof(D3D12_RTAS_CLUSTER_TRIANGLES_INPUTS_DESC);
+  case D3D12_RTAS_OPERATION_TYPE_BUILD_CLUSTER_TEMPLATES_FROM_TRIANGLES:
+    return sizeof(D3D12_RTAS_CLUSTER_TEMPLATE_TRIANGLES_INPUTS_DESC);
+  case D3D12_RTAS_OPERATION_TYPE_INSTANTIATE_CLUSTER_TEMPLATES:
+    return sizeof(D3D12_RTAS_INSTANTIATE_CLUSTER_TEMPLATE_INPUTS_DESC);
+  case D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS:
+    return sizeof(D3D12_RTAS_PARTITIONED_TLAS_INPUTS_DESC);
+  }
+  GITS_ASSERT(false, "Unknown D3D12_RTAS_OPERATION_TYPE");
+  return 0;
+}
+
+unsigned GetRtasOperationDataSize(D3D12_RTAS_OPERATION_TYPE type) {
+  return type == D3D12_RTAS_OPERATION_TYPE_PARTITIONED_TLAS
+             ? sizeof(D3D12_RTAS_PARTITIONED_TLAS_OPERATION_DATA)
+             : sizeof(D3D12_RTAS_BATCHED_OPERATION_DATA);
+}
+
+static void CopyRtasOperationInputs(D3D12_RTAS_OPERATION_INPUTS& dst,
+                                    const D3D12_RTAS_OPERATION_INPUTS& src) {
+  dst = src;
+  if (src.pClasDesc) {
+    unsigned size = GetRtasOperationInputsDescSize(src.Type);
+    char* desc = new char[size];
+    memcpy(desc, src.pClasDesc, size);
+    dst.pClasDesc = reinterpret_cast<D3D12_RTAS_CLAS_INPUTS_DESC*>(desc);
+  }
+}
+
+PointerArgument<D3D12_RTAS_OPERATION_INPUTS>::PointerArgument(
+    const PointerArgument<D3D12_RTAS_OPERATION_INPUTS>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  Value = new D3D12_RTAS_OPERATION_INPUTS();
+  CopyRtasOperationInputs(*Value, *arg.Value);
+  Copy = true;
+}
+
+PointerArgument<D3D12_RTAS_OPERATION_INPUTS>::~PointerArgument() {
+  if (Copy) {
+    delete[] reinterpret_cast<const char*>(Value->pClasDesc);
+    delete Value;
+  }
+}
+
+ArrayArgument<D3D12_RTAS_OPERATION_DESC>::ArrayArgument(
+    const ArrayArgument<D3D12_RTAS_OPERATION_DESC>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  Size = arg.Size;
+  Value = new D3D12_RTAS_OPERATION_DESC[Size];
+  for (unsigned i = 0; i < Size; ++i) {
+    Value[i] = arg.Value[i];
+    CopyRtasOperationInputs(Value[i].Inputs, arg.Value[i].Inputs);
+    if (arg.Value[i].pBatchedOperationData) {
+      unsigned size = GetRtasOperationDataSize(Value[i].Inputs.Type);
+      char* data = new char[size];
+      memcpy(data, arg.Value[i].pBatchedOperationData, size);
+      Value[i].pBatchedOperationData = reinterpret_cast<D3D12_RTAS_BATCHED_OPERATION_DATA*>(data);
+    }
+  }
+  DataKeys = arg.DataKeys;
+  DataOffsets = arg.DataOffsets;
+  Copy = true;
+}
+
+ArrayArgument<D3D12_RTAS_OPERATION_DESC>::~ArrayArgument() {
+  if (Copy) {
+    for (unsigned i = 0; i < Size; ++i) {
+      delete[] reinterpret_cast<const char*>(Value[i].Inputs.pClasDesc);
+      delete[] reinterpret_cast<const char*>(Value[i].pBatchedOperationData);
+    }
+    delete[] Value;
+  }
+}
+
 D3D12_BARRIER_GROUPs_Argument::D3D12_BARRIER_GROUPs_Argument(
     const D3D12_BARRIER_GROUPs_Argument& arg) {
   Size = arg.Size;
@@ -1621,10 +1708,16 @@ D3D12_BARRIER_GROUPs_Argument::D3D12_BARRIER_GROUPs_Argument(
         Value[i].pBufferBarriers = new D3D12_BUFFER_BARRIER[Value[i].NumBarriers];
         memcpy(const_cast<D3D12_BUFFER_BARRIER*>(Value[i].pBufferBarriers),
                arg.Value[i].pBufferBarriers, sizeof(D3D12_BUFFER_BARRIER) * Value[i].NumBarriers);
+      } else if (Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+        Value[i].pDescriptorHeapBarriers = new D3D12_DESCRIPTOR_HEAP_BARRIER[Value[i].NumBarriers];
+        memcpy(const_cast<D3D12_DESCRIPTOR_HEAP_BARRIER*>(Value[i].pDescriptorHeapBarriers),
+               arg.Value[i].pDescriptorHeapBarriers,
+               sizeof(D3D12_DESCRIPTOR_HEAP_BARRIER) * Value[i].NumBarriers);
       }
     }
   }
-  ResourceKeys = arg.ResourceKeys;
+  ObjectKeys = arg.ObjectKeys;
+  DescriptorIndexes = arg.DescriptorIndexes;
   Copy = true;
 }
 
@@ -1637,9 +1730,143 @@ D3D12_BARRIER_GROUPs_Argument::~D3D12_BARRIER_GROUPs_Argument() {
         delete[] Value[i].pTextureBarriers;
       } else if (Value[i].Type == D3D12_BARRIER_TYPE_BUFFER) {
         delete[] Value[i].pBufferBarriers;
+      } else if (Value[i].Type == D3D12_BARRIER_TYPE_DESCRIPTOR_HEAP) {
+        delete[] Value[i].pDescriptorHeapBarriers;
       }
     }
 
+    delete[] Value;
+  }
+}
+
+D3D12_TEXTURE_COPY_DESCs_Argument::D3D12_TEXTURE_COPY_DESCs_Argument(
+    const D3D12_TEXTURE_COPY_DESCs_Argument& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_TEXTURE_COPY_DESC[Size];
+    memcpy(Value, arg.Value, Size * sizeof(D3D12_TEXTURE_COPY_DESC));
+    for (unsigned i = 0; i < Size; ++i) {
+      if (!arg.Value[i].pCopyRegions) {
+        continue;
+      }
+      D3D12_TEXTURE_COPY_REGION* regions = new D3D12_TEXTURE_COPY_REGION[Value[i].NumRegions];
+      memcpy(regions, arg.Value[i].pCopyRegions,
+             sizeof(D3D12_TEXTURE_COPY_REGION) * Value[i].NumRegions);
+      for (unsigned j = 0; j < Value[i].NumRegions; ++j) {
+        if (regions[j].pSourceBox) {
+          regions[j].pSourceBox = new D3D12_BOX(*regions[j].pSourceBox);
+        }
+      }
+      Value[i].pCopyRegions = regions;
+    }
+  }
+  DestOrBufferKeys = arg.DestOrBufferKeys;
+  SourceOrTextureKeys = arg.SourceOrTextureKeys;
+  Copy = true;
+}
+
+D3D12_TEXTURE_COPY_DESCs_Argument::~D3D12_TEXTURE_COPY_DESCs_Argument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Size; ++i) {
+      if (!Value[i].pCopyRegions) {
+        continue;
+      }
+      for (unsigned j = 0; j < Value[i].NumRegions; ++j) {
+        delete Value[i].pCopyRegions[j].pSourceBox;
+      }
+      delete[] Value[i].pCopyRegions;
+    }
+    delete[] Value;
+  }
+}
+
+D3D12_CLEAR_TEXTURE_DESCs_Argument::D3D12_CLEAR_TEXTURE_DESCs_Argument(
+    const D3D12_CLEAR_TEXTURE_DESCs_Argument& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_CLEAR_TEXTURE_DESC[Size];
+    memcpy(Value, arg.Value, Size * sizeof(D3D12_CLEAR_TEXTURE_DESC));
+    for (unsigned i = 0; i < Size; ++i) {
+      if (Value[i].pRegion) {
+        Value[i].pRegion = new D3D12_BOX(*arg.Value[i].pRegion);
+      }
+    }
+  }
+  ResourceKeys = arg.ResourceKeys;
+  Copy = true;
+}
+
+D3D12_CLEAR_TEXTURE_DESCs_Argument::~D3D12_CLEAR_TEXTURE_DESCs_Argument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Size; ++i) {
+      delete Value[i].pRegion;
+    }
+    delete[] Value;
+  }
+}
+
+D3D12_FILL_BUFFER_DESCs_Argument::D3D12_FILL_BUFFER_DESCs_Argument(
+    const D3D12_FILL_BUFFER_DESCs_Argument& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_FILL_BUFFER_DESC[Size];
+    memcpy(Value, arg.Value, Size * sizeof(D3D12_FILL_BUFFER_DESC));
+  }
+  ResourceKeys = arg.ResourceKeys;
+  Copy = true;
+}
+
+D3D12_FILL_BUFFER_DESCs_Argument::~D3D12_FILL_BUFFER_DESCs_Argument() {
+  if (Copy) {
+    delete[] Value;
+  }
+}
+
+BoxArraysArgument::BoxArraysArgument(const BoxArraysArgument& arg) {
+  Sizes = arg.Sizes;
+  if (arg.Value) {
+    Value = new const D3D12_BOX* [Sizes.size()] {};
+    for (unsigned i = 0; i < Sizes.size(); ++i) {
+      if (Sizes[i]) {
+        D3D12_BOX* boxes = new D3D12_BOX[Sizes[i]];
+        memcpy(boxes, arg.Value[i], Sizes[i] * sizeof(D3D12_BOX));
+        Value[i] = boxes;
+      }
+    }
+  }
+  Copy = true;
+}
+
+BoxArraysArgument::~BoxArraysArgument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Sizes.size(); ++i) {
+      delete[] Value[i];
+    }
+    delete[] Value;
+  }
+}
+
+CastableFormatArraysArgument::CastableFormatArraysArgument(
+    const CastableFormatArraysArgument& arg) {
+  Sizes = arg.Sizes;
+  if (arg.Value) {
+    Value = new const DXGI_FORMAT* [Sizes.size()] {};
+    for (unsigned i = 0; i < Sizes.size(); ++i) {
+      if (Sizes[i]) {
+        DXGI_FORMAT* formats = new DXGI_FORMAT[Sizes[i]];
+        memcpy(formats, arg.Value[i], Sizes[i] * sizeof(DXGI_FORMAT));
+        Value[i] = formats;
+      }
+    }
+  }
+  Copy = true;
+}
+
+CastableFormatArraysArgument::~CastableFormatArraysArgument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Sizes.size(); ++i) {
+      delete[] Value[i];
+    }
     delete[] Value;
   }
 }
@@ -1662,6 +1889,186 @@ ArrayArgument<D3D12_LINEAR_ALGEBRA_MATRIX_CONVERSION_INFO>::~ArrayArgument() {
   if (Copy) {
     delete[] Value;
   }
+}
+
+ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>::ArrayArgument(
+    const ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_COPY_DESCRIPTORS_RANGE[arg.Size];
+    memcpy(Value, arg.Value, Size * sizeof(D3D12_COPY_DESCRIPTORS_RANGE));
+  }
+  DestHeapKeys = arg.DestHeapKeys;
+  DestIndexes = arg.DestIndexes;
+  SourceHeapKeys = arg.SourceHeapKeys;
+  SourceIndexes = arg.SourceIndexes;
+  Copy = true;
+}
+
+ArrayArgument<D3D12_COPY_DESCRIPTORS_RANGE>::~ArrayArgument() {
+  if (Copy) {
+    delete[] Value;
+  }
+}
+
+ArrayArgument<D3D12_DATABASE_GROUP_KEY>::ArrayArgument(
+    const ArrayArgument<D3D12_DATABASE_GROUP_KEY>& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_DATABASE_GROUP_KEY[arg.Size];
+    for (unsigned i = 0; i < Size; ++i) {
+      Value[i] = arg.Value[i];
+      if (arg.Value[i].pKey) {
+        char* key = new char[arg.Value[i].KeySize];
+        memcpy(key, arg.Value[i].pKey, arg.Value[i].KeySize);
+        Value[i].pKey = key;
+      }
+    }
+  }
+  Copy = true;
+}
+
+ArrayArgument<D3D12_DATABASE_GROUP_KEY>::~ArrayArgument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Size; ++i) {
+      delete[] static_cast<const char*>(Value[i].pKey);
+    }
+    delete[] Value;
+  }
+}
+
+ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>::ArrayArgument(
+    const ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_CACHE_TYPED_CONST_VALUE[arg.Size];
+    for (unsigned i = 0; i < Size; ++i) {
+      Value[i] = arg.Value[i];
+      if (arg.Value[i].Value.pValue) {
+        char* value = new char[arg.Value[i].Value.ValueSize];
+        memcpy(value, arg.Value[i].Value.pValue, arg.Value[i].Value.ValueSize);
+        Value[i].Value.pValue = value;
+      }
+    }
+  }
+  Copy = true;
+}
+
+ArrayArgument<D3D12_CACHE_TYPED_CONST_VALUE>::~ArrayArgument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Size; ++i) {
+      delete[] static_cast<const char*>(Value[i].Value.pValue);
+    }
+    delete[] Value;
+  }
+}
+
+UINT ArrayArgument<D3D12_CACHE_TYPED_VALUE>::GetStoredValueSize(unsigned index) const {
+  const D3D12_CACHE_VALUE& value = Value[index].Value;
+  if (!value.pValue) {
+    return 0;
+  }
+  if (index < ProvidedValues.size() && ProvidedValues[index].pValue == value.pValue) {
+    return std::min(ProvidedValues[index].ValueSize, value.ValueSize);
+  }
+  return value.ValueSize;
+}
+
+ArrayArgument<D3D12_CACHE_TYPED_VALUE>::ArrayArgument(
+    const ArrayArgument<D3D12_CACHE_TYPED_VALUE>& arg) {
+  Size = arg.Size;
+  if (arg.Value) {
+    Value = new D3D12_CACHE_TYPED_VALUE[arg.Size];
+    ProvidedValues.resize(arg.Size);
+    for (unsigned i = 0; i < Size; ++i) {
+      Value[i] = arg.Value[i];
+      UINT storedSize = arg.GetStoredValueSize(i);
+      if (arg.Value[i].Value.pValue) {
+        char* value = new char[storedSize];
+        memcpy(value, arg.Value[i].Value.pValue, storedSize);
+        Value[i].Value.pValue = value;
+      }
+      ProvidedValues[i] = {Value[i].Value.pValue, storedSize};
+    }
+  }
+  Copy = true;
+}
+
+ArrayArgument<D3D12_CACHE_TYPED_VALUE>::~ArrayArgument() {
+  if (Copy && Value) {
+    for (unsigned i = 0; i < Size; ++i) {
+      delete[] static_cast<char*>(Value[i].Value.pValue);
+    }
+    delete[] Value;
+  }
+}
+
+PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>::PointerArgument(
+    const PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  Value = new D3D12_SHADER_CACHE_SESSION_DESC1(*arg.Value);
+  switch (Value->Mode) {
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    if (arg.Value->Disk.pDirectory) {
+      unsigned len = wcslen(arg.Value->Disk.pDirectory);
+      Value->Disk.pDirectory = new wchar_t[len + 1];
+      memcpy(const_cast<wchar_t*>(Value->Disk.pDirectory), arg.Value->Disk.pDirectory, len * 2 + 2);
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    if (arg.Value->Registered.pComponentName) {
+      unsigned len = wcslen(arg.Value->Registered.pComponentName);
+      Value->Registered.pComponentName = new wchar_t[len + 1];
+      memcpy(const_cast<wchar_t*>(Value->Registered.pComponentName),
+             arg.Value->Registered.pComponentName, len * 2 + 2);
+    }
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    if (arg.Value->File.pDescs) {
+      D3D12_CACHE_FILE_DESC* descs = new D3D12_CACHE_FILE_DESC[arg.Value->File.NumDescs];
+      for (unsigned i = 0; i < arg.Value->File.NumDescs; ++i) {
+        descs[i] = arg.Value->File.pDescs[i];
+        if (arg.Value->File.pDescs[i].pPath) {
+          unsigned len = wcslen(arg.Value->File.pDescs[i].pPath);
+          descs[i].pPath = new wchar_t[len + 1];
+          memcpy(const_cast<wchar_t*>(descs[i].pPath), arg.Value->File.pDescs[i].pPath,
+                 len * 2 + 2);
+        }
+      }
+      Value->File.pDescs = descs;
+    }
+    break;
+  default:
+    break;
+  }
+  Copy = true;
+}
+
+PointerArgument<D3D12_SHADER_CACHE_SESSION_DESC1>::~PointerArgument() {
+  if (!Copy || !Value) {
+    return;
+  }
+  switch (Value->Mode) {
+  case D3D12_SHADER_CACHE_MODE_DISK:
+    delete[] Value->Disk.pDirectory;
+    break;
+  case D3D12_SHADER_CACHE_MODE_REGISTERED:
+    delete[] Value->Registered.pComponentName;
+    break;
+  case D3D12_SHADER_CACHE_MODE_FILE:
+    if (Value->File.pDescs) {
+      for (unsigned i = 0; i < Value->File.NumDescs; ++i) {
+        delete[] Value->File.pDescs[i].pPath;
+      }
+      delete[] Value->File.pDescs;
+    }
+    break;
+  default:
+    break;
+  }
+  delete Value;
 }
 
 #pragma endregion

@@ -141,6 +141,14 @@ private:
   void CommandAnalysis(ID3D12GraphicsCommandList5RSSetShadingRateImageCommand& c);
   void CommandAnalysis(ID3D12GraphicsCommandList6DispatchMeshCommand& c);
   void CommandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12CopyBufferRegionsCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12CopyTextureRegionsCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12CopyResourcesCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12CopyTilesAsyncCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand& c);
+  void CommandAnalysis(ID3D12GraphicsCommandList12FillBuffersCommand& c);
 
 private:
   AnalyzerService& m_AnalyzerService;

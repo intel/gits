@@ -275,6 +275,37 @@ void AnalyzerCommandListService::CommandListRestore(ObjectKey commandListKey) {
     case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST7_BARRIER:
       CommandAnalysis(static_cast<ID3D12GraphicsCommandList7BarrierCommand&>(*storedCommand));
       break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_COPYBUFFERREGIONS:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12CopyBufferRegionsCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_COPYTEXTUREREGIONS:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12CopyTextureRegionsCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_COPYRESOURCES:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12CopyResourcesCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_COPYTILESASYNC:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12CopyTilesAsyncCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_RESOLVESUBRESOURCEREGIONASYNC:
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand&>(
+          *storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_RESOLVEQUERYDATAASYNC:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_CLEARTEXTURESUBRESOURCES:
+      CommandAnalysis(
+          static_cast<ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand&>(*storedCommand));
+      break;
+    case CommandId::ID_ID3D12GRAPHICSCOMMANDLIST12_FILLBUFFERS:
+      CommandAnalysis(static_cast<ID3D12GraphicsCommandList12FillBuffersCommand&>(*storedCommand));
+      break;
     }
   }
   m_CommandsByCommandList.erase(itCommandList);
@@ -1214,7 +1245,68 @@ void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList6Dispa
 }
 
 void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList7BarrierCommand& c) {
-  for (ObjectKey key : c.m_pBarrierGroups.ResourceKeys) {
+  for (ObjectKey key : c.m_pBarrierGroups.ObjectKeys) {
+    AddObjectForRestore(key);
+  }
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12CopyBufferRegionsCommand& c) {
+  for (ObjectKey key : c.m_ppDestBuffers.Keys) {
+    AddObjectForRestore(key);
+  }
+  for (ObjectKey key : c.m_ppSourceBuffers.Keys) {
+    AddObjectForRestore(key);
+  }
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12CopyTextureRegionsCommand& c) {
+  for (ObjectKey key : c.m_pCopyDescs.DestOrBufferKeys) {
+    AddObjectForRestore(key);
+  }
+  for (ObjectKey key : c.m_pCopyDescs.SourceOrTextureKeys) {
+    AddObjectForRestore(key);
+  }
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12CopyResourcesCommand& c) {
+  for (ObjectKey key : c.m_ppDestResources.Keys) {
+    AddObjectForRestore(key);
+  }
+  for (ObjectKey key : c.m_ppSourceResources.Keys) {
+    AddObjectForRestore(key);
+  }
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12CopyTilesAsyncCommand& c) {
+  AddObjectForRestore(c.m_pTiledResource.Key);
+  AddObjectForRestore(c.m_pBuffer.Key);
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12ResolveSubresourceRegionAsyncCommand& c) {
+  AddObjectForRestore(c.m_pDestResource.Key);
+  AddObjectForRestore(c.m_pSourceResource.Key);
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12ResolveQueryDataAsyncCommand& c) {
+  AddObjectForRestore(c.m_pQueryHeap.Key);
+  AddObjectForRestore(c.m_pDestBuffer.Key);
+}
+
+void AnalyzerCommandListService::CommandAnalysis(
+    ID3D12GraphicsCommandList12ClearTextureSubresourcesCommand& c) {
+  for (ObjectKey key : c.m_pClearDescs.ResourceKeys) {
+    AddObjectForRestore(key);
+  }
+}
+
+void AnalyzerCommandListService::CommandAnalysis(ID3D12GraphicsCommandList12FillBuffersCommand& c) {
+  for (ObjectKey key : c.m_pFillDescs.ResourceKeys) {
     AddObjectForRestore(key);
   }
 }

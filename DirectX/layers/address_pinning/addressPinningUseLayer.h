@@ -40,6 +40,8 @@ public:
   void Post(ID3D12Device8CreateCommittedResource2Command& command) override;
   void Pre(ID3D12Device10CreateCommittedResource3Command& command) override;
   void Post(ID3D12Device10CreateCommittedResource3Command& command) override;
+  void Pre(ID3D12Device16CreateCommittedResource4Command& command) override;
+  void Post(ID3D12Device16CreateCommittedResource4Command& command) override;
   void Pre(ID3D12DeviceCreateReservedResourceCommand& command) override;
   void Post(ID3D12DeviceCreateReservedResourceCommand& command) override;
   void Pre(ID3D12Device4CreateReservedResource1Command& command) override;
@@ -52,15 +54,17 @@ public:
   void Post(ID3D12Device8CreatePlacedResource1Command& command) override;
   void Pre(ID3D12Device10CreatePlacedResource2Command& command) override;
   void Post(ID3D12Device10CreatePlacedResource2Command& command) override;
+  void Pre(ID3D12Device16CreatePlacedResource3Command& command) override;
+  void Post(ID3D12Device16CreatePlacedResource3Command& command) override;
 
 private:
   void ReadAddressRanges();
 
-  template <typename CommandT>
-  void PreResource(CommandT& command);
+  template <typename CommandT, typename ResourceDescT>
+  void PreResource(CommandT& command, const ResourceDescT* desc);
 
-  template <typename CommandT>
-  void PostResource(CommandT& command);
+  template <typename CommandT, typename ResourceDescT>
+  void PostResource(CommandT& command, const ResourceDescT* desc);
 
   template <typename CommandT>
   void PreHeap(CommandT& command);
