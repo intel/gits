@@ -13,6 +13,7 @@
 #include "glEnumsAuto.h"
 #include "openglDriversAuto.h"
 
+#include <algorithm>
 #include <atomic>
 #include <string>
 #include <vector>
@@ -108,7 +109,11 @@ inline const TextureTarget* FindTextureTarget(GLenum target) {
   return nullptr;
 }
 
-inline std::vector<GLuint> AttachedShaderNames(GLuint program) {
+// The shaders attached to the program, ordered by `order`, the names in the order they were
+// attached. glGetAttachedShaders returns them in an order of its own, while the resources a link
+// assigns can depend on the order of the shaders.
+inline std::vector<GLuint> AttachedShaderNames(GLuint program,
+                                               const std::vector<GLuint>& order = {}) {
   GLint count = 0;
   GL_FN(glGetProgramiv)(program, GL_ATTACHED_SHADERS, &count);
   std::vector<GLuint> shaders(static_cast<size_t>(count > 0 ? count : 0));
@@ -117,6 +122,11 @@ inline std::vector<GLuint> AttachedShaderNames(GLuint program) {
     GL_FN(glGetAttachedShaders)(program, count, &written, shaders.data());
   }
   shaders.resize(static_cast<size_t>(written));
+  const auto position = [&order](GLuint shader) {
+    return std::find(order.begin(), order.end(), shader) - order.begin();
+  };
+  std::stable_sort(shaders.begin(), shaders.end(),
+                   [&](GLuint a, GLuint b) { return position(a) < position(b); });
   return shaders;
 }
 

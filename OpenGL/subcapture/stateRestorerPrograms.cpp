@@ -103,7 +103,13 @@ void StateRestorer::RestoreProgram(GITSKey key, GLuint name) {
     Emit<glAttachShaderCommandSerializer>(command);
   };
   const auto attachCurrentShaders = [&] {
-    for (GLuint shader : AttachedShaderNames(name)) {
+    std::vector<GLuint> order;
+    if (tracked != nullptr) {
+      for (GITSKey shader : tracked->AttachOrder) {
+        order.push_back(NameOf(GLObjectKind::Shader, shader));
+      }
+    }
+    for (GLuint shader : AttachedShaderNames(name, order)) {
       if (const GITSKey shaderKey = KeyOf(GLObjectKind::Shader, shader)) {
         attach(key, shaderKey);
       }
@@ -271,35 +277,11 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
     }
   }
 
-  if (m_Version.AtLeast(3, 1)) {
-    GLint blocks = 0;
-    GL_FN(glGetProgramiv)(program, GL_ACTIVE_UNIFORM_BLOCKS, &blocks);
-    for (GLint i = 0; i < blocks; ++i) {
-      glUniformBlockBindingCommand command;
-      command.m_program.Key = key;
-      command.m_uniformBlockIndex.Value = static_cast<GLuint>(i);
-      GLint binding = 0;
-      GL_FN(glGetActiveUniformBlockiv)
-      (program, static_cast<GLuint>(i), GL_UNIFORM_BLOCK_BINDING, &binding);
-      command.m_uniformBlockBinding.Value = static_cast<GLuint>(binding);
-      Emit<glUniformBlockBindingCommandSerializer>(command);
-    }
-  }
-  if (m_Version.AtLeast(4, 3) || (HasExtension("GL_ARB_shader_storage_buffer_object") &&
-                                  HasExtension("GL_ARB_program_interface_query"))) {
-    GLint blocks = 0;
-    GL_FN(glGetProgramInterfaceiv)(program, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &blocks);
-    for (GLint i = 0; i < blocks; ++i) {
-      const GLenum property = GL_BUFFER_BINDING;
-      GLint binding = 0;
-      GL_FN(glGetProgramResourceiv)
-      (program, GL_SHADER_STORAGE_BLOCK, static_cast<GLuint>(i), 1, &property, 1, nullptr,
-       &binding);
-      glShaderStorageBlockBindingCommand command;
-      command.m_program.Key = key;
-      command.m_storageBlockIndex.Value = static_cast<GLuint>(i);
-      command.m_storageBlockBinding.Value = static_cast<GLuint>(binding);
-      Emit<glShaderStorageBlockBindingCommandSerializer>(command);
+  if (tracked != nullptr) {
+    for (const auto* bindings : {&tracked->UniformBlockBindings, &tracked->StorageBlockBindings}) {
+      for (const auto& [index, command] : *bindings) {
+        command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+      }
     }
   }
 

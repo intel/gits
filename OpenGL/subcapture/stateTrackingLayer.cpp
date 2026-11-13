@@ -53,21 +53,33 @@ void DeleteObjects(StateTrackingService& state,
 
 // Shaders attached at link, by type and source, so a program whose shaders are detached or
 // changed afterwards can be linked again.
-std::vector<std::pair<GLenum, std::string>> AttachedShaders(GLuint program) {
-  GLint count = 0;
-  GL_FN(glGetProgramiv)(program, GL_ATTACHED_SHADERS, &count);
-  std::vector<GLuint> shaders(static_cast<size_t>(count > 0 ? count : 0));
-  GLsizei written = 0;
-  if (!shaders.empty()) {
-    GL_FN(glGetAttachedShaders)(program, count, &written, shaders.data());
+std::vector<std::pair<GLenum, std::string>> AttachedShaders(GLuint program,
+                                                            const ProgramState& tracked) {
+  std::vector<GLuint> order;
+  for (GITSKey shader : tracked.AttachOrder) {
+    order.push_back(ObjectNameMapService::Get().TryGetHandle(GLObjectKind::Shader, shader));
   }
   std::vector<std::pair<GLenum, std::string>> linked;
-  for (GLsizei i = 0; i < written; ++i) {
+  for (GLuint shader : AttachedShaderNames(program, order)) {
     GLint type = 0;
-    GL_FN(glGetShaderiv)(shaders[i], GL_SHADER_TYPE, &type);
-    linked.emplace_back(static_cast<GLenum>(type), ShaderSource(shaders[i]));
+    GL_FN(glGetShaderiv)(shader, GL_SHADER_TYPE, &type);
+    linked.emplace_back(static_cast<GLenum>(type), ShaderSource(shader));
   }
   return linked;
+}
+
+void AttachShader(StateTrackingService& state, GITSKey program, GITSKey shader) {
+  ProgramState* tracked = state.Program(program);
+  if (tracked != nullptr && std::find(tracked->AttachOrder.begin(), tracked->AttachOrder.end(),
+                                      shader) == tracked->AttachOrder.end()) {
+    tracked->AttachOrder.push_back(shader);
+  }
+}
+
+void DetachShader(StateTrackingService& state, GITSKey program, GITSKey shader) {
+  if (ProgramState* tracked = state.Program(program)) {
+    std::erase(tracked->AttachOrder, shader);
+  }
 }
 
 GLuint TextureName(GITSKey key) {
@@ -109,6 +121,8 @@ void ReplaceExecutable(ProgramState& tracked, GITSKey key) {
   }
   tracked.Binary = nullptr;
   tracked.HandleUniforms.clear();
+  tracked.UniformBlockBindings.clear();
+  tracked.StorageBlockBindings.clear();
   tracked.LinkedShaders.clear();
   tracked.LinkedSetupCount = tracked.LinkSetup.size();
 }
@@ -117,7 +131,7 @@ void SnapshotLink(StateTrackingService& state, GITSKey key, GLuint program) {
   ProgramState* tracked = state.Program(key);
   if (tracked != nullptr && Linked(program)) {
     ReplaceExecutable(*tracked, key);
-    tracked->LinkedShaders = AttachedShaders(program);
+    tracked->LinkedShaders = AttachedShaders(program, *tracked);
   }
 }
 
@@ -1475,6 +1489,22 @@ void StateTrackingLayer::Post(glProgramBinaryCommand& command) {
   }
 }
 
+void StateTrackingLayer::Post(glAttachShaderCommand& command) {
+  AttachShader(m_State, command.m_program.Key, command.m_shader.Key);
+}
+
+void StateTrackingLayer::Post(glAttachObjectARBCommand& command) {
+  AttachShader(m_State, command.m_containerObj.Key, command.m_obj.Key);
+}
+
+void StateTrackingLayer::Post(glDetachShaderCommand& command) {
+  DetachShader(m_State, command.m_program.Key, command.m_shader.Key);
+}
+
+void StateTrackingLayer::Post(glDetachObjectARBCommand& command) {
+  DetachShader(m_State, command.m_containerObj.Key, command.m_attachedObj.Key);
+}
+
 void StateTrackingLayer::Post(glLinkProgramCommand& command) {
   SnapshotLink(m_State, command.m_program.Key, command.m_program.Value);
 }
@@ -1506,6 +1536,20 @@ void StateTrackingLayer::Post(glProgramParameteriARBCommand& command) {
 
 void StateTrackingLayer::Post(glProgramParameteriEXTCommand& command) {
   AddLinkSetup<glProgramParameteriEXTCommandSerializer>(m_State, command.m_program.Key, command);
+}
+
+void StateTrackingLayer::Post(glUniformBlockBindingCommand& command) {
+  if (ProgramState* tracked = m_State.Program(command.m_program.Key)) {
+    tracked->UniformBlockBindings[command.m_uniformBlockIndex.Value] =
+        Store<glUniformBlockBindingCommandSerializer>(command);
+  }
+}
+
+void StateTrackingLayer::Post(glShaderStorageBlockBindingCommand& command) {
+  if (ProgramState* tracked = m_State.Program(command.m_program.Key)) {
+    tracked->StorageBlockBindings[command.m_storageBlockIndex.Value] =
+        Store<glShaderStorageBlockBindingCommandSerializer>(command);
+  }
 }
 
 // ---- ARB assembly programs ----------------------------------------------

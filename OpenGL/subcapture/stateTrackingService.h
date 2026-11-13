@@ -119,7 +119,9 @@ struct ObjectState {
 };
 
 struct ProgramState {
-  // Shaders attached at the last link, as (type, source).
+  // Shaders attached, in the order they were attached.
+  std::vector<GITSKey> AttachOrder;
+  // Shaders attached at the last link, in that order, as (type, source).
   std::vector<std::pair<GLenum, std::string>> LinkedShaders;
   // Commands that affect links: output locations, varyings and parameters.
   std::vector<std::shared_ptr<StoredCommand>> LinkSetup;
@@ -133,6 +135,11 @@ struct ProgramState {
   // holding a bindless handle, by recorded location. Reading a uniform back gives only the low
   // 32 bits of its handle.
   std::map<GLint, std::shared_ptr<StoredCommand>> HandleUniforms;
+  // The last glUniformBlockBinding and glShaderStorageBlockBinding call for each block index since
+  // the executable was replaced, which sets block bindings from the shaders. A link can number the
+  // blocks differently than the one recorded, so bindings it sets are not restored by index.
+  std::map<GLuint, std::shared_ptr<StoredCommand>> UniformBlockBindings;
+  std::map<GLuint, std::shared_ptr<StoredCommand>> StorageBlockBindings;
 };
 
 // An ARB assembly program. Its names are separate from those of GLSL programs.

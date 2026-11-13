@@ -260,6 +260,10 @@ public:
   void Post(glDeleteObjectARBCommand& command) override;
   void Post(glProgramBinaryCommand& command) override;
   // Link inputs: the attached shaders and the calls that affect the next link.
+  void Post(glAttachShaderCommand& command) override;
+  void Post(glAttachObjectARBCommand& command) override;
+  void Post(glDetachShaderCommand& command) override;
+  void Post(glDetachObjectARBCommand& command) override;
   void Post(glLinkProgramCommand& command) override;
   void Post(glLinkProgramARBCommand& command) override;
   void Post(glBindFragDataLocationCommand& command) override;
@@ -268,6 +272,8 @@ public:
   void Post(glProgramParameteriCommand& command) override;
   void Post(glProgramParameteriARBCommand& command) override;
   void Post(glProgramParameteriEXTCommand& command) override;
+  void Post(glUniformBlockBindingCommand& command) override;
+  void Post(glShaderStorageBlockBindingCommand& command) override;
 
   // ---- ARB assembly programs --------------------------------------------
   void Post(glGenProgramsARBCommand& command) override;
