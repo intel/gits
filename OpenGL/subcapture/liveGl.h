@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,33 @@ inline GLfloat GetFloat(GLenum pname) {
 
 inline GLuint GetName(GLenum pname) {
   return static_cast<GLuint>(GetInteger(pname));
+}
+
+// Whether the current context, of GL `major`.`minor`, keeps the features GL 3.0 deprecated. A
+// forward-compatible context removes them, a GL 3.1 context keeps them only with
+// GL_ARB_compatibility, and a later one only in a compatibility profile.
+inline bool CompatibilityContext(int major, int minor) {
+  if (major < 3) {
+    return true;
+  }
+  if ((GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0) {
+    return false;
+  }
+  if (major == 3 && minor == 0) {
+    return true;
+  }
+  if (major == 3 && minor == 1) {
+    const GLint count = GetInteger(GL_NUM_EXTENSIONS);
+    for (GLint i = 0; i < count; ++i) {
+      const auto* name =
+          reinterpret_cast<const char*>(GL_FN(glGetStringi)(GL_EXTENSIONS, static_cast<GLuint>(i)));
+      if (name != nullptr && std::strcmp(name, "GL_ARB_compatibility") == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+  return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
 }
 
 inline GLint GetVertexAttribute(GLuint index, GLenum pname) {

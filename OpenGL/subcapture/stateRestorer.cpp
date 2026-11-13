@@ -732,8 +732,7 @@ void StateRestorer::ReadVersion() {
   if (version != nullptr) {
     std::sscanf(version, "%d.%d", &m_Version.Major, &m_Version.Minor);
   }
-  m_Version.Compatibility = !m_Version.AtLeast(3, 2) || (GetInteger(GL_CONTEXT_PROFILE_MASK) &
-                                                         GL_CONTEXT_COMPATIBILITY_PROFILE_BIT);
+  m_Version.Compatibility = CompatibilityContext(m_Version.Major, m_Version.Minor);
 }
 
 void StateRestorer::MapNames(GITSKey shareGroup, GITSKey context) {
@@ -1449,8 +1448,15 @@ void StateRestorer::RestoreDrawBufferBlend(GLuint index) {
 }
 
 // Current values of generic vertex attributes, which disabled attribute arrays read. Attribute 0
-// of a compatibility context aliases the vertex position and has none.
+// of a compatibility context aliases the vertex position and has none. Any other context can
+// reject attribute queries while no vertex array is bound, though the current values are context
+// state, so a temporary vertex array is bound meanwhile.
 void StateRestorer::RestoreVertexAttributeValues() {
+  GLuint temporary = 0;
+  if (!m_Version.Compatibility && GetName(GL_VERTEX_ARRAY_BINDING) == 0) {
+    GL_FN(glGenVertexArrays)(1, &temporary);
+    GL_FN(glBindVertexArray)(temporary);
+  }
   const GLint attributes =
       std::min(GetInteger(GL_MAX_VERTEX_ATTRIBS), MAX_RESTORED_VERTEX_ATTRIBUTES);
   for (GLint i = m_Version.Compatibility ? 1 : 0; i < attributes; ++i) {
@@ -1464,6 +1470,10 @@ void StateRestorer::RestoreVertexAttributeValues() {
     if (command.m_v.Data != defaults) {
       Emit<glVertexAttrib4fvCommandSerializer>(command);
     }
+  }
+  if (temporary != 0) {
+    GL_FN(glBindVertexArray)(0);
+    GL_FN(glDeleteVertexArrays)(1, &temporary);
   }
 }
 

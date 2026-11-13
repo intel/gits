@@ -636,9 +636,7 @@ bool StateTrackingLayer::Compatibility(uint32_t threadId) {
       version != nullptr) {
     std::sscanf(version, "%d.%d", &major, &minor);
   }
-  const bool compatibility =
-      major < 3 || (major == 3 && minor < 2) ||
-      (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
+  const bool compatibility = CompatibilityContext(major, minor);
   m_Compatibility.emplace(context, compatibility);
   return compatibility;
 }
