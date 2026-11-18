@@ -702,7 +702,8 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
   // Must run before OnPostAllocateMemory, which prepends its own pNext node and would otherwise
   // chain it onto the import struct, leaving the import in what the encoder serializes.
   mapTrackingService.UnlinkExternalMemory(command.m_pAllocateInfo.Value,
-                                          s_AllocateInfo.HostPointerInfo);
+                                          s_AllocateInfo.HostPointerInfo,
+                                          s_AllocateInfo.AllocateInfoPtr->allocationSize);
 
   m_RayTracingService.OnPostAllocateMemory(command);
 

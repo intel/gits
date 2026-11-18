@@ -187,6 +187,32 @@ bool ReplaceUnwrittenRange(char* first, char* last, const char* expected, const 
   }
   return replaced;
 }
+
+// Whether [address, address + size) is committed memory that can be read.
+bool IsReadable(const void* address, size_t size) {
+  MEMORY_BASIC_INFORMATION region{};
+  if (VirtualQuery(address, &region, sizeof(region)) == 0 || region.State != MEM_COMMIT ||
+      (region.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0) {
+    return false;
+  }
+  return static_cast<const char*>(region.BaseAddress) + region.RegionSize >=
+         static_cast<const char*>(address) + size;
+}
+
+// Commits the reserved pages of the VirtualAlloc allocation at `allocationBase`.
+void CommitReservedPages(void* allocationBase) {
+  MEMORY_BASIC_INFORMATION region{};
+  const char* address = static_cast<const char*>(allocationBase);
+  while (VirtualQuery(address, &region, sizeof(region)) != 0 &&
+         region.AllocationBase == allocationBase) {
+    if (region.State == MEM_RESERVE) {
+      void* committed =
+          VirtualAlloc(region.BaseAddress, region.RegionSize, MEM_COMMIT, PAGE_READWRITE);
+      GITS_ASSERT(committed != nullptr);
+    }
+    address = static_cast<const char*>(region.BaseAddress) + region.RegionSize;
+  }
+}
 } // namespace
 
 #endif
@@ -230,9 +256,15 @@ MapTrackingService::~MapTrackingService() {
 #else
   std::lock_guard<std::mutex> lock(m_Mutex);
   // The app may keep using its mapped pointers after recording ends, so stale shadow pages are
-  // made accessible instead of being released, before the handler stops refreshing them.
+  // made accessible instead of being released, before the handler stops refreshing them, and the
+  // pages past the end of mapped memory are committed.
+  for (auto& entry : m_ExternalAllocations) {
+    CommitReservedPages(entry.second->ExternalMemory);
+  }
+  m_ExternalAllocations.clear();
   for (auto& entry : m_ShadowAllocations) {
     AllocationInfo* allocationInfo = entry.second;
+    CommitReservedPages(allocationInfo->ShadowAllocation);
     char* pageBase = ShadowPageBase(*allocationInfo);
     for (size_t page = 0; page < allocationInfo->PageStates.size(); ++page) {
       if (allocationInfo->PageStates[page] == PageState::Protected) {
@@ -370,9 +402,6 @@ void* MapTrackingService::EnableExternalMemory(
     }
     alignment = it->second;
   }
-  if (allocationInfo->allocationSize % alignment != 0) {
-    return nullptr;
-  }
   // Memory can have only one external source, and exported memory must stay driver-owned so other
   // APIs and processes can import it.
   if (IsMemoryImport(allocationInfo->pNext) || IsMemoryExport(allocationInfo->pNext)) {
@@ -386,9 +415,17 @@ void* MapTrackingService::EnableExternalMemory(
     return nullptr;
   }
 
-  void* hostPtr = VirtualAlloc(nullptr, static_cast<SIZE_T>(allocationInfo->allocationSize),
-                               MEM_RESERVE | MEM_COMMIT | MEM_WRITE_WATCH, PAGE_READWRITE);
+  // The imported size must be a multiple of the import alignment, so the allocation is made larger,
+  // as drivers do. The rest of the allocation granule stays reserved for CommitPastEnd.
+  const SIZE_T importSize =
+      static_cast<SIZE_T>((allocationInfo->allocationSize + alignment - 1) / alignment * alignment);
+  const SIZE_T reservedSize = (importSize + m_AllocationGranularity - 1) / m_AllocationGranularity *
+                              m_AllocationGranularity;
+  void* hostPtr =
+      VirtualAlloc(nullptr, reservedSize, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
   GITS_ASSERT(hostPtr != nullptr);
+  void* committed = VirtualAlloc(hostPtr, importSize, MEM_COMMIT, PAGE_READWRITE);
+  GITS_ASSERT(committed != nullptr);
   VkMemoryHostPointerPropertiesEXT hostPointerProperties{};
   hostPointerProperties.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT;
   const auto& dt = m_Manager.GetDeviceDispatchTable(device);
@@ -405,6 +442,7 @@ void* MapTrackingService::EnableExternalMemory(
   hostPointerInfo->handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT;
   hostPointerInfo->pHostPointer = hostPtr;
   allocationInfo->pNext = &hostPointerInfo.value();
+  allocationInfo->allocationSize = importSize;
   return hostPtr;
 #else
   return nullptr;
@@ -416,13 +454,15 @@ void* MapTrackingService::EnableExternalMemory(
 // a NULL import instead of the allocation the app asked for.
 void MapTrackingService::UnlinkExternalMemory(
     VkMemoryAllocateInfo* allocationInfo,
-    std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo) {
+    std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo,
+    VkDeviceSize allocationSize) {
   if (!hostPointerInfo.has_value()) {
     return;
   }
   GITS_ASSERT(allocationInfo->pNext == &hostPointerInfo.value(),
               "pNext head changed after the write-watch import was injected.");
   allocationInfo->pNext = hostPointerInfo->pNext;
+  allocationInfo->allocationSize = allocationSize;
   hostPointerInfo.reset();
 }
 
@@ -449,6 +489,12 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
     }
   }
   m_Allocations[deviceMemoryKey] = std::move(allocationInfo);
+#ifdef GITS_PLATFORM_WINDOWS
+  if (externalPtr) {
+    m_ExternalAllocations[reinterpret_cast<uintptr_t>(externalPtr)] =
+        &m_Allocations[deviceMemoryKey];
+  }
+#endif
 }
 
 void MapTrackingService::ClearMemory(VkDevice device,
@@ -513,6 +559,7 @@ void MapTrackingService::RemoveAllocationInfo(GITSKey deviceMemoryKey) {
   }
 #ifdef GITS_PLATFORM_WINDOWS
   if (it->second.ExternalMemory) {
+    m_ExternalAllocations.erase(reinterpret_cast<uintptr_t>(it->second.ExternalMemory));
     VirtualFree(it->second.ExternalMemory, 0, MEM_RELEASE);
   }
 #endif
@@ -548,11 +595,17 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
   }
   // Write watch works only on GITS-allocated memory, so the app writes to a shadow that is copied
   // to the driver mapping on every update.
+  // The rest of the allocation granule stays reserved for CommitPastEnd.
   const SIZE_T residue =
       static_cast<SIZE_T>(reinterpret_cast<uintptr_t>(*ppData) % m_AllocationGranularity);
-  allocationInfo.ShadowAllocation = VirtualAlloc(
-      nullptr, residue + mapSize, MEM_RESERVE | MEM_COMMIT | MEM_WRITE_WATCH, PAGE_READWRITE);
+  const SIZE_T reservedSize = (residue + mapSize + m_AllocationGranularity - 1) /
+                              m_AllocationGranularity * m_AllocationGranularity;
+  allocationInfo.ShadowAllocation =
+      VirtualAlloc(nullptr, reservedSize, MEM_RESERVE | MEM_WRITE_WATCH, PAGE_READWRITE);
   GITS_ASSERT(allocationInfo.ShadowAllocation != nullptr);
+  void* committed =
+      VirtualAlloc(allocationInfo.ShadowAllocation, residue + mapSize, MEM_COMMIT, PAGE_READWRITE);
+  GITS_ASSERT(committed != nullptr);
   allocationInfo.ShadowMemory = static_cast<char*>(allocationInfo.ShadowAllocation) + residue;
   std::memcpy(allocationInfo.ShadowMemory, *ppData, mapSize);
   ResetWriteWatch(allocationInfo.ShadowMemory, mapSize);
@@ -783,26 +836,66 @@ void MapTrackingService::RefreshShadowPage(AllocationInfo& allocationInfo, size_
   }
 }
 
+// Applications read past the end of mapped memory where the driver mapping lets them, which can
+// extend to the end of its allocation granule. The host memory GITS maps instead keeps the rest of
+// its granule reserved and commits a page of it on its first access: zeroed for imported memory,
+// and with the content of the driver mapping for a shadow, if the driver mapping is readable there.
+// Accesses past the end are not recorded.
+bool MapTrackingService::CommitPastEnd(void* address) {
+  MEMORY_BASIC_INFORMATION region{};
+  if (VirtualQuery(address, &region, sizeof(region)) == 0 || region.State != MEM_RESERVE) {
+    return false;
+  }
+  const uintptr_t addr = reinterpret_cast<uintptr_t>(address);
+  char* const page = reinterpret_cast<char*>(addr - addr % m_PageSize);
+  const char* source = nullptr;
+  if (m_ExternalAllocations.count(reinterpret_cast<uintptr_t>(region.AllocationBase)) == 0) {
+    auto it = m_ShadowAllocations.upper_bound(addr);
+    if (it == m_ShadowAllocations.begin()) {
+      return false;
+    }
+    --it;
+    const AllocationInfo& allocationInfo = *it->second;
+    if (allocationInfo.ShadowAllocation != region.AllocationBase) {
+      return false;
+    }
+    // The shadow keeps the offset of the driver mapping within a page.
+    source = static_cast<const char*>(allocationInfo.MappedData) +
+             (page - static_cast<const char*>(allocationInfo.ShadowMemory));
+    if (!IsReadable(source, m_PageSize)) {
+      return false;
+    }
+  }
+  if (VirtualAlloc(page, m_PageSize, MEM_COMMIT, PAGE_READWRITE) == nullptr) {
+    return false;
+  }
+  if (source) {
+    std::memcpy(page, source, m_PageSize);
+  }
+  m_PastEndAccessed = true;
+  return true;
+}
+
 bool MapTrackingService::HandleAddress(void* address) {
   const uintptr_t addr = reinterpret_cast<uintptr_t>(address);
   std::lock_guard<std::mutex> lock(m_Mutex);
   // The last shadow starting at or below the address is the only one that can contain it.
   auto it = m_ShadowAllocations.upper_bound(addr);
-  if (it == m_ShadowAllocations.begin()) {
-    return false;
+  if (it != m_ShadowAllocations.begin()) {
+    --it;
+    AllocationInfo& allocationInfo = *it->second;
+    // The last page also holds the bytes past the end of the mapping.
+    const size_t pageIndex =
+        (addr - reinterpret_cast<uintptr_t>(ShadowPageBase(allocationInfo))) / m_PageSize;
+    if (pageIndex < allocationInfo.PageStates.size()) {
+      // Another thread may have refreshed the page while this one waited for the lock.
+      if (allocationInfo.PageStates[pageIndex] == PageState::Protected) {
+        RefreshShadowPage(allocationInfo, pageIndex);
+      }
+      return true;
+    }
   }
-  --it;
-  AllocationInfo& allocationInfo = *it->second;
-  if (addr >= it->first + allocationInfo.MapSize) {
-    return false;
-  }
-  const size_t pageIndex =
-      (addr - reinterpret_cast<uintptr_t>(ShadowPageBase(allocationInfo))) / m_PageSize;
-  // Another thread may have refreshed the page while this one waited for the lock.
-  if (allocationInfo.PageStates[pageIndex] == PageState::Protected) {
-    RefreshShadowPage(allocationInfo, pageIndex);
-  }
-  return true;
+  return CommitPastEnd(address);
 }
 #endif
 
@@ -812,6 +905,12 @@ void MapTrackingService::ScheduleMemoryUpdate(GITSKey deviceMemoryKey) {
   AllocationInfo& allocationInfo = it->second;
 
 #ifdef GITS_PLATFORM_WINDOWS
+  // Logged here as the exception handler must not allocate.
+  if (m_PastEndAccessed && !m_PastEndAccessLogged) {
+    LOG_WARNING << "MapTrackingService: the application accessed memory past the end of mapped "
+                   "Vulkan memory. The access is allowed, as on driver memory, but not recorded.";
+    m_PastEndAccessLogged = true;
+  }
   char* baseAddress = static_cast<char*>(allocationInfo.ShadowMemory ? allocationInfo.ShadowMemory
                                                                      : allocationInfo.MappedData);
   uint64_t totalSize =

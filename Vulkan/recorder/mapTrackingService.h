@@ -47,8 +47,10 @@ public:
                              VkDevice device,
                              VkMemoryAllocateInfo* allocationInfo,
                              std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo);
+  // Restores the allocation size the application requested, which the import may have increased.
   void UnlinkExternalMemory(VkMemoryAllocateInfo* allocationInfo,
-                            std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo);
+                            std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo,
+                            VkDeviceSize allocationSize);
   void StoreAllocationInfo(GITSKey deviceKey,
                            GITSKey deviceMemoryKey,
                            VkDeviceMemory memory,
@@ -77,7 +79,8 @@ public:
 #ifdef GITS_PLATFORM_LINUX
   bool HandleAddress(void* address, bool isWrite);
 #else
-  // Refreshes a protected shadow page on its first access. Returns false for other addresses.
+  // Refreshes a protected shadow page on its first access and commits a page past the end of mapped
+  // memory, see CommitPastEnd. Returns false for other addresses.
   bool HandleAddress(void* address);
 #endif
 
@@ -127,7 +130,12 @@ private:
   char* ShadowPageBase(const AllocationInfo& allocationInfo) const;
   void InvalidateShadowMemory(AllocationInfo& allocationInfo, VkDeviceSize begin, VkDeviceSize end);
   void RefreshShadowPage(AllocationInfo& allocationInfo, size_t pageIndex);
+  bool CommitPastEnd(void* address);
   uint32_t m_AllocationGranularity;
+  // Allocations backed by imported host memory, by its address.
+  std::map<uintptr_t, AllocationInfo*> m_ExternalAllocations;
+  bool m_PastEndAccessed{false};
+  bool m_PastEndAccessLogged{false};
   // Page-sized buffers used by RefreshShadowPage under m_Mutex.
   std::vector<char> m_PageSnapshot;
   std::vector<char> m_PageDeviceData;
