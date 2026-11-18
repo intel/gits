@@ -35,6 +35,8 @@ set(STREAM_SRC_HEADERS
   ${STREAM_HEADER_DIR}/streamCompressor.h
   ${STREAM_HEADER_DIR}/diskSpaceCheck.h
   ${STREAM_HEADER_DIR}/externalHandleService.h
+  ${STREAM_HEADER_DIR}/subcaptureSession.h
+  ${STREAM_HEADER_DIR}/restoredContents.h
   ${TBB_DEPENDENT_HEADERS}
 )
 set(STREAM_SRC_SOURCES
@@ -45,6 +47,7 @@ set(STREAM_SRC_SOURCES
   ${STREAM_SOURCE_DIR}/streamCompressor.cpp
   ${STREAM_SOURCE_DIR}/diskSpaceCheck.cpp
   ${STREAM_SOURCE_DIR}/externalHandleService.cpp
+  ${STREAM_SOURCE_DIR}/subcaptureSession.cpp
   ${TBB_DEPENDENT_SOURCES}
 )
 
@@ -64,3 +67,15 @@ PRIVATE
 )
 
 set_target_properties(stream PROPERTIES FOLDER "common")
+
+# Host-only gate for the check that the exporting API restores the contents an import uses: no
+# GPU, no driver, no stream. Run the executable; it prints failures and exits non-zero. It needs
+# only the inline functions of restoredContents.h, so it links nothing.
+add_executable(stream_restored_contents_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/restoredContentsTest.cpp
+)
+target_include_directories(stream_restored_contents_test PRIVATE
+  ${STREAM_HEADER_DIR}
+)
+
+set_target_properties(stream_restored_contents_test PROPERTIES FOLDER "common")
