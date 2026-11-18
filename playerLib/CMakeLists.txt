@@ -17,6 +17,7 @@ if(MSVC)
     "EXPORTS\n"
     "  Initialize\n"
     "  GetApplicationName\n"
+    "  GetGpuPreferenceExport\n"
     "  Play\n")
 endif()
 

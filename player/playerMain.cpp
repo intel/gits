@@ -23,6 +23,16 @@
 #include <vector>
 #include <string>
 
+#if defined GITS_PLATFORM_WINDOWS
+// Windows runs an executable exporting a nonzero value of these on the high-performance GPU. It
+// reads them when a graphics API first selects an adapter, so the player sets the values the
+// recorded executable exported before playback.
+extern "C" {
+__declspec(dllexport) DWORD NvOptimusEnablement = 0;
+__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 0;
+}
+#endif
+
 namespace gits {
 
 #if defined GITS_PLATFORM_WINDOWS
@@ -149,6 +159,15 @@ int MainBody(int argc, char* argv[]) {
   if (ret) {
     return ret;
   }
+
+#if defined GITS_PLATFORM_WINDOWS
+  NvOptimusEnablement = GetGpuPreferenceExport("NvOptimusEnablement");
+  AmdPowerXpressRequestHighPerformance =
+      static_cast<int>(GetGpuPreferenceExport("AmdPowerXpressRequestHighPerformance"));
+  if (NvOptimusEnablement != 0 || AmdPowerXpressRequestHighPerformance != 0) {
+    LOG_INFO << "The recorded application requested the high-performance GPU.";
+  }
+#endif
 
   std::filesystem::path playerPath = "";
   auto argsVector = std::vector<std::string>(argv, argv + argc);

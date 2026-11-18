@@ -409,6 +409,15 @@ void gather_diagnostic_info(nlohmann::ordered_json& properties) {
     }
   }
 
+  // Windows runs an executable exporting a nonzero value of these on the high-performance GPU.
+  for (const char* exportName : {"NvOptimusEnablement", "AmdPowerXpressRequestHighPerformance"}) {
+    const auto* value =
+        reinterpret_cast<const uint32_t*>(GetProcAddress(GetModuleHandleW(nullptr), exportName));
+    if (value != nullptr) {
+      properties["diag"]["app"]["gpu_preference_exports"][exportName] = *value;
+    }
+  }
+
   std::wstring cmdlineW = GetCommandLineW();
   std::string cmdlineUtf8 = wstringToUtf8string(cmdlineW);
   properties["diag"]["proc"]["cmdline"] = cmdlineUtf8;

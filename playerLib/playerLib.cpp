@@ -126,6 +126,7 @@ bool g_LegacyMode{};
 bool g_InitializedForPlay{};
 std::set<std::string> g_ArgsFilterTags;
 std::string g_ApplicationName;
+std::optional<nlohmann::ordered_json> g_GpuPreferenceExports;
 std::unique_ptr<CPlayer> g_Player;
 
 bool ArgsFilterTagsFunc(const args::Base& item) {
@@ -320,6 +321,11 @@ int Initialize(int argc, char* argv[]) {
     }
   }
 
+  const char* gpuPreferenceExports = "diag.app.gpu_preference_exports";
+  g_GpuPreferenceExports = g_LegacyMode
+                               ? CGits::Instance().FilePlayer().FindProperty(gpuPreferenceExports)
+                               : stream::StreamHeader::Get().FindProperty(gpuPreferenceExports);
+
   g_InitializedForPlay = true;
   return EXIT_SUCCESS;
 }
@@ -503,6 +509,18 @@ int STDCALL Initialize(int argc, char* argv[]) {
 
 const char* STDCALL GetApplicationName() {
   return gits::g_ApplicationName.c_str();
+}
+
+uint32_t STDCALL GetGpuPreferenceExport(const char* name) {
+  const auto& exports = gits::g_GpuPreferenceExports;
+  if (!exports || !exports->is_object()) {
+    return 0;
+  }
+  const auto value = exports->find(name);
+  if (value == exports->end() || !value->is_number_unsigned()) {
+    return 0;
+  }
+  return value->get<uint32_t>();
 }
 
 int STDCALL Play() {
