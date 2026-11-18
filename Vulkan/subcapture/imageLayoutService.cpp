@@ -10,7 +10,9 @@
 #include "stateTrackingService.h"
 #include "objectState.h"
 #include "gpuReadbackHelper.h" // for AspectMaskForFormat
+#include "externalOwnership.h"
 #include "log.h"
+#include "subcaptureSession.h"
 
 #include <algorithm>
 
@@ -34,6 +36,10 @@ bool CoversWholeImage(const ImageState& img, const VkImageSubresourceRange& rang
     return false;
   }
   return range.aspectMask == AspectMaskForFormat(img.Format, img.Disjoint);
+}
+
+bool CoversWholeBuffer(const BufferState& buffer, VkDeviceSize offset, VkDeviceSize size) {
+  return offset == 0 && (size == VK_WHOLE_SIZE || size >= buffer.BufferSize);
 }
 } // namespace
 
@@ -243,6 +249,59 @@ void ImageLayoutService::NoteExclusiveQueueFamilyTransfer(uint64_t cbKey,
   }
 }
 
+// A transfer to or from an external queue family has no Vulkan queue on the other side, so unlike
+// NoteExclusiveQueueFamilyTransfer the barrier alone tells release from acquire. It is tracked
+// for both sharing modes: a CONCURRENT resource names only the external family and
+// VK_QUEUE_FAMILY_IGNORED (VUID-VkImageMemoryBarrier-image-04071).
+void ImageLayoutService::NoteExternalQueueFamilyTransfer(
+    uint64_t cbKey, uint64_t key, uint32_t srcFamily, uint32_t dstFamily, bool wholeResource) {
+  if (!key || srcFamily == dstFamily ||
+      (!IsExternalQueueFamily(srcFamily) && !IsExternalQueueFamily(dstFamily))) {
+    return;
+  }
+  auto* cb = m_StateTracking.GetState<CommandBufferState>(cbKey);
+  if (!cb) {
+    return;
+  }
+  if (!wholeResource) {
+    cb->ExternalOwnerPartialAfterSubmit.insert(key);
+    return;
+  }
+  cb->ExternalOwnerAfterSubmit[key] =
+      IsExternalQueueFamily(dstFamily) ? dstFamily : VK_QUEUE_FAMILY_IGNORED;
+}
+
+void ImageLayoutService::ApplyExternalOwner(uint64_t key, uint32_t family) {
+  if (auto* img = m_StateTracking.GetState<ImageState>(key)) {
+    img->ExternalOwnerFamily = family;
+    // A layout the external owner reported handing the image back in predates this release.
+    if (IsExternalQueueFamily(family) && img->BoundMemoryKey) {
+      stream::SubcaptureSession::Get().ClearHandBackLayout(img->BoundMemoryKey, img->MemoryOffset);
+    }
+  } else if (auto* buffer = m_StateTracking.GetState<BufferState>(key)) {
+    buffer->ExternalOwnerFamily = family;
+  }
+}
+
+void ImageLayoutService::OnBufferMemoryBarriers(uint64_t cbKey,
+                                                const VkBufferMemoryBarrier* barriers,
+                                                uint32_t count,
+                                                const std::vector<uint64_t>& handleKeys) {
+  if (!barriers) {
+    return;
+  }
+  // HandleKeys has one entry per barrier, as the player updater consumes them.
+  for (uint32_t i = 0; i < count && i < handleKeys.size(); ++i) {
+    const VkBufferMemoryBarrier& b = barriers[i];
+    const uint64_t bufferKey = handleKeys[i];
+    if (const auto* buffer = m_StateTracking.GetState<BufferState>(bufferKey)) {
+      NoteExternalQueueFamilyTransfer(cbKey, bufferKey, b.srcQueueFamilyIndex,
+                                      b.dstQueueFamilyIndex,
+                                      CoversWholeBuffer(*buffer, b.offset, b.size));
+    }
+  }
+}
+
 // Buffer the layout into the recording command buffer (last write wins per
 // image).  It is committed to ImageState::CurrentLayout at submit time.
 void ImageLayoutService::RecordImageLayout(uint64_t cbKey,
@@ -291,6 +350,11 @@ void ImageLayoutService::OnPipelineBarrier(uint64_t cbKey,
       } else {
         NoteExclusiveQueueFamilyUse(cbKey, imageKey);
       }
+      if (const auto* img = m_StateTracking.GetState<ImageState>(imageKey)) {
+        NoteExternalQueueFamilyTransfer(cbKey, imageKey, b.srcQueueFamilyIndex,
+                                        b.dstQueueFamilyIndex,
+                                        CoversWholeImage(*img, b.subresourceRange));
+      }
     }
   }
 }
@@ -300,7 +364,18 @@ void ImageLayoutService::OnPipelineBarrier2(uint64_t cbKey,
                                             const std::vector<uint64_t>& handleKeys) {
   // HandleKeys layout: [bufferBarrierKeys...][imageBarrierKeys...]
   // Each slot is consumed unconditionally (no null check in the player updater).
-  uint32_t keyIdx = depInfo.bufferMemoryBarrierCount; // skip past buffer keys
+  uint32_t keyIdx = 0;
+  for (uint32_t i = 0; i < depInfo.bufferMemoryBarrierCount && keyIdx < handleKeys.size();
+       ++i, ++keyIdx) {
+    const VkBufferMemoryBarrier2& b = depInfo.pBufferMemoryBarriers[i];
+    const uint64_t bufferKey = handleKeys[keyIdx];
+    if (const auto* buffer = m_StateTracking.GetState<BufferState>(bufferKey)) {
+      NoteExternalQueueFamilyTransfer(cbKey, bufferKey, b.srcQueueFamilyIndex,
+                                      b.dstQueueFamilyIndex,
+                                      CoversWholeBuffer(*buffer, b.offset, b.size));
+    }
+  }
+  keyIdx = depInfo.bufferMemoryBarrierCount;
   for (uint32_t i = 0; i < depInfo.imageMemoryBarrierCount && keyIdx < handleKeys.size();
        ++i, ++keyIdx) {
     const VkImageMemoryBarrier2& b = depInfo.pImageMemoryBarriers[i];
@@ -316,6 +391,10 @@ void ImageLayoutService::OnPipelineBarrier2(uint64_t cbKey,
                                        b.dstQueueFamilyIndex, b.subresourceRange);
     } else {
       NoteExclusiveQueueFamilyUse(cbKey, imageKey);
+    }
+    if (const auto* img = m_StateTracking.GetState<ImageState>(imageKey)) {
+      NoteExternalQueueFamilyTransfer(cbKey, imageKey, b.srcQueueFamilyIndex, b.dstQueueFamilyIndex,
+                                      CoversWholeImage(*img, b.subresourceRange));
     }
   }
 }
@@ -419,6 +498,16 @@ void ImageLayoutService::ApplyCommandBuffer(uint64_t cbKey) {
   for (const PartialOwnerTransfer& transfer : cb->PartialOwnerTransfersAfterSubmit) {
     ApplyPartialOwnershipTransfer(transfer);
   }
+  for (const auto& [key, family] : cb->ExternalOwnerAfterSubmit) {
+    ApplyExternalOwner(key, family);
+  }
+  for (uint64_t key : cb->ExternalOwnerPartialAfterSubmit) {
+    if (auto* img = m_StateTracking.GetState<ImageState>(key)) {
+      img->ExternalOwnershipPartial = true;
+    } else if (auto* buffer = m_StateTracking.GetState<BufferState>(key)) {
+      buffer->ExternalOwnershipPartial = true;
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +596,11 @@ void ImageLayoutService::MergeSecondary(uint64_t primaryKey, uint64_t secondaryK
   prim->PartialOwnerTransfersAfterSubmit.insert(prim->PartialOwnerTransfersAfterSubmit.end(),
                                                 sec->PartialOwnerTransfersAfterSubmit.begin(),
                                                 sec->PartialOwnerTransfersAfterSubmit.end());
+  for (const auto& [key, family] : sec->ExternalOwnerAfterSubmit) {
+    prim->ExternalOwnerAfterSubmit[key] = family;
+  }
+  prim->ExternalOwnerPartialAfterSubmit.insert(sec->ExternalOwnerPartialAfterSubmit.begin(),
+                                               sec->ExternalOwnerPartialAfterSubmit.end());
 }
 
 } // namespace vulkan

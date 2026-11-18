@@ -20,6 +20,7 @@
 #include "configurator.h"
 #include "gpuReadbackHelper.h" // for AspectMaskForFormat
 #include "log.h"
+#include "subcaptureSession.h"
 #include "tools.h"
 #include "vulkanHelpers.h"
 
@@ -30,6 +31,7 @@
 #include <memory>
 #include <ranges>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -159,8 +161,181 @@ bool StateTrackingService::ShouldRestore(uint64_t key) const {
     default:
       break;
     }
+    // The analysis covers only the commands of this API, not the uses of the
+    // other API.
+    if (IsExported(*it->second)) {
+      return true;
+    }
   }
   return m_AnalyzerResults->RestoreObject(key);
+}
+
+bool StateTrackingService::IsExported(const ObjectState& state) const {
+  if (!state.ExportCommands.empty()) {
+    return true;
+  }
+  uint64_t memoryKey = 0;
+  if (state.CreationCommandId == CommandId::ID_VKCREATEBUFFER) {
+    memoryKey = static_cast<const BufferState&>(state).BoundMemoryKey;
+  } else if (state.CreationCommandId == CommandId::ID_VKCREATEIMAGE) {
+    memoryKey = static_cast<const ImageState&>(state).BoundMemoryKey;
+  }
+  const auto memory = memoryKey ? m_States.find(memoryKey) : m_States.end();
+  return memory != m_States.end() && !memory->second->ExportCommands.empty();
+}
+
+namespace {
+
+// The layout RestoreState gives an image: ApplyHandBackLayouts replaces the one Vulkan released
+// it to an external queue family in with the one the external owner handed it back in.
+VkImageLayout RestoredLayout(const ImageState& image) {
+  if (image.BoundMemoryKey == 0 || !IsReleasedToExternal(image)) {
+    return image.CurrentLayout;
+  }
+  const auto glLayout =
+      stream::SubcaptureSession::Get().GetHandBackLayout(image.BoundMemoryKey, image.MemoryOffset);
+  const auto layout = glLayout ? ImageLayoutFromGlLayout(*glLayout) : std::nullopt;
+  return layout ? *layout : image.CurrentLayout;
+}
+
+} // namespace
+
+void StateTrackingService::ReportUnrestorableExportedContents() {
+  std::unordered_map<uint64_t, stream::RestoredContents> contents;
+  for (const auto& [key, state] : m_States) {
+    if (!state->Destroyed && state->CreationCommandId == CommandId::ID_VKALLOCATEMEMORY &&
+        !state->ExportCommands.empty()) {
+      contents[key].Size = static_cast<const DeviceMemoryState&>(*state).AllocationSize;
+    }
+  }
+  m_ReportedContents.clear();
+  const auto bound = [this, &contents](uint64_t resource, uint64_t memory, VkDeviceSize offset,
+                                       VkDeviceSize size, bool restored) {
+    if (const auto entry = contents.find(memory); entry != contents.end()) {
+      entry->second.Bound.push_back({offset, size});
+      if (restored) {
+        entry->second.Restored.push_back({offset, size});
+        m_ReportedContents.push_back({resource, memory, offset, size});
+      }
+    }
+  };
+  // RestoreBufferContents and RestoreImageContents read back nothing on a device without them.
+  std::unordered_map<uint64_t, bool> hasQueueAndPool;
+  const auto readable = [this, &hasQueueAndPool](uint64_t deviceKey) {
+    auto [entry, inserted] = hasQueueAndPool.try_emplace(deviceKey, false);
+    if (inserted) {
+      uint64_t queueKey = 0;
+      uint64_t poolKey = 0;
+      entry->second = FindQueueAndPool(deviceKey, queueKey, poolKey);
+      if (!entry->second) {
+        LOG_WARNING << "Vulkan subcapture: device key=" << deviceKey
+                    << " has no queue and command pool of the same queue family, so the contents "
+                       "of its buffers and images bound to exported memory are not restored";
+      }
+    }
+    return entry->second;
+  };
+  std::unordered_map<uint64_t, std::string> reasons;
+  for (const auto& [key, state] : m_States) {
+    if (state->Destroyed) {
+      continue;
+    }
+    if (state->CreationCommandId == CommandId::ID_VKCREATEBUFFER) {
+      const auto& buffer = static_cast<const BufferState&>(*state);
+      // RestoreBufferContents reads back the whole of a buffer, or each resident range of a
+      // sparse one. The recorder gives every buffer TRANSFER_SRC where it may.
+      const bool restored =
+          (buffer.UsageFlags & VK_BUFFER_USAGE_TRANSFER_SRC_BIT) != 0 && readable(buffer.ParentKey);
+      if (buffer.SparseBinding && !buffer.SparseRanges.empty()) {
+        for (const auto& [offset, range] : buffer.SparseRanges) {
+          bound(key, range.MemoryKey, range.MemoryOffset, range.Size, restored);
+        }
+      } else if (buffer.BoundMemoryKey != 0 && buffer.BufferSize != 0) {
+        bound(key, buffer.BoundMemoryKey, buffer.MemoryOffset, buffer.BufferSize, restored);
+      }
+      if (buffer.ExternalOwnershipPartial) {
+        reasons.try_emplace(buffer.BoundMemoryKey,
+                            "the Vulkan buffer " + std::to_string(key) +
+                                " bound to it is partly released to an external queue family, so "
+                                "its contents cannot be read back");
+      }
+    } else if (state->CreationCommandId == CommandId::ID_VKCREATEIMAGE) {
+      const auto& image = static_cast<const ImageState&>(*state);
+      const char* reason = nullptr;
+      if (image.ExternalOwnershipPartial) {
+        reason = "is partly released to an external queue family";
+      } else if (image.SharingMode == VK_SHARING_MODE_EXCLUSIVE &&
+                 (image.ExclusiveOwnershipPending || image.ExclusiveOwnershipMixed) &&
+                 !IsReleasedToExternal(image)) {
+        reason = "is in a queue family ownership transfer between Vulkan queue families, or in "
+                 "a partial one";
+      } else if (image.Samples != VK_SAMPLE_COUNT_1_BIT) {
+        reason = "is multisampled";
+      } else if (image.Disjoint) {
+        reason = "is disjoint";
+      }
+      if (reason != nullptr) {
+        reasons.try_emplace(image.BoundMemoryKey, "the Vulkan image " + std::to_string(key) +
+                                                      " bound to it " + reason +
+                                                      ", so its contents cannot be read back");
+        continue;
+      }
+      const auto entry = contents.find(image.BoundMemoryKey);
+      if (entry == contents.end()) {
+        continue;
+      }
+      const VkDeviceSize size = m_GpuReadbackHelper != nullptr
+                                    ? m_GpuReadbackHelper->GetImageMemorySize(image.ParentKey, key)
+                                    : 0;
+      if (size == 0) {
+        // Without its size, the image may be bound over any of the rest of the memory.
+        if (image.MemoryOffset < entry->second.Size) {
+          bound(key, image.BoundMemoryKey, image.MemoryOffset,
+                entry->second.Size - image.MemoryOffset, false);
+        }
+        continue;
+      }
+      entry->second.Images[image.MemoryOffset] = size;
+      // RestoreImageContents copies only an image it may read, whose contents are defined.
+      const VkImageLayout layout = RestoredLayout(image);
+      bound(key, image.BoundMemoryKey, image.MemoryOffset, size,
+            (image.UsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) && image.Extent.width != 0 &&
+                image.Extent.height != 0 && layout != VK_IMAGE_LAYOUT_UNDEFINED &&
+                layout != VK_IMAGE_LAYOUT_PREINITIALIZED && readable(image.ParentKey));
+    }
+  }
+  for (auto& [key, restoredContents] : contents) {
+    if (const auto reason = reasons.find(key); reason != reasons.end()) {
+      stream::SubcaptureSession::Get().SetContentsNotRestored(key, reason->second);
+    } else {
+      stream::SubcaptureSession::Get().SetRestoredContents(key, std::move(restoredContents));
+    }
+  }
+}
+
+void StateTrackingService::ApplyHandBackLayouts() {
+  for (auto& [key, state] : m_States) {
+    if (state->Destroyed || state->CreationCommandId != CommandId::ID_VKCREATEIMAGE) {
+      continue;
+    }
+    auto& image = static_cast<ImageState&>(*state);
+    if (!image.BoundMemoryKey || !IsReleasedToExternal(image)) {
+      continue;
+    }
+    const auto glLayout = stream::SubcaptureSession::Get().GetHandBackLayout(image.BoundMemoryKey,
+                                                                             image.MemoryOffset);
+    if (!glLayout) {
+      continue;
+    }
+    const auto layout = ImageLayoutFromGlLayout(*glLayout);
+    if (!layout) {
+      LOG_WARNING << "Vulkan subcapture: image key=" << key
+                  << " was handed back in the unknown OpenGL layout " << *glLayout
+                  << ", so its layout is the one Vulkan released it in";
+      continue;
+    }
+    image.CurrentLayout = *layout;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +408,7 @@ void StateTrackingService::EnsureRestored(uint64_t key) {
 // RestoreState -- public entry point
 // ---------------------------------------------------------------------------
 
-void StateTrackingService::RestoreState() {
+void StateTrackingService::RestoreState(bool writeMarkers) {
   GITS_ASSERT(m_GpuReadbackHelper);
   GITS_ASSERT(m_Recorder.IsOpen());
 
@@ -245,8 +420,7 @@ void StateTrackingService::RestoreState() {
   m_TransientlyRestored.clear();
   m_AsBuildInputStats = {};
 
-  // Emit StateRestoreBegin marker
-  {
+  if (writeMarkers) {
     StateRestoreBeginCommand cmd;
     m_Recorder.Record(StateRestoreBeginSerializer(cmd));
   }
@@ -365,7 +539,14 @@ void StateTrackingService::RestoreState() {
         continue;
       }
       auto* sem = static_cast<SemaphoreState*>(state);
-      if (sem->IsBinary && sem->IsSignaled) {
+      // The other API waits on and signals an imported semaphore without Vulkan
+      // seeing it, so the session tracks the state of the shared payload.
+      bool signaled = sem->IsSignaled;
+      if (!sem->ExportCommands.empty()) {
+        signaled = stream::SubcaptureSession::Get().GetImportedSemaphoreSignaled(sem->Key).value_or(
+            signaled);
+      }
+      if (sem->IsBinary && signaled) {
         semaphoresToSignal[sem->ParentKey].push_back(sem->Key);
       }
     }
@@ -465,8 +646,10 @@ void StateTrackingService::RestoreState() {
   LogAsBuildInputStats();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RTAS_END);
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_BEGIN);
+  ApplyHandBackLayouts();
   RestoreBufferContents();
   RestoreImageContents();
+  CheckReportedContentsRestored();
   recordStatus(MarkerUInt64Command::Value::STATE_RESTORE_RESOURCES_END);
 
   EmitImageLayoutTransitions();
@@ -507,8 +690,7 @@ void StateTrackingService::RestoreState() {
     m_Recorder.Record(vkDeviceWaitIdleSerializer(waitCmd));
   }
 
-  // Emit StateRestoreEnd marker
-  {
+  if (writeMarkers) {
     StateRestoreEndCommand cmd;
     m_Recorder.Record(StateRestoreEndSerializer(cmd));
   }
@@ -702,6 +884,10 @@ void StateTrackingService::RestoreOne(ObjectState* state) {
   // registered by RestoreSwapchain).  Mark as fully restored so dependents
   // can safely look up its handle in HandleMapService.
   m_RestoredThisPass.insert(state->Key);
+
+  for (const auto& [id, encoded] : state->ExportCommands) {
+    EmitRawCommand(id, encoded, /*keepRecordedKey=*/true);
+  }
 
   // For batch pipeline creation (createInfoCount > 1), all sibling handles
   // are produced by the same vkCreate*Pipelines command that was just emitted.
@@ -1242,10 +1428,23 @@ void StateTrackingService::EmitImageLayoutTransitions() {
   // The second player creates every image in UNDEFINED layout, so we must
   // transition them to the correct layout before the first recorded frame runs.
   std::unordered_map<uint64_t, std::vector<uint64_t>> imagesByDevice;
+  // Buffers released to an external queue family, released again on the default family, which
+  // restored their contents. A device with only such buffers still gets an imagesByDevice entry.
+  std::unordered_map<uint64_t, std::vector<uint64_t>> externalBuffersByDevice;
 
   for (auto& [_, statePtr] : m_States) {
     ObjectState* state = statePtr.get();
     if (state->Destroyed) {
+      continue;
+    }
+    if (state->CreationCommandId == CommandId::ID_VKCREATEBUFFER) {
+      auto* buf = static_cast<BufferState*>(state);
+      const bool sparse = buf->SparseBinding && !buf->SparseRanges.empty();
+      if (IsReleasedToExternal(*buf) && m_RestoredThisPass.count(buf->Key) &&
+          (sparse || m_RestoredThisPass.count(buf->BoundMemoryKey))) {
+        imagesByDevice[buf->ParentKey];
+        externalBuffersByDevice[buf->ParentKey].push_back(buf->Key);
+      }
       continue;
     }
     if (state->CreationCommandId != CommandId::ID_VKCREATEIMAGE &&
@@ -1257,7 +1456,7 @@ void StateTrackingService::EmitImageLayoutTransitions() {
     }
     auto* img = static_cast<ImageState*>(state);
 
-    if (img->ContentRestored) {
+    if (img->ContentRestored && !IsReleasedToExternal(*img)) {
       continue;
     }
 
@@ -1380,6 +1579,12 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         // it always has a real pool by construction (see the FindQueueAndPool
         // check earlier in this function).
         chosenFamily = defaultFamily;
+      } else if (IsReleasedToExternal(*img) && img->ContentRestored) {
+        // The upload left the image owned by the family that restored it, which must release it.
+        chosenFamily = img->ContentRestoreFamily;
+      } else if (IsReleasedToExternal(*img) && img->SharingMode == VK_SHARING_MODE_EXCLUSIVE) {
+        // No Vulkan family owns it, so any family may release it.
+        chosenFamily = defaultFamily;
       } else if (defaultFamily != UINT32_MAX &&
                  MaySubmitImageOperationOnQueueFamily(*img, defaultFamily)) {
         chosenFamily = defaultFamily;
@@ -1400,8 +1605,16 @@ void StateTrackingService::EmitImageLayoutTransitions() {
       }
       groupsByFamily[chosenFamily].push_back(imgKey);
     }
+    const std::vector<uint64_t> noBuffers;
+    const auto externalBuffers = externalBuffersByDevice.find(deviceKey);
+    const std::vector<uint64_t>& defaultFamilyBuffers =
+        externalBuffers != externalBuffersByDevice.end() ? externalBuffers->second : noBuffers;
+    if (!defaultFamilyBuffers.empty()) {
+      groupsByFamily[defaultFamily];
+    }
 
     static const VkImage kDummyImageSentinel = reinterpret_cast<VkImage>(0x1ULL);
+    static const VkBuffer kDummyBufferSentinel = reinterpret_cast<VkBuffer>(0x1ULL);
 
     // Emits one temporary command buffer transitioning every image in `keys`
     // on (targetQueueKey, targetPoolKey), so a group routed away from the
@@ -1411,8 +1624,9 @@ void StateTrackingService::EmitImageLayoutTransitions() {
     // ownership transfer): needed to tell a same-family barrier (no transfer)
     // apart from a genuine hand-off to a different recorded owner family.
     auto emitBatch = [&](uint64_t targetQueueKey, uint64_t targetPoolKey, uint32_t submittingFamily,
-                         const std::vector<uint64_t>& keys) {
-      if (keys.empty()) {
+                         const std::vector<uint64_t>& keys,
+                         const std::vector<uint64_t>& bufferKeys) {
+      if (keys.empty() && bufferKeys.empty()) {
         return;
       }
       // Allocate a temporary command buffer using the existing command pool.
@@ -1499,6 +1713,13 @@ void StateTrackingService::EmitImageLayoutTransitions() {
           b.srcQueueFamilyIndex = submittingFamily;
           b.dstQueueFamilyIndex = img->ExclusiveOwnerFamily;
         }
+        // An image released to an external queue family is released to it again, in the
+        // layout of the release, from the layout its upload left it in, if any.
+        if (IsReleasedToExternal(*img)) {
+          b = GetExternalReleaseBarrier(
+              img->ContentRestored ? img->CurrentLayout : VK_IMAGE_LAYOUT_UNDEFINED,
+              img->CurrentLayout, GetExternalOwnership(*img, submittingFamily));
+        }
         b.image = kDummyImageSentinel; // non-null so the player's null-check passes
         b.subresourceRange.aspectMask = AspectMaskForFormat(img->Format, img->Disjoint);
         b.subresourceRange.baseMipLevel = 0;
@@ -1509,14 +1730,31 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         barrierImageKeys.push_back(imgKey);
       }
 
-      if (!barriers.empty()) {
+      std::vector<VkBufferMemoryBarrier> bufferBarriers;
+      std::vector<uint64_t> barrierBufferKeys;
+      for (uint64_t bufKey : bufferKeys) {
+        auto* buf = GetState<BufferState>(bufKey);
+        if (!buf) {
+          continue;
+        }
+        VkBufferMemoryBarrier b =
+            GetExternalReleaseBarrier(GetExternalOwnership(*buf, submittingFamily));
+        b.buffer = kDummyBufferSentinel;
+        bufferBarriers.push_back(b);
+        barrierBufferKeys.push_back(bufKey);
+      }
+
+      if (!barriers.empty() || !bufferBarriers.empty()) {
         vkCmdPipelineBarrierCommand barrierCmd;
         barrierCmd.m_commandBuffer.Key = kTempCBKey;
         barrierCmd.m_srcStageMask.Value = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         barrierCmd.m_dstStageMask.Value = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         barrierCmd.m_dependencyFlags.Value = 0;
         barrierCmd.m_memoryBarrierCount.Value = 0;
-        barrierCmd.m_bufferMemoryBarrierCount.Value = 0;
+        barrierCmd.m_bufferMemoryBarrierCount.Value = static_cast<uint32_t>(bufferBarriers.size());
+        barrierCmd.m_pBufferMemoryBarriers.Value = bufferBarriers.data();
+        barrierCmd.m_pBufferMemoryBarriers.Size = static_cast<uint32_t>(bufferBarriers.size());
+        barrierCmd.m_pBufferMemoryBarriers.HandleKeys = std::move(barrierBufferKeys);
         barrierCmd.m_imageMemoryBarrierCount.Value = static_cast<uint32_t>(barriers.size());
         barrierCmd.m_pImageMemoryBarriers.Value = barriers.data();
         barrierCmd.m_pImageMemoryBarriers.Size = static_cast<uint32_t>(barriers.size());
@@ -1596,9 +1834,13 @@ void StateTrackingService::EmitImageLayoutTransitions() {
         targetQueueKey = it->second.first;
         targetPoolKey = it->second.second;
       } else {
-        continue; // unreachable: chosenFamily always came from one of the above
+        LOG_WARNING << "Vulkan subcapture: no restored queue and command pool of queue family "
+                    << family << " on device key=" << deviceKey << " for the layouts of "
+                    << keys.size() << " image(s) - they will not be restored";
+        continue;
       }
-      emitBatch(targetQueueKey, targetPoolKey, family, keys);
+      emitBatch(targetQueueKey, targetPoolKey, family, keys,
+                family == defaultFamily ? defaultFamilyBuffers : noBuffers);
     }
   }
 }
@@ -5514,6 +5756,10 @@ void StateTrackingService::RestoreBufferContents() {
     if (!physDevKey) {
       continue;
     }
+    uint32_t readbackFamily = UINT32_MAX;
+    if (auto* poolState = GetState<CommandPoolState>(poolKey)) {
+      readbackFamily = poolState->QueueFamilyIndex;
+    }
 
     // Build the manifest: every candidate buffer that actually needs a GPU
     // copy, in a dense index order the data tokens will reference.  The player
@@ -5589,11 +5835,13 @@ void StateTrackingService::RestoreBufferContents() {
       if (hostVisible) {
         std::vector<uint8_t> probe;
         if (m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                            /*srcOffset=*/0, buf->BufferSize, probe) &&
+                                            /*srcOffset=*/0, buf->BufferSize,
+                                            GetExternalOwnership(*buf, readbackFamily), probe) &&
             ShadowFullyCoversAndMatches(*buf, *mem, probe)) {
           LOG_TRACE << "Vulkan subcapture: buffer key=" << bufKey
                     << " matches CPU shadow - excluded from content manifest "
                        "(mapped-memory restore covers it)";
+          m_RestoredBufferContents.insert(bufKey);
           continue; // omit entirely: no manifest entry, no token, no staging
         }
       }
@@ -5623,15 +5871,21 @@ void StateTrackingService::RestoreBufferContents() {
     // is still emitted so the player's token count matches the manifest and the
     // stream terminates cleanly without a separate end token.
     static char sEmptyByte = 0;
+    std::unordered_set<uint64_t> failed;
     for (size_t i = 0; i < slices.size(); ++i) {
       const uint64_t bufKey = slices[i].BufKey;
       std::vector<uint8_t> data;
       auto* buf = static_cast<BufferState*>(GetState(bufKey));
       if (buf) {
         if (!m_GpuReadbackHelper->ReadBuffer(deviceKey, physDevKey, queueKey, poolKey, bufKey,
-                                             slices[i].Offset, slices[i].Size, data)) {
+                                             slices[i].Offset, slices[i].Size,
+                                             GetExternalOwnership(*buf, readbackFamily), data)) {
           LOG_WARNING << "Vulkan subcapture: GPU readback failed for buffer key=" << bufKey;
           data.clear();
+          failed.insert(bufKey);
+          m_RestoredBufferContents.erase(bufKey);
+        } else if (!failed.contains(bufKey)) {
+          m_RestoredBufferContents.insert(bufKey);
         }
       }
 
@@ -5813,8 +6067,13 @@ void StateTrackingService::RestoreImageContents() {
       const bool depthStencil =
           (aspectMask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0;
 
+      // An EXCLUSIVE image released to an external queue family belongs to no Vulkan family, so
+      // the readback acquires it on whichever family reads it.
+      const bool acquiredForReadback =
+          img->SharingMode == VK_SHARING_MODE_EXCLUSIVE && IsReleasedToExternal(*img);
       auto familyIsUsable = [&](uint32_t family) {
-        if (family == UINT32_MAX || !MaySubmitImageOperationOnQueueFamily(*img, family)) {
+        if (family == UINT32_MAX ||
+            (!acquiredForReadback && !MaySubmitImageOperationOnQueueFamily(*img, family))) {
           return false;
         }
         // Family properties are required regardless of aspect: a
@@ -5881,7 +6140,7 @@ void StateTrackingService::RestoreImageContents() {
     // it.
     static char sEmptyByte = 0;
     auto emitGroup = [&](const std::vector<uint64_t>& keys, uint64_t targetQueueKey,
-                         uint64_t targetPoolKey) {
+                         uint64_t targetPoolKey, uint32_t family) {
       if (keys.empty()) {
         return;
       }
@@ -5934,6 +6193,7 @@ void StateTrackingService::RestoreImageContents() {
           req.Samples = img->Samples;
           req.CurrentLayout = img->CurrentLayout;
           req.Disjoint = img->Disjoint;
+          req.Ownership = GetExternalOwnership(*img, family);
         } else {
           req.Extent = {}; // zero extent - the helper reports it as unreadable
         }
@@ -5948,9 +6208,11 @@ void StateTrackingService::RestoreImageContents() {
               LOG_WARNING << "Vulkan subcapture: GPU readback failed for image key=" << imgKey;
               size = 0;
             } else if (auto* img = static_cast<ImageState*>(GetState(imgKey))) {
-              // The player's upload leaves the image in its tracked layout, so
-              // EmitImageLayoutTransitions must skip it.
+              // The player's upload leaves the image in its tracked layout, owned by
+              // `family`, so EmitImageLayoutTransitions must skip it unless it
+              // releases it to an external queue family.
               img->ContentRestored = true;
+              img->ContentRestoreFamily = family;
             }
 
             RestoreContentDataCommand dataCmd;
@@ -5987,8 +6249,34 @@ void StateTrackingService::RestoreImageContents() {
       } else {
         continue; // unreachable: chosenFamily always came from one of the above
       }
-      emitGroup(keys, targetQueueKey, targetPoolKey);
+      emitGroup(keys, targetQueueKey, targetPoolKey, family);
     }
+  }
+}
+
+void StateTrackingService::CheckReportedContentsRestored() const {
+  for (const ReportedContents& reported : m_ReportedContents) {
+    const auto state = m_States.find(reported.ResourceKey);
+    if (state == m_States.end()) {
+      continue;
+    }
+    const bool buffer = state->second->CreationCommandId == CommandId::ID_VKCREATEBUFFER;
+    const bool restored = buffer
+                              ? static_cast<const BufferState&>(*state->second).ContentRestored ||
+                                    m_RestoredBufferContents.contains(reported.ResourceKey)
+                              : static_cast<const ImageState&>(*state->second).ContentRestored;
+    if (restored || !stream::SubcaptureSession::Get().IsContentRequired(
+                        reported.MemoryKey, {reported.Offset, reported.Size})) {
+      continue;
+    }
+    throw std::runtime_error(
+        "Subcapture of this range is not supported: the contents of the Vulkan " +
+        std::string(buffer ? "buffer " : "image ") + std::to_string(reported.ResourceKey) +
+        ", bound at bytes " + std::to_string(reported.Offset) + " to " +
+        std::to_string(reported.Offset + reported.Size) + " of the exported memory " +
+        std::to_string(reported.MemoryKey) +
+        ", could not be restored, and OpenGL objects with storage in that memory rely on them. "
+        "The warnings above name the cause.");
   }
 }
 
@@ -5996,7 +6284,9 @@ void StateTrackingService::RestoreImageContents() {
 // EmitRawCommand
 // ---------------------------------------------------------------------------
 
-void StateTrackingService::EmitRawCommand(CommandId id, const std::vector<char>& encoded) {
+void StateTrackingService::EmitRawCommand(CommandId id,
+                                          const std::vector<char>& encoded,
+                                          bool keepRecordedKey) {
   if (encoded.empty()) {
     return;
   }
@@ -6010,7 +6300,7 @@ void StateTrackingService::EmitRawCommand(CommandId id, const std::vector<char>&
   // during state restore (see EMIT_DECODED above for the same reasoning) - can be
   // overwritten in place here without a per-type decode/re-encode round trip.
   std::vector<char> rekeyed = encoded;
-  if (rekeyed.size() >= sizeof(GITSKey)) {
+  if (!keepRecordedKey && rekeyed.size() >= sizeof(GITSKey)) {
     GITSKey freshKey = m_Recorder.CreateStateRestoreKey();
     std::memcpy(rekeyed.data(), &freshKey, sizeof(GITSKey));
   }

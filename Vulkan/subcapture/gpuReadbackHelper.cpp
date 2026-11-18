@@ -190,6 +190,17 @@ bool GpuReadbackHelper::QueryImageRequirements(uint64_t deviceKey,
   return true;
 }
 
+VkDeviceSize GpuReadbackHelper::GetImageMemorySize(uint64_t deviceKey, uint64_t imageKey) {
+  auto device = reinterpret_cast<VkDevice>(HandleMapService::Get().TryGetHandle(deviceKey));
+  auto image = reinterpret_cast<VkImage>(HandleMapService::Get().TryGetHandle(imageKey));
+  if (!device || !image) {
+    return 0;
+  }
+  VkMemoryRequirements req{};
+  m_Player.GetDeviceDispatchTable(device).vkGetImageMemoryRequirements(device, image, &req);
+  return req.size;
+}
+
 uint32_t GpuReadbackHelper::FindCompatibleMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) {
   auto physDevice =
       reinterpret_cast<VkPhysicalDevice>(HandleMapService::Get().TryGetHandle(physDevKey));
@@ -406,6 +417,7 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
                                    uint64_t bufferKey,
                                    VkDeviceSize srcOffset,
                                    VkDeviceSize size,
+                                   const ExternalOwnership& ownership,
                                    std::vector<uint8_t>& outData) {
   auto& hms = HandleMapService::Get();
   auto device = reinterpret_cast<VkDevice>(hms.TryGetHandle(deviceKey));
@@ -429,21 +441,24 @@ bool GpuReadbackHelper::ReadBuffer(uint64_t deviceKey,
   }
 
   bool ok = SubmitOneShot(device, queue, pool, [&](VkCommandBuffer cb) {
-    // Barrier: ensure all prior writes to 'buffer' are visible for transfer read.
+    // Barrier: ensure all prior writes to 'buffer' are visible for transfer read, and acquire a
+    // buffer released to an external queue family.
     VkBufferMemoryBarrier srcBarrier{};
-    srcBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    srcBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-    srcBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    srcBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    srcBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    VkBufferMemoryBarrier releaseBarrier{};
+    GetBufferReadbackBarriers(ownership, srcBarrier, releaseBarrier);
     srcBarrier.buffer = buffer;
-    srcBarrier.offset = 0;
-    srcBarrier.size = VK_WHOLE_SIZE;
+    releaseBarrier.buffer = buffer;
     dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                             0, 0, nullptr, 1, &srcBarrier, 0, nullptr);
 
     VkBufferCopy region{srcOffset, 0, size};
     dt.vkCmdCopyBuffer(cb, buffer, stagingBuf, 1, &region);
+
+    if (ownership.IsTransfer()) {
+      dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 1, &releaseBarrier,
+                              0, nullptr);
+    }
 
     // Barrier: staging ? host-read.
     VkBufferMemoryBarrier dstBarrier{};
@@ -1107,27 +1122,28 @@ bool GpuReadbackHelper::ReadImages(uint64_t deviceKey,
           // One barrier array for the whole batch, so a batch costs two barrier commands
           // rather than two per image.
           std::vector<VkImageMemoryBarrier> barriers;
+          std::vector<VkImageMemoryBarrier> postBarriers;
           barriers.reserve(batch.size());
+          postBarriers.reserve(batch.size());
           for (const auto& e : batch) {
             const auto& r = requests[e.Item->Index];
+            // A transfer between Vulkan queue families is not attempted: an EXCLUSIVE
+            // image's queue family must already be the one this is submitted on, since a
+            // legal transfer needs a release submitted on the owning queue and a matching
+            // acquire submitted on this one, which a single one-shot submission cannot do
+            // (see MaySubmitImageOperationOnQueueFamily, the caller that enforces this
+            // precondition). An image released to an external queue family has no Vulkan
+            // queue holding the release, so the copy acquires it and releases it back.
             VkImageMemoryBarrier b{};
-            b.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            b.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-            b.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            b.oldLayout = r.CurrentLayout;
-            b.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-            // No ownership transfer is attempted: an EXCLUSIVE image's queue family must
-            // already be the one this is submitted on, since a legal transfer needs a
-            // release submitted on the owning queue and a matching acquire submitted on
-            // this one, which a single one-shot submission cannot do (see
-            // MaySubmitImageOperationOnQueueFamily, the caller that enforces this
-            // precondition for depth/stencil images).
-            b.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            b.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            VkImageMemoryBarrier post{};
+            GetImageReadbackBarriers(r.CurrentLayout, r.Ownership, b, post);
             b.image = e.Item->Image;
             b.subresourceRange = {AspectMaskForFormat(r.Format, r.Disjoint), 0,
                                   VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+            post.image = b.image;
+            post.subresourceRange = b.subresourceRange;
             barriers.push_back(b);
+            postBarriers.push_back(post);
           }
           dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                                   VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr,
@@ -1143,15 +1159,10 @@ bool GpuReadbackHelper::ReadImages(uint64_t deviceKey,
                                       regions.data());
           }
 
-          // The same barriers reversed: TRANSFER_SRC_OPTIMAL back to each image's layout.
-          for (auto& b : barriers) {
-            std::swap(b.oldLayout, b.newLayout);
-            b.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            b.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-          }
+          // TRANSFER_SRC_OPTIMAL back to each image's layout.
           dt.vkCmdPipelineBarrier(cb, VK_PIPELINE_STAGE_TRANSFER_BIT,
                                   VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr,
-                                  static_cast<uint32_t>(barriers.size()), barriers.data());
+                                  static_cast<uint32_t>(postBarriers.size()), postBarriers.data());
 
           VkBufferMemoryBarrier dstBarrier{};
           dstBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;

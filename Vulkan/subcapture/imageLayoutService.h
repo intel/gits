@@ -56,6 +56,14 @@ public:
                           const VkDependencyInfo& depInfo,
                           const std::vector<uint64_t>& handleKeys);
 
+  // Called from Post(vkCmdPipelineBarrierCommand) for the buffer barriers, whose only tracked
+  // effect is a transfer to or from an external queue family.
+  // handleKeys: m_pBufferMemoryBarriers.HandleKeys - one entry per barrier.
+  void OnBufferMemoryBarriers(uint64_t cbKey,
+                              const VkBufferMemoryBarrier* barriers,
+                              uint32_t count,
+                              const std::vector<uint64_t>& handleKeys);
+
   // ---- Render pass final-layout tracking (record time) -------------------
   //
   // vkCmdBeginRenderPass records which images are bound as attachments so that
@@ -143,6 +151,11 @@ private:
                                         uint32_t srcFamily,
                                         uint32_t dstFamily,
                                         const VkImageSubresourceRange& range);
+  // Buffer a transfer of an image or buffer to or from an external queue family - see
+  // CommandBufferState::ExternalOwnerAfterSubmit.
+  void NoteExternalQueueFamilyTransfer(
+      uint64_t cbKey, uint64_t key, uint32_t srcFamily, uint32_t dstFamily, bool wholeResource);
+  void ApplyExternalOwner(uint64_t key, uint32_t family);
 
   StateTrackingService& m_StateTracking;
 

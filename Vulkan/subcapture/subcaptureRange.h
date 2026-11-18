@@ -34,6 +34,10 @@ public:
   // present was recorded by a state restore (it is not an application frame).
   void FrameEnd(bool stateRestore);
 
+  void SetCurrentFrame(uint32_t frame) {
+    m_CurrentFrame = frame;
+  }
+
   // Returns true exactly once: on the Present call that precedes the first
   // frame of the requested subcapture range.  After it returns true once it
   // always returns false (state restore should only be triggered once).
@@ -44,6 +48,10 @@ public:
 
   bool BeforeRange() const {
     return m_CurrentFrame < m_StartFrame;
+  }
+
+  uint32_t StartFrame() const {
+    return m_StartFrame;
   }
 
   // Returns true if subcapture is enabled at all.

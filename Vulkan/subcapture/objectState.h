@@ -51,6 +51,10 @@ struct ObjectState {
   // Encoded creation command blob.  Re-decoded during state restore to
   // replay the creation using the command type identified by CreationCommandId.
   std::vector<char> CreationCommandBuffer;
+
+  // Encoded commands that exported a handle of this memory or semaphore to
+  // another API, restored under their recorded keys. See ExternalHandleService.
+  std::vector<std::pair<CommandId, std::vector<char>>> ExportCommands;
 };
 
 // ---- Instance / device -------------------------------------------------
@@ -177,6 +181,10 @@ struct BufferState : ObjectState {
   // Stored at vkCreateBuffer time for GPU-readback content restore.
   VkDeviceSize BufferSize{};
   VkBufferUsageFlags UsageFlags{};
+  VkSharingMode SharingMode{VK_SHARING_MODE_EXCLUSIVE};
+  // See ImageState::ExternalOwnerFamily and ImageState::ExternalOwnershipPartial.
+  uint32_t ExternalOwnerFamily{VK_QUEUE_FAMILY_IGNORED};
+  bool ExternalOwnershipPartial{false};
   // VkBufferOpaqueCaptureAddressCreateInfo::opaqueCaptureAddress, if present. Cached
   // here so it can be looked up without re-decoding the creation command.
   uint64_t OpaqueCaptureAddress{};
@@ -238,6 +246,8 @@ struct ImageState : ObjectState {
   // content-restore readback cannot perform the release+acquire handshake
   // itself), so ExclusiveOwnerFamily must be ignored and the image excluded
   // from content restore - see ImageLayoutService::NoteExclusiveQueueFamilyTransfer.
+  // A release to an external family is the exception: no Vulkan queue holds the
+  // other half, so the readback acquires the image itself (IsReleasedToExternal).
   bool ExclusiveOwnershipPending{false};
   // True once partial-range ownership transfers leave the image genuinely split (ranges heading
   // to two different destination families), so no single owner can be named. Sticky - content
@@ -253,6 +263,13 @@ struct ImageState : ObjectState {
   // Destination family every range of the in-flight partial transfer names. A range naming a
   // different one means the image really is split, which sets ExclusiveOwnershipMixed.
   uint32_t PartialOwnerDstFamily{UINT32_MAX};
+  // The external queue family (VK_QUEUE_FAMILY_EXTERNAL or VK_QUEUE_FAMILY_FOREIGN_EXT) the whole
+  // image was last released to, until it is acquired back; VK_QUEUE_FAMILY_IGNORED otherwise.
+  // Tracked for both sharing modes - see IsReleasedToExternal.
+  uint32_t ExternalOwnerFamily{VK_QUEUE_FAMILY_IGNORED};
+  // True once a barrier transferred only part of the image to or from an external queue family.
+  // Sticky, like ExclusiveOwnershipMixed, as the readback acquires the whole image.
+  bool ExternalOwnershipPartial{false};
   // From VkImageCreateInfo::flags & VK_IMAGE_CREATE_DISJOINT_BIT. A disjoint
   // multi-planar image's barriers must use plane aspect bits rather than
   // COLOR (VUID-VkImageMemoryBarrier-image-01672 / -image-09242) - see
@@ -262,6 +279,8 @@ struct ImageState : ObjectState {
   // subcapture stream.  EmitImageLayoutTransitions skips these images because
   // the buffer-to-image copy already ends in the correct layout.
   bool ContentRestored{false};
+  // The queue family that restored the contents, on which the image ends owned by the copy.
+  uint32_t ContentRestoreFamily{UINT32_MAX};
   // True once RestoreImage has determined that this image's backing memory
   // (BoundMemoryKey) could not be restored - e.g. an external/host-pointer
   // imported allocation that cannot be re-imported at replay time.  The image
@@ -523,6 +542,13 @@ struct CommandBufferState : ObjectState {
   // resolves the owner, so they cannot collapse into a per-image map like the whole-image updates
   // above.
   std::vector<PartialOwnerTransfer> PartialOwnerTransfersAfterSubmit;
+  // Images and buffers (by key) whose whole range this CB transfers to or from an external queue
+  // family: the external family for a release, VK_QUEUE_FAMILY_IGNORED for an acquire (last write
+  // wins). Applied to their ExternalOwnerFamily at submit time.
+  std::unordered_map<uint64_t, uint32_t> ExternalOwnerAfterSubmit;
+  // Images and buffers this CB transfers only part of to or from an external queue family. Kept
+  // apart from ExternalOwnerAfterSubmit for the reason ExclusiveOwnerMixedAfterSubmit is.
+  std::unordered_set<uint64_t> ExternalOwnerPartialAfterSubmit;
   // Acceleration-structure builds whose input buffers must be read back after this CB is
   // submitted. Folded onto the executing primary at vkCmdExecuteCommands. Cleared on CB
   // reset and one-time-submit invalidation.

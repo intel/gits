@@ -45,6 +45,8 @@ public:
                               VkMemoryRequirements& outReq,
                               bool& outRequiresDedicatedAllocation) override;
 
+  VkDeviceSize GetImageMemorySize(uint64_t deviceKey, uint64_t imageKey) override;
+
   uint32_t FindCompatibleMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) override;
 
   // Query a bound buffer because a parent trim may omit the original address command.
@@ -57,6 +59,7 @@ public:
                   uint64_t bufferKey,
                   VkDeviceSize srcOffset,
                   VkDeviceSize size,
+                  const ExternalOwnership& ownership,
                   std::vector<uint8_t>& outData) override;
 
   VkDeviceSize GetImageStagingLayout(VkFormat format,

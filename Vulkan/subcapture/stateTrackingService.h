@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "externalOwnership.h"
 #include "objectState.h"
 #include "subcaptureRecorder.h"
 #include "descriptorSetUpdateService.h"
@@ -96,6 +97,10 @@ public:
                                       VkMemoryRequirements& outReq,
                                       bool& outRequiresDedicatedAllocation) = 0;
 
+  // The size of the memory the replayed image `imageKey` takes where it is bound, from its memory
+  // requirements. Returns 0 when its handle or that of its device cannot be resolved.
+  virtual VkDeviceSize GetImageMemorySize(uint64_t deviceKey, uint64_t imageKey) = 0;
+
   // Pick a memory type index allowed by memoryTypeBits.  Prefers
   // VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, otherwise the first set bit.
   virtual uint32_t FindCompatibleMemoryType(uint64_t physDevKey, uint32_t memoryTypeBits) = 0;
@@ -103,7 +108,8 @@ public:
   // Reads 'size' bytes starting at 'srcOffset' of a GPU-local VkBuffer into outData.
   // The caller must keep srcOffset+size within the buffer. Pass the queue on whose
   // timeline the producing work has completed, so the copy observes the intended
-  // contents. Returns false when readback is not possible.
+  // contents. A buffer released to an external queue family is acquired for the copy
+  // and released back, as `ownership` names. Returns false when readback is not possible.
   virtual bool ReadBuffer(uint64_t deviceKey,
                           uint64_t physDevKey,
                           uint64_t queueKey,
@@ -111,7 +117,20 @@ public:
                           uint64_t bufferKey,
                           VkDeviceSize srcOffset,
                           VkDeviceSize size,
+                          const ExternalOwnership& ownership,
                           std::vector<uint8_t>& outData) = 0;
+  // Reads a buffer that Vulkan owns.
+  bool ReadBuffer(uint64_t deviceKey,
+                  uint64_t physDevKey,
+                  uint64_t queueKey,
+                  uint64_t commandPoolKey,
+                  uint64_t bufferKey,
+                  VkDeviceSize srcOffset,
+                  VkDeviceSize size,
+                  std::vector<uint8_t>& outData) {
+    return ReadBuffer(deviceKey, physDevKey, queueKey, commandPoolKey, bufferKey, srcOffset, size,
+                      ExternalOwnership{}, outData);
+  }
 
   // Compute the tightly-packed staging layout for an image (one
   // VkBufferImageCopy per subresource, bufferOffset relative to the image's
@@ -158,6 +177,9 @@ public:
     VkSampleCountFlagBits Samples{VK_SAMPLE_COUNT_1_BIT};
     VkImageLayout CurrentLayout{};
     bool Disjoint{};
+    // For an image released to an external queue family, the transfer that acquires it for the
+    // copy and releases it back in CurrentLayout.
+    ExternalOwnership Ownership{};
   };
 
   // Delivers one request's bytes. index is its position in the requests vector, data
@@ -323,7 +345,17 @@ public:
 
   // Emit state-restore commands into the subcapture stream for every live
   // object, in dependency order.  Called once at the subcapture boundary.
-  void RestoreState();
+  // Without `writeMarkers`, the caller writes the state restore markers around
+  // the state restore of all APIs of the stream.
+  void RestoreState(bool writeMarkers = true);
+  // Reports to the subcapture session the exported memory whose contents RestoreState cannot
+  // restore, and which contents of the rest it restores. It restores them only through the buffers
+  // and images bound to the memory, and reads back no image that is multisampled, disjoint, or in
+  // a queue family ownership transfer other than a whole release to an external queue family, nor
+  // a buffer partly released to one, nor any resource of a device without a queue and command pool
+  // of the same queue family. RestoreMappedMemory writes back only the host writes of the stream,
+  // without those of the GPU, so it counts as restoring none of the contents.
+  void ReportUnrestorableExportedContents();
 
   // Expose the descriptor-set update tracker so SubcaptureLayer can feed it.
   DescriptorSetUpdateService& GetDescriptorSetUpdateService() {
@@ -452,8 +484,14 @@ private:
   // map-order object pass cannot guarantee is available yet when a buffer is
   // reached.
   void RestoreSparseBufferBinds();
+  // An image released to an external queue family is in the layout the external owner handed it
+  // back in, when that reported one after the release, rather than the one Vulkan released it in.
+  void ApplyHandBackLayouts();
   void RestoreBufferContents();
   void RestoreImageContents();
+  // Throws when the contents of a resource reported as restored were not restored, and the
+  // importing API relies on them.
+  void CheckReportedContentsRestored() const;
   void RestoreAccelerationStructureContents();
 
   // Report what the acceleration structure and micromap build-input restore emitted versus
@@ -619,7 +657,9 @@ private:
 
   // Emit image layout transitions for all images whose currentLayout is neither
   // UNDEFINED nor PREINITIALIZED.  Called from RestoreState() after all objects
-  // have been re-created, before the StateRestoreEnd marker.
+  // have been re-created, before the StateRestoreEnd marker.  Images and buffers
+  // released to an external queue family are released to it again, after their
+  // contents are restored, so the application's acquire is valid.
   void EmitImageLayoutTransitions();
 
   // True if `img` is a swapchain image that was acquired (and not yet presented)
@@ -638,7 +678,12 @@ private:
 
   // Emit a pre-encoded command directly from a raw byte buffer (used for
   // replaying in-flight command buffer commands during state restore).
-  void EmitRawCommand(CommandId id, const std::vector<char>& encoded);
+  // `keepRecordedKey` keeps the key of a command other commands reference.
+  void EmitRawCommand(CommandId id, const std::vector<char>& encoded, bool keepRecordedKey = false);
+
+  // Whether the memory or semaphore of `state`, or the memory a buffer or image
+  // of `state` is bound to, is exported to another API.
+  bool IsExported(const ObjectState& state) const;
 
   // MicromapRestoreService is the opacity micromap half of the content-restore pass.
   friend class MicromapRestoreService;
@@ -659,6 +704,18 @@ private:
   // registered).  Inserted only after successful creation so dependents can
   // rely on the presence of a key here as proof the object actually exists.
   std::unordered_set<uint64_t> m_RestoredThisPass;
+  // The buffers and images that ReportUnrestorableExportedContents reported as restoring the
+  // range of the exported memory they are bound over.
+  struct ReportedContents {
+    uint64_t ResourceKey{};
+    uint64_t MemoryKey{};
+    uint64_t Offset{};
+    uint64_t Size{};
+  };
+  std::vector<ReportedContents> m_ReportedContents;
+  // Buffers whose contents RestoreBufferContents restored, through a readback or the mapped
+  // memory restore.
+  std::unordered_set<uint64_t> m_RestoredBufferContents;
   // Descriptor set keys whose vkAllocateDescriptorSets has already been emitted
   // this pass (via the per-pool batch or, for pNext sets, individually).  Kept
   // separate from m_RestoredThisPass because a set is "allocated" before its

@@ -10,6 +10,7 @@
 #include "stateTrackingService.h"
 #include "objectState.h"
 #include "commandIdsAuto.h"
+#include "subcaptureSession.h"
 #include <algorithm>
 
 namespace gits {
@@ -149,6 +150,9 @@ void SyncStateService::UnsignalBinarySemaphore(uint64_t semKey) {
   auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
   if (state && state->IsBinary) {
     state->IsSignaled = false;
+    if (!state->ExportCommands.empty()) {
+      stream::SubcaptureSession::Get().SetSemaphoreSignaled(semKey, false);
+    }
   }
 }
 
@@ -158,6 +162,9 @@ void SyncStateService::SignalBinarySemaphore(uint64_t semKey) {
   auto* state = m_StateTracking.GetState<SemaphoreState>(semKey);
   if (state && state->IsBinary) {
     state->IsSignaled = true;
+    if (!state->ExportCommands.empty()) {
+      stream::SubcaptureSession::Get().SetSemaphoreSignaled(semKey, true);
+    }
   }
 }
 

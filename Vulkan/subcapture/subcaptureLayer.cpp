@@ -71,12 +71,70 @@ SubcaptureLayer::SubcaptureLayer(PlayerManager& playerManager,
     // empty / absent).
     m_StateTracking.SetAnalyzerResults(&m_AnalyzerResults);
   }
+  if (m_SubcaptureRange.IsEnabled() && stream::SubcaptureSession::IsShared()) {
+    m_SubcaptureRange.SetCurrentFrame(
+        stream::SubcaptureSession::Get().AddParticipant(this, 0, m_SubcaptureRange.StartFrame()));
+  }
+}
+
+SubcaptureLayer::~SubcaptureLayer() {
+  stream::SubcaptureSession::Get().RemoveParticipant(this);
 }
 
 // ---- Frame boundary ------------------------------------------------------
 
 void SubcaptureLayer::TriggerRestoreState() {
   m_StateTracking.RestoreState();
+}
+
+void SubcaptureLayer::PrepareRestoreState() {
+  if (!m_AnalysisMode) {
+    m_StateTracking.ReportUnrestorableExportedContents();
+  }
+}
+
+void SubcaptureLayer::RestoreState() {
+  if (!m_AnalysisMode) {
+    m_StateTracking.RestoreState(/*writeMarkers=*/false);
+  }
+}
+
+void SubcaptureLayer::EndFrame() {
+  AdvanceRange(/*stateRestorePresent=*/false);
+}
+
+void SubcaptureLayer::AdvanceRange(bool stateRestorePresent) {
+  // Analysis pass: advance the frame counter and dump the analysis file when
+  // the range ends.  No restore and no recording happen here.
+  if (m_AnalysisMode) {
+    const bool wasInRange = m_SubcaptureRange.InRange();
+    m_SubcaptureRange.FrameEnd(stateRestorePresent);
+    const bool nowInRange = m_SubcaptureRange.InRange();
+    if (wasInRange && !nowInRange && m_AnalyzerService) {
+      m_AnalyzerService->DumpAnalysisFile();
+    }
+    return;
+  }
+
+  m_SubcaptureRange.FrameEnd(stateRestorePresent);
+
+  // RecordingLayer (registered immediately after SubcaptureLayer in the post
+  // order) is the sole owner of stream output: it records the in-range
+  // vkQueuePresentKHR, emits the trailing FrameEnd marker, and finalizes the
+  // stream once the range closes.  This handler must therefore only advance the
+  // range.  Emitting a FrameEnd marker or calling FinishRecording() here would
+  // run *before* RecordingLayer's present handler and close the stream one
+  // command too early, dropping the final vkQueuePresentKHR (and duplicating
+  // FrameEnd markers) for every subcapture.
+  if (m_SubcaptureRange.InRange()) {
+    if (!m_Recording) {
+      m_Recording = true;
+      LOG_INFO << "Vulkan subcapture: entering recording range";
+    }
+  } else if (m_Recording) {
+    m_Recording = false;
+    LOG_INFO << "Vulkan subcapture: recording range complete";
+  }
 }
 
 void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
@@ -139,46 +197,26 @@ void SubcaptureLayer::Post(vkQueuePresentKHRCommand& command) {
     return;
   }
 
-  const bool stateRestorePresent = IsStateRestoreKey(command.m_Key);
+  // A present recorded by a state restore is no frame of the application, so it is neither a
+  // restore point nor a frame of a subcapture shared with other APIs.
+  if (IsStateRestoreKey(command.m_Key)) {
+    AdvanceRange(/*stateRestorePresent=*/true);
+    return;
+  }
 
-  // Analysis pass: advance the frame counter and dump the analysis file when
-  // the range ends.  No restore and no recording happen here.
-  if (m_AnalysisMode) {
-    const bool wasInRange = m_SubcaptureRange.InRange();
-    m_SubcaptureRange.FrameEnd(stateRestorePresent);
-    const bool nowInRange = m_SubcaptureRange.InRange();
-    if (wasInRange && !nowInRange && m_AnalyzerService) {
-      m_AnalyzerService->DumpAnalysisFile();
-    }
+  if (stream::SubcaptureSession::IsShared()) {
+    stream::SubcaptureSession::Get().EndFrame(stream::StreamHeader::Api::API_VULKAN);
     return;
   }
 
   // Fire state restore exactly once, before the first recorded frame.
-  if (!stateRestorePresent && m_SubcaptureRange.IsRestorePoint()) {
+  if (!m_AnalysisMode && m_SubcaptureRange.IsRestorePoint()) {
     TriggerRestoreState();
     // After RestoreState the recorder stream is open; the very next FrameEnd
     // will put us inside the range so recording begins below.
   }
 
-  m_SubcaptureRange.FrameEnd(stateRestorePresent);
-
-  // RecordingLayer (registered immediately after SubcaptureLayer in the post
-  // order) is the sole owner of stream output: it records the in-range
-  // vkQueuePresentKHR, emits the trailing FrameEnd marker, and finalizes the
-  // stream once the range closes.  This handler must therefore only advance the
-  // range.  Emitting a FrameEnd marker or calling FinishRecording() here would
-  // run *before* RecordingLayer's present handler and close the stream one
-  // command too early, dropping the final vkQueuePresentKHR (and duplicating
-  // FrameEnd markers) for every subcapture.
-  if (m_SubcaptureRange.InRange()) {
-    if (!m_Recording) {
-      m_Recording = true;
-      LOG_INFO << "Vulkan subcapture: entering recording range";
-    }
-  } else if (m_Recording) {
-    m_Recording = false;
-    LOG_INFO << "Vulkan subcapture: recording range complete";
-  }
+  EndFrame();
 }
 
 // ---- Instance / device ---------------------------------------------------
@@ -411,6 +449,7 @@ void SubcaptureLayer::DropSparseRangesBackedBy(uint64_t memoryKey) {
 void SubcaptureLayer::Post(vkFreeMemoryCommand& command) {
   // Before the AsBacking branch below: the pages are gone either way.
   DropSparseRangesBackedBy(command.m_memory.Key);
+  stream::SubcaptureSession::Get().RemoveExports(command.m_memory.Key);
 
   // RestoreBlasChain needs the AS backing memory, so it is flagged Destroyed rather than
   // erased. Other memory is erased as before.
@@ -421,6 +460,46 @@ void SubcaptureLayer::Post(vkFreeMemoryCommand& command) {
   }
   m_StateTracking.RemoveState(command.m_memory.Key);
 }
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+namespace {
+
+template <typename TCommand>
+void StoreExportCommand(StateTrackingService& stateTracking, const TCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  ObjectState* state = stateTracking.GetState(command.m_pGetWin32HandleInfo.HandleKeys[0]);
+  if (!state) {
+    return;
+  }
+  auto& exported = state->ExportCommands.emplace_back();
+  exported.first = command.GetId();
+  exported.second.resize(GetSize(command));
+  Encode(command, exported.second.data());
+  stream::SubcaptureSession::Get().AddExport(command.m_Key, state->Key);
+}
+
+} // namespace
+
+// The runner overwrites m_Return with the replay result, so the recorded one is read in Pre.
+void SubcaptureLayer::Pre(vkGetMemoryWin32HandleKHRCommand& command) {
+  StoreExportCommand(m_StateTracking, command);
+}
+
+void SubcaptureLayer::Pre(vkGetSemaphoreWin32HandleKHRCommand& command) {
+  StoreExportCommand(m_StateTracking, command);
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  auto* semaphore =
+      m_StateTracking.GetState<SemaphoreState>(command.m_pGetWin32HandleInfo.HandleKeys[0]);
+  if (semaphore && semaphore->IsBinary) {
+    stream::SubcaptureSession::Get().AddSemaphoreExport(command.m_Key, semaphore->Key,
+                                                        semaphore->IsSignaled);
+  }
+}
+#endif
 
 void SubcaptureLayer::Post(vkMapMemoryCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
@@ -778,6 +857,7 @@ void SubcaptureLayer::Post(vkCreateSemaphoreCommand& command) {
 }
 
 void SubcaptureLayer::Post(vkDestroySemaphoreCommand& command) {
+  stream::SubcaptureSession::Get().RemoveExports(command.m_semaphore.Key);
   m_StateTracking.RemoveState(command.m_semaphore.Key);
 }
 
@@ -846,6 +926,7 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
     state->BufferSize = command.m_pCreateInfo.Value->size;
     state->UsageFlags =
         static_cast<VkBufferUsageFlags>(GetBufferUsage(*command.m_pCreateInfo.Value));
+    state->SharingMode = command.m_pCreateInfo.Value->sharingMode;
     state->SparseBinding =
         (command.m_pCreateInfo.Value->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != 0;
     // Detect a capture/replay opaque address via pNext chain (unlike AS,
@@ -2577,6 +2658,9 @@ void SubcaptureLayer::Post(vkCmdPipelineBarrierCommand& command) {
   m_ImageLayout.OnPipelineBarrier(command.m_commandBuffer.Key, command.m_pImageMemoryBarriers.Value,
                                   command.m_pImageMemoryBarriers.Size,
                                   command.m_pImageMemoryBarriers.HandleKeys);
+  m_ImageLayout.OnBufferMemoryBarriers(
+      command.m_commandBuffer.Key, command.m_pBufferMemoryBarriers.Value,
+      command.m_pBufferMemoryBarriers.Size, command.m_pBufferMemoryBarriers.HandleKeys);
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,
                                                    command.m_pBufferMemoryBarriers.HandleKeys);
   m_CommandBufferLifecycle.TrackHandleDependencies(command.m_commandBuffer.Key,

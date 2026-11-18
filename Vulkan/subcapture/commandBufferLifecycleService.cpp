@@ -36,6 +36,8 @@ void CommandBufferLifecycleService::ClearState(CommandBufferState& state) {
   state.ExclusiveOwnerAfterSubmit.clear();
   state.ExclusiveOwnerMixedAfterSubmit.clear();
   state.PartialOwnerTransfersAfterSubmit.clear();
+  state.ExternalOwnerAfterSubmit.clear();
+  state.ExternalOwnerPartialAfterSubmit.clear();
   state.AsInputReadbacksAfterSubmit.clear();
 }
 

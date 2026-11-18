@@ -24,6 +24,7 @@
 #include "analyzerRaytracingService.h"
 #include "raytracingOptimizationService.h"
 #include "commandCodersAuto.h"
+#include "subcaptureSession.h"
 
 #include <memory>
 #include <string>
@@ -39,7 +40,11 @@ class PlayerManager;
 // the state tables up-to-date so that a future state-restore pass (triggered
 // at the frame boundary defined by SubcaptureRange) can replay creation
 // commands in the right order.  Mirrors the DX12 StateTrackingLayer design.
-class SubcaptureLayer : public Layer {
+//
+// In a stream recorded with several APIs, the frames end at the frame ends
+// of any of them and the state of all of them is restored together. See
+// SubcaptureSession.
+class SubcaptureLayer : public Layer, public stream::SubcaptureSession::Participant {
 public:
   // framesStr: frame range string from config, e.g. "5" or "3-6".
   // An empty/"-" string disables subcapture.
@@ -51,6 +56,11 @@ public:
   explicit SubcaptureLayer(PlayerManager& playerManager,
                            const std::string& framesStr,
                            bool analysisMode = false);
+  ~SubcaptureLayer() override;
+
+  void PrepareRestoreState() override;
+  void RestoreState() override;
+  void EndFrame() override;
 
   StateTrackingService& GetStateTrackingService() {
     return m_StateTracking;
@@ -107,6 +117,12 @@ public:
   // ---- Memory ----------------------------------------------------------
   void Post(vkAllocateMemoryCommand& command) override;
   void Post(vkFreeMemoryCommand& command) override;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  // Exports are restored after the memory or semaphore, under the recorded key, which the
+  // imports of the other API of the stream reference. See ExternalHandleService.
+  void Pre(vkGetMemoryWin32HandleKHRCommand& command) override;
+  void Pre(vkGetSemaphoreWin32HandleKHRCommand& command) override;
+#endif
   void Post(vkMapMemoryCommand& command) override;
   void Post(vkUnmapMemoryCommand& command) override;
   void Post(vkMapMemory2Command& command) override;
@@ -464,6 +480,8 @@ private:
   // RecordingLayer::TrackCmdBuffer.
 
   void TriggerRestoreState();
+  // Advances the range past a present; one recorded by a state restore counts no frame.
+  void AdvanceRange(bool stateRestorePresent);
 
   void RemoveDescriptorSetsByPool(uint64_t poolKey);
 

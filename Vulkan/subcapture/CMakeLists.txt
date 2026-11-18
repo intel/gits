@@ -24,6 +24,8 @@ set(STATE_TRACKING_SRC
   ${SRC_DIR}/deviceAddressTrackingService.cpp
   ${SRC_DIR}/imageLayoutService.h
   ${SRC_DIR}/imageLayoutService.cpp
+  ${SRC_DIR}/externalOwnership.h
+  ${SRC_DIR}/externalOwnership.cpp
   ${SRC_DIR}/commandBufferLifecycleService.h
   ${SRC_DIR}/commandBufferLifecycleService.cpp
   ${SRC_DIR}/mappedMemoryService.h
@@ -120,3 +122,16 @@ target_link_libraries(Vulkan_subcapture_test PRIVATE
 )
 
 set_target_properties(Vulkan_subcapture_test PROPERTIES FOLDER Vulkan)
+
+# The same kind of gate for the ownership of resources released to an external queue family,
+# which pulls only externalOwnership.obj out of the static library.
+add_executable(Vulkan_subcapture_ownership_test
+  ${SRC_DIR}/tests/externalOwnershipTest.cpp
+)
+
+target_link_libraries(Vulkan_subcapture_ownership_test PRIVATE
+  Vulkan_subcapture
+  Vulkan_layer_interface
+)
+
+set_target_properties(Vulkan_subcapture_ownership_test PROPERTIES FOLDER Vulkan)

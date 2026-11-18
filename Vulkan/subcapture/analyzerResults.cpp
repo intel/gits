@@ -9,11 +9,11 @@
 #include "analyzerResults.h"
 #include "configurator.h"
 #include "log.h"
+#include "subcaptureSession.h"
 
 #include "yaml-cpp/yaml.h"
 
 #include <filesystem>
-#include <sstream>
 
 namespace gits {
 namespace vulkan {
@@ -153,8 +153,16 @@ bool AnalyzerResults::IsAnalysis() {
   // file (carrying the trailing completion marker).  A truncated file from an
   // interrupted analysis run is ignored here so the analysis pass re-runs and
   // regenerates it, instead of silently driving the recording pass with a
-  // partial restore set.
-  return IsUsableAnalysisFile(GetAnalysisFileName());
+  // partial restore set.  The subcaptures of a stream with several APIs run
+  // their analysis pass together.
+  const auto& player = Configurator::Get().common.player;
+  for (const std::string& fileName :
+       stream::SubcaptureSession::AnalysisFileNames(player.streamDir, player.subcapture.frames)) {
+    if (!IsUsableAnalysisFile(fileName)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 bool AnalyzerResults::IsUsableAnalysisFile(const std::string& fileName) {
@@ -176,11 +184,9 @@ bool AnalyzerResults::IsUsableAnalysisFile(const std::string& fileName) {
 }
 
 std::string AnalyzerResults::GetAnalysisFileName() {
-  const Configuration& config = Configurator::Get();
-  std::stringstream fileName;
-  fileName << config.common.player.streamDir.filename().string() << "_frames-"
-           << config.common.player.subcapture.frames << "_analysis.yml";
-  return fileName.str();
+  const auto& player = Configurator::Get().common.player;
+  return stream::SubcaptureSession::AnalysisFileName(player.streamDir, player.subcapture.frames,
+                                                     stream::StreamHeader::Api::API_VULKAN);
 }
 
 } // namespace vulkan
