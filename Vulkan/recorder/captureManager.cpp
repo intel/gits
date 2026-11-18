@@ -37,6 +37,8 @@ CaptureManager::CaptureManager() {
   stream::OrderingRecorder& recorder = stream::RecordingSession::Get().GetOrderingRecorder();
 
   m_MapTrackingService.reset(new MapTrackingService(*this, recorder));
+  stream::RecordingSession::Get().SetHostWritePublisher(
+      [service = m_MapTrackingService.get()] { service->SnapshotExportedMapped(); });
   m_WindowTrackingService.reset(new WindowTrackingService(*this, recorder));
 
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
@@ -54,6 +56,7 @@ CaptureManager::CaptureManager() {
 }
 
 CaptureManager::~CaptureManager() {
+  stream::RecordingSession::Get().SetHostWritePublisher({});
   Shutdown();
 }
 

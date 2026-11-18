@@ -438,6 +438,7 @@ void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
   allocationInfo.AllocationSize = allocateInfo.allocationSize;
   allocationInfo.MemoryTypeIndex = allocateInfo.memoryTypeIndex;
   allocationInfo.ExternalMemory = externalPtr;
+  allocationInfo.IsExported = IsMemoryExport(allocateInfo.pNext);
   auto deviceIt = m_Devices.find(deviceKey);
   if (deviceIt != m_Devices.end()) {
     auto propertiesIt = m_PhysicalDeviceMemoryProperties.find(deviceIt->second.PhysicalDeviceKey);
@@ -518,6 +519,9 @@ void MapTrackingService::RemoveAllocationInfo(GITSKey deviceMemoryKey) {
   // vkFreeMemory implicitly unmaps the memory. Writes since the last submit can never reach the
   // GPU, so the shadow is dropped without touching the already freed mapping.
   ReleaseShadowMemory(it->second);
+  if (it->second.IsMapped && it->second.IsExported) {
+    m_MappedExportedCount.fetch_sub(1, std::memory_order_release);
+  }
   m_Allocations.erase(it);
 }
 
@@ -529,6 +533,9 @@ void MapTrackingService::StoreData(GITSKey deviceMemoryKey,
   auto it = m_Allocations.find(deviceMemoryKey);
   GITS_ASSERT(it != m_Allocations.end());
   auto& allocationInfo = it->second;
+  if (allocationInfo.IsExported && !allocationInfo.IsMapped) {
+    m_MappedExportedCount.fetch_add(1, std::memory_order_release);
+  }
   allocationInfo.IsMapped = true;
   allocationInfo.MapOffset = offset;
   allocationInfo.MapSize = (size == VK_WHOLE_SIZE) ? allocationInfo.AllocationSize - offset : size;
@@ -581,6 +588,9 @@ void MapTrackingService::RemoveData(GITSKey deviceMemoryKey) {
   GITS_ASSERT(it != m_Allocations.end());
   if (it->second.IsMapped) {
     ScheduleMemoryUpdate(deviceMemoryKey);
+    if (it->second.IsExported) {
+      m_MappedExportedCount.fetch_sub(1, std::memory_order_release);
+    }
   }
   ReleaseShadowMemory(it->second);
   it->second.IsMapped = false;
@@ -616,6 +626,18 @@ void MapTrackingService::SnapshotAllMapped() {
   std::lock_guard<std::mutex> lock(m_Mutex);
   for (const auto& [deviceMemoryKey, allocationInfo] : m_Allocations) {
     if (allocationInfo.IsMapped) {
+      ScheduleMemoryUpdate(deviceMemoryKey);
+    }
+  }
+}
+
+void MapTrackingService::SnapshotExportedMapped() {
+  if (m_MappedExportedCount.load(std::memory_order_acquire) == 0) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  for (const auto& [deviceMemoryKey, allocationInfo] : m_Allocations) {
+    if (allocationInfo.IsMapped && allocationInfo.IsExported) {
       ScheduleMemoryUpdate(deviceMemoryKey);
     }
   }

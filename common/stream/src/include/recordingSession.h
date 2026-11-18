@@ -12,6 +12,8 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
+#include <mutex>
 
 namespace gits {
 namespace stream {
@@ -39,11 +41,21 @@ public:
     return CreateCommandKeyRange(1);
   }
 
+  // The publisher records the host writes to mapped memory that another API may import, and makes
+  // them visible to that API. An empty function removes the publisher.
+  void SetHostWritePublisher(std::function<void()> publisher);
+  // Called by the recorder of an API that imports memory, before a command that may read it and
+  // before the key of that command is reserved.
+  void PublishHostWrites();
+
 private:
   RecordingSession() = default;
 
   OrderingRecorder m_Recorder;
   std::atomic<uint64_t> m_CommandKey{0};
+  std::atomic<bool> m_HasHostWritePublisher{false};
+  std::mutex m_HostWritePublisherMutex;
+  std::function<void()> m_HostWritePublisher;
 };
 
 } // namespace stream

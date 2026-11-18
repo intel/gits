@@ -12,6 +12,7 @@
 #include "command.h"
 #include "arguments.h"
 
+#include <atomic>
 #include <map>
 #include <vector>
 #include <unordered_map>
@@ -63,6 +64,9 @@ public:
   void StoreData(GITSKey deviceMemoryKey, VkDeviceSize offset, VkDeviceSize size, void** ppData);
   void RemoveData(GITSKey deviceMemoryKey);
   void SnapshotAllMapped();
+  // Publishes host writes to mapped memory that other APIs may import, which they can read
+  // without a Vulkan queue submission.
+  void SnapshotExportedMapped();
   void SnapshotMapped(GITSKey deviceMemoryKey);
   // Make device writes visible to the host in shadowed mappings: those of the range on
   // vkInvalidateMappedMemoryRanges and of every host-coherent mapping on a host synchronization.
@@ -96,6 +100,7 @@ private:
     VkDeviceSize AllocationSize;
     uint32_t MemoryTypeIndex;
     void* ExternalMemory{nullptr};
+    bool IsExported{false};
     bool IsCoherent{true};
     bool IsMapped;
     VkDeviceSize MapOffset;
@@ -140,6 +145,8 @@ private:
   std::unordered_map<GITSKey, DeviceInfo> m_Devices;
   std::unordered_map<GITSKey, VkPhysicalDeviceMemoryProperties> m_PhysicalDeviceMemoryProperties;
   std::unordered_map<GITSKey, AllocationInfo> m_Allocations;
+  // Modified under m_Mutex; read without it so that commands of other APIs check it cheaply.
+  std::atomic<size_t> m_MappedExportedCount{0};
   // Mapped allocations by shadow memory address. Points into m_Allocations, whose elements stay
   // valid until erased.
   std::map<uintptr_t, AllocationInfo*> m_ShadowAllocations;
