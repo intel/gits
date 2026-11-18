@@ -64,6 +64,9 @@ namespace gits::opengl {
 // glBindTransformFeedback/glIsTransformFeedback/glDrawTransformFeedback(Stream(Instanced)) -
 // see object_name_lifecycle.py's matching GLObjectKind comment.
 //
+// MemoryObject and Semaphore name GL_EXT_memory_object/GL_EXT_semaphore objects, which import
+// memory and semaphores exported by another API.
+//
 // Share-group identity (see modern-opengl-backend-architecture.md's share-group decision
 // record and common/services/shareGroupService.h): a GLuint object name is unique only within
 // a share group, not process-globally - two independent, non-sharing contexts can each have a
@@ -92,6 +95,8 @@ enum class GLObjectKind : uint8_t {
   Sampler,
   ProgramPipeline,
   TransformFeedback,
+  MemoryObject,
+  Semaphore,
   kCount, // Not a real bucket - array size sentinel only.
 };
 

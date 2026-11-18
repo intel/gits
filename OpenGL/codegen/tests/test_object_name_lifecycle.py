@@ -50,14 +50,27 @@ class ValidateObjectNameOverrideTests(unittest.TestCase):
         _validate_object_name_override(
             'glBindTexture', 'texture', TypeFacts.from_type('GLuint'), override)
 
-    def test_array_lookup_is_rejected(self) -> None:
-        # No enabled command needs an array-of-existing-names lookup today - see
-        # object_name_lifecycle.py's ObjectNameRole.LOOKUP docstring.
+    def test_array_lookup_without_pointer_override_is_rejected(self) -> None:
         override = ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP)
         with self.assertRaises(ValueError):
             _validate_object_name_override(
                 'glSomeHypotheticalCommand', 'textures',
                 TypeFacts.from_type('GLuint *'), override)
+
+    def test_array_lookup_with_matching_in_direction_is_accepted(self) -> None:
+        override = ObjectNameOverride(kind=GLObjectKind.TEXTURE, role=ObjectNameRole.LOOKUP)
+        # Should not raise: glSignalSemaphoreEXT.textures is a PointerDirection.IN entry.
+        _validate_object_name_override(
+            'glSignalSemaphoreEXT', 'textures', TypeFacts.from_type('const GLuint *'), override)
+
+    def test_array_lookup_or_create_is_rejected(self) -> None:
+        override = ObjectNameOverride(kind=GLObjectKind.TEXTURE,
+                                      role=ObjectNameRole.LOOKUP_OR_CREATE,
+                                      gen_command='glGenTextures', is_command='glIsTexture')
+        with self.assertRaises(ValueError):
+            _validate_object_name_override(
+                'glSignalSemaphoreEXT', 'textures', TypeFacts.from_type('const GLuint *'),
+                override)
 
     def test_array_create_without_matching_pointer_override_is_rejected(self) -> None:
         # A command name/param name that has no POINTER_PARAM_OVERRIDES entry at all is a
@@ -364,6 +377,37 @@ class EndToEndClassificationTests(unittest.TestCase):
                 param = next(p for p in cmd.params if p.name == param_name)
                 override = object_name_override_for(cmd_name, param_name, param.class_)
                 self.assertEqual(wrapper_for(param.type_facts, override), 'HandleArrayArgument')
+
+    def test_external_object_commands(self) -> None:
+        for cmd_name, param_name, kind, role in (
+            ('glCreateMemoryObjectsEXT', 'memoryObjects', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.CREATE),
+            ('glDeleteMemoryObjectsEXT', 'memoryObjects', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.DELETE),
+            ('glImportMemoryWin32HandleEXT', 'memory', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.LOOKUP),
+            ('glMemoryObjectParameterivEXT', 'memoryObject', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.LOOKUP),
+            ('glNamedBufferStorageMemEXT', 'memory', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.LOOKUP),
+            ('glTextureStorageMem2DEXT', 'memory', GLObjectKind.MEMORY_OBJECT,
+             ObjectNameRole.LOOKUP),
+            ('glGenSemaphoresEXT', 'semaphores', GLObjectKind.SEMAPHORE, ObjectNameRole.CREATE),
+            ('glDeleteSemaphoresEXT', 'semaphores', GLObjectKind.SEMAPHORE,
+             ObjectNameRole.DELETE),
+            ('glImportSemaphoreWin32HandleEXT', 'semaphore', GLObjectKind.SEMAPHORE,
+             ObjectNameRole.LOOKUP),
+            ('glSignalSemaphoreEXT', 'semaphore', GLObjectKind.SEMAPHORE, ObjectNameRole.LOOKUP),
+            ('glSignalSemaphoreEXT', 'textures', GLObjectKind.TEXTURE, ObjectNameRole.LOOKUP),
+            ('glWaitSemaphoreEXT', 'buffers', GLObjectKind.BUFFER, ObjectNameRole.LOOKUP),
+        ):
+            with self.subTest(command=cmd_name, param=param_name):
+                cmd = self._get_command(Api.GL, cmd_name)
+                self.assertTrue(cmd.enabled)
+                param = next(p for p in cmd.params if p.name == param_name)
+                override = object_name_override_for(cmd_name, param_name, param.class_)
+                self.assertEqual(override.kind, kind)
+                self.assertEqual(override.role, role)
 
     def test_array_input_destruction_command(self) -> None:
         cmd = self._get_command(Api.GL, 'glDeleteTextures')

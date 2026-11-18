@@ -1278,4 +1278,41 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
         direction=PointerDirection.OUT,
         length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1',
         query_buffer_guard=True),
+
+    # GL_EXT_memory_object/GL_EXT_semaphore name arrays. gl.xml gives glCreateMemoryObjectsEXT's
+    # `memoryObjects` no len= at all; the spec fills `n` names, like glCreateTextures.
+    ('glCreateMemoryObjectsEXT', 'memoryObjects'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    ('glDeleteMemoryObjectsEXT', 'memoryObjects'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    ('glGenSemaphoresEXT', 'semaphores'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    ('glDeleteSemaphoresEXT', 'semaphores'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value='n'),
+    # The Win32 handle of an exported allocation or semaphore. Its value is valid only in the
+    # recorded process; the recorder replaces it with the key of the command that exported it.
+    ('glImportMemoryWin32HandleEXT', 'handle'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    ('glImportSemaphoreWin32HandleEXT', 'handle'): PointerParamOverride(
+        direction=PointerDirection.IN, length_source_kind=LengthSourceKind.OPAQUE_BIT_PATTERN),
+    # GL_DEDICATED_MEMORY_OBJECT_EXT and GL_PROTECTED_MEMORY_OBJECT_EXT, the only parameters, are
+    # one value each.
+    ('glMemoryObjectParameterivEXT', 'params'): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.FIXED_COUNT, length_source_value='1'),
+    # glSignalSemaphoreEXT/glWaitSemaphoreEXT barriers: gl.xml writes the lengths as
+    # COMPSIZE(numBufferBarriers)/COMPSIZE(numTextureBarriers), but the spec passes exactly that
+    # many buffers, textures and layouts.
+    **{(command, param): PointerParamOverride(
+        direction=PointerDirection.IN,
+        length_source_kind=LengthSourceKind.SIBLING_PARAM, length_source_value=length)
+       for command, layouts in (('glSignalSemaphoreEXT', 'dstLayouts'),
+                                ('glWaitSemaphoreEXT', 'srcLayouts'))
+       for param, length in (('buffers', 'numBufferBarriers'),
+                             ('textures', 'numTextureBarriers'),
+                             (layouts, 'numTextureBarriers'))},
 }

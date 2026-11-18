@@ -118,6 +118,12 @@ class GLObjectKind(StrEnum):
     # between contexts - see recorder/include/handleArgumentUpdaters.h's GroupIdentityFor(),
     # which buckets this kind by per-context identity for exactly this reason.
     TRANSFORM_FEEDBACK = 'TransformFeedback'
+    # GL_EXT_memory_object/GL_EXT_semaphore objects, used to import memory and semaphores
+    # exported by Vulkan. gl.xml tags none of their fields with a class=, so every field is
+    # listed in _EXPLICIT_OVERRIDES. GL_EXT_external_objects adds both to the shared object
+    # types.
+    MEMORY_OBJECT = 'MemoryObject'
+    SEMAPHORE = 'Semaphore'
 
 
 class ObjectNameRole(StrEnum):
@@ -451,6 +457,62 @@ _EXPLICIT_OVERRIDES: dict[tuple[str, str], ObjectNameOverride] = {
     **{(command, 'name'): ObjectNameOverride(
         kind=None, role=ObjectNameRole.LOOKUP, identifier_param='identifier')
        for command in ('glObjectLabel', 'glObjectLabelKHR')},
+
+    # gl.xml tags no memory object or semaphore field with a class=. The role follows the
+    # command name like that of class-tagged fields.
+    **{(command, field): ObjectNameOverride(kind=GLObjectKind.MEMORY_OBJECT,
+                                            role=_infer_role(command))
+       for command, field in (
+           ('glAcquireKeyedMutexWin32EXT', 'memory'),
+           ('glBufferAttachMemoryNV', 'memory'),
+           ('glBufferPageCommitmentMemNV', 'memory'),
+           ('glBufferStorageMemEXT', 'memory'),
+           ('glCreateMemoryObjectsEXT', 'memoryObjects'),
+           ('glDeleteMemoryObjectsEXT', 'memoryObjects'),
+           ('glGetMemoryObjectDetachedResourcesuivNV', 'memory'),
+           ('glGetMemoryObjectParameterivEXT', 'memoryObject'),
+           ('glImportMemoryFdEXT', 'memory'),
+           ('glImportMemoryWin32HandleEXT', 'memory'),
+           ('glImportMemoryWin32NameEXT', 'memory'),
+           ('glIsMemoryObjectEXT', 'memoryObject'),
+           ('glMemoryObjectParameterivEXT', 'memoryObject'),
+           ('glNamedBufferAttachMemoryNV', 'memory'),
+           ('glNamedBufferPageCommitmentMemNV', 'memory'),
+           ('glNamedBufferStorageMemEXT', 'memory'),
+           ('glReleaseKeyedMutexWin32EXT', 'memory'),
+           ('glResetMemoryObjectParameterNV', 'memory'),
+           ('glTexAttachMemoryNV', 'memory'),
+           ('glTexPageCommitmentMemNV', 'memory'),
+           ('glTexStorageMem1DEXT', 'memory'),
+           ('glTexStorageMem2DEXT', 'memory'),
+           ('glTexStorageMem2DMultisampleEXT', 'memory'),
+           ('glTexStorageMem3DEXT', 'memory'),
+           ('glTexStorageMem3DMultisampleEXT', 'memory'),
+           ('glTextureAttachMemoryNV', 'memory'),
+           ('glTexturePageCommitmentMemNV', 'memory'),
+           ('glTextureStorageMem1DEXT', 'memory'),
+           ('glTextureStorageMem2DEXT', 'memory'),
+           ('glTextureStorageMem2DMultisampleEXT', 'memory'),
+           ('glTextureStorageMem3DEXT', 'memory'),
+           ('glTextureStorageMem3DMultisampleEXT', 'memory'),
+       )},
+    **{(command, field): ObjectNameOverride(kind=GLObjectKind.SEMAPHORE,
+                                            role=_infer_role(command))
+       for command, field in (
+           ('glCreateSemaphoresNV', 'semaphores'),
+           ('glDeleteSemaphoresEXT', 'semaphores'),
+           ('glGenSemaphoresEXT', 'semaphores'),
+           ('glGetSemaphoreParameterivNV', 'semaphore'),
+           ('glGetSemaphoreParameterui64vEXT', 'semaphore'),
+           ('glImportSemaphoreFdEXT', 'semaphore'),
+           ('glImportSemaphoreWin32HandleEXT', 'semaphore'),
+           ('glImportSemaphoreWin32NameEXT', 'semaphore'),
+           ('glIsSemaphoreEXT', 'semaphore'),
+           ('glSemaphoreParameterivNV', 'semaphore'),
+           ('glSemaphoreParameterui64vEXT', 'semaphore'),
+           ('glSignalSemaphoreEXT', 'semaphore'),
+           ('glWaitSemaphoreEXT', 'semaphore'),
+       )},
 }
 
 

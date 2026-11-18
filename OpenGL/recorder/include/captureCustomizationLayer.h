@@ -45,6 +45,10 @@ public:
   void Pre(glProgramBinaryOESCommand& command) override;
   void Pre(glShaderBinaryCommand& command) override;
 
+  // Records the key of the command that exported the imported handle. See ExternalHandleService.
+  void Pre(glImportMemoryWin32HandleEXTCommand& command) override;
+  void Pre(glImportSemaphoreWin32HandleEXTCommand& command) override;
+
   void Post(wglCreateContextAttribsARBCommand& command) override;
 };
 

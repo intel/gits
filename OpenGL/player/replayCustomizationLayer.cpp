@@ -8,6 +8,7 @@
 
 #include "replayCustomizationLayer.h"
 
+#include "externalHandleService.h"
 #include "glEnumsAuto.h"
 #include "glxDrawableService.h"
 #include "handleArgumentUpdaters.h"
@@ -18,6 +19,8 @@
 #include "uniformLocationMapService.h"
 
 #include <atomic>
+#include <stdexcept>
+#include <string>
 
 namespace gits::opengl {
 
@@ -28,6 +31,22 @@ thread_local GLint tl_RecordedLocation{};
 
 bool Executed(const Command& command) {
   return PlayerManager::Get().ExecuteCommands() && !command.m_Skip;
+}
+
+// The recorder stores the key of the command that exported the handle instead of the handle.
+template <typename CommandT>
+void ImportReplayedExport(CommandT& command, const char* commandName) {
+  if (!Executed(command)) {
+    return;
+  }
+  const uint64_t exportKey = command.m_handle.Value;
+  void* handle = stream::ExternalHandleService::Get().GetReplayedExport(exportKey);
+  if (handle == nullptr) {
+    throw std::runtime_error(std::string(commandName) + " (key " + std::to_string(command.m_Key) +
+                             ") imports a handle of command " + std::to_string(exportKey) +
+                             ", which did not export one in this replay");
+  }
+  command.m_handle.Value = reinterpret_cast<uintptr_t>(handle);
 }
 
 // The other elements of a uniform array the location belongs to are registered by the
@@ -172,6 +191,14 @@ void ReplayCustomizationLayer::Post(glViewportCommand& command) {
         command.m_width.Value, command.m_height.Value);
 #endif
   }
+}
+
+void ReplayCustomizationLayer::Pre(glImportMemoryWin32HandleEXTCommand& command) {
+  ImportReplayedExport(command, "glImportMemoryWin32HandleEXT");
+}
+
+void ReplayCustomizationLayer::Pre(glImportSemaphoreWin32HandleEXTCommand& command) {
+  ImportReplayedExport(command, "glImportSemaphoreWin32HandleEXT");
 }
 
 void ReplayCustomizationLayer::Pre(glClientWaitSyncCommand& command) {

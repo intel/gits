@@ -961,6 +961,11 @@ _FORCE_DISABLED_COMMANDS: frozenset[str] = frozenset({
     # Binds a video channel of the recorded display to a window. Video channels are hardware
     # outputs the player cannot substitute.
     'glXBindChannelToWindowSGIX',
+
+    # Take a file descriptor of the recorded process. Only Win32 handles exported by a recorded
+    # command are replaced with the handle the player's replay of it returned.
+    'glImportMemoryFdEXT',
+    'glImportSemaphoreFdEXT',
 })
 
 
@@ -1024,6 +1029,7 @@ def _is_fully_capturable_command(
 _EXPECTED_POINTER_DIRECTION_FOR_ROLE: dict[ObjectNameRole, PointerDirection] = {
     ObjectNameRole.CREATE: PointerDirection.OUT,
     ObjectNameRole.DELETE: PointerDirection.IN,
+    ObjectNameRole.LOOKUP: PointerDirection.IN,
 }
 
 
@@ -1039,11 +1045,10 @@ def _validate_object_name_override(
     not merely "this field happens to be currently uncapturable for an unrelated reason".
     """
     if type_facts.is_array_element_eligible:
-        if override.role is ObjectNameRole.LOOKUP:
+        if override.role not in _EXPECTED_POINTER_DIRECTION_FOR_ROLE:
             raise ValueError(
-                f"{command_name}.{param_name}: ObjectNameRole.LOOKUP is only defined for "
-                f"scalar object-name fields today - no enabled command needs an "
-                f"array-of-existing-names lookup yet"
+                f"{command_name}.{param_name}: ObjectNameRole.{override.role} is only defined "
+                f"for scalar object-name fields"
             )
         pointer_override = _pointer_override_for_command_or_alias(command_name, param_name, alias)
         if pointer_override is None:

@@ -41,6 +41,10 @@ const char* KindName(GLObjectKind kind) {
     return "ProgramPipeline";
   case GLObjectKind::TransformFeedback:
     return "TransformFeedback";
+  case GLObjectKind::MemoryObject:
+    return "MemoryObject";
+  case GLObjectKind::Semaphore:
+    return "Semaphore";
   case GLObjectKind::kCount:
     break;
     // No default: - a `default:` branch would silently absorb any future GLObjectKind

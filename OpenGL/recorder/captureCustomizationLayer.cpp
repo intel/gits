@@ -9,6 +9,7 @@
 #include "captureCustomizationLayer.h"
 
 #include "capabilitySuppressionService.h"
+#include "externalHandleService.h"
 #include "glEnumsAuto.h"
 #include "log.h"
 #include "openglDriversAuto.h"
@@ -28,6 +29,18 @@ void AnswerStateQuery(CommandT& command) {
 void SkipCall(Command& command) {
   command.m_Skip = true;
   command.m_SkipRecording = true;
+}
+
+// The driver is called with the application's handle, not with the command's arguments.
+template <typename CommandT>
+void RecordExportKey(CommandT& command, const char* commandName) {
+  const uint64_t exportKey = stream::ExternalHandleService::Get().GetRecordedExportKey(
+      reinterpret_cast<void*>(command.m_handle.Value), command.m_Key);
+  if (exportKey == 0) {
+    LOG_ERROR << commandName << " imports a handle that no recorded command exported, so the "
+              << "stream cannot replay the import. Only handles exported by Vulkan are supported.";
+  }
+  command.m_handle.Value = static_cast<uintptr_t>(exportKey);
 }
 
 } // namespace
@@ -100,6 +113,14 @@ void CaptureCustomizationLayer::Pre(glShaderBinaryCommand& command) {
   if (CapabilitySuppressionService::Get().SkipsShaderBinary(command.m_binaryFormat.Value)) {
     SkipCall(command);
   }
+}
+
+void CaptureCustomizationLayer::Pre(glImportMemoryWin32HandleEXTCommand& command) {
+  RecordExportKey(command, "glImportMemoryWin32HandleEXT");
+}
+
+void CaptureCustomizationLayer::Pre(glImportSemaphoreWin32HandleEXTCommand& command) {
+  RecordExportKey(command, "glImportSemaphoreWin32HandleEXT");
 }
 
 void CaptureCustomizationLayer::Post(wglCreateContextAttribsARBCommand& command) {
