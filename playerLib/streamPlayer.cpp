@@ -356,6 +356,13 @@ void PlayStream(const std::filesystem::path& streamPath) {
     throw std::runtime_error("The stream was recorded with several APIs, but the player was "
                              "built without some of them.");
   }
+  // The subcapture of a stream with several APIs counts the frames of all of them from the first
+  // one, also for an API whose first command follows the subcapture range or is never replayed.
+  if (header.HasMultipleApis()) {
+    for (stream::CommandFactory* commandFactory : commandFactories) {
+      commandFactory->CreatePlayer();
+    }
+  }
 
   Configurator::Instance().LogUnspportedConfigUsage(header.GetApiBool());
 

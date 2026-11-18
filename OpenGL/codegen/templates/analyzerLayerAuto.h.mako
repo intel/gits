@@ -12,6 +12,7 @@ ${AUTO_GENERATED_HEADER}
 
 #include "layerAuto.h"
 #include "subcaptureRange.h"
+#include "subcaptureSession.h"
 
 #include <set>
 #include <unordered_set>
@@ -20,11 +21,15 @@ namespace gits::opengl {
 
 // Collects the objects the commands of a subcapture range name, and writes them to the analysis
 // file when the range ends. Commands compiled into display lists count wherever they are
-// compiled, since the range may call the lists.
-class AnalyzerLayer : public Layer {
+// compiled, since the range may call the lists. In a stream recorded with two APIs, the frames
+// end at the frame ends of either API. See SubcaptureSession.
+class AnalyzerLayer : public Layer, public stream::SubcaptureSession::Participant {
 public:
-  explicit AnalyzerLayer(const SubcaptureRange& range) : Layer("Analyzer"), m_Range(range) {}
+  explicit AnalyzerLayer(const SubcaptureRange& range);
   ~AnalyzerLayer() override;
+
+  void RestoreState() override {}
+  void EndFrame() override;
 
 % for name in analyzed:
   void Pre(${name}Command& command) override;
@@ -58,7 +63,7 @@ private:
       Use(key);
     }
   }
-  void EndFrame();
+  void SwapEnded();
 
   SubcaptureRange m_Range;
   std::unordered_set<GITSKey> m_Objects;

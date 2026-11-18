@@ -56,6 +56,7 @@ add_library(stream STATIC ${STREAM_SRC_HEADERS} ${STREAM_SRC_SOURCES})
 target_link_libraries(stream PRIVATE 
   log
   configuration
+  yamlcpp
   ${TBB_DEPENDENT_LIBRARIES}
 )
 
@@ -67,6 +68,14 @@ PRIVATE
 )
 
 set_target_properties(stream PROPERTIES FOLDER "common")
+
+# Host-only gate for the analysis files a subcapture recording pass can use, on which the APIs of
+# a stream decide together. Run the executable; it prints failures and exits non-zero.
+add_executable(stream_subcapture_analysis_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/subcaptureAnalysisTest.cpp
+)
+target_link_libraries(stream_subcapture_analysis_test PRIVATE stream configuration log)
+set_target_properties(stream_subcapture_analysis_test PROPERTIES FOLDER "common")
 
 # Host-only gate for the check that the exporting API restores the contents an import uses: no
 # GPU, no driver, no stream. Run the executable; it prints failures and exits non-zero. It needs

@@ -116,6 +116,28 @@ struct ObjectState {
   GITSKey DeletedIn{};
   // Whether a texture or image handle of the texture was ever created.
   bool HandleCreated{};
+  // The commands that set up a memory object or semaphore of GL_EXT_memory_object or
+  // GL_EXT_semaphore after its creation, such as the import of its handle. A memory object
+  // deleted while a buffer or texture has storage in it stays tracked, delete pending, to give
+  // that storage again.
+  std::vector<std::shared_ptr<StoredCommand>> Setup;
+  // A semaphore created by glCreateSemaphoresNV of GL_NV_timeline_semaphore rather than by
+  // glGenSemaphoresEXT.
+  bool CreatedByNv{};
+  // The key of the command of the other API that exported the payload a memory object or
+  // semaphore imports.
+  uint64_t ImportedExport{};
+  // The command that gave a buffer or texture its storage in the memory object `StorageMemory`,
+  // at `StorageOffset`, of `StorageSize` for a buffer; GL gives no size for a texture. The API
+  // that exported the memory restores the contents, but for the bytes of a buffer that no
+  // resource of that API is bound over.
+  std::shared_ptr<StoredCommand> MemoryStorage;
+  GITSKey StorageMemory{};
+  uint64_t StorageOffset{};
+  uint64_t StorageSize{};
+  // The GL_TEXTURE_TILING_EXT the application set on a texture before giving it its storage in a
+  // memory object. Not every driver answers a query of it.
+  std::optional<GLint> Tiling;
 };
 
 struct ProgramState {
@@ -246,6 +268,16 @@ public:
   }
   void SetTarget(GITSKey texture, GLenum target);
   void SetView(GITSKey texture, GITSKey original, std::shared_ptr<StoredCommand> view);
+  void AddSetup(GITSKey object, std::shared_ptr<StoredCommand> command);
+  void SetCreatedByNv(GITSKey semaphore);
+  void SetImportedExport(GITSKey object, uint64_t exportKey);
+  void SetTiling(GITSKey texture, GLint tiling);
+  void SetMemoryStorage(GITSKey object,
+                        GITSKey memory,
+                        uint64_t offset,
+                        uint64_t size,
+                        std::shared_ptr<StoredCommand> command);
+  void DeleteMemoryObject(GITSKey memory);
   // Whether a tracked texture is a view of `texture`.
   bool Viewed(GITSKey texture) const {
     return m_ViewOriginals.contains(texture);

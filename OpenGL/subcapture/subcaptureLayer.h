@@ -13,14 +13,25 @@
 #include "stateTrackingService.h"
 #include "subcaptureRange.h"
 #include "subcaptureRecorder.h"
+#include "subcaptureSession.h"
 
 namespace gits::opengl {
 
 // Owns the frame range and the subcapture stream, and advances the frame after a swap the
-// recorder ended a frame at. A range starting after frame 1 begins with state restore.
-class SubcaptureLayer : public Layer {
+// recorder ended a frame at. A range starting after frame 1 begins with state restore. In a
+// stream recorded with several APIs, the frames end at the frame ends of any of them, and the
+// state of all of them is restored together. See SubcaptureSession.
+class SubcaptureLayer : public Layer, public stream::SubcaptureSession::Participant {
 public:
   explicit SubcaptureLayer(const SubcaptureRange& range);
+  ~SubcaptureLayer() override;
+
+  // Throws for a memory object or semaphore that imports an export the other API does not
+  // restore, as the subcapture could not import it, and for a buffer or texture with storage in
+  // memory whose contents the other API cannot restore.
+  void PrepareRestoreState() override;
+  void RestoreState() override;
+  void EndFrame() override;
 
   SubcaptureRecorder& GetRecorder() {
     return m_Recorder;
@@ -43,7 +54,7 @@ public:
   void Post(glXSwapBuffersCommand& command) override;
 
 private:
-  void EndFrame();
+  void SwapEnded();
 
   SubcaptureRange m_Range;
   SubcaptureRecorder m_Recorder;

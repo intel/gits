@@ -45,11 +45,6 @@ public:
   // GlxDrawableService::FitViewport().
   void Post(glViewportCommand& command) override;
 
-  // Imports the handle the replay of the recorded export command returned. See
-  // ExternalHandleService.
-  void Pre(glImportMemoryWin32HandleEXTCommand& command) override;
-  void Pre(glImportSemaphoreWin32HandleEXTCommand& command) override;
-
   // A wait that reached the sync object in the recording waits again while replay times out.
   void Pre(glClientWaitSyncCommand& command) override;
   void Post(glClientWaitSyncCommand& command) override;

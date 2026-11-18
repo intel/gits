@@ -11,6 +11,8 @@
 #include "commandId.h"
 #include "log.h"
 
+#include "yaml-cpp/yaml.h"
+
 #include <algorithm>
 #include <stdexcept>
 #include <utility>
@@ -76,6 +78,33 @@ std::vector<std::string> SubcaptureSession::AnalysisFileNames(
     names.push_back(AnalysisFileName(streamDir, frames, api));
   }
   return names;
+}
+
+bool SubcaptureSession::IsAnalysisUsable(const std::string& fileName, bool optimize) {
+  if (!std::filesystem::exists(fileName)) {
+    return false;
+  }
+  try {
+    const YAML::Node root = YAML::LoadFile(fileName);
+    if (!root["Complete"] || !root["Complete"].as<bool>()) {
+      return false;
+    }
+    // An unoptimized analysis leaves the restore-reducing sections empty, so an optimized run
+    // must not use it. Files without the key were written by a full analysis.
+    const bool optimized = !root["Optimize"] || root["Optimize"].as<bool>();
+    return optimized || !optimize;
+  } catch (...) {
+    return false;
+  }
+}
+
+bool SubcaptureSession::IsAnalysisDone(const std::filesystem::path& streamDir,
+                                       const std::string& frames,
+                                       bool optimize) {
+  const std::vector<std::string> fileNames = AnalysisFileNames(streamDir, frames);
+  return std::all_of(fileNames.begin(), fileNames.end(), [optimize](const std::string& fileName) {
+    return IsAnalysisUsable(fileName, optimize);
+  });
 }
 
 void SubcaptureSession::Open(const std::filesystem::path& path, CompressionType compressionType) {

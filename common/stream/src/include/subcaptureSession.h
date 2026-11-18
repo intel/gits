@@ -63,6 +63,14 @@ public:
   // The analysis files of all APIs of the stream.
   static std::vector<std::string> AnalysisFileNames(const std::filesystem::path& streamDir,
                                                     const std::string& frames);
+  // Whether the analysis file was written by a finished analysis pass and suits a recording pass
+  // with Common.Player.Subcapture.Optimize set to `optimize`.
+  static bool IsAnalysisUsable(const std::string& fileName, bool optimize);
+  // Whether every API of the stream has a usable analysis file. All APIs decide on it, so that
+  // they run the same pass.
+  static bool IsAnalysisDone(const std::filesystem::path& streamDir,
+                             const std::string& frames,
+                             bool optimize);
 
   // Opens the subcapture stream on the first call; later calls share it.
   void Open(const std::filesystem::path& path, CompressionType compressionType);

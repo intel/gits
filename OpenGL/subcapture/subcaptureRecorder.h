@@ -10,14 +10,12 @@
 
 #include "arguments.h"
 #include "commandSerializer.h"
-#include "streamWriter.h"
-
-#include <filesystem>
-#include <memory>
 
 namespace gits::opengl {
 
-// Writes the subcapture stream to Common.Player.SubcapturePath.
+// Writes the subcapture stream to Common.Player.SubcapturePath. The stream and the state restore
+// keys are shared with the subcaptures of the other APIs of a stream recorded with several APIs.
+// See SubcaptureSession.
 class SubcaptureRecorder {
 public:
   SubcaptureRecorder();
@@ -29,18 +27,8 @@ public:
   // Idempotent.
   void FinishRecording();
 
-  GITSKey CreateStateRestoreKey() {
-    return ++m_NextStateRestoreKey;
-  }
-  GITSKey CreateStateRestoreObjectKey() {
-    return ++m_NextStateRestoreObjectKey;
-  }
-
-private:
-  std::unique_ptr<stream::StreamWriter> m_Writer;
-  std::filesystem::path m_StreamPath;
-  GITSKey m_NextStateRestoreKey{STATE_RESTORE_KEY_MASK};
-  GITSKey m_NextStateRestoreObjectKey{STATE_RESTORE_KEY_MASK};
+  GITSKey CreateStateRestoreKey();
+  GITSKey CreateStateRestoreObjectKey();
 };
 
 } // namespace gits::opengl

@@ -13,6 +13,13 @@
 
 namespace gits::opengl {
 
+AnalyzerLayer::AnalyzerLayer(const SubcaptureRange& range) : Layer("Analyzer"), m_Range(range) {
+  if (stream::SubcaptureSession::IsShared()) {
+    m_Range.SetCurrentFrame(
+        stream::SubcaptureSession::Get().AddParticipant(this, 1, m_Range.StartFrame()));
+  }
+}
+
 // The frames not played can use objects an interrupted analysis did not see, so it is not
 // written as complete.
 AnalyzerLayer::~AnalyzerLayer() {
@@ -22,6 +29,7 @@ AnalyzerLayer::~AnalyzerLayer() {
     }
   } catch (...) {
   }
+  stream::SubcaptureSession::Get().RemoveParticipant(this);
 }
 
 void AnalyzerLayer::Pre(MappedDataMetaCommand& command) {
@@ -56,7 +64,7 @@ void AnalyzerLayer::Pre(wglSwapBuffersCommand& command) {
 }
 
 void AnalyzerLayer::Post(wglSwapBuffersCommand& /*command*/) {
-  EndFrame();
+  SwapEnded();
 }
 
 void AnalyzerLayer::Pre(wglSwapLayerBuffersCommand& command) {
@@ -64,7 +72,7 @@ void AnalyzerLayer::Pre(wglSwapLayerBuffersCommand& command) {
 }
 
 void AnalyzerLayer::Post(wglSwapLayerBuffersCommand& /*command*/) {
-  EndFrame();
+  SwapEnded();
 }
 
 void AnalyzerLayer::Pre(glXSwapBuffersCommand& /*command*/) {
@@ -72,14 +80,22 @@ void AnalyzerLayer::Pre(glXSwapBuffersCommand& /*command*/) {
 }
 
 void AnalyzerLayer::Post(glXSwapBuffersCommand& /*command*/) {
-  EndFrame();
+  SwapEnded();
 }
 
-void AnalyzerLayer::EndFrame() {
+void AnalyzerLayer::SwapEnded() {
   if (!m_SwapEndsFrame) {
     return;
   }
   m_SwapEndsFrame = false;
+  if (stream::SubcaptureSession::IsShared()) {
+    stream::SubcaptureSession::Get().EndFrame(stream::StreamHeader::Api::API_OPENGL);
+  } else {
+    EndFrame();
+  }
+}
+
+void AnalyzerLayer::EndFrame() {
   const bool wasInRange = m_Range.InRange();
   m_Range.FrameEnd();
   if (wasInRange && !m_Range.InRange()) {

@@ -339,6 +339,52 @@ public:
   void Post(glFenceSyncCommand& command) override;
   void Post(glDeleteSyncCommand& command) override;
 
+  // ---- Memory objects and semaphores --------------------------------------
+  // They import memory and semaphores of the other API of the stream, which restores the
+  // contents of the memory.
+  void Post(glCreateMemoryObjectsEXTCommand& command) override;
+  void Post(glDeleteMemoryObjectsEXTCommand& command) override;
+  void Post(glMemoryObjectParameterivEXTCommand& command) override;
+  void Post(glImportMemoryWin32HandleEXTCommand& command) override;
+  void Post(glGenSemaphoresEXTCommand& command) override;
+  void Post(glCreateSemaphoresNVCommand& command) override;
+  void Post(glDeleteSemaphoresEXTCommand& command) override;
+  void Post(glImportSemaphoreWin32HandleEXTCommand& command) override;
+  void Post(glSignalSemaphoreEXTCommand& command) override;
+  void Post(glWaitSemaphoreEXTCommand& command) override;
+  void Post(glBufferStorageMemEXTCommand& command) override;
+  void Post(glNamedBufferStorageMemEXTCommand& command) override;
+  void Post(glTexStorageMem1DEXTCommand& command) override;
+  void Post(glTexStorageMem2DEXTCommand& command) override;
+  void Post(glTexStorageMem2DMultisampleEXTCommand& command) override;
+  void Post(glTexStorageMem3DEXTCommand& command) override;
+  void Post(glTexStorageMem3DMultisampleEXTCommand& command) override;
+  void Post(glTextureStorageMem1DEXTCommand& command) override;
+  void Post(glTextureStorageMem2DEXTCommand& command) override;
+  void Post(glTextureStorageMem2DMultisampleEXTCommand& command) override;
+  void Post(glTextureStorageMem3DEXTCommand& command) override;
+  void Post(glTextureStorageMem3DMultisampleEXTCommand& command) override;
+  void Post(glTexParameteriCommand& command) override;
+  void Post(glTexParameterivCommand& command) override;
+  void Post(glTexParameterfCommand& command) override;
+  void Post(glTexParameterfvCommand& command) override;
+  void Post(glTexParameterIivCommand& command) override;
+  void Post(glTexParameterIuivCommand& command) override;
+  void Post(glTextureParameteriCommand& command) override;
+  void Post(glTextureParameterivCommand& command) override;
+  void Post(glTextureParameterfCommand& command) override;
+  void Post(glTextureParameterfvCommand& command) override;
+  void Post(glTextureParameterIivCommand& command) override;
+  void Post(glTextureParameterIuivCommand& command) override;
+  void Post(glTextureParameteriEXTCommand& command) override;
+  void Post(glTextureParameterivEXTCommand& command) override;
+  void Post(glTextureParameterfEXTCommand& command) override;
+  void Post(glTextureParameterfvEXTCommand& command) override;
+  void Post(glTextureParameterIivEXTCommand& command) override;
+  void Post(glTextureParameterIuivEXTCommand& command) override;
+  void Post(glMultiTexParameteriEXTCommand& command) override;
+  void Post(glMultiTexParameterfEXTCommand& command) override;
+
 private:
   // A deleted buffer, texture or renderbuffer stays live while a container that is not bound, or
   // a buffer texture, references it, but GL no longer reads it by name. Before the range, it is
@@ -415,6 +461,23 @@ private:
   void ForgetCopyDestinationCompressedImages(const CommandT& command);
   template <typename CommandT>
   void ForgetUnitCompressedImage(const CommandT& command);
+  // The tracked buffer or texture of the current context's share group bound to `binding`.
+  GITSKey BoundObject(GLObjectKind kind, uint32_t threadId, GLenum binding) const;
+  // The tracked buffer or texture of the current context's share group named `name`.
+  GITSKey NamedObject(GLObjectKind kind, uint32_t threadId, GLuint name) const;
+  template <typename SerializerT, typename CommandT>
+  void SetTexStorageMem(const CommandT& command);
+  template <typename SerializerT, typename CommandT>
+  void SetTextureStorageMem(const CommandT& command);
+  // Tracks GL_TEXTURE_TILING_EXT set on the texture bound to `target` on the active texture unit
+  // or on `texunit`, or on `texture`.
+  template <typename ValueT>
+  void SetTexTiling(uint32_t threadId, GLenum target, GLenum pname, const ValueT* value);
+  template <typename ValueT>
+  void SetMultiTexTiling(
+      uint32_t threadId, GLenum texunit, GLenum target, GLenum pname, const ValueT* value);
+  template <typename ValueT>
+  void SetTextureTiling(GITSKey texture, GLenum pname, const ValueT* value);
 
   StateTrackingService& m_State;
   SubcaptureRecorder& m_Recorder;
@@ -423,6 +486,8 @@ private:
   // Whether the name of the view being created was not a texture before the call.
   bool m_ViewNameUnused{};
   std::unordered_map<GITSKey, bool> m_Compatibility;
+  // The key of the command that exported each imported semaphore.
+  std::unordered_map<GITSKey, uint64_t> m_SemaphoreExportKeys;
 };
 
 } // namespace gits::opengl

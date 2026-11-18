@@ -109,32 +109,6 @@ constexpr QueryTarget QUERY_TARGETS[] = {
     {GL_CLIPPING_OUTPUT_PRIMITIVES, false, 4, 6, PIPELINE_STATISTICS},
 };
 
-struct BufferTarget {
-  GLenum Target;
-  GLenum Binding;
-  int Major;
-  int Minor;
-  const char* Extension{};
-};
-
-constexpr BufferTarget BUFFER_TARGETS[] = {
-    {GL_ARRAY_BUFFER, GL_ARRAY_BUFFER_BINDING, 1, 5},
-    {GL_PIXEL_PACK_BUFFER, GL_PIXEL_PACK_BUFFER_BINDING, 2, 1},
-    {GL_PIXEL_UNPACK_BUFFER, GL_PIXEL_UNPACK_BUFFER_BINDING, 2, 1},
-    {GL_TRANSFORM_FEEDBACK_BUFFER, GL_TRANSFORM_FEEDBACK_BUFFER_BINDING, 3, 0},
-    {GL_COPY_READ_BUFFER, GL_COPY_READ_BUFFER_BINDING, 3, 1},
-    {GL_COPY_WRITE_BUFFER, GL_COPY_WRITE_BUFFER_BINDING, 3, 1},
-    {GL_UNIFORM_BUFFER, GL_UNIFORM_BUFFER_BINDING, 3, 1},
-    {GL_DRAW_INDIRECT_BUFFER, GL_DRAW_INDIRECT_BUFFER_BINDING, 4, 0, "GL_ARB_draw_indirect"},
-    {GL_ATOMIC_COUNTER_BUFFER, GL_ATOMIC_COUNTER_BUFFER_BINDING, 4, 2,
-     "GL_ARB_shader_atomic_counters"},
-    {GL_DISPATCH_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER_BINDING, 4, 3,
-     "GL_ARB_compute_shader"},
-    {GL_SHADER_STORAGE_BUFFER, GL_SHADER_STORAGE_BUFFER_BINDING, 4, 3,
-     "GL_ARB_shader_storage_buffer_object"},
-    {GL_QUERY_BUFFER, GL_QUERY_BUFFER_BINDING, 4, 4, "GL_ARB_query_buffer_object"},
-};
-
 struct IndexedBufferTarget {
   GLenum Target;
   GLenum Binding;
@@ -270,6 +244,18 @@ void StateRestorer::Restore() {
     Emit(destroy);
   }
 
+  ThreadContextService::MakeCurrent(live);
+}
+
+void StateRestorer::FinishContexts() {
+  const auto live = ThreadContextService::Capture(ThreadContextService::Get().CurrentEntryPoint());
+  m_Collecting = true;
+  for (const auto& [key, context] : m_State.Contexts()) {
+    if (context.LastMakeCurrent && SwitchTo(*context.LastMakeCurrent)) {
+      GL_FN(glFinish)();
+    }
+  }
+  m_Collecting = false;
   ThreadContextService::MakeCurrent(live);
 }
 
@@ -591,6 +577,17 @@ void StateRestorer::Emit(const SampledCommand& command) {
     command.Geometry->Record(m_Recorder, m_Recorder.CreateStateRestoreKey());
   }
   command.Command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey());
+}
+
+void StateRestorer::EmitStored(const std::shared_ptr<StoredCommand>& command) {
+  if (m_Collecting) {
+    return;
+  }
+  if (m_Capture != nullptr) {
+    m_Capture->push_back(command);
+    return;
+  }
+  command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
 }
 
 ListCompileState StateRestorer::CaptureListCompileState(uint32_t threadId) {

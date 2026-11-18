@@ -360,7 +360,15 @@ void StateTrackingService::EraseObject(std::map<GITSKey, ObjectState>::iterator 
       original != m_ViewOriginals.end()) {
     m_ViewOriginals.erase(original);
   }
+  const GITSKey memory = object->second.StorageMemory;
   m_Objects.erase(object);
+  // A deleted memory object is kept only for the storage in it of tracked buffers and textures.
+  if (const auto state = m_Objects.find(memory);
+      memory != 0 && state != m_Objects.end() && state->second.DeletePending &&
+      std::none_of(m_Objects.begin(), m_Objects.end(),
+                   [memory](const auto& entry) { return entry.second.StorageMemory == memory; })) {
+    m_Objects.erase(state);
+  }
 }
 
 void StateTrackingService::ForgetDeleted(GITSKey key) {
@@ -409,6 +417,60 @@ void StateTrackingService::SetView(GITSKey texture,
     object->second.View = std::move(view);
     object->second.ViewOf = original;
     m_ViewOriginals.insert(original);
+  }
+}
+
+void StateTrackingService::AddSetup(GITSKey object, std::shared_ptr<StoredCommand> command) {
+  if (const auto state = m_Objects.find(object); state != m_Objects.end()) {
+    state->second.Setup.push_back(std::move(command));
+  }
+}
+
+void StateTrackingService::SetCreatedByNv(GITSKey semaphore) {
+  if (const auto state = m_Objects.find(semaphore); state != m_Objects.end()) {
+    state->second.CreatedByNv = true;
+  }
+}
+
+void StateTrackingService::SetImportedExport(GITSKey object, uint64_t exportKey) {
+  if (const auto state = m_Objects.find(object); state != m_Objects.end()) {
+    state->second.ImportedExport = exportKey;
+  }
+}
+
+void StateTrackingService::SetTiling(GITSKey texture, GLint tiling) {
+  // Storage is given once, and its tiling is the value at that time.
+  if (const auto state = m_Objects.find(texture);
+      state != m_Objects.end() && state->second.MemoryStorage == nullptr) {
+    state->second.Tiling = tiling;
+  }
+}
+
+void StateTrackingService::SetMemoryStorage(GITSKey object,
+                                            GITSKey memory,
+                                            uint64_t offset,
+                                            uint64_t size,
+                                            std::shared_ptr<StoredCommand> command) {
+  if (const auto state = m_Objects.find(object); state != m_Objects.end()) {
+    state->second.MemoryStorage = std::move(command);
+    state->second.StorageMemory = memory;
+    state->second.StorageOffset = offset;
+    state->second.StorageSize = size;
+  }
+}
+
+void StateTrackingService::DeleteMemoryObject(GITSKey memory) {
+  const auto state = m_Objects.find(memory);
+  if (state == m_Objects.end() || state->second.Kind != GLObjectKind::MemoryObject) {
+    return;
+  }
+  const bool used = std::any_of(m_Objects.begin(), m_Objects.end(), [memory](const auto& entry) {
+    return entry.second.StorageMemory == memory;
+  });
+  if (used) {
+    state->second.DeletePending = true;
+  } else {
+    EraseObject(state);
   }
 }
 

@@ -9,12 +9,17 @@
 #include "playerManager.h"
 
 #include "messageBus.h"
+#include "openGLCommandFactory.h"
 
 namespace gits::opengl {
 
 PlayerManager& PlayerManager::Get() {
   static PlayerManager instance;
   return instance;
+}
+
+void OpenGLCommandFactory::CreatePlayer() {
+  PlayerManager::Get();
 }
 
 PlayerManager::PlayerManager() {

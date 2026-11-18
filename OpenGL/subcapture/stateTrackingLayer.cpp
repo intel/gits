@@ -13,6 +13,7 @@
 #include "liveGl.h"
 #include "pixelFormatMetaTypes.h"
 #include "stateRestorer.h"
+#include "subcaptureSession.h"
 #include "uniformLocationMapService.h"
 
 #include <algorithm>
@@ -1792,6 +1793,310 @@ void StateTrackingLayer::Post(glFenceSyncCommand& command) {
 
 void StateTrackingLayer::Post(glDeleteSyncCommand& command) {
   m_State.DeleteSync(command.m_sync.Key);
+}
+
+// ---- Memory objects and semaphores ----------------------------------------
+
+void StateTrackingLayer::Post(glCreateMemoryObjectsEXTCommand& command) {
+  CreateObjects(m_State, GLObjectKind::MemoryObject, command.m_ThreadId, command.m_memoryObjects);
+}
+
+void StateTrackingLayer::Post(glDeleteMemoryObjectsEXTCommand& command) {
+  for (GITSKey key : command.m_memoryObjects.Key) {
+    m_State.DeleteMemoryObject(key);
+  }
+}
+
+// Set before the import, which fixes the parameters of the memory object.
+void StateTrackingLayer::Post(glMemoryObjectParameterivEXTCommand& command) {
+  m_State.AddSetup(command.m_memoryObject.Key,
+                   Store<glMemoryObjectParameterivEXTCommandSerializer>(command));
+}
+
+void StateTrackingLayer::Post(glImportMemoryWin32HandleEXTCommand& command) {
+  m_State.AddSetup(command.m_memory.Key,
+                   Store<glImportMemoryWin32HandleEXTCommandSerializer>(command));
+  m_State.SetImportedExport(command.m_memory.Key, command.m_handle.Value);
+}
+
+void StateTrackingLayer::Post(glGenSemaphoresEXTCommand& command) {
+  CreateObjects(m_State, GLObjectKind::Semaphore, command.m_ThreadId, command.m_semaphores);
+}
+
+void StateTrackingLayer::Post(glCreateSemaphoresNVCommand& command) {
+  CreateObjects(m_State, GLObjectKind::Semaphore, command.m_ThreadId, command.m_semaphores);
+  for (GITSKey key : command.m_semaphores.Key) {
+    m_State.SetCreatedByNv(key);
+  }
+}
+
+void StateTrackingLayer::Post(glDeleteSemaphoresEXTCommand& command) {
+  DeleteObjects(m_State, GLObjectKind::Semaphore, command.m_semaphores);
+  for (GITSKey key : command.m_semaphores.Key) {
+    m_SemaphoreExportKeys.erase(key);
+  }
+}
+
+void StateTrackingLayer::Post(glImportSemaphoreWin32HandleEXTCommand& command) {
+  m_State.AddSetup(command.m_semaphore.Key,
+                   Store<glImportSemaphoreWin32HandleEXTCommandSerializer>(command));
+  m_State.SetImportedExport(command.m_semaphore.Key, command.m_handle.Value);
+  m_SemaphoreExportKeys[command.m_semaphore.Key] = command.m_handle.Value;
+  stream::SubcaptureSession::Get().ImportSemaphore(command.m_handle.Value);
+}
+
+void StateTrackingLayer::Post(glSignalSemaphoreEXTCommand& command) {
+  auto it = m_SemaphoreExportKeys.find(command.m_semaphore.Key);
+  if (it != m_SemaphoreExportKeys.end()) {
+    stream::SubcaptureSession::Get().SetImportedSemaphoreSignaled(it->second, true);
+  }
+  // Vulkan acquires the textures in the layouts the signal transitions them to.
+  const size_t count = std::min(command.m_textures.Key.size(), command.m_dstLayouts.Data.size());
+  for (size_t i = 0; i < count; ++i) {
+    const ObjectState* texture = m_State.Object(command.m_textures.Key[i]);
+    if (texture == nullptr || texture->MemoryStorage == nullptr) {
+      continue;
+    }
+    const ObjectState* memory = m_State.Object(texture->StorageMemory);
+    if (memory != nullptr && memory->ImportedExport != 0) {
+      stream::SubcaptureSession::Get().SetHandBackLayout(
+          memory->ImportedExport, texture->StorageOffset, command.m_dstLayouts.Data[i]);
+    }
+  }
+}
+
+void StateTrackingLayer::Post(glWaitSemaphoreEXTCommand& command) {
+  auto it = m_SemaphoreExportKeys.find(command.m_semaphore.Key);
+  if (it != m_SemaphoreExportKeys.end()) {
+    stream::SubcaptureSession::Get().SetImportedSemaphoreSignaled(it->second, false);
+  }
+}
+
+GITSKey StateTrackingLayer::BoundObject(GLObjectKind kind,
+                                        uint32_t threadId,
+                                        GLenum binding) const {
+  return NamedObject(kind, threadId, binding != 0 ? opengl::GetName(binding) : 0);
+}
+
+GITSKey StateTrackingLayer::NamedObject(GLObjectKind kind, uint32_t threadId, GLuint name) const {
+  if (name == 0) {
+    return 0;
+  }
+  const GITSKey shareGroup = m_State.CurrentShareGroup(threadId).first;
+  for (const auto& [key, object] : m_State.Objects()) {
+    if (object.Kind == kind && object.Owner == shareGroup && !object.DeletePending &&
+        ObjectNameMapService::Get().TryGetHandle(kind, key) == name) {
+      return key;
+    }
+  }
+  return 0;
+}
+
+// Restored with the buffer bound to GL_ARRAY_BUFFER, as RestoreBuffer binds it.
+void StateTrackingLayer::Post(glBufferStorageMemEXTCommand& command) {
+  const GITSKey buffer =
+      BoundObject(GLObjectKind::Buffer, command.m_ThreadId, BufferBinding(command.m_target.Value));
+  glBufferStorageMemEXTCommand storage = command;
+  storage.m_target.Value = GL_ARRAY_BUFFER;
+  m_State.SetMemoryStorage(buffer, command.m_memory.Key, command.m_offset.Value,
+                           static_cast<uint64_t>(command.m_size.Value),
+                           Store<glBufferStorageMemEXTCommandSerializer>(storage));
+}
+
+void StateTrackingLayer::Post(glNamedBufferStorageMemEXTCommand& command) {
+  m_State.SetMemoryStorage(command.m_buffer.Key, command.m_memory.Key, command.m_offset.Value,
+                           static_cast<uint64_t>(command.m_size.Value),
+                           Store<glNamedBufferStorageMemEXTCommandSerializer>(command));
+}
+
+// Restored with the texture bound to its target, as RestoreTexture binds it.
+template <typename SerializerT, typename CommandT>
+void StateTrackingLayer::SetTexStorageMem(const CommandT& command) {
+  const TextureTarget* target = FindTextureTarget(command.m_target.Value);
+  if (target == nullptr) {
+    return;
+  }
+  const GITSKey texture = BoundObject(GLObjectKind::Texture, command.m_ThreadId, target->Binding);
+  m_State.SetMemoryStorage(texture, command.m_memory.Key, command.m_offset.Value, 0,
+                           Store<SerializerT>(command));
+}
+
+template <typename SerializerT, typename CommandT>
+void StateTrackingLayer::SetTextureStorageMem(const CommandT& command) {
+  m_State.SetMemoryStorage(command.m_texture.Key, command.m_memory.Key, command.m_offset.Value, 0,
+                           Store<SerializerT>(command));
+}
+
+void StateTrackingLayer::Post(glTexStorageMem1DEXTCommand& command) {
+  SetTexStorageMem<glTexStorageMem1DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTexStorageMem2DEXTCommand& command) {
+  SetTexStorageMem<glTexStorageMem2DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTexStorageMem2DMultisampleEXTCommand& command) {
+  SetTexStorageMem<glTexStorageMem2DMultisampleEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTexStorageMem3DEXTCommand& command) {
+  SetTexStorageMem<glTexStorageMem3DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTexStorageMem3DMultisampleEXTCommand& command) {
+  SetTexStorageMem<glTexStorageMem3DMultisampleEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTextureStorageMem1DEXTCommand& command) {
+  SetTextureStorageMem<glTextureStorageMem1DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTextureStorageMem2DEXTCommand& command) {
+  SetTextureStorageMem<glTextureStorageMem2DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTextureStorageMem2DMultisampleEXTCommand& command) {
+  SetTextureStorageMem<glTextureStorageMem2DMultisampleEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTextureStorageMem3DEXTCommand& command) {
+  SetTextureStorageMem<glTextureStorageMem3DEXTCommandSerializer>(command);
+}
+
+void StateTrackingLayer::Post(glTextureStorageMem3DMultisampleEXTCommand& command) {
+  SetTextureStorageMem<glTextureStorageMem3DMultisampleEXTCommandSerializer>(command);
+}
+
+template <typename ValueT>
+void StateTrackingLayer::SetTexTiling(uint32_t threadId,
+                                      GLenum target,
+                                      GLenum pname,
+                                      const ValueT* value) {
+  if (pname != GL_TEXTURE_TILING_EXT || value == nullptr) {
+    return;
+  }
+  const TextureTarget* textureTarget = FindTextureTarget(target);
+  if (textureTarget == nullptr) {
+    return;
+  }
+  m_State.SetTiling(BoundObject(GLObjectKind::Texture, threadId, textureTarget->Binding),
+                    static_cast<GLint>(*value));
+}
+
+template <typename ValueT>
+void StateTrackingLayer::SetMultiTexTiling(
+    uint32_t threadId, GLenum texunit, GLenum target, GLenum pname, const ValueT* value) {
+  if (pname != GL_TEXTURE_TILING_EXT || value == nullptr) {
+    return;
+  }
+  const TextureTarget* textureTarget = FindTextureTarget(target);
+  if (textureTarget == nullptr) {
+    return;
+  }
+  const GLuint name = GetMultiTexName(textureTarget->Binding, texunit);
+  m_State.SetTiling(NamedObject(GLObjectKind::Texture, threadId, name), static_cast<GLint>(*value));
+}
+
+template <typename ValueT>
+void StateTrackingLayer::SetTextureTiling(GITSKey texture, GLenum pname, const ValueT* value) {
+  if (pname == GL_TEXTURE_TILING_EXT && value != nullptr) {
+    m_State.SetTiling(texture, static_cast<GLint>(*value));
+  }
+}
+
+namespace {
+template <typename T>
+const T* FirstValue(const ArrayArgument<T>& values) {
+  return values.Data.empty() ? nullptr : values.Data.data();
+}
+} // namespace
+
+void StateTrackingLayer::Post(glTexParameteriCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTexParameterivCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTexParameterfCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTexParameterfvCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTexParameterIivCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTexParameterIuivCommand& command) {
+  SetTexTiling(command.m_ThreadId, command.m_target.Value, command.m_pname.Value,
+               FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameteriCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTextureParameterivCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_param));
+}
+
+void StateTrackingLayer::Post(glTextureParameterfCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTextureParameterfvCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_param));
+}
+
+void StateTrackingLayer::Post(glTextureParameterIivCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameterIuivCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameteriEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTextureParameterivEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameterfEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glTextureParameterfvEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameterIivEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glTextureParameterIuivEXTCommand& command) {
+  SetTextureTiling(command.m_texture.Key, command.m_pname.Value, FirstValue(command.m_params));
+}
+
+void StateTrackingLayer::Post(glMultiTexParameteriEXTCommand& command) {
+  SetMultiTexTiling(command.m_ThreadId, command.m_texunit.Value, command.m_target.Value,
+                    command.m_pname.Value, &command.m_param.Value);
+}
+
+void StateTrackingLayer::Post(glMultiTexParameterfEXTCommand& command) {
+  SetMultiTexTiling(command.m_ThreadId, command.m_texunit.Value, command.m_target.Value,
+                    command.m_pname.Value, &command.m_param.Value);
 }
 
 } // namespace gits::opengl

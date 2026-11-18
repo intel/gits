@@ -21,6 +21,8 @@ public:
   CommandFactory& operator=(const CommandFactory&) = delete;
 
   virtual CommandRunner* CreateCommand(unsigned id) = 0;
+  // Creates the player of the API before its first command.
+  virtual void CreatePlayer() {}
 };
 
 } // namespace stream

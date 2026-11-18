@@ -43,6 +43,9 @@ public:
       : m_State(state), m_Recorder(recorder), m_Analysis(analysis) {}
 
   void Restore();
+  // Completes the commands of every context, so that the other API of the stream reads their
+  // writes to the memory it shares with GL when it restores its state. Writes nothing.
+  void FinishContexts();
 
   // The vertex array and pixel unpack state of the context current on `threadId`, which the
   // commands compiled into a display list read. Written for a context with that state initial.
@@ -84,6 +87,8 @@ private:
     m_Recorder.Record(SerializerT(command));
   }
   void Emit(const SampledCommand& command);
+  // Writes a command stored as the application issued it, or captures it as Emit does.
+  void EmitStored(const std::shared_ptr<StoredCommand>& command);
 
   // Makes `current`'s context current in the subcapture and on the replay driver.
   bool SwitchTo(const MakeCurrent& current);
@@ -130,8 +135,13 @@ private:
 
   void RestoreClientArrayBlocks();
   void RestoreSharedObjects(GITSKey shareGroup);
+  // The commands that set up a memory object or semaphore after its creation.
+  void EmitSetup(const ObjectState& object);
   void RestoreDeleted(GITSKey key, const ObjectState& object);
   void RestoreBuffer(GITSKey key, GLuint name);
+  // The contents of the storage of a buffer in an exported memory object that the exporting API
+  // does not restore. No resource of that API is bound over them, so only GL accesses them.
+  void RestoreUnsharedContents(GITSKey key, GLuint name, const ObjectState& object);
   void RestoreTexture(GITSKey key, GLuint name, GLenum target);
   // `restored` holds the views already restored.
   void RestoreTextureView(GITSKey key, std::set<GITSKey>& restored);

@@ -12,6 +12,7 @@
 #include "externalHandleService.h"
 #include "log.h"
 #include "messageBus.h"
+#include "vulkanCommandFactory.h"
 
 namespace gits {
 namespace vulkan {
@@ -27,6 +28,10 @@ PlayerManager& PlayerManager::Get() {
         [](Topic t, const MessagePtr& m) { PlayerManager::Destroy(); });
   }
   return *m_Instance;
+}
+
+void VulkanCommandFactory::CreatePlayer() {
+  PlayerManager::Get();
 }
 
 PlayerManager::~PlayerManager() {

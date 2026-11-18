@@ -13,6 +13,7 @@
 #include "commandSerializersAuto.h"
 #include "liveGl.h"
 #include "log.h"
+#include "subcaptureSession.h"
 
 #include <algorithm>
 #include <iterator>
@@ -476,12 +477,51 @@ void StateRestorer::RestoreSharedObjects(GITSKey shareGroup) {
       }
     }
   };
+  // Imported before the buffers and textures that have storage in them.
+  restore(GLObjectKind::MemoryObject, [this](GITSKey key, GLuint, const ObjectState& object) {
+    glCreateMemoryObjectsEXTCommand command;
+    command.m_n.Value = 1;
+    command.m_memoryObjects.Key = {key};
+    command.m_memoryObjects.Value = {0};
+    command.m_memoryObjects.HasValue = true;
+    Emit<glCreateMemoryObjectsEXTCommandSerializer>(command);
+    EmitSetup(object);
+  });
+  restore(GLObjectKind::Semaphore, [this](GITSKey key, GLuint, const ObjectState& object) {
+    if (object.CreatedByNv) {
+      glCreateSemaphoresNVCommand command;
+      command.m_n.Value = 1;
+      command.m_semaphores.Key = {key};
+      command.m_semaphores.Value = {0};
+      command.m_semaphores.HasValue = true;
+      Emit<glCreateSemaphoresNVCommandSerializer>(command);
+    } else {
+      glGenSemaphoresEXTCommand command;
+      command.m_n.Value = 1;
+      command.m_semaphores.Key = {key};
+      command.m_semaphores.Value = {0};
+      command.m_semaphores.HasValue = true;
+      Emit<glGenSemaphoresEXTCommandSerializer>(command);
+    }
+    EmitSetup(object);
+  });
   restore(GLObjectKind::Buffer,
           [this](GITSKey key, GLuint name, const ObjectState&) { RestoreBuffer(key, name); });
   restore(GLObjectKind::Texture, [this](GITSKey key, GLuint name, const ObjectState& object) {
     if (object.View == nullptr) {
       RestoreTexture(key, object.Snapshot.Storage != 0 ? object.Snapshot.Storage : name,
                      object.Target);
+    }
+  });
+  // A memory object the application deleted after giving storage in it.
+  restore(GLObjectKind::MemoryObject, [this](GITSKey key, GLuint, const ObjectState& object) {
+    if (object.DeletePending) {
+      glDeleteMemoryObjectsEXTCommand command;
+      command.m_n.Value = 1;
+      command.m_memoryObjects.Key = {key};
+      command.m_memoryObjects.Value = {0};
+      command.m_memoryObjects.HasValue = true;
+      Emit<glDeleteMemoryObjectsEXTCommandSerializer>(command);
     }
   });
   std::set<GITSKey> views;
@@ -574,6 +614,12 @@ void StateRestorer::RestoreDisplayLists(GITSKey shareGroup) {
   }
 }
 
+void StateRestorer::EmitSetup(const ObjectState& object) {
+  for (const auto& command : object.Setup) {
+    command->Record(m_Recorder, m_Recorder.CreateStateRestoreKey(), m_ThreadId);
+  }
+}
+
 void StateRestorer::RestoreBuffer(GITSKey key, GLuint name) {
   glGenBuffersCommand gen;
   gen.m_n.Value = 1;
@@ -581,6 +627,20 @@ void StateRestorer::RestoreBuffer(GITSKey key, GLuint name) {
   gen.m_buffers.Value = {0};
   gen.m_buffers.HasValue = true;
   Emit<glGenBuffersCommandSerializer>(gen);
+  // Storage in a memory object is given whether or not the range uses the buffer, as it is
+  // shared with the other API of the stream, which restores its contents.
+  if (const ObjectState* object = m_State.Object(key);
+      object != nullptr && object->MemoryStorage != nullptr) {
+    glBindBufferCommand bind;
+    bind.m_target.Value = GL_ARRAY_BUFFER;
+    bind.m_buffer.Key = key;
+    Emit<glBindBufferCommandSerializer>(bind);
+    EmitStored(object->MemoryStorage);
+    if (m_Capture == nullptr && name != 0 && GL_FN(glIsBuffer)(name)) {
+      RestoreUnsharedContents(key, name, *object);
+    }
+    return;
+  }
   if (!Required(key) || name == 0 || !GL_FN(glIsBuffer)(name)) {
     return;
   }
@@ -627,6 +687,65 @@ void StateRestorer::RestoreBuffer(GITSKey key, GLuint name) {
   }
 }
 
+void StateRestorer::RestoreUnsharedContents(GITSKey key, GLuint name, const ObjectState& object) {
+  const ObjectState* memory = m_State.Object(object.StorageMemory);
+  const stream::RestoredContents* contents =
+      memory != nullptr && memory->ImportedExport != 0
+          ? stream::SubcaptureSession::Get().GetRestoredContents(memory->ImportedExport)
+          : nullptr;
+  if (contents == nullptr) {
+    return;
+  }
+  // Storage in a memory object may be immutable without GL_DYNAMIC_STORAGE_BIT, so the contents
+  // are copied into it from a temporary buffer.
+  for (const stream::ContentRange& range :
+       stream::UnrestoredRanges(*contents, {object.StorageOffset, object.StorageSize})) {
+    const auto offset = static_cast<GLintptr>(range.Offset - object.StorageOffset);
+    std::vector<uint8_t> data(static_cast<size_t>(range.Size));
+    const GLuint bound = GetName(GL_COPY_READ_BUFFER_BINDING);
+    GL_FN(glBindBuffer)(GL_COPY_READ_BUFFER, name);
+    GL_FN(glGetBufferSubData)
+    (GL_COPY_READ_BUFFER, offset, static_cast<GLsizeiptr>(data.size()), data.data());
+    GL_FN(glBindBuffer)(GL_COPY_READ_BUFFER, bound);
+
+    const GITSKey temporary = m_Recorder.CreateStateRestoreObjectKey();
+    glGenBuffersCommand gen;
+    gen.m_n.Value = 1;
+    gen.m_buffers.Key = {temporary};
+    gen.m_buffers.Value = {0};
+    gen.m_buffers.HasValue = true;
+    Emit<glGenBuffersCommandSerializer>(gen);
+    glBindBufferCommand bindRead;
+    bindRead.m_target.Value = GL_COPY_READ_BUFFER;
+    bindRead.m_buffer.Key = temporary;
+    Emit<glBindBufferCommandSerializer>(bindRead);
+    glBufferDataCommand bufferData;
+    bufferData.m_target.Value = GL_COPY_READ_BUFFER;
+    bufferData.m_size.Value = static_cast<GLsizeiptr>(data.size());
+    bufferData.m_data.Data = std::move(data);
+    bufferData.m_data.HasValue = true;
+    bufferData.m_usage.Value = GL_STATIC_DRAW;
+    Emit<glBufferDataCommandSerializer>(bufferData);
+    glBindBufferCommand bindWrite;
+    bindWrite.m_target.Value = GL_COPY_WRITE_BUFFER;
+    bindWrite.m_buffer.Key = key;
+    Emit<glBindBufferCommandSerializer>(bindWrite);
+    glCopyBufferSubDataCommand copy;
+    copy.m_readTarget.Value = GL_COPY_READ_BUFFER;
+    copy.m_writeTarget.Value = GL_COPY_WRITE_BUFFER;
+    copy.m_readOffset.Value = 0;
+    copy.m_writeOffset.Value = offset;
+    copy.m_size.Value = static_cast<GLsizeiptr>(range.Size);
+    Emit<glCopyBufferSubDataCommandSerializer>(copy);
+    glDeleteBuffersCommand remove;
+    remove.m_n.Value = 1;
+    remove.m_buffers.Key = {temporary};
+    remove.m_buffers.Value = {0};
+    remove.m_buffers.HasValue = true;
+    Emit<glDeleteBuffersCommandSerializer>(remove);
+  }
+}
+
 void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
   glGenTexturesCommand gen;
   gen.m_n.Value = 1;
@@ -634,10 +753,35 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
   gen.m_textures.Value = {0};
   gen.m_textures.HasValue = true;
   Emit<glGenTexturesCommandSerializer>(gen);
+  const TextureTarget* binding = FindTextureTarget(target);
+  // Storage in a memory object is given whether or not the range uses the texture, as it is
+  // shared with the other API of the stream, which restores its contents.
+  if (const ObjectState* object = m_State.Object(key);
+      object != nullptr && object->MemoryStorage != nullptr && binding != nullptr) {
+    glBindTextureCommand bind;
+    bind.m_target.Value = target;
+    bind.m_texture.Key = key;
+    Emit<glBindTextureCommandSerializer>(bind);
+    // The tiling is read when the storage is given, and must match the image of the other API.
+    if (object->Tiling) {
+      glTexParameteriCommand parameter;
+      parameter.m_target.Value = target;
+      parameter.m_pname.Value = GL_TEXTURE_TILING_EXT;
+      parameter.m_param.Value = *object->Tiling;
+      Emit<glTexParameteriCommandSerializer>(parameter);
+    }
+    EmitStored(object->MemoryStorage);
+    if (name != 0 && GL_FN(glIsTexture)(name)) {
+      const GLuint bound = GetName(binding->Binding);
+      GL_FN(glBindTexture)(target, name);
+      RestoreTextureParameters(key, target);
+      GL_FN(glBindTexture)(target, bound);
+    }
+    return;
+  }
   if (!Required(key) || name == 0 || !GL_FN(glIsTexture)(name)) {
     return;
   }
-  const TextureTarget* binding = FindTextureTarget(target);
   if (binding == nullptr) {
     LOG_WARNING << "Subcapture: texture " << key << " has an unsupported target " << target
                 << ", its contents are not restored";

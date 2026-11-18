@@ -25,6 +25,7 @@ add_library(OpenGL_player STATIC
   include/bindlessHandleMapService.h
   include/clientArraysMetaRunner.h
   include/discardedOutputElements.h
+  include/externalHandleLayer.h
   include/glxDrawableService.h
   include/glxFBConfigService.h
   include/hdcVirtualizationService.h
@@ -48,6 +49,7 @@ add_library(OpenGL_player STATIC
   bindlessHandleMapService.cpp
   clientArraysMetaRunner.cpp
   discardedOutputElements.cpp
+  externalHandleLayer.cpp
   glxDrawableService.cpp
   glxFBConfigService.cpp
   hdcVirtualizationService.cpp

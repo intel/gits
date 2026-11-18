@@ -85,6 +85,14 @@ inline bool CompatibilityContext(int major, int minor) {
   return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
 }
 
+// The texture bound to `binding` on `texunit`, GL_TEXTUREi, by the query GL_EXT_direct_state_access
+// adds with its glMultiTex* commands.
+inline GLuint GetMultiTexName(GLenum binding, GLenum texunit) {
+  GLint value = 0;
+  GL_FN(glGetIntegerIndexedvEXT)(binding, texunit - GL_TEXTURE0, &value);
+  return static_cast<GLuint>(value);
+}
+
 inline GLint GetVertexAttribute(GLuint index, GLenum pname) {
   GLint value = 0;
   GL_FN(glGetVertexAttribiv)(index, pname, &value);
@@ -135,6 +143,53 @@ inline const TextureTarget* FindTextureTarget(GLenum target) {
     }
   }
   return nullptr;
+}
+
+struct BufferTarget {
+  GLenum Target;
+  GLenum Binding;
+  int Major;
+  int Minor;
+  const char* Extension{};
+};
+
+// The buffer bindings of a context, without those of vertex arrays and textures.
+inline constexpr BufferTarget BUFFER_TARGETS[] = {
+    {GL_ARRAY_BUFFER, GL_ARRAY_BUFFER_BINDING, 1, 5},
+    {GL_PIXEL_PACK_BUFFER, GL_PIXEL_PACK_BUFFER_BINDING, 2, 1},
+    {GL_PIXEL_UNPACK_BUFFER, GL_PIXEL_UNPACK_BUFFER_BINDING, 2, 1},
+    {GL_TRANSFORM_FEEDBACK_BUFFER, GL_TRANSFORM_FEEDBACK_BUFFER_BINDING, 3, 0},
+    {GL_COPY_READ_BUFFER, GL_COPY_READ_BUFFER_BINDING, 3, 1},
+    {GL_COPY_WRITE_BUFFER, GL_COPY_WRITE_BUFFER_BINDING, 3, 1},
+    {GL_UNIFORM_BUFFER, GL_UNIFORM_BUFFER_BINDING, 3, 1},
+    {GL_DRAW_INDIRECT_BUFFER, GL_DRAW_INDIRECT_BUFFER_BINDING, 4, 0, "GL_ARB_draw_indirect"},
+    {GL_ATOMIC_COUNTER_BUFFER, GL_ATOMIC_COUNTER_BUFFER_BINDING, 4, 2,
+     "GL_ARB_shader_atomic_counters"},
+    {GL_DISPATCH_INDIRECT_BUFFER, GL_DISPATCH_INDIRECT_BUFFER_BINDING, 4, 3,
+     "GL_ARB_compute_shader"},
+    {GL_SHADER_STORAGE_BUFFER, GL_SHADER_STORAGE_BUFFER_BINDING, 4, 3,
+     "GL_ARB_shader_storage_buffer_object"},
+    {GL_QUERY_BUFFER, GL_QUERY_BUFFER_BINDING, 4, 4, "GL_ARB_query_buffer_object"},
+};
+
+// The binding of the buffer bound to `target`; 0 for an unknown target.
+inline GLenum BufferBinding(GLenum target) {
+  switch (target) {
+  case GL_ELEMENT_ARRAY_BUFFER:
+    return GL_ELEMENT_ARRAY_BUFFER_BINDING;
+  case GL_TEXTURE_BUFFER:
+    return GL_TEXTURE_BUFFER_BINDING;
+  case GL_PARAMETER_BUFFER:
+    return GL_PARAMETER_BUFFER_BINDING;
+  default:
+    break;
+  }
+  for (const BufferTarget& entry : BUFFER_TARGETS) {
+    if (entry.Target == target) {
+      return entry.Binding;
+    }
+  }
+  return 0;
 }
 
 // The shaders attached to the program, ordered by `order`, the names in the order they were

@@ -20,6 +20,7 @@ namespace gits::opengl {
 class OpenGLCommandFactory : public stream::CommandFactory {
 public:
   stream::CommandRunner* CreateCommand(unsigned id) override;
+  void CreatePlayer() override;
 };
 
 } // namespace gits::opengl

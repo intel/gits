@@ -37,7 +37,6 @@ public:
 
 private:
   static std::string FileName();
-  static bool IsComplete(const std::string& fileName);
 
   bool m_Loaded{false};
   std::unordered_set<GITSKey> m_Objects;

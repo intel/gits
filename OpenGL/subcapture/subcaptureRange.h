@@ -22,6 +22,10 @@ public:
     ++m_CurrentFrame;
   }
 
+  void SetCurrentFrame(uint32_t frame) {
+    m_CurrentFrame = frame;
+  }
+
   bool InRange() const {
     return m_CurrentFrame >= m_StartFrame && m_CurrentFrame <= m_EndFrame;
   }

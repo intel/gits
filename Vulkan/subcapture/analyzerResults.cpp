@@ -156,31 +156,13 @@ bool AnalyzerResults::IsAnalysis() {
   // partial restore set.  The subcaptures of a stream with several APIs run
   // their analysis pass together.
   const auto& player = Configurator::Get().common.player;
-  for (const std::string& fileName :
-       stream::SubcaptureSession::AnalysisFileNames(player.streamDir, player.subcapture.frames)) {
-    if (!IsUsableAnalysisFile(fileName)) {
-      return false;
-    }
-  }
-  return true;
+  return stream::SubcaptureSession::IsAnalysisDone(player.streamDir, player.subcapture.frames,
+                                                   player.subcapture.optimize);
 }
 
 bool AnalyzerResults::IsUsableAnalysisFile(const std::string& fileName) {
-  if (!std::filesystem::exists(fileName)) {
-    return false;
-  }
-  try {
-    YAML::Node root = YAML::LoadFile(fileName);
-    if (!root["Complete"] || !root["Complete"].as<bool>()) {
-      return false;
-    }
-    // An unoptimized analysis leaves the restore-reducing sections empty, so an optimized run
-    // must not use it. Files without the key predate it and were only written optimized.
-    const bool optimized = !root["Optimize"] || root["Optimize"].as<bool>();
-    return optimized || !Configurator::Get().common.player.subcapture.optimize;
-  } catch (...) {
-    return false;
-  }
+  return stream::SubcaptureSession::IsAnalysisUsable(
+      fileName, Configurator::Get().common.player.subcapture.optimize);
 }
 
 std::string AnalyzerResults::GetAnalysisFileName() {

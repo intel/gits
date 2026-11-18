@@ -11,6 +11,7 @@
 #include "analyzerLayerAuto.h"
 #include "analyzerResults.h"
 #include "configurator.h"
+#include "externalHandleLayer.h"
 #include "layerAuto.h"
 #include "log.h"
 #include "openglDriversAuto.h"
@@ -68,6 +69,10 @@ void PlayerLayerManager::LoadLayers() {
     m_PreLayers.push_back(recordingLayer.get());
   }
 
+  // The first Post layer, so that the post-call trace shows the recorded import as well.
+  auto externalHandleLayer = std::make_unique<ExternalHandleLayer>();
+  m_PostLayers.insert(m_PostLayers.begin(), externalHandleLayer.get());
+
   auto threadContextLayer = std::make_unique<ThreadContextLayer>();
   m_PostLayers.push_back(threadContextLayer.get());
   m_LayersOwner.push_back(std::move(threadContextLayer));
@@ -114,6 +119,9 @@ void PlayerLayerManager::LoadLayers() {
       m_PostLayers.push_back(layer);
     }
   }
+
+  m_PreLayers.push_back(externalHandleLayer.get());
+  m_LayersOwner.push_back(std::move(externalHandleLayer));
 }
 
 void PlayerLayerManager::Shutdown() {

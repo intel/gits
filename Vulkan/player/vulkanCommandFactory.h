@@ -17,6 +17,7 @@ namespace vulkan {
 class VulkanCommandFactory : public stream::CommandFactory {
 public:
   stream::CommandRunner* CreateCommand(unsigned id) override;
+  void CreatePlayer() override;
 };
 
 } // namespace vulkan

@@ -10,11 +10,11 @@
 
 #include "configurator.h"
 #include "log.h"
+#include "subcaptureSession.h"
 
 #include "yaml-cpp/yaml.h"
 
 #include <algorithm>
-#include <filesystem>
 #include <fstream>
 #include <vector>
 
@@ -25,7 +25,7 @@ AnalyzerResults::AnalyzerResults() {
     return;
   }
   const std::string fileName = FileName();
-  if (!IsComplete(fileName)) {
+  if (!stream::SubcaptureSession::IsAnalysisUsable(fileName, true)) {
     LOG_WARNING << "Subcapture: no complete analysis file '" << fileName
                 << "', restoring every object";
     return;
@@ -44,8 +44,11 @@ AnalyzerResults::AnalyzerResults() {
   }
 }
 
+// The subcaptures of a stream with several APIs run their analysis pass together.
 bool AnalyzerResults::NeedsAnalysis() {
-  return !IsComplete(FileName());
+  const auto& player = Configurator::Get().common.player;
+  return !stream::SubcaptureSession::IsAnalysisDone(player.streamDir, player.subcapture.frames,
+                                                    player.subcapture.optimize);
 }
 
 void AnalyzerResults::Write(const std::unordered_set<GITSKey>& objects) {
@@ -67,21 +70,8 @@ void AnalyzerResults::Write(const std::unordered_set<GITSKey>& objects) {
 }
 
 std::string AnalyzerResults::FileName() {
-  const auto& config = Configurator::Get().common.player;
-  return config.streamDir.filename().string() + "_frames-" + config.subcapture.frames +
-         "_analysis.yml";
+  const auto& player = Configurator::Get().common.player;
+  return stream::SubcaptureSession::AnalysisFileName(player.streamDir, player.subcapture.frames,
+                                                     stream::StreamHeader::Api::API_OPENGL);
 }
-
-bool AnalyzerResults::IsComplete(const std::string& fileName) {
-  if (!std::filesystem::exists(fileName)) {
-    return false;
-  }
-  try {
-    const YAML::Node complete = YAML::LoadFile(fileName)["Complete"];
-    return complete && complete.as<bool>();
-  } catch (...) {
-    return false;
-  }
-}
-
 } // namespace gits::opengl
