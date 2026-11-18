@@ -24,7 +24,7 @@ namespace stream {
 #endif
 
 StreamHeader StreamHeader::m_Instance;
-const unsigned StreamHeader::VERSION[4] = {2, 0, 12, VERSION_4};
+const unsigned StreamHeader::VERSION[4] = {2, 0, 14, VERSION_4};
 const unsigned StreamHeader::VERSION_API_INFO[4] = {2, 0, 11, 0};
 const unsigned StreamHeader::SCHEDULER_VERSION = 1;
 
