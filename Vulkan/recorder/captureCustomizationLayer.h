@@ -174,10 +174,22 @@ private:
     std::optional<VkDeviceSize> HostPointerImportAlignment;
   };
 
+  // A copy of a buffer create info, with its pNext chain copied up to the
+  // VkBufferUsageFlags2CreateInfo, so the usage can be extended without writing to application
+  // memory. The rest of the chain is the application's. A structure unknown to GITS before the
+  // usage cannot be copied, which fails the recording.
+  struct BufferCreateInfoCopy {
+    VkBufferCreateInfo CreateInfo{};
+    std::vector<std::vector<uint64_t>> PNextNodes;
+  };
+  static void CopyBufferCreateInfo(const VkBufferCreateInfo& createInfo,
+                                   BufferCreateInfoCopy& copy);
+
   static thread_local AllocateInfo s_AllocateInfo;
   static thread_local DeviceCreateInfo s_DeviceCreateInfo;
+  static thread_local BufferCreateInfoCopy s_CreateBufferInfo;
   static thread_local VkDeviceBufferMemoryRequirements s_BufferMemoryRequirementsInfo;
-  static thread_local VkBufferCreateInfo s_BufferCreateInfo;
+  static thread_local BufferCreateInfoCopy s_BufferCreateInfo;
   static thread_local VkDeviceImageMemoryRequirements s_ImageMemoryRequirementsInfo;
   static thread_local VkImageCreateInfo s_ImageCreateInfo;
 

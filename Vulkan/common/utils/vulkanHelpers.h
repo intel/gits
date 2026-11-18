@@ -48,6 +48,24 @@ inline bool IsMemoryImport(const void* pNext) {
   });
 }
 
+// A chained VkBufferUsageFlags2CreateInfo replaces VkBufferCreateInfo::usage.
+inline VkBufferUsageFlags2 GetBufferUsage(const VkBufferCreateInfo& createInfo) {
+  auto* usage2 = static_cast<const VkBufferUsageFlags2CreateInfo*>(
+      getPNextStructure(createInfo.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO));
+  return usage2 ? usage2->usage : createInfo.usage;
+}
+
+// The pNext chain up to the VkBufferUsageFlags2CreateInfo must be owned by the caller.
+inline void AddBufferUsage(VkBufferCreateInfo& createInfo, VkBufferUsageFlags2 usage) {
+  createInfo.usage |= static_cast<VkBufferUsageFlags>(usage);
+  auto* usage2 =
+      const_cast<VkBufferUsageFlags2CreateInfo*>(static_cast<const VkBufferUsageFlags2CreateInfo*>(
+          getPNextStructure(createInfo.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO)));
+  if (usage2) {
+    usage2->usage |= usage;
+  }
+}
+
 // Returns the number of physical devices of a logical device created with the given info.
 inline uint32_t GetDeviceGroupSize(const VkDeviceCreateInfo& createInfo) {
   const auto* groupInfo = static_cast<const VkDeviceGroupDeviceCreateInfo*>(

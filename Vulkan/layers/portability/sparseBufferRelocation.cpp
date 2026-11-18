@@ -56,7 +56,7 @@ bool SparseBufferRelocation::PrepareBuffer(
                  "created at another address.";
   addressInfo->opaqueCaptureAddress = 0;
   createInfo.flags &= ~VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
-  if (createInfo.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
+  if (GetBufferUsage(createInfo) & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) {
     m_Pending.Recorded = recorded;
     m_Pending.Size = createInfo.size;
   }

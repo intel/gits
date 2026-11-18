@@ -15,6 +15,7 @@
 #include "configurator.h"
 #include "log.h"
 #include "subcaptureFatal.h"
+#include "vulkanHelpers.h"
 
 #include <algorithm>
 #include <map>
@@ -843,7 +844,8 @@ void SubcaptureLayer::Post(vkCreateBufferCommand& command) {
   state->ParentKey = command.m_device.Key;
   if (command.m_pCreateInfo.Value) {
     state->BufferSize = command.m_pCreateInfo.Value->size;
-    state->UsageFlags = command.m_pCreateInfo.Value->usage;
+    state->UsageFlags =
+        static_cast<VkBufferUsageFlags>(GetBufferUsage(*command.m_pCreateInfo.Value));
     state->SparseBinding =
         (command.m_pCreateInfo.Value->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != 0;
     // Detect a capture/replay opaque address via pNext chain (unlike AS,

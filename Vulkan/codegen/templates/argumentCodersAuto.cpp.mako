@@ -251,6 +251,27 @@ void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext) {
   }
 }
 
+<%def name="pnext_struct_sizes(structs)">\
+% for s in structs:
+<% define = get_define(s.platform) %>
+% if define:
+#ifdef ${define}
+% endif
+  case ${s.stype_value}:
+    return sizeof(${s.name});
+% if define:
+#endif
+% endif
+% endfor
+</%def>\
+size_t GetPNextStructureSize(VkStructureType sType) {
+  switch (sType) {
+${pnext_struct_sizes(pnext_input_structs)}\
+  default:
+    return 0;
+  }
+}
+
 <%
 union_selector_types = get_union_selector_types(structures, unions)
 %>\

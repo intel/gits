@@ -78,6 +78,9 @@ void EncodePNextChainOutput(char* dst, uint32_t& offset, const void* pNext);
 void DecodePNextChainInput(char* src, uint32_t& offset, void** pNext);
 void DecodePNextChainOutput(char* src, uint32_t& offset, void** pNext);
 
+// The size of the input pNext structure of `sType`; 0 for a structure GITS does not know.
+size_t GetPNextStructureSize(VkStructureType sType);
+
 //uint32_t GetSize(const VkAllocationCallbacks* src, uint32_t count);
 //void Encode(const VkAllocationCallbacks* src, uint32_t count, char* dst, uint32_t& offset);
 //void Decode(const VkAllocationCallbacks* dst, uint32_t count, char* src, uint32_t& offset);

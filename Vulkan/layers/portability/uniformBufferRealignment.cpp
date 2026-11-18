@@ -68,7 +68,7 @@ void UniformBufferRealignment::RemoveMemory(VkDeviceMemory memory) {
 }
 
 void UniformBufferRealignment::AddBuffer(VkBuffer buffer, const VkBufferCreateInfo& createInfo) {
-  if ((createInfo.usage & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == 0 ||
+  if ((GetBufferUsage(createInfo) & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == 0 ||
       (createInfo.flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) != 0) {
     return;
   }

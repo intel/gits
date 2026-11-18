@@ -7,6 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "captureCustomizationLayer.h"
+#include "argumentCoders.h"
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
 #include "configurator.h"
@@ -26,9 +27,12 @@ namespace vulkan {
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
 thread_local CaptureCustomizationLayer::DeviceCreateInfo
     CaptureCustomizationLayer::s_DeviceCreateInfo;
+thread_local CaptureCustomizationLayer::BufferCreateInfoCopy
+    CaptureCustomizationLayer::s_CreateBufferInfo;
 thread_local VkDeviceBufferMemoryRequirements
     CaptureCustomizationLayer::s_BufferMemoryRequirementsInfo;
-thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
+thread_local CaptureCustomizationLayer::BufferCreateInfoCopy
+    CaptureCustomizationLayer::s_BufferCreateInfo;
 thread_local VkDeviceImageMemoryRequirements
     CaptureCustomizationLayer::s_ImageMemoryRequirementsInfo;
 thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
@@ -403,9 +407,40 @@ void CaptureCustomizationLayer::Post(vkCreateWaylandSurfaceKHRCommand& command) 
 
 void CaptureCustomizationLayer::ModifyBufferCreateInfo(GITSKey deviceKey,
                                                        VkBufferCreateInfo& createInfo) {
-  createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+  AddBufferUsage(createInfo, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
   m_RayTracingService.ModifyBufferCreateInfo(deviceKey, createInfo);
+}
+
+void CaptureCustomizationLayer::CopyBufferCreateInfo(const VkBufferCreateInfo& createInfo,
+                                                     BufferCreateInfoCopy& copy) {
+  copy.CreateInfo = createInfo;
+  copy.PNextNodes.clear();
+  if (!getPNextStructure(createInfo.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO)) {
+    return;
+  }
+  const void** link = &copy.CreateInfo.pNext;
+  for (auto* node = static_cast<const VkBaseInStructure*>(createInfo.pNext); node != nullptr;
+       node = node->pNext) {
+    const size_t size = GetPNextStructureSize(node->sType);
+    if (size == 0) {
+      // The application's chain may be read-only, so it is not modified in place.
+      GITS_ASSERT(size != 0, "VkBufferCreateInfo: pNext structure " +
+                                 std::to_string(static_cast<uint32_t>(node->sType)) +
+                                 " is unknown to GITS and precedes VkBufferUsageFlags2CreateInfo, "
+                                 "so GITS cannot add the buffer usage that recording requires. "
+                                 "Record with a GITS build that supports the structure.");
+      return;
+    }
+    auto& storage = copy.PNextNodes.emplace_back((size + sizeof(uint64_t) - 1) / sizeof(uint64_t));
+    std::memcpy(storage.data(), node, size);
+    *link = storage.data();
+    if (node->sType == VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO) {
+      return;
+    }
+    link = reinterpret_cast<const void**>(
+        &reinterpret_cast<VkBaseInStructure*>(storage.data())->pNext);
+  }
 }
 
 void CaptureCustomizationLayer::ModifyImageCreateInfo(VkImageCreateInfo& createInfo) {
@@ -422,11 +457,11 @@ void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
     return;
   }
 
-  s_BufferCreateInfo = *pInfo.Value->pCreateInfo;
-  ModifyBufferCreateInfo(device.Key, s_BufferCreateInfo);
+  CopyBufferCreateInfo(*pInfo.Value->pCreateInfo, s_BufferCreateInfo);
+  ModifyBufferCreateInfo(device.Key, s_BufferCreateInfo.CreateInfo);
 
   s_BufferMemoryRequirementsInfo = *pInfo.Value;
-  s_BufferMemoryRequirementsInfo.pCreateInfo = &s_BufferCreateInfo;
+  s_BufferMemoryRequirementsInfo.pCreateInfo = &s_BufferCreateInfo.CreateInfo;
   pInfo.Value = &s_BufferMemoryRequirementsInfo;
 }
 
@@ -449,7 +484,9 @@ void CaptureCustomizationLayer::Pre(vkCreateBufferCommand& command) {
     return;
   }
 
-  ModifyBufferCreateInfo(command.m_device.Key, *command.m_pCreateInfo.Value);
+  CopyBufferCreateInfo(*command.m_pCreateInfo.Value, s_CreateBufferInfo);
+  ModifyBufferCreateInfo(command.m_device.Key, s_CreateBufferInfo.CreateInfo);
+  command.m_pCreateInfo.Value = &s_CreateBufferInfo.CreateInfo;
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceBufferMemoryRequirementsCommand& command) {

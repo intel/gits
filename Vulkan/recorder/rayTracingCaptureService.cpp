@@ -246,12 +246,13 @@ void RayTracingCaptureService::ModifyBufferCreateInfo(GITSKey deviceKey,
   // createInfo.offset is the entire reproduction mechanism. MICROMAP_BUILD_INPUT_READ_ONLY is
   // deliberately not listed - build inputs are ordinary buffers, already pinned via
   // SHADER_DEVICE_ADDRESS.
-  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) ||
-      isBitSet(createInfo.usage, VK_BUFFER_USAGE_MICROMAP_STORAGE_BIT_EXT)) {
-    createInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+  const VkBufferUsageFlags2 usage = GetBufferUsage(createInfo);
+  if (isBitSet(usage, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR) ||
+      isBitSet(usage, VK_BUFFER_USAGE_MICROMAP_STORAGE_BIT_EXT)) {
+    AddBufferUsage(createInfo, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT);
   }
 
-  if (isBitSet(createInfo.usage, VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
+  if (isBitSet(GetBufferUsage(createInfo), VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) &&
       m_Caps[deviceKey].m_BufferDeviceAddressCaptureReplay) {
     createInfo.flags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
   }

@@ -21,6 +21,7 @@
 #include "gpuReadbackHelper.h" // for AspectMaskForFormat
 #include "log.h"
 #include "tools.h"
+#include "vulkanHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -2499,7 +2500,7 @@ bool StateTrackingService::RestoreBuffer(ObjectState* state) {
     vkCreateBufferCommand cmd;
     Decode(raw, cmd);
     if (cmd.m_pCreateInfo.Value) {
-      cmd.m_pCreateInfo.Value->usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      AddBufferUsage(*cmd.m_pCreateInfo.Value, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     }
     cmd.m_Key = m_Recorder.CreateStateRestoreKey();
     m_Recorder.Record(vkCreateBufferSerializer(cmd));

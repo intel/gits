@@ -292,6 +292,22 @@ void TestOpacityMicromapInPNextOfPpGeometries() {
   }
 }
 
+// The recorder copies a pNext chain by the sizes of its structures, so a wrong size truncates a
+// copied structure or reads past the application's.
+void TestPNextStructureSize() {
+  using gits::vulkan::GetPNextStructureSize;
+  Check(GetPNextStructureSize(VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO) ==
+            sizeof(VkBufferUsageFlags2CreateInfo),
+        "pNext size: VkBufferUsageFlags2CreateInfo");
+  Check(GetPNextStructureSize(VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO) ==
+            sizeof(VkExternalMemoryBufferCreateInfo),
+        "pNext size: VkExternalMemoryBufferCreateInfo");
+  Check(GetPNextStructureSize(VK_STRUCTURE_TYPE_BUFFER_OPAQUE_CAPTURE_ADDRESS_CREATE_INFO) ==
+            sizeof(VkBufferOpaqueCaptureAddressCreateInfo),
+        "pNext size: VkBufferOpaqueCaptureAddressCreateInfo");
+  Check(GetPNextStructureSize(VK_STRUCTURE_TYPE_MAX_ENUM) == 0, "pNext size: unknown structure");
+}
+
 } // namespace
 
 int main() {
@@ -300,6 +316,7 @@ int main() {
     TestOpacityMicromapPpUsageCounts();
     TestAsBuildGeometryInfoPpGeometries();
     TestOpacityMicromapInPNextOfPpGeometries();
+    TestPNextStructureSize();
   } catch (const std::exception& e) {
     std::printf("coderRoundTripTest: unexpected exception: %s\n", e.what());
     return 1;
