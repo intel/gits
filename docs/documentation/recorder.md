@@ -16,6 +16,8 @@ Details regarding the configuration options can be found in the documentation's 
 
 For information about the [Vulkan legacy](Vulkan/VulkanLegacy.md) and [OpenGL legacy](OpenGL/OpenGLLegacy.md) backends, please see the documentation.
 
+To record an application that shares memory and semaphores between OpenGL and Vulkan, see [OpenGL and Vulkan interop](interop.md).
+
 # Example usage
 
 --8<-- "recorder_steps.md"

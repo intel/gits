@@ -14,6 +14,8 @@ There are multiple ways how the GITS player can be configured:
 
 The details of the options as well as how to use each method is described in the documentation's [configuration section](../configuration/how_to.md).
 
+For replay requirements of streams recorded with OpenGL and Vulkan interop, see [OpenGL and Vulkan interop](interop.md).
+
 # Example usage
 
 --8<-- "player_steps.md"

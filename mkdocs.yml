@@ -90,6 +90,7 @@ nav:
     - 'documentation/launcher.md'
     - 'documentation/terminology.md'
     - 'documentation/Plugins.md'
+    - 'documentation/interop.md'
     - API:
       - DirectX: 
         - 'documentation/DirectX/Overview.md'
