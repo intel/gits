@@ -83,6 +83,16 @@ inline bool IsMemoryExport(const void* pNext) {
          getPNextStructure(pNext, VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_NV) != nullptr;
 }
 
+// KMT handles are global names rather than NT handles owned by the process.
+inline bool IsNtHandleType(VkExternalMemoryHandleTypeFlagBits type) {
+  return type != VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT &&
+         type != VK_EXTERNAL_MEMORY_HANDLE_TYPE_D3D11_TEXTURE_KMT_BIT;
+}
+
+inline bool IsNtHandleType(VkExternalSemaphoreHandleTypeFlagBits type) {
+  return type != VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_WIN32_KMT_BIT;
+}
+
 inline bool IsImageDescriptorType(const VkWriteDescriptorSet& s) {
   auto type = s.descriptorType;
   return (type == VK_DESCRIPTOR_TYPE_SAMPLER || type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||

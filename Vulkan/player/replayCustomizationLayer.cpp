@@ -10,6 +10,7 @@
 #include "playerManager.h"
 #include "swapchainImageSyncService.h"
 #include "configurator.h"
+#include "externalHandleService.h"
 #include "suppressNames.h"
 #include "vulkanHelpers.h"
 #include "log.h"
@@ -444,6 +445,36 @@ void ReplayCustomizationLayer::ClearHostVisibleMemory(vkAllocateMemoryCommand& c
     throw error("flushing", result);
   }
 }
+
+void ReplayCustomizationLayer::Post(vkFreeMemoryCommand& command) {
+  stream::ExternalHandleService::Get().RemoveReplayedExports(command.m_memory.Key);
+}
+
+void ReplayCustomizationLayer::Post(vkDestroySemaphoreCommand& command) {
+  stream::ExternalHandleService::Get().RemoveReplayedExports(command.m_semaphore.Key);
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+void ReplayCustomizationLayer::Post(vkGetMemoryWin32HandleKHRCommand& command) {
+  if (!m_Manager.ExecuteCommands() || command.m_Skip || command.m_Return.Value != VK_SUCCESS ||
+      command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  stream::ExternalHandleService::Get().AddReplayedExport(
+      command.m_pGetWin32HandleInfo.HandleKeys[0], command.m_Key, *command.m_pHandle.Value,
+      IsNtHandleType(command.m_pGetWin32HandleInfo.Value->handleType));
+}
+
+void ReplayCustomizationLayer::Post(vkGetSemaphoreWin32HandleKHRCommand& command) {
+  if (!m_Manager.ExecuteCommands() || command.m_Skip || command.m_Return.Value != VK_SUCCESS ||
+      command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  stream::ExternalHandleService::Get().AddReplayedExport(
+      command.m_pGetWin32HandleInfo.HandleKeys[0], command.m_Key, *command.m_pHandle.Value,
+      IsNtHandleType(command.m_pGetWin32HandleInfo.Value->handleType));
+}
+#endif
 
 void ReplayCustomizationLayer::Post(vkMapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreData(command.m_device.Key, command.m_memory.Key,

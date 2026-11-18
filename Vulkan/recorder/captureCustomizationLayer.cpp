@@ -10,6 +10,7 @@
 #include "captureManager.h"
 #include "commandSerializersCustom.h"
 #include "configurator.h"
+#include "externalHandleService.h"
 #include "log.h"
 #include "suppressNames.h"
 #include "vulkanHelpers.h"
@@ -685,7 +686,32 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
 
 void CaptureCustomizationLayer::Post(vkFreeMemoryCommand& command) {
   m_Manager.GetMapTrackingService().RemoveAllocationInfo(command.m_memory.Key);
+  stream::ExternalHandleService::Get().RemoveRecordedExports(command.m_memory.Key);
 }
+
+void CaptureCustomizationLayer::Post(vkDestroySemaphoreCommand& command) {
+  stream::ExternalHandleService::Get().RemoveRecordedExports(command.m_semaphore.Key);
+}
+
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+void CaptureCustomizationLayer::Post(vkGetMemoryWin32HandleKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  stream::ExternalHandleService::Get().AddRecordedExport(
+      command.m_pGetWin32HandleInfo.HandleKeys[0], command.m_Key, *command.m_pHandle.Value,
+      IsNtHandleType(command.m_pGetWin32HandleInfo.Value->handleType));
+}
+
+void CaptureCustomizationLayer::Post(vkGetSemaphoreWin32HandleKHRCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS || command.m_pGetWin32HandleInfo.HandleKeys.empty()) {
+    return;
+  }
+  stream::ExternalHandleService::Get().AddRecordedExport(
+      command.m_pGetWin32HandleInfo.HandleKeys[0], command.m_Key, *command.m_pHandle.Value,
+      IsNtHandleType(command.m_pGetWin32HandleInfo.Value->handleType));
+}
+#endif
 
 void CaptureCustomizationLayer::Post(vkMapMemoryCommand& command) {
   m_Manager.GetMapTrackingService().StoreData(command.m_memory.Key, command.m_offset.Value,

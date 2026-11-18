@@ -9,6 +9,7 @@
 #include "playerManager.h"
 #include "pluginService.h"
 #include "configurator.h"
+#include "externalHandleService.h"
 #include "log.h"
 #include "messageBus.h"
 
@@ -40,6 +41,7 @@ PlayerManager::~PlayerManager() {
     // entirely for a single-frame stream.
     m_LayerManager.Shutdown();
     m_PluginService.reset();
+    stream::ExternalHandleService::Get().CloseReplayedExports();
     dl::close_library(m_Lib);
     m_Lib = nullptr;
   } catch (...) {

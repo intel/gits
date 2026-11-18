@@ -91,6 +91,12 @@ public:
   void Pre(vkAllocateMemoryCommand& command) override;
   void Post(vkAllocateMemoryCommand& command) override;
   void Post(vkFreeMemoryCommand& command) override;
+  void Post(vkDestroySemaphoreCommand& command) override;
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+  // Stores exported handles for the recorders of other APIs. See ExternalHandleService.
+  void Post(vkGetMemoryWin32HandleKHRCommand& command) override;
+  void Post(vkGetSemaphoreWin32HandleKHRCommand& command) override;
+#endif
   void Post(vkMapMemoryCommand& command) override;
   void Post(vkMapMemory2Command& command) override;
   void Post(vkMapMemory2KHRCommand& command) override;
