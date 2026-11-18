@@ -51,6 +51,8 @@ public:
   void UnlinkExternalMemory(VkMemoryAllocateInfo* allocationInfo,
                             std::optional<VkImportMemoryHostPointerInfoEXT>& hostPointerInfo,
                             VkDeviceSize allocationSize);
+  // Frees the host memory EnableExternalMemory returned for an allocation that failed.
+  void ReleaseExternalMemory(void* externalPtr);
   void StoreAllocationInfo(GITSKey deviceKey,
                            GITSKey deviceMemoryKey,
                            VkDeviceMemory memory,

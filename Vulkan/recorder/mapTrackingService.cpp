@@ -466,6 +466,14 @@ void MapTrackingService::UnlinkExternalMemory(
   hostPointerInfo.reset();
 }
 
+void MapTrackingService::ReleaseExternalMemory(void* externalPtr) {
+#ifdef GITS_PLATFORM_WINDOWS
+  if (externalPtr) {
+    VirtualFree(externalPtr, 0, MEM_RELEASE);
+  }
+#endif
+}
+
 void MapTrackingService::StoreAllocationInfo(GITSKey deviceKey,
                                              GITSKey deviceMemoryKey,
                                              VkDeviceMemory memory,

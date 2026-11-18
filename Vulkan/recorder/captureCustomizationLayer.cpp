@@ -711,12 +711,15 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
                                            s_AllocateInfo.AllocateInfoModified.memoryTypeIndex)) {
     return;
   }
+  if (command.m_Return.Value != VK_SUCCESS) {
+    mapTrackingService.ReleaseExternalMemory(s_AllocateInfo.ExternalMemory);
+    return;
+  }
 
   mapTrackingService.StoreAllocationInfo(
       command.m_device.Key, command.m_pMemory.Key, *command.m_pMemory.Value,
       s_AllocateInfo.AllocateInfoModified, s_AllocateInfo.ExternalMemory);
-  if (command.m_Return.Value == VK_SUCCESS &&
-      !IsMemoryImport(command.m_pAllocateInfo.Value->pNext)) {
+  if (!IsMemoryImport(command.m_pAllocateInfo.Value->pNext)) {
     mapTrackingService.ClearMemory(command.m_device.Value, command.m_pMemory.Key,
                                    *command.m_pAllocateInfo.Value);
   }
