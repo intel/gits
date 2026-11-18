@@ -59,6 +59,9 @@ Vulkan exports, and the OpenGL imports use the handles the replayed exports retu
     same; the simplest way is to replay on a system with one active GPU. The player does not
     check this.
 
+With `Common.Shared.Trace.Enabled`, the player writes the OpenGL and Vulkan commands to the same
+trace files, in the order it runs them.
+
 ## Subcapture
 
 Frame subcapture works as for one API; see [Vulkan subcapture](Vulkan/Subcapture.md). For an

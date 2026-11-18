@@ -12,10 +12,17 @@ ${AUTO_GENERATED_HEADER}
 
 namespace gits::opengl {
 
+namespace {
+
+// Each printer has its own name, because one overload set of all commands would make every call
+// resolve against all of them.
 % for cmd in commands:
 % if cmd.enabled:
-void TraceLayer::Pre(${cmd.name}Command& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "${cmd.name}");
+void Print${cmd.name}(FastOStream& stream,
+                      std::mutex& mutex,
+                      bool flush,
+                      ${cmd.name}Command& command) {
+  CommandPrinter printer(stream, mutex, command, "${cmd.name}");
 % for param in cmd.params:
 % if param.name not in consumed_pointer_params(cmd.name):
 <% pointer = pointer_override_for(cmd, param.name) %>\
@@ -83,7 +90,21 @@ void TraceLayer::Pre(${cmd.name}Command& command) {
   printer.Result(command.m_Return);
 % endif
 % endif
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
+}
+
+% endif
+% endfor
+} // namespace
+
+% for cmd in commands:
+% if cmd.enabled:
+void TraceLayer::Pre(${cmd.name}Command& command) {
+  Print${cmd.name}(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(${cmd.name}Command& command) {
+  Print${cmd.name}(m_PostStream, m_Mutex, m_Flush, command);
 }
 
 % endif

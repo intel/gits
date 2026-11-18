@@ -8,12 +8,13 @@
 
 #pragma once
 
-#include "fastOStream.h"
-
 #include <memory>
-#include <mutex>
 
-namespace gits::opengl {
+namespace gits {
+
+class TraceFiles;
+
+namespace opengl {
 
 class TraceLayer;
 
@@ -22,13 +23,16 @@ public:
   TraceLayerGroup();
   ~TraceLayerGroup();
 
-  bool IsEnabled() const;
+  // The layer created by CreateLayer() is registered as a Pre layer only if TracesPreCalls() and
+  // as a Post layer only if TracesPostCalls().
+  bool TracesPreCalls() const;
+  bool TracesPostCalls() const;
   std::unique_ptr<TraceLayer> CreateLayer();
 
 private:
-  std::unique_ptr<FastOStream> m_PreStream;
-  std::mutex m_Mutex;
+  std::shared_ptr<TraceFiles> m_Files;
   bool m_Flush{};
 };
 
-} // namespace gits::opengl
+} // namespace opengl
+} // namespace gits

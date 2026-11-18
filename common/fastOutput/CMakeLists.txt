@@ -14,6 +14,8 @@ set(FASTOUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "FastOutput direct
 set(FASTOUTPUT_SRC
   ${SRC_DIR}/fastOStream.h
   ${SRC_DIR}/fastOStream.cpp
+  ${SRC_DIR}/traceFiles.h
+  ${SRC_DIR}/traceFiles.cpp
 )
 
 add_library(fastOutput STATIC ${FASTOUTPUT_SRC})
@@ -21,6 +23,12 @@ add_library(fastOutput STATIC ${FASTOUTPUT_SRC})
 target_include_directories(fastOutput SYSTEM PUBLIC
   ${FASTIO_DIR}/include
 )
+
+# fast_io calls the sized operator delete, which Clang before 19 declares only with
+# -fsized-deallocation.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT MSVC)
+  target_compile_options(fastOutput PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fsized-deallocation>)
+endif()
 
 target_include_directories(fastOutput PUBLIC
   ${COMMON_HEADER_DIR}

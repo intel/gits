@@ -9,16 +9,16 @@
 #include "traceLayerGroup.h"
 
 #include "configurator.h"
+#include "traceFiles.h"
 #include "traceLayerAuto.h"
 
 #include <filesystem>
-#include <string>
 
 namespace gits::opengl {
 
 TraceLayerGroup::TraceLayerGroup() {
   const auto& config = Configurator::Get().common;
-  if (!config.shared.trace.enabled || !config.shared.trace.print.preCalls) {
+  if (!config.shared.trace.enabled) {
     return;
   }
 
@@ -28,34 +28,25 @@ TraceLayerGroup::TraceLayerGroup() {
   }
   std::filesystem::create_directories(directory);
 
-  const auto base = directory / config.player.streamDir.filename();
-  const std::string stem = base.string() + "_tracefile";
-  std::string suffix;
-  for (unsigned index = 1; std::filesystem::exists(stem + suffix + ".txt") ||
-                           std::filesystem::exists(stem + "_pre" + suffix + ".txt");
-       ++index) {
-    suffix = std::to_string(index);
-  }
-  const std::string path = stem + "_pre" + suffix + ".txt";
+  m_Files = TraceFiles::Acquire(directory / config.player.streamDir.filename());
   m_Flush = config.shared.trace.flushMethod != "off";
-  if (config.shared.trace.flushMethod == "ipc") {
-    m_PreStream = std::make_unique<FastOStringStream>(path);
-  } else {
-    m_PreStream = std::make_unique<FastOFileStream>(path);
-  }
 
-  // TODO: Mirror WARNING, ERROR, and TRACE via a removable log sink; lock m_Mutex and avoid
-  // recursive trace writes while keeping the normal log.
+  // TODO: Mirror WARNING, ERROR, and TRACE via a removable log sink; lock the trace files mutex
+  // and avoid recursive trace writes while keeping the normal log.
 }
 
 TraceLayerGroup::~TraceLayerGroup() = default;
 
-bool TraceLayerGroup::IsEnabled() const {
-  return m_PreStream && m_PreStream->IsOpen();
+bool TraceLayerGroup::TracesPreCalls() const {
+  return m_Files && m_Files->Pre().IsOpen();
+}
+
+bool TraceLayerGroup::TracesPostCalls() const {
+  return m_Files && m_Files->Post().IsOpen();
 }
 
 std::unique_ptr<TraceLayer> TraceLayerGroup::CreateLayer() {
-  return std::make_unique<TraceLayer>(*m_PreStream, m_Mutex, m_Flush);
+  return std::make_unique<TraceLayer>(m_Files->Pre(), m_Files->Post(), m_Files->Mutex(), m_Flush);
 }
 
 } // namespace gits::opengl

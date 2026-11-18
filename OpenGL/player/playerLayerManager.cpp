@@ -37,10 +37,17 @@ PlayerLayerManager::~PlayerLayerManager() {
 
 void PlayerLayerManager::LoadLayers() {
   m_TraceLayerGroup = std::make_unique<TraceLayerGroup>();
-  if (m_TraceLayerGroup->IsEnabled()) {
+  Layer* traceLayer = nullptr;
+  if (m_TraceLayerGroup->TracesPreCalls() || m_TraceLayerGroup->TracesPostCalls()) {
     auto layer = m_TraceLayerGroup->CreateLayer();
-    m_PreLayers.push_back(layer.get());
+    traceLayer = layer.get();
     m_LayersOwner.push_back(std::move(layer));
+  }
+  if (m_TraceLayerGroup->TracesPreCalls()) {
+    m_PreLayers.push_back(traceLayer);
+  }
+  if (m_TraceLayerGroup->TracesPostCalls()) {
+    m_PostLayers.push_back(traceLayer);
   }
 
   auto replayCustomizationLayer = std::make_unique<ReplayCustomizationLayer>();

@@ -12,11 +12,11 @@
 #include "streamHeader.h"
 #include "messageBus.h"
 
-#include <fstream>
-#include <string>
 #include <filesystem>
+#include <string>
 
 #include "fastOStream.h"
+#include "traceFiles.h"
 
 namespace gits {
 namespace vulkan {
@@ -42,62 +42,33 @@ TraceLayerGroup::TraceLayerGroup() {
     filepath = outputTracePath / appName;
   }
 
-  const std::filesystem::path filepathBase = filepath.string() + "_tracefile";
-  const std::filesystem::path filepathBasePre = filepath.string() + "_tracefile_pre";
-  std::string fileNum;
-  const std::string fileExt = ".txt";
-
-  for (int i = 1;; ++i) {
-    if (!std::filesystem::exists(filepathBase.string() + fileNum + fileExt)) {
-      break;
-    }
-    fileNum = std::to_string(i);
-  }
-  const std::string finalOutputPath = filepathBase.string() + fileNum + fileExt;
-  const std::string finalOutputPathPre = filepathBasePre.string() + fileNum + fileExt;
-
   const auto& configCommon = Configurator::Get().common;
-
-  if (configCommon.shared.trace.enabled) {
-
-    m_TraceStream = std::make_unique<FastOFileStream>();
-    m_TraceStreamPre = std::make_unique<FastOFileStream>();
-
-    if (configCommon.shared.trace.print.postCalls) {
-      if (configCommon.shared.trace.flushMethod == "ipc") {
-        m_TraceStream = std::make_unique<FastOStringStream>(finalOutputPath);
-      } else {
-        m_TraceStream = std::make_unique<FastOFileStream>(finalOutputPath);
-      }
-    }
-    if (configCommon.shared.trace.print.preCalls) {
-      if (configCommon.shared.trace.flushMethod == "ipc") {
-        m_TraceStreamPre = std::make_unique<FastOStringStream>(finalOutputPathPre);
-      } else {
-        m_TraceStreamPre = std::make_unique<FastOFileStream>(finalOutputPathPre);
-      }
-    }
-
-    m_TraceLayer = std::make_unique<TraceLayer>(*m_TraceStreamPre, *m_TraceStream, m_TraceMutex,
-                                                configCommon.shared.trace.flushMethod != "off");
+  if (!configCommon.shared.trace.enabled) {
+    return;
   }
+
+  m_TraceFiles = TraceFiles::Acquire(filepath);
+  m_TraceLayer =
+      std::make_unique<TraceLayer>(m_TraceFiles->Pre(), m_TraceFiles->Post(), m_TraceFiles->Mutex(),
+                                   configCommon.shared.trace.flushMethod != "off");
 
   // Log messages with LogLevel::TRACE to trace files
-  auto traceMsg = [this](const MessagePtr& m) {
+  auto traceMsg = [weakFiles = std::weak_ptr<TraceFiles>(m_TraceFiles)](const MessagePtr& m) {
     auto msg = std::dynamic_pointer_cast<LogMessage>(m);
     if (!msg || msg->getLevel() != LogLevel::TRACE) {
       return;
     }
-
-    std::lock_guard<std::mutex> lock(m_TraceMutex);
-
-    auto* stream = m_TraceStream.get();
-    auto* streamPre = m_TraceStreamPre.get();
-    if (stream && stream->IsOpen()) {
-      *stream << msg->getText() << '\n';
+    const auto files = weakFiles.lock();
+    if (!files) {
+      return;
     }
-    if (streamPre && streamPre->IsOpen()) {
-      *streamPre << msg->getText() << '\n';
+
+    std::lock_guard<std::mutex> lock(files->Mutex());
+    if (files->Post().IsOpen()) {
+      files->Post() << msg->getText() << '\n';
+    }
+    if (files->Pre().IsOpen()) {
+      files->Pre() << msg->getText() << '\n';
     }
   };
   gits::MessageBus& msgBus = gits::MessageBus::get();

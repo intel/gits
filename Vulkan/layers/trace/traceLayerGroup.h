@@ -11,12 +11,10 @@
 #include "layerAuto.h"
 
 #include <memory>
-#include <mutex>
 
 namespace gits {
 
-class FastOStream;
-class FastOStringStream;
+class TraceFiles;
 
 namespace vulkan {
 
@@ -37,10 +35,8 @@ public:
   }
 
 private:
-  std::unique_ptr<FastOStream> m_TraceStream;
-  std::unique_ptr<FastOStream> m_TraceStreamPre;
+  std::shared_ptr<TraceFiles> m_TraceFiles;
   std::unique_ptr<Layer> m_TraceLayer;
-  std::mutex m_TraceMutex;
 };
 
 } // namespace vulkan

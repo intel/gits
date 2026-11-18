@@ -14,9 +14,11 @@
 
 namespace gits::opengl {
 
-void TraceLayer::Pre(Command& command) {
+namespace {
+
+[[noreturn]] void PrintMissingFormatter(FastOStream& stream, std::mutex& mutex, Command& command) {
   {
-    CommandPrinter printer(m_Stream, m_Mutex, command, "Command");
+    CommandPrinter printer(stream, mutex, command, "Command");
     printer.AddOpaque(static_cast<uintptr_t>(command.GetId()));
     printer.Finish(true, " [error: no trace formatter]");
   }
@@ -27,18 +29,24 @@ void TraceLayer::Pre(Command& command) {
 
 // TODO: Decide whether FrameEndCommand belongs in layers or needs trace-local counters.
 
-void TraceLayer::Pre(MappedDataMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "MappedDataMeta");
+void PrintMappedDataMeta(FastOStream& stream,
+                         std::mutex& mutex,
+                         bool flush,
+                         MappedDataMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "MappedDataMeta");
   printer.Add(command.m_Buffer);
   printer.Add(command.m_Offset);
   printer.Add(command.m_Length);
   printer.AddEnum(command.m_Access.Value, GLenumApi::GL, GLenumGroup::MapBufferAccessMask);
   printer.Add(command.m_Data);
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
 }
 
-void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "WindowGeometryMeta");
+void PrintWindowGeometryMeta(FastOStream& stream,
+                             std::mutex& mutex,
+                             bool flush,
+                             WindowGeometryMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "WindowGeometryMeta");
   printer.Add(command.m_CallSamples);
   printer.Add(command.m_Windows);
   printer.Add(command.m_X);
@@ -47,11 +55,14 @@ void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
   printer.Add(command.m_Height);
   printer.Add(command.m_Visible);
   printer.Add(command.m_DestroyedWindows);
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
 }
 
-void TraceLayer::Pre(ClientArraysMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "ClientArraysMeta");
+void PrintClientArraysMeta(FastOStream& stream,
+                           std::mutex& mutex,
+                           bool flush,
+                           ClientArraysMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "ClientArraysMeta");
   printer.Add(command.m_ReleasedBlocks);
   printer.Add(command.m_BlockIds);
   printer.Add(command.m_BlockSizes);
@@ -64,11 +75,14 @@ void TraceLayer::Pre(ClientArraysMetaCommand& command) {
   printer.Add(command.m_Flags);
   printer.Add(command.m_ArrayBlocks);
   printer.Add(command.m_ArrayOffsets);
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
 }
 
-void TraceLayer::Pre(UniformArrayMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "UniformArrayMeta");
+void PrintUniformArrayMeta(FastOStream& stream,
+                           std::mutex& mutex,
+                           bool flush,
+                           UniformArrayMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "UniformArrayMeta");
   printer.Add(command.m_Program);
   if (command.m_Name.HasValue && !command.m_Name.Data.empty()) {
     const auto& text = command.m_Name.Data;
@@ -79,29 +93,104 @@ void TraceLayer::Pre(UniformArrayMetaCommand& command) {
   printer.Add(command.m_Location);
   printer.Add(command.m_ArraySize);
   printer.Add(command.m_ArrayIndex);
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
 }
 
-void TraceLayer::Pre(MappedTextureDataMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "MappedTextureDataMeta");
+void PrintMappedTextureDataMeta(FastOStream& stream,
+                                std::mutex& mutex,
+                                bool flush,
+                                MappedTextureDataMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "MappedTextureDataMeta");
   printer.Add(command.m_Textures);
   printer.Add(command.m_Levels);
   printer.Add(command.m_Strides);
   printer.Add(command.m_Rows);
   printer.Add(command.m_Data);
-  printer.Finish(m_Flush);
+  printer.Finish(flush);
+}
+
+void PrintPixelFormatMeta(FastOStream& stream,
+                          std::mutex& mutex,
+                          bool flush,
+                          PixelFormatMetaCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "PixelFormatMeta");
+  printer.Add(command.m_Attributes);
+  printer.Finish(flush);
+}
+
+void PrintUnsupportedCommand(FastOStream& stream,
+                             std::mutex& mutex,
+                             bool flush,
+                             UnsupportedCommand& command) {
+  CommandPrinter printer(stream, mutex, command, "UnsupportedCommand");
+  printer.AddText(command.GetName());
+  printer.Finish(flush);
+}
+
+} // namespace
+
+void TraceLayer::Pre(Command& command) {
+  PrintMissingFormatter(m_PreStream, m_Mutex, command);
+}
+
+void TraceLayer::Post(Command& command) {
+  PrintMissingFormatter(m_PostStream, m_Mutex, command);
+}
+
+void TraceLayer::Pre(MappedDataMetaCommand& command) {
+  PrintMappedDataMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(MappedDataMetaCommand& command) {
+  PrintMappedDataMeta(m_PostStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Pre(WindowGeometryMetaCommand& command) {
+  PrintWindowGeometryMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(WindowGeometryMetaCommand& command) {
+  PrintWindowGeometryMeta(m_PostStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Pre(ClientArraysMetaCommand& command) {
+  PrintClientArraysMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(ClientArraysMetaCommand& command) {
+  PrintClientArraysMeta(m_PostStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Pre(UniformArrayMetaCommand& command) {
+  PrintUniformArrayMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(UniformArrayMetaCommand& command) {
+  PrintUniformArrayMeta(m_PostStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Pre(MappedTextureDataMetaCommand& command) {
+  PrintMappedTextureDataMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(MappedTextureDataMetaCommand& command) {
+  PrintMappedTextureDataMeta(m_PostStream, m_Mutex, m_Flush, command);
 }
 
 void TraceLayer::Pre(PixelFormatMetaCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "PixelFormatMeta");
-  printer.Add(command.m_Attributes);
-  printer.Finish(m_Flush);
+  PrintPixelFormatMeta(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(PixelFormatMetaCommand& command) {
+  PrintPixelFormatMeta(m_PostStream, m_Mutex, m_Flush, command);
 }
 
 void TraceLayer::Pre(UnsupportedCommand& command) {
-  CommandPrinter printer(m_Stream, m_Mutex, command, "UnsupportedCommand");
-  printer.AddText(command.GetName());
-  printer.Finish(m_Flush);
+  PrintUnsupportedCommand(m_PreStream, m_Mutex, m_Flush, command);
+}
+
+void TraceLayer::Post(UnsupportedCommand& command) {
+  PrintUnsupportedCommand(m_PostStream, m_Mutex, m_Flush, command);
 }
 
 } // namespace gits::opengl
