@@ -78,6 +78,11 @@ inline bool isBitSet(VkFlags64 flags, VkFlags64 bit) {
   return (flags & bit) == bit;
 }
 
+inline bool IsMemoryExport(const void* pNext) {
+  return getPNextStructure(pNext, VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO) != nullptr ||
+         getPNextStructure(pNext, VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_NV) != nullptr;
+}
+
 inline bool IsImageDescriptorType(const VkWriteDescriptorSet& s) {
   auto type = s.descriptorType;
   return (type == VK_DESCRIPTOR_TYPE_SAMPLER || type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ||

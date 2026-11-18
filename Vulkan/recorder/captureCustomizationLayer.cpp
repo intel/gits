@@ -14,12 +14,17 @@
 #include "suppressNames.h"
 #include "vulkanHelpers.h"
 
+#include <algorithm>
+#include <cstring>
 #include <string>
+#include <vector>
 
 namespace gits {
 namespace vulkan {
 
 thread_local CaptureCustomizationLayer::AllocateInfo CaptureCustomizationLayer::s_AllocateInfo;
+thread_local CaptureCustomizationLayer::DeviceCreateInfo
+    CaptureCustomizationLayer::s_DeviceCreateInfo;
 thread_local VkDeviceBufferMemoryRequirements
     CaptureCustomizationLayer::s_BufferMemoryRequirementsInfo;
 thread_local VkBufferCreateInfo CaptureCustomizationLayer::s_BufferCreateInfo;
@@ -486,12 +491,23 @@ void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
   ModifyImageCreateInfo(*command.m_pCreateInfo.Value);
 }
 
-void CaptureCustomizationLayer::Post(vkCreateInstanceCommand& command) {}
+void CaptureCustomizationLayer::Post(vkCreateInstanceCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS && command.m_pCreateInfo.Value) {
+    const VkApplicationInfo* appInfo = command.m_pCreateInfo.Value->pApplicationInfo;
+    m_Manager.GetMapTrackingService().StoreInstanceApiVersion(
+        command.m_pInstance.Key,
+        appInfo && appInfo->apiVersion ? appInfo->apiVersion : VK_API_VERSION_1_0);
+  }
+}
 
 void CaptureCustomizationLayer::Post(vkEnumeratePhysicalDevicesCommand& command) {
   if ((command.m_Return.Value != VK_SUCCESS && command.m_Return.Value != VK_INCOMPLETE) ||
       !command.m_pPhysicalDevices.Value) {
     return;
+  }
+  for (GITSKey physicalDeviceKey : command.m_pPhysicalDevices.Keys) {
+    m_Manager.GetMapTrackingService().StorePhysicalDeviceInstance(physicalDeviceKey,
+                                                                  command.m_instance.Key);
   }
 }
 
@@ -534,9 +550,44 @@ void CaptureCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
   }
 
   m_RayTracingService.OnPreCreateDevice(command);
+
+  s_DeviceCreateInfo = {};
+#ifdef GITS_PLATFORM_WINDOWS
+  // Write watch tracking of mapped memory imports GITS-allocated host memory into allocations.
+  VkDeviceCreateInfo* createInfo = command.m_pCreateInfo.Value;
+  std::vector<const char*> extensions(createInfo->ppEnabledExtensionNames,
+                                      createInfo->ppEnabledExtensionNames +
+                                          createInfo->enabledExtensionCount);
+  s_DeviceCreateInfo.HostPointerImportAlignment =
+      m_Manager.GetMapTrackingService().QueryHostPointerImport(command.m_physicalDevice,
+                                                               extensions);
+  if (!s_DeviceCreateInfo.HostPointerImportAlignment ||
+      std::any_of(extensions.begin(), extensions.end(), [](const char* extension) {
+        return std::strcmp(extension, VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME) == 0;
+      })) {
+    return;
+  }
+  s_DeviceCreateInfo.Extensions = std::move(extensions);
+  s_DeviceCreateInfo.Extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+  s_DeviceCreateInfo.CreateInfoPtr = createInfo;
+  s_DeviceCreateInfo.CreateInfoModified = *createInfo;
+  s_DeviceCreateInfo.CreateInfoModified.enabledExtensionCount =
+      static_cast<uint32_t>(s_DeviceCreateInfo.Extensions.size());
+  s_DeviceCreateInfo.CreateInfoModified.ppEnabledExtensionNames =
+      s_DeviceCreateInfo.Extensions.data();
+  command.m_pCreateInfo.Value = &s_DeviceCreateInfo.CreateInfoModified;
+#endif
 }
 
 void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
+  // The extension GITS enables for itself must not reach the stream.
+  if (s_DeviceCreateInfo.CreateInfoPtr) {
+    command.m_pCreateInfo.Value = s_DeviceCreateInfo.CreateInfoPtr;
+  }
+  const std::optional<VkDeviceSize> hostPointerImportAlignment =
+      s_DeviceCreateInfo.HostPointerImportAlignment;
+  s_DeviceCreateInfo = {};
+
   if (!command.m_pDevice.Value || (*command.m_pDevice.Value == VK_NULL_HANDLE) ||
       !command.m_pCreateInfo.Value || (command.m_Return.Value != VK_SUCCESS)) {
     return;
@@ -544,6 +595,10 @@ void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
 
   m_Manager.GetMapTrackingService().StoreDevice(command.m_pDevice.Key, command.m_physicalDevice.Key,
                                                 GetDeviceGroupSize(*command.m_pCreateInfo.Value));
+  if (hostPointerImportAlignment) {
+    m_Manager.GetMapTrackingService().StoreHostPointerImport(command.m_pDevice.Key,
+                                                             *hostPointerImportAlignment);
+  }
 
   m_RayTracingService.OnPostCreateDevice(command);
 }
@@ -596,7 +651,8 @@ void CaptureCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
   }
 
   s_AllocateInfo.ExternalMemory = mapTrackingService.EnableExternalMemory(
-      command.m_device.Key, command.m_pAllocateInfo.Value, s_AllocateInfo.HostPointerInfo);
+      command.m_device.Key, command.m_device.Value, command.m_pAllocateInfo.Value,
+      s_AllocateInfo.HostPointerInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
@@ -670,6 +726,81 @@ void CaptureCustomizationLayer::Pre(vkQueueSubmit2Command& command) {
 
 void CaptureCustomizationLayer::Pre(vkQueueSubmit2KHRCommand& command) {
   m_Manager.GetMapTrackingService().SnapshotAllMapped();
+}
+
+void CaptureCustomizationLayer::Pre(vkFlushMappedMemoryRangesCommand& command) {
+  const size_t count =
+      std::min<size_t>(command.m_pMemoryRanges.Size, command.m_pMemoryRanges.HandleKeys.size());
+  for (size_t i = 0; i < count; ++i) {
+    m_Manager.GetMapTrackingService().SnapshotMapped(command.m_pMemoryRanges.HandleKeys[i]);
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkInvalidateMappedMemoryRangesCommand& command) {
+  if (command.m_Return.Value != VK_SUCCESS) {
+    return;
+  }
+  const size_t count =
+      std::min<size_t>(command.m_pMemoryRanges.Size, command.m_pMemoryRanges.HandleKeys.size());
+  for (size_t i = 0; i < count; ++i) {
+    const VkMappedMemoryRange& range = command.m_pMemoryRanges.Value[i];
+    m_Manager.GetMapTrackingService().RefreshMapped(command.m_pMemoryRanges.HandleKeys[i],
+                                                    range.offset, range.size);
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkWaitForFencesCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkGetFenceStatusCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkQueueWaitIdleCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkDeviceWaitIdleCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkWaitSemaphoresCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkWaitSemaphoresKHRCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkGetSemaphoreCounterValueCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkGetSemaphoreCounterValueKHRCommand& command) {
+  if (command.m_Return.Value == VK_SUCCESS) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
+}
+
+void CaptureCustomizationLayer::Post(vkGetEventStatusCommand& command) {
+  if (command.m_Return.Value == VK_EVENT_SET) {
+    m_Manager.GetMapTrackingService().RefreshCoherentMapped();
+  }
 }
 
 void CaptureCustomizationLayer::Post(vkCreateDescriptorUpdateTemplateCommand& command) {

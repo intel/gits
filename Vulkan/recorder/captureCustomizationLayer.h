@@ -100,6 +100,17 @@ public:
   void Pre(vkQueueSubmitCommand& command) override;
   void Pre(vkQueueSubmit2Command& command) override;
   void Pre(vkQueueSubmit2KHRCommand& command) override;
+  void Pre(vkFlushMappedMemoryRangesCommand& command) override;
+  void Post(vkInvalidateMappedMemoryRangesCommand& command) override;
+  void Post(vkWaitForFencesCommand& command) override;
+  void Post(vkGetFenceStatusCommand& command) override;
+  void Post(vkQueueWaitIdleCommand& command) override;
+  void Post(vkDeviceWaitIdleCommand& command) override;
+  void Post(vkWaitSemaphoresCommand& command) override;
+  void Post(vkWaitSemaphoresKHRCommand& command) override;
+  void Post(vkGetSemaphoreCounterValueCommand& command) override;
+  void Post(vkGetSemaphoreCounterValueKHRCommand& command) override;
+  void Post(vkGetEventStatusCommand& command) override;
 
   void Post(vkCreateDescriptorUpdateTemplateCommand& command) override;
   void Post(vkCreateDescriptorUpdateTemplateKHRCommand& command) override;
@@ -149,7 +160,16 @@ private:
     }
   };
 
+  struct DeviceCreateInfo {
+    // Pointer to the original data, set only when the create info is modified
+    VkDeviceCreateInfo* CreateInfoPtr{nullptr};
+    VkDeviceCreateInfo CreateInfoModified{};
+    std::vector<const char*> Extensions;
+    std::optional<VkDeviceSize> HostPointerImportAlignment;
+  };
+
   static thread_local AllocateInfo s_AllocateInfo;
+  static thread_local DeviceCreateInfo s_DeviceCreateInfo;
   static thread_local VkDeviceBufferMemoryRequirements s_BufferMemoryRequirementsInfo;
   static thread_local VkBufferCreateInfo s_BufferCreateInfo;
   static thread_local VkDeviceImageMemoryRequirements s_ImageMemoryRequirementsInfo;
