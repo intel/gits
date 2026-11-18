@@ -8,10 +8,12 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <span>
+#include <vector>
 
 namespace gits::opengl {
 
@@ -47,10 +49,39 @@ public:
   std::optional<ByteRange> DirtyRange(const void* data,
                                       size_t size,
                                       std::span<const uint8_t> baseline = {}) const;
+  // Like DirtyRange() without a baseline, but returns each run of consecutive touched pages, and
+  // resets the write watch in the same step, so a concurrent write is reported by the next call.
+  std::vector<ByteRange> TakeDirtyRanges(const void* data, size_t size) const;
 
 private:
+  // The addresses of the touched pages in ascending order, and the page size.
+  std::vector<uintptr_t> QueryDirtyPages(bool reset, size_t& pageSize) const;
+
   void* m_Data{};
   size_t m_Size;
 };
+
+// The runs of consecutive pages of pageSize bytes at the ascending addresses in pages, clipped to
+// [begin, begin + size) and relative to begin.
+inline std::vector<WatchedShadow::ByteRange> PageRuns(std::span<const uintptr_t> pages,
+                                                      size_t pageSize,
+                                                      uintptr_t begin,
+                                                      size_t size) {
+  std::vector<WatchedShadow::ByteRange> runs;
+  const uintptr_t end = begin + size;
+  for (const uintptr_t page : pages) {
+    const uintptr_t first = std::max(begin, page);
+    const uintptr_t last = std::min(end, page + pageSize);
+    if (first >= last) {
+      continue;
+    }
+    if (!runs.empty() && runs.back().Offset + runs.back().Length == first - begin) {
+      runs.back().Length += last - first;
+    } else {
+      runs.push_back({first - begin, last - first});
+    }
+  }
+  return runs;
+}
 
 } // namespace gits::opengl

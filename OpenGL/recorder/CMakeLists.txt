@@ -101,3 +101,15 @@ else()
 endif()
 
 set_target_properties(OpenGL_recorder PROPERTIES FOLDER OpenGL)
+
+# Host-only gate for the runs of written pages that coherent maps publish: no GPU, no driver, no
+# stream. Run the executable; it prints failures and exits non-zero. It needs only the inline
+# PageRuns() of watchedShadow.h, so it links nothing.
+add_executable(OpenGL_recorder_page_runs_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/pageRunsTest.cpp
+)
+target_include_directories(OpenGL_recorder_page_runs_test PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+set_target_properties(OpenGL_recorder_page_runs_test PROPERTIES FOLDER OpenGL)

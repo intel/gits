@@ -97,6 +97,11 @@ bool PackPixelsPointerIsBufferOffset(const void* pixels);
 // against the correct byte range instead of silently defaulting to offset 0.
 const void* GuardQueryBufferPointer(const char* commandName, const void* params);
 
+// Whether a GL_QUERY_BUFFER is bound, so that glGetQueryObject* writes its result into that
+// buffer rather than into `params`. Probes GL_ARB_query_buffer_object support first, as
+// GuardQueryBufferPointer() does.
+bool QueryBufferIsBound();
+
 // Returns nullptr when a GL_DRAW_INDIRECT_BUFFER is bound, in which case an indirect draw's
 // `indirect` is a byte offset into that buffer; returns `indirect` unchanged otherwise (client
 // memory, compatibility profiles only). No warning: both forms replay correctly, since the

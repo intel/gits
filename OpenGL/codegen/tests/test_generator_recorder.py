@@ -27,8 +27,9 @@ sys.path.insert(0, str(CODEGEN_DIR))
 
 from generator_helpers import mako_render
 from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
-                                PRE_HOOK_KEY_PAIR_COMMANDS, DrawableIdentities,
-                                drawable_identities)
+                                PRE_HOOK_KEY_PAIR_COMMANDS, PRIMITIVE_PAIR_COMMANDS,
+                                DrawableIdentities, drawable_identities, mapped_write_publishers,
+                                query_buffer_publishers)
 from handle_lifecycle import FRAME_END_COMMANDS
 from intermediates import Api, CmdType, Command, ReturnValue
 from intermediates_creator import (
@@ -62,7 +63,10 @@ def render_wrappers(command_names: tuple[str, ...], pre_hook_key_pair_commands: 
 def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozenset[str],
                     post_hook_key_pair_commands: frozenset[str] = frozenset(),
                     pre_hook_extra_key_commands: dict[str, str] | None = None,
-                    frame_end_commands: frozenset[str] = frozenset()) -> str:
+                    frame_end_commands: frozenset[str] = frozenset(),
+                    mapped_write_publishers: frozenset[str] = frozenset(),
+                    primitive_pair_commands: dict[str, bool] | None = None,
+                    query_buffer_publishers: frozenset[str] = frozenset()) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
@@ -70,8 +74,10 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
         pre_hook_key_pair_commands=pre_hook_key_pair_commands,
         post_hook_key_pair_commands=post_hook_key_pair_commands,
         pre_hook_extra_key_commands=pre_hook_extra_key_commands or {},
-        frame_end_commands=frame_end_commands, client_array_setters={},
-        buffer_content_hooks={})
+        frame_end_commands=frame_end_commands, mapped_write_publishers=mapped_write_publishers,
+        query_buffer_publishers=query_buffer_publishers,
+        primitive_pair_commands=primitive_pair_commands or {},
+        client_array_setters={}, buffer_content_hooks={})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
 
@@ -297,6 +303,170 @@ class NestedCallWrapperTests(unittest.TestCase):
         key = body.find('CaptureManager::Get().CreateCommandKey()')
         self.assertNotEqual(nested, -1, body)
         self.assertLess(nested, key)
+
+
+class MappedWritePublisherTests(unittest.TestCase):
+    """Writes through coherent maps and to imported Vulkan memory reach the stream only before
+    these commands, so a reader left out would replay with stale memory, and the written pages
+    published after a writer left out would overwrite what it wrote."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        names = ('glDrawArrays', 'glMultiDrawElementsIndirect', 'glDrawTransformFeedback',
+                 'glDispatchCompute', 'glDispatchComputeIndirect', 'glCopyBufferSubData',
+                 'glCopyNamedBufferSubData', 'glGetBufferSubData', 'glGetNamedBufferSubData',
+                 'glCopyImageSubData', 'glBlitFramebuffer', 'glBlitNamedFramebuffer',
+                 'glReadPixels', 'glReadnPixels', 'glTexSubImage2D', 'glTextureSubImage3D',
+                 'glCompressedTexImage2D', 'glMultiTexSubImage2DEXT', 'glGetTexImage',
+                 'glGetTextureSubImage', 'glGetnCompressedTexImage', 'glGenerateMipmap',
+                 'glGenerateTextureMipmap', 'glSignalSemaphoreEXT', 'glWaitSemaphoreEXT',
+                 'glDrawBuffer', 'glDrawBuffers', 'glDrawBuffersARB', 'glMapBufferRange',
+                 'glFlushMappedBufferRange', 'glUnmapBuffer', 'glBufferSubData', 'glBindBuffer',
+                 'glTexParameteri', 'glGetTexParameteriv', 'wglSwapBuffers')
+        cls.publishers = mapped_write_publishers([fake_command(name) for name in names])
+
+    def test_copies_from_buffers_textures_and_framebuffers(self) -> None:
+        names = ('glNamedCopyBufferSubDataEXT', 'glMulticastCopyBufferSubDataNV',
+                 'glCopyTexImage1D', 'glCopyTexImage2DEXT', 'glCopyTexSubImage2D',
+                 'glCopyTexSubImage3DOES', 'glCopyTextureImage2DEXT', 'glCopyTextureSubImage1D',
+                 'glCopyTextureSubImage3DEXT', 'glCopyMultiTexImage1DEXT',
+                 'glCopyMultiTexSubImage3DEXT', 'glCopyPixels', 'glCopyColorTableSGI',
+                 'glCopyColorSubTableEXT', 'glCopyConvolutionFilter2D')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+
+    def test_pixel_unpacks_that_may_read_a_buffer(self) -> None:
+        names = ('glBitmap', 'glPolygonStipple', 'glCompressedMultiTexImage2DEXT',
+                 'glCompressedMultiTexSubImage3DEXT', 'glColorTable', 'glColorTableSGI',
+                 'glColorSubTableEXT', 'glConvolutionFilter1D', 'glConvolutionFilter2DEXT',
+                 'glSeparableFilter2D', 'glPixelMapfv', 'glPixelMapuiv', 'glPixelMapusv')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+
+    def test_vulkan_semaphore_signal_and_wait(self) -> None:
+        names = ('glSignalVkSemaphoreNV', 'glWaitVkSemaphoreNV')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+
+    def test_commands_that_read_no_buffer_or_texture_memory(self) -> None:
+        names = ('glColorTableParameterfv', 'glConvolutionParameteri', 'glGetPolygonStipple',
+                 'glGetPixelMapfv', 'glPixelStorei', 'glPixelTransferf', 'glLineStipple',
+                 'glImportSemaphoreWin32HandleEXT', 'glGenSemaphoresEXT', 'glCreateSemaphoresNV')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset())
+
+    def test_accesses_of_buffer_and_texture_memory(self) -> None:
+        self.assertEqual(self.publishers, frozenset({
+            'glDrawArrays', 'glMultiDrawElementsIndirect', 'glDrawTransformFeedback',
+            'glDispatchCompute', 'glDispatchComputeIndirect', 'glCopyBufferSubData',
+            'glCopyNamedBufferSubData', 'glGetBufferSubData', 'glGetNamedBufferSubData',
+            'glCopyImageSubData', 'glBlitFramebuffer', 'glBlitNamedFramebuffer', 'glReadPixels',
+            'glReadnPixels', 'glTexSubImage2D', 'glTextureSubImage3D', 'glCompressedTexImage2D',
+            'glMultiTexSubImage2DEXT', 'glGetTexImage', 'glGetTextureSubImage',
+            'glGetnCompressedTexImage', 'glGenerateMipmap', 'glGenerateTextureMipmap',
+            'glSignalSemaphoreEXT', 'glWaitSemaphoreEXT', 'glBufferSubData'}))
+
+    def test_writers_of_buffer_and_texture_memory(self) -> None:
+        names = ('glBufferSubData', 'glBufferSubDataARB', 'glNamedBufferSubData',
+                 'glNamedBufferSubDataEXT', 'glClearBufferData', 'glClearBufferSubData',
+                 'glClearNamedBufferData', 'glClearNamedBufferSubData',
+                 'glClearNamedBufferDataEXT', 'glClearNamedBufferSubDataEXT', 'glClearTexImage',
+                 'glClearTexSubImage', 'glClearTexImageEXT', 'glClearTexSubImageEXT', 'glClear',
+                 'glClearBufferiv', 'glClearBufferuiv', 'glClearBufferfv', 'glClearBufferfi',
+                 'glClearNamedFramebufferiv', 'glClearNamedFramebufferuiv',
+                 'glClearNamedFramebufferfv', 'glClearNamedFramebufferfi')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+
+    def test_clear_values_and_buffer_allocations_are_excluded(self) -> None:
+        # These set the values a clear writes, or give a buffer new storage that no published page
+        # can overlap.
+        names = ('glClearColor', 'glClearDepth', 'glClearDepthf', 'glClearStencil',
+                 'glClearIndex', 'glClearAccum', 'glClearColorIiEXT', 'glClearColorIuiEXT',
+                 'glBufferData', 'glNamedBufferData', 'glBufferStorage', 'glNamedBufferStorage')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset())
+
+    def test_custom_wrappers_are_excluded(self) -> None:
+        # A generated wrapper replaced by a custom one never runs.
+        source = (CODEGEN_DIR.parent / 'recorder' / 'mapTrackingWrappers.cpp').read_text(
+            encoding='utf-8')
+        table = source[source.index('CUSTOM_WRAPPERS[]'):]
+        custom = frozenset(re.findall(r'\{"(gl\w+)"', table))
+        self.assertIn('glFlushMappedBufferRange', custom)
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in custom]),
+                         frozenset())
+
+    def test_query_results_written_into_a_buffer(self) -> None:
+        # A query buffer object always receives the result of these.
+        names = ('glGetQueryBufferObjectiv', 'glGetQueryBufferObjectuiv',
+                 'glGetQueryBufferObjecti64v', 'glGetQueryBufferObjectui64v')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+        self.assertEqual(query_buffer_publishers([fake_command(name) for name in names]),
+                         frozenset())
+
+    def test_query_results_written_into_a_bound_query_buffer(self) -> None:
+        # These write into client memory unless a GL_QUERY_BUFFER is bound.
+        names = ('glGetQueryObjectiv', 'glGetQueryObjectuiv', 'glGetQueryObjecti64v',
+                 'glGetQueryObjectui64v', 'glGetQueryObjectivARB', 'glGetQueryObjectuivARB',
+                 'glGetQueryObjecti64vEXT', 'glGetQueryObjectui64vEXT')
+        self.assertEqual(query_buffer_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset())
+        others = ('glGetQueryiv', 'glGetQueryIndexediv', 'glBeginQuery', 'glQueryCounter')
+        self.assertEqual(query_buffer_publishers([fake_command(name) for name in others]),
+                         frozenset())
+
+    def test_query_results_publish_only_into_a_bound_query_buffer(self) -> None:
+        rendered = render_commands([fake_command('glGetQueryObjectuiv')], frozenset(),
+                                   query_buffer_publishers=frozenset({'glGetQueryObjectuiv'}))
+        body = extract_wrapper_body(rendered, 'glGetQueryObjectuiv')
+        bound = body.index('if (QueryBufferIsBound()) {')
+        publish = body.index('MapTrackingService::Get().PublishMappedWrites();')
+        self.assertLess(bound, publish)
+        self.assertLess(publish, body.index('CaptureManager::Get().CreateCommandKey()'))
+
+    def test_writes_are_published_before_the_key_is_reserved(self) -> None:
+        rendered = render_commands([fake_command('glDrawArrays'), fake_command('glBindBuffer')],
+                                   frozenset(), mapped_write_publishers=frozenset({'glDrawArrays'}))
+        body = extract_wrapper_body(rendered, 'glDrawArrays')
+        publish = body.index('MapTrackingService::Get().PublishMappedWrites();')
+        self.assertLess(publish, body.index('CaptureManager::Get().CreateCommandKey()'))
+        self.assertNotIn('PublishMappedWrites',
+                         extract_wrapper_body(rendered, 'glBindBuffer'))
+
+    def test_display_list_calls_and_immediate_mode_draws(self) -> None:
+        names = ('glCallList', 'glCallLists', 'glBegin', 'glRectd', 'glRectfv', 'glRecti',
+                 'glRectsv', 'glEvalMesh1', 'glEvalMesh2')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset(names))
+
+    def test_commands_only_valid_between_begin_and_end_are_excluded(self) -> None:
+        # Writes the commands between glBegin and glEnd read are published before glBegin.
+        names = ('glEnd', 'glVertex3f', 'glArrayElement', 'glEvalCoord2f', 'glEvalPoint1',
+                 'glBeginQuery', 'glBeginTransformFeedback', 'glNewList', 'glEndList',
+                 'glListBase', 'glGenLists')
+        self.assertEqual(mapped_write_publishers([fake_command(name) for name in names]),
+                         frozenset())
+
+    def test_begin_and_end_bracket_the_publication(self) -> None:
+        self.assertEqual(PRIMITIVE_PAIR_COMMANDS, {'glBegin': True, 'glEnd': False})
+        rendered = render_commands(
+            [fake_command('glBegin'), fake_command('glEnd'), fake_command('glCallList')],
+            frozenset(), mapped_write_publishers=frozenset({'glBegin', 'glCallList'}),
+            primitive_pair_commands=PRIMITIVE_PAIR_COMMANDS)
+        # The last realFunction() call is the one past the nested-call early return.
+        begin = extract_wrapper_body(rendered, 'glBegin')
+        # glBegin publishes before it starts the pair.
+        self.assertLess(begin.index('PublishMappedWrites();'), begin.rindex('realFunction();'))
+        self.assertLess(begin.rindex('realFunction();'),
+                        begin.index('MapTrackingService::Get().SetInPrimitivePair(true);'))
+        end = extract_wrapper_body(rendered, 'glEnd')
+        self.assertLess(end.rindex('realFunction();'),
+                        end.index('MapTrackingService::Get().SetInPrimitivePair(false);'))
+        self.assertNotIn('SetInPrimitivePair', extract_wrapper_body(rendered, 'glCallList'))
 
 
 class EncoderLayerSkipRecordingTests(unittest.TestCase):

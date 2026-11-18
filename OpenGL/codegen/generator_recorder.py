@@ -8,6 +8,7 @@
 #
 # ===================== end_copyright_notice ==============================
 
+import re
 from dataclasses import dataclass
 
 from buffer_content_hooks import buffer_content_hooks
@@ -101,6 +102,68 @@ assert PRE_HOOK_EXTRA_KEY_COMMANDS.keys() <= PRE_HOOK_KEY_PAIR_COMMANDS
 assert FRAME_END_COMMANDS <= PRE_HOOK_EXTRA_KEY_COMMANDS.keys()
 
 
+# Commands that may read or write buffer or texture memory: draws, including display list calls,
+# glBegin and the other immediate mode draws, dispatches, buffer copies, reads, uploads and
+# clears, texture uploads, copies, readbacks and clears, framebuffer clears, copies and blits,
+# mipmap generation, the other pixel unpacks a GL_PIXEL_UNPACK_BUFFER may source, query results
+# written into a buffer, and the semaphore signals and waits. Their Wrapper_<cmd> calls
+# MapTrackingService::PublishMappedWrites() before reserving its key, so writes through coherent
+# maps and host writes to memory GL imports from Vulkan replay before the command accesses the
+# memory, and the pages they wrote are not published again over what it wrote. Buffer maps and flushes have custom wrappers
+# (recorder/mapTrackingWrappers.cpp), which these patterns exclude.
+_MAPPED_WRITE_PUBLISHER_RE = re.compile(
+    r'^gl(?:Multi)?Draw(?!Buffers?(?:ARB|ATI|EXT|NV|IndexedEXT)?$)'
+    r'|^glCallLists?$'
+    r'|^glBegin$'
+    r'|^glRect[dfis]v?$'
+    r'|^glEvalMesh[12]$'
+    r'|^glDispatchCompute'
+    r'|^gl(?:Copy|Get)(?:Named)?Buffer(?:Sub)?Data'
+    r'|^gl(?:Named)?BufferSubData'
+    r'|^glClear(?:Named)?Buffer(?:Sub)?Data'
+    r'|^glClearTex(?:Sub)?Image'
+    r'|^glClear$'
+    r'|^glClear(?:Buffer|NamedFramebuffer)(?:iv|uiv|fv|fi)$'
+    r'|^gl(?:Named|Multicast)CopyBufferSubData'
+    r'|^glCopyImageSubData'
+    r'|^glBlit(?:Named)?Framebuffer'
+    r'|^glReadn?Pixels'
+    r'|^gl(?:Multi)?(?:Compressed)?(?:Multi)?Tex(?:ture)?(?:Sub)?Image[123]D'
+    r'|^glCopy(?:Multi)?Tex(?:ture)?(?:Sub)?Image[123]D'
+    r'|^glCopy(?:Pixels|Color(?:Sub)?Table|ConvolutionFilter[12]D)'
+    r'|^glGetn?(?:Compressed)?(?:Multi)?Tex(?:ture)?(?:Sub)?Image'
+    r'|^glGenerate(?:Texture|MultiTex)?Mipmap'
+    r'|^gl(?:Bitmap|PolygonStipple)'
+    r'|^gl(?:Color(?:Sub)?Table|ConvolutionFilter[12]D|SeparableFilter2D)(?:EXT|SGI)?$'
+    r'|^glPixelMap(?:fv|uiv|usv)$'
+    r'|^glGetQueryBufferObject(?:i|ui|i64|ui64)v$'
+    r'|^gl(?:Signal|Wait)(?:Vk)?Semaphore')
+
+
+def mapped_write_publishers(commands: list[Command]) -> frozenset[str]:
+    """The commands before which mapped writes are published."""
+    return frozenset(cmd.name for cmd in commands if _MAPPED_WRITE_PUBLISHER_RE.search(cmd.name))
+
+
+# Commands that write a query result into the GL_QUERY_BUFFER when one is bound, and into client
+# memory otherwise. Their Wrapper_<cmd> publishes mapped writes as mapped_write_publishers() do,
+# but only when a query buffer is bound, as applications poll query results.
+_QUERY_BUFFER_PUBLISHER_RE = re.compile(r'^glGetQueryObject(?:i|ui|i64|ui64)v(?:ARB|EXT)?$')
+
+
+def query_buffer_publishers(commands: list[Command]) -> frozenset[str]:
+    """The commands before which mapped writes are published when a query buffer is bound."""
+    return frozenset(cmd.name for cmd in commands
+                     if _QUERY_BUFFER_PUBLISHER_RE.search(cmd.name))
+
+
+# Whether each command starts or ends a glBegin/glEnd pair. Its Wrapper_<cmd> tells
+# MapTrackingService after the call, as PublishMappedWrites() does nothing between them: the
+# commands it records replay GL calls that are invalid there, such as before a glCallList, and
+# glBegin published the writes the pair reads.
+PRIMITIVE_PAIR_COMMANDS: dict[str, bool] = {'glBegin': True, 'glEnd': False}
+
+
 def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
     """PRE_HOOK_KEY_PAIR_COMMANDS plus ClientArraysLayer's draws (client_array_draws.py), which
     record a ClientArraysMetaCommand under the spare key the same way. The two sets must not
@@ -182,6 +245,9 @@ def generate_recorder_files(commands: list[Command]) -> None:
                post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
                pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
                frame_end_commands=FRAME_END_COMMANDS,
+               mapped_write_publishers=mapped_write_publishers(commands),
+               query_buffer_publishers=query_buffer_publishers(commands),
+               primitive_pair_commands=PRIMITIVE_PAIR_COMMANDS,
                client_array_setters=client_array_setters(commands),
                buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl-layer-architecture-alignment-plan.md): the sole,

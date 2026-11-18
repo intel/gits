@@ -8,8 +8,8 @@
 
 #pragma once
 
-// Recorder-side buffer-map tracking: captures implicit writes at unmap and explicit writes at
-// flush as MappedDataMetaCommands.
+// Recorder-side buffer-map tracking: captures implicit writes at unmap, explicit writes at flush
+// and coherent writes before commands that may read them as MappedDataMetaCommands.
 //
 // Lives under recorder/ rather than common/services/, mirroring Vulkan and DirectX: capturing a
 // mapped range needs the recorder's own real-driver dispatch table and CaptureManager, neither of
@@ -20,6 +20,7 @@
 #include "glTypes.h"
 #include "watchedShadow.h"
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -107,6 +108,14 @@ public:
                         GLsizeiptr length,
                         const std::function<void()>& realFlush);
   void* TranslateShadowPointerQuery(GLuint buffer, void* pointer);
+
+  // Called before a command that may read or write buffer or texture memory, before its key is
+  // reserved.
+  // Writes through coherent maps of the current share group reach the driver and the stream, and
+  // so do host writes to memory that the recorder of another API shares through
+  // stream::RecordingSession. Does nothing between glBegin and glEnd on this thread.
+  void PublishMappedWrites();
+  void SetInPrimitivePair(bool inPair);
 
   // Uses its own real driver entry point; glUnmapBuffer and glUnmapBufferARB may resolve
   // independently.
@@ -278,8 +287,15 @@ private:
       const std::function<bool(GLintptr, GLsizeiptr, void*)>& realReadSubData,
       const std::function<bool(GLint&)>& queryStorageFlags);
 
+  static bool IsCoherent(const MappedRange& range);
+  // Callers hold m_MappedBuffersMutex.
+  void EraseMappedRange(std::unordered_map<Key, MappedRange, KeyHash>::iterator it);
+
   std::mutex m_MappedBuffersMutex;
   std::unordered_map<Key, MappedRange, KeyHash> m_MappedBuffers;
+  // Coherent entries of m_MappedBuffers. Modified under m_MappedBuffersMutex; read without it so
+  // that commands check it cheaply.
+  std::atomic<size_t> m_CoherentMaps{0};
 
   // Warn-once state for unrecognized targets, missing bindings, and unsupported coherent maps.
   // Map/unmap is a low-frequency path, so a plain mutex is sufficient.

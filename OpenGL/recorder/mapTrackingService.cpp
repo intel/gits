@@ -17,6 +17,7 @@
 #include "mappedDataMetaTypes.h"
 #include "messageBus.h"
 #include "openglDriversAuto.h"
+#include "recordingSession.h"
 #include "systemApi.h"
 
 #include <cstring>
@@ -31,6 +32,8 @@
 namespace gits::opengl {
 
 namespace {
+
+thread_local bool t_InPrimitivePair = false;
 
 void RequireShadowMapAlignment() {
   const auto [major, minor] = CurrentContextGLVersion();
@@ -132,7 +135,7 @@ void PersistentMapSanityCheck(GLintptr offset,
   GITS_ASSERT(mapAccess == access,
               "Persistent buffer mapping access flags differ from requested access");
   const GLbitfield requiredStorageFlags =
-      access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+      access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
   GITS_ASSERT((storageFlags & requiredStorageFlags) == requiredStorageFlags,
               "Persistent buffer storage flags do not permit requested mapping access");
 }
@@ -196,6 +199,13 @@ void MapTrackingService::LogStatistics() {
 // End of functions for buffer mapping statistics tracking.
 
 bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
+  constexpr GLbitfield invalidate = GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+  if ((access & GL_MAP_COHERENT_BIT) != 0) {
+    // Published pages are copied whole, so the shadow must hold the buffer contents.
+    return WatchedShadow::kTracksWrites &&
+           (access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT)) == GL_MAP_WRITE_BIT &&
+           (access & invalidate) == 0;
+  }
   constexpr GLbitfield required = GL_MAP_WRITE_BIT;
   constexpr GLbitfield excluded = GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
                                   GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT |
@@ -442,19 +452,41 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   const bool invalidated =
       (access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0;
   const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
-  if (coherent || (persistent && !readable)) {
-    const std::string message =
-        (coherent ? "Coherent persistent buffer maps are unsupported"
-                  : "Write-only persistent noncoherent buffer maps are unsupported") +
-        std::string(" (access: ") +
-        GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')';
-    GITS_ASSERT(false, message);
+  const char* unsupported = nullptr;
+  if (coherent && readable) {
+    unsupported = "Readable coherent persistent buffer maps are unsupported";
+  } else if (coherent && !WatchedShadow::kTracksWrites) {
+    unsupported = "Coherent persistent buffer maps are unsupported on this platform";
+  } else if (persistent && !readable && !coherent) {
+    unsupported = "Write-only persistent noncoherent buffer maps are unsupported";
+  }
+  if (unsupported != nullptr) {
+    GITS_ASSERT(
+        false, std::string(unsupported) + " (access: " +
+                   GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')');
   }
   if (persistent) {
     PersistentMapSanityCheck(offset, length, access, parameter);
   }
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
                     offset, length, access, true};
+  if (coherent) {
+    // The application writes a watched shadow. Its written pages reach the driver mapping and the
+    // stream at PublishMappedWrites() and at unmap.
+    GITS_ASSERT(invalidated || initialBytes.size() == static_cast<size_t>(length),
+                "Coherent buffer maps require reading the buffer contents before the map");
+    RequireShadowMapAlignment();
+    GLint alignment = 0;
+    g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
+                                                                  &alignment);
+    GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
+    range.RangePolicy.Type = CaptureRangePolicy::Mode::DirtyPages;
+    range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
+                                    !invalidated);
+    void* applicationPointer = range.Source.ApplicationPointer;
+    StoreMappedRange(CurrentShareGroup(), buffer, std::move(range));
+    return applicationPointer;
+  }
   const bool dirtyPageCandidate =
       WatchedShadow::kTracksWrites && !explicitFlush && writable && !readable && !unsynchronized;
   if (dirtyPageCandidate || (explicitFlush && !readable)) {
@@ -752,7 +784,7 @@ void MapTrackingService::OnBufferData(GLuint buffer,
   GITS_ASSERT(driverMapped == GL_FALSE || driverMapped == GL_TRUE,
               "GL_BUFFER_MAPPED query left its output unchanged or returned an invalid boolean");
   if (driverMapped == GL_FALSE) {
-    m_MappedBuffers.erase(mapped);
+    EraseMappedRange(mapped);
   }
 }
 
@@ -769,7 +801,9 @@ void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
                 "and retained-object lifetimes at deletion, so it cannot safely discard the "
                 "mapping or GPU-write classification. This workload requires additional recorder "
                 "support");
-    m_MappedBuffers.erase(Key{shareGroup, buffers[index]});
+    if (mapped != m_MappedBuffers.end()) {
+      EraseMappedRange(mapped);
+    }
   }
 }
 
@@ -779,7 +813,14 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
   range.Map = key;
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
-    m_MappedBuffers[key] = std::move(range);
+    const auto previous = m_MappedBuffers.find(key);
+    if (previous != m_MappedBuffers.end()) {
+      EraseMappedRange(previous);
+    }
+    if (IsCoherent(range)) {
+      m_CoherentMaps.fetch_add(1, std::memory_order_release);
+    }
+    m_MappedBuffers.emplace(key, std::move(range));
   }
   // Do not hold the map mutex while calling BufferShadowService. Its GPU-write hooks
   // hold the shadow mutex while acquiring the map mutex; reversing that order could deadlock.
@@ -807,8 +848,58 @@ std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRan
     return std::nullopt;
   }
   MappedRange range = std::move(it->second);
-  m_MappedBuffers.erase(it);
+  EraseMappedRange(it);
   return range;
+}
+
+bool MapTrackingService::IsCoherent(const MappedRange& range) {
+  return (range.Access & GL_MAP_COHERENT_BIT) != 0;
+}
+
+void MapTrackingService::EraseMappedRange(
+    std::unordered_map<Key, MappedRange, KeyHash>::iterator it) {
+  if (IsCoherent(it->second)) {
+    m_CoherentMaps.fetch_sub(1, std::memory_order_release);
+  }
+  m_MappedBuffers.erase(it);
+}
+
+void MapTrackingService::PublishMappedWrites() {
+  if (t_InPrimitivePair) {
+    return;
+  }
+  stream::RecordingSession::Get().PublishHostWrites();
+  if (m_CoherentMaps.load(std::memory_order_acquire) == 0) {
+    return;
+  }
+  const uint64_t shareGroup = CurrentShareGroup();
+  std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>> updates;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    for (auto& [key, range] : m_MappedBuffers) {
+      if (key.ShareGroup != shareGroup || !IsCoherent(range)) {
+        continue;
+      }
+      const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
+                                                              static_cast<size_t>(range.Length));
+      for (const WatchedShadow::ByteRange& run : dirty) {
+        auto bytes = range.Source.Snapshot(run.Offset, run.Length);
+        range.Source.WriteBack(run.Offset, bytes);
+        const MapRelativeRange interval{static_cast<GLintptr>(run.Offset),
+                                        static_cast<GLsizeiptr>(run.Length)};
+        updates.emplace_back(CaptureManager::Get().CreateCommandKey(),
+                             MakeMappedUpdate(range, interval, std::move(bytes)));
+      }
+    }
+  }
+  // BufferShadowService locks its mutex before the map mutex, so record after releasing it.
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
+}
+
+void MapTrackingService::SetInPrimitivePair(bool inPair) {
+  t_InPrimitivePair = inPair;
 }
 
 } // namespace gits::opengl

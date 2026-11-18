@@ -96,6 +96,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     return realFunction(${param_names});
 % endif
   }
+% if cmd.name in mapped_write_publishers:
+  // See generator_recorder.py's mapped_write_publishers(): the published writes must replay before
+  // this command, so they are recorded before its key is reserved.
+  MapTrackingService::Get().PublishMappedWrites();
+% elif cmd.name in query_buffer_publishers:
+  // See generator_recorder.py's query_buffer_publishers().
+  if (QueryBufferIsBound()) {
+    MapTrackingService::Get().PublishMappedWrites();
+  }
+% endif
   // Reserved here - before the real driver dispatch below - rather than deferred into
   // CaptureManager::RecordCommand/RecordUnsupportedCommand (as it used to be), so concurrent
   // top-level calls on different threads get ordering keys assigned in DISPATCH order, matching
@@ -347,6 +357,10 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 % else:
   ${ret} result = realFunction(${param_names});
 % endif
+% endif
+% if cmd.name in primitive_pair_commands:
+  // See generator_recorder.py's PRIMITIVE_PAIR_COMMANDS.
+  MapTrackingService::Get().SetInPrimitivePair(${'true' if primitive_pair_commands[cmd.name] else 'false'});
 % endif
 % if cmd.name in buffer_content_hooks:
 <%

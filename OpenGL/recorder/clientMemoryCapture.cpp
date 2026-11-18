@@ -262,6 +262,10 @@ bool ContextSupportsQueryBufferObject() {
 
 } // namespace
 
+bool QueryBufferIsBound() {
+  return ContextSupportsQueryBufferObject() && QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) != 0;
+}
+
 const void* GuardUnpackPixelsPointer(const char* commandName, const void* pixels) {
   return GuardPixelsPointer(commandName, pixels, GL_PIXEL_UNPACK_BUFFER_BINDING);
 }
@@ -304,8 +308,7 @@ bool PackPixelsPointerIsBufferOffset(const void* /*pixels*/) {
 // QueryBoundBufferQuiet() and the pixel buffer binding enums from that same
 // scope).
 const void* GuardQueryBufferPointer(const char* commandName, const void* params) {
-  if (params == nullptr || !ContextSupportsQueryBufferObject() ||
-      QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) == 0) {
+  if (params == nullptr || !QueryBufferIsBound()) {
     return params;
   }
   std::lock_guard<std::mutex> lock(g_QueryBufferGuardMutex);
