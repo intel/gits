@@ -26,6 +26,7 @@
 #include <iomanip>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #if defined GITS_PLATFORM_WINDOWS_X64
@@ -335,22 +336,26 @@ void PlayStream(const std::filesystem::path& streamPath) {
 
 #if defined GITS_PLATFORM_WINDOWS_X64 && defined WITH_DIRECTX
   DirectX::DirectXCommandFactory directXCommandFactory;
-  if (header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
+  if (header.HasApi(stream::StreamHeader::Api::API_DIRECTX)) {
     commandFactories.push_back(&directXCommandFactory);
   }
 #endif
 #if defined WITH_VULKAN
   vulkan::VulkanCommandFactory vulkanCommandFactory;
-  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN) {
+  if (header.HasApi(stream::StreamHeader::Api::API_VULKAN)) {
     commandFactories.push_back(&vulkanCommandFactory);
   }
 #endif
 #if defined WITH_OPENGL
   opengl::OpenGLCommandFactory openGLCommandFactory;
-  if (header.GetApi() == stream::StreamHeader::Api::API_OPENGL) {
+  if (header.HasApi(stream::StreamHeader::Api::API_OPENGL)) {
     commandFactories.push_back(&openGLCommandFactory);
   }
 #endif
+  if (header.HasMultipleApis() && commandFactories.size() < header.GetApis().size()) {
+    throw std::runtime_error("The stream was recorded with several APIs, but the player was "
+                             "built without some of them.");
+  }
 
   Configurator::Instance().LogUnspportedConfigUsage(header.GetApiBool());
 
@@ -402,8 +407,8 @@ void PlayStream(const std::filesystem::path& streamPath) {
   MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                             std::make_shared<ProgramMessage>());
 
-  if (header.GetApi() == stream::StreamHeader::Api::API_VULKAN ||
-      header.GetApi() == stream::StreamHeader::Api::API_DIRECTX) {
+  if (header.HasApi(stream::StreamHeader::Api::API_VULKAN) ||
+      header.HasApi(stream::StreamHeader::Api::API_DIRECTX)) {
     windowing::WindowManager::Get().DestroyAllWindows();
   }
 }

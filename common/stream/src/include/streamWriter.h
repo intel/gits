@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "commandId.h"
 #include "commandSerializer.h"
 #include "streamCompressor.h"
 #include "enumsAuto.h"
@@ -38,7 +39,10 @@ public:
 private:
   std::ofstream m_Stream;
   std::string m_StreamDir;
-  bool m_ApiWritten{};
+  // The API of the first command with an API and the StreamHeader::ApiBit of the APIs of the
+  // commands recorded so far, written to the header on Close.
+  ApiId m_FirstApi{};
+  uint32_t m_Apis{};
   std::atomic<uint64_t> m_CapturedFrames{};
   const unsigned TRIGGER_BLOCK_SIZE = 1024 * 1024 * 4;
   const unsigned INITIAL_BLOCK_ALLOC = TRIGGER_BLOCK_SIZE * 2;

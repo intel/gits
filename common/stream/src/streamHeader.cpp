@@ -13,6 +13,7 @@
 #include "log.h"
 #include "yaml-cpp/yaml.h"
 
+#include <bit>
 #include <string>
 #include <limits>
 
@@ -26,6 +27,7 @@ namespace stream {
 StreamHeader StreamHeader::m_Instance;
 const unsigned StreamHeader::VERSION[4] = {2, 0, 14, VERSION_4};
 const unsigned StreamHeader::VERSION_API_INFO[4] = {2, 0, 11, 0};
+const unsigned StreamHeader::VERSION_APIS[4] = {2, 0, 14, 0};
 const unsigned StreamHeader::SCHEDULER_VERSION = 1;
 
 void StreamHeader::WriteHeader(std::ofstream& stream, CompressionType compressionType) {
@@ -40,6 +42,9 @@ void StreamHeader::WriteHeader(std::ofstream& stream, CompressionType compressio
   stream.write(reinterpret_cast<const char*>(&api), sizeof(api));
   unsigned apiCompute{};
   stream.write(reinterpret_cast<const char*>(&apiCompute), sizeof(apiCompute));
+  uint32_t apis{};
+  m_ApisPosition = stream.tellp();
+  stream.write(reinterpret_cast<const char*>(&apis), sizeof(apis));
   stream.write(reinterpret_cast<const char*>(&SCHEDULER_VERSION), sizeof(SCHEDULER_VERSION));
 
   if (compressionType != CompressionType::LZ4 && compressionType != CompressionType::ZSTD) {
@@ -53,12 +58,22 @@ void StreamHeader::WriteHeader(std::ofstream& stream, CompressionType compressio
   stream.write(reinterpret_cast<const char*>(&chunkSize), sizeof(chunkSize));
 }
 
-void StreamHeader::WriteApi(std::ofstream& stream, ApiId id) {
+void StreamHeader::WriteApis(std::ofstream& stream, ApiId firstApi, uint32_t apis) {
   std::fstream::pos_type currentPosition = stream.tellp();
   stream.seekp(m_ApiPosition);
-  Api api = TranslateApi(id);
+  Api api = TranslateApi(firstApi);
   stream.write(reinterpret_cast<const char*>(&api), sizeof(api));
+  stream.seekp(m_ApisPosition);
+  stream.write(reinterpret_cast<const char*>(&apis), sizeof(apis));
   stream.seekp(currentPosition);
+}
+
+uint32_t StreamHeader::ApiBit(ApiId id) {
+  return ApiBit(TranslateApi(id));
+}
+
+uint32_t StreamHeader::ApiBit(Api api) {
+  return api == Api::API_NOT_SET ? 0 : 1u << static_cast<unsigned>(api);
 }
 
 void StreamHeader::ReadHeader(std::istream& stream) {
@@ -91,11 +106,16 @@ void StreamHeader::ReadHeader(std::istream& stream) {
             static_cast<uint64_t>(v[2]) << 16 | static_cast<uint64_t>(v[3]));
   };
 
+  m_Apis = 0;
   if (versionToUint64(m_Version) >= versionToUint64(VERSION_API_INFO)) {
     stream.read(reinterpret_cast<char*>(&m_Api), sizeof(m_Api));
     unsigned apiCompute{};
     stream.read(reinterpret_cast<char*>(&apiCompute), sizeof(apiCompute));
+    if (versionToUint64(m_Version) >= versionToUint64(VERSION_APIS)) {
+      stream.read(reinterpret_cast<char*>(&m_Apis), sizeof(m_Apis));
+    }
     stream.read(reinterpret_cast<char*>(&m_SchedulerVersion), sizeof(m_SchedulerVersion));
+    m_Apis |= ApiBit(m_Api);
   }
   stream.read(reinterpret_cast<char*>(&m_CompressionType), sizeof(m_CompressionType));
   stream.read(reinterpret_cast<char*>(&m_ChunkSize), sizeof(m_ChunkSize));
@@ -228,6 +248,28 @@ StreamHeader::Api StreamHeader::TranslateApi(ApiId id) {
 
 StreamHeader::Api StreamHeader::GetApi() const {
   return m_Api;
+}
+
+std::vector<StreamHeader::Api> StreamHeader::GetApis() const {
+  std::vector<Api> apis;
+  if (m_Api != Api::API_NOT_SET) {
+    apis.push_back(m_Api);
+  }
+  for (unsigned value = 1; value < 32; ++value) {
+    const Api api = static_cast<Api>(value);
+    if (api != m_Api && (m_Apis & ApiBit(api))) {
+      apis.push_back(api);
+    }
+  }
+  return apis;
+}
+
+bool StreamHeader::HasApi(Api api) const {
+  return (m_Apis & ApiBit(api)) != 0;
+}
+
+bool StreamHeader::HasMultipleApis() const {
+  return std::popcount(m_Apis) > 1;
 }
 
 ApiBool StreamHeader::GetApiBool() const {

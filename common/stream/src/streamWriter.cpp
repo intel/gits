@@ -58,6 +58,8 @@ StreamWriter::~StreamWriter() {
 }
 
 void StreamWriter::Close() {
+  ApiId firstApi{};
+  uint32_t apis{};
   {
     if (m_StopThreads) {
       return;
@@ -65,6 +67,8 @@ void StreamWriter::Close() {
 
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_StopThreads = true;
+    firstApi = m_FirstApi;
+    apis = m_Apis;
     Block* block = FindBlockForRecord(lock, 0);
     if (block->DataSize) {
       ++m_RecordedBlockId;
@@ -85,6 +89,7 @@ void StreamWriter::Close() {
       m_CompressionThreads[i].join();
     }
   }
+  StreamHeader::Get().WriteApis(m_Stream, firstApi, apis);
   StreamHeader::Get().WriteCapturedFrames(m_Stream, m_CapturedFrames.load());
   m_Stream.close();
 }
@@ -104,13 +109,11 @@ void StreamWriter::Record(const CommandSerializer& commandSerializer) {
   Block* block{};
   {
     std::unique_lock<std::mutex> lock(m_Mutex);
-    if (!m_ApiWritten) {
-      ApiId apiId = ExtractApiIdentifier(id);
-      if (apiId != ApiId::ID_COMMON) {
-        StreamHeader::Get().WriteApi(m_Stream, apiId);
-        m_ApiWritten = true;
-      }
+    const ApiId apiId = ExtractApiIdentifier(id);
+    if (!m_Apis) {
+      m_FirstApi = apiId;
     }
+    m_Apis |= StreamHeader::ApiBit(apiId);
     block = FindBlockForRecord(lock, totalSize);
   }
   if (block->DataAlloc - block->DataSize < totalSize) {

@@ -12,8 +12,10 @@
 #include "commandId.h"
 
 #include <array>
+#include <cstdint>
 #include <fstream>
 #include <memory>
+#include <vector>
 #include "nlohmann/json.hpp"
 
 namespace gits {
@@ -45,19 +47,29 @@ public:
     API_VULKAN,
     API_OPENGL,
   };
+  // The API of the first command of the stream.
   Api GetApi() const;
+  // The APIs of the commands of the stream, GetApi() first. An application using several APIs,
+  // e.g. OpenGL with Vulkan interop, records the commands of all of them into one stream.
+  std::vector<Api> GetApis() const;
+  bool HasApi(Api api) const;
+  bool HasMultipleApis() const;
   ApiBool GetApiBool() const;
 
 private:
   friend class StreamWriter;
   void WriteHeader(std::ofstream& stream, CompressionType compressionType);
-  void WriteApi(std::ofstream& stream, ApiId id);
+  // `firstApi` is the API of the first command, `apis` holds the ApiBit of every API recorded.
+  void WriteApis(std::ofstream& stream, ApiId firstApi, uint32_t apis);
+  // 0 for commands of no API.
+  static uint32_t ApiBit(ApiId id);
+  static uint32_t ApiBit(Api api);
 
 private:
   void WriteVersion(std::ostream& stream);
   void ReadVersion(std::istream& stream);
   void WriteProperties(std::ostream& stream);
-  Api TranslateApi(ApiId id);
+  static Api TranslateApi(ApiId id);
 
 private:
   StreamHeader() {}
@@ -65,13 +77,16 @@ private:
   static const unsigned VERSION[4];
   unsigned m_Version[4]{};
   static const unsigned VERSION_API_INFO[4];
+  static const unsigned VERSION_APIS[4];
   unsigned m_SchedulerVersion{};
   static const unsigned SCHEDULER_VERSION;
   CompressionType m_CompressionType{};
   uint64_t m_ChunkSize{};
   nlohmann::ordered_json m_Properties;
   Api m_Api{};
+  uint32_t m_Apis{};
   std::fstream::pos_type m_ApiPosition{};
+  std::fstream::pos_type m_ApisPosition{};
   std::fstream::pos_type m_CapturedFramesPosition{};
 };
 
