@@ -87,18 +87,24 @@ bool IsDirectory(const std::filesystem::path& path) {
 }
 
 // The recorder runs inside the application's process, so its plugins are found relative to
-// the recorder installation rather than to the executable.
+// the recorder installation rather than to the executable. The player can run from a copy
+// outside the installation, so it falls back to the recorder installation too.
 std::filesystem::path FindPluginsPath(const Configuration& cfg) {
+  const auto& installPath = cfg.common.recorder.installPath;
+  const auto installPluginsPath =
+      std::filesystem::absolute(installPath.parent_path() / "Plugins" / "OpenGL");
   if (Configurator::IsRecorder()) {
-    return std::filesystem::absolute(cfg.common.recorder.installPath.parent_path() / "Plugins" /
-                                     "OpenGL");
+    return installPluginsPath;
   }
   const auto exePath = ExecutablePath();
-  auto pluginsPath = exePath.parent_path() / "Plugins" / "OpenGL";
-  if (!IsDirectory(pluginsPath)) {
-    pluginsPath = exePath.parent_path().parent_path() / "Plugins" / "OpenGL";
+  const auto exePluginsPath = exePath.parent_path() / "Plugins" / "OpenGL";
+  if (IsDirectory(exePluginsPath)) {
+    return exePluginsPath;
   }
-  return pluginsPath;
+  if (!installPath.empty() && IsDirectory(installPluginsPath)) {
+    return installPluginsPath;
+  }
+  return exePath.parent_path().parent_path() / "Plugins" / "OpenGL";
 }
 
 } // namespace
