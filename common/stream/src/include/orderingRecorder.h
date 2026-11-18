@@ -31,6 +31,8 @@ public:
 
   void Record(size_t key, stream::CommandSerializer* serializer);
   void Skip(size_t key);
+  // Writes all recorded commands and closes the stream. Commands recorded later are dropped.
+  void Close();
 
 private:
   struct OrderedSerializer {
@@ -58,7 +60,6 @@ private:
     } Type;
   };
 
-  void Close();
   void ConditionalFlush();
   void ProcessQueue();
   void SkipImpl(size_t key);

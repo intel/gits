@@ -29,21 +29,22 @@ void CaptureManager::Cleanup() {
   if (m_Instance) {
     delete m_Instance;
     m_Instance = nullptr;
+    stream::RecordingSession::Get().GetOrderingRecorder().Close();
   }
 }
 
 CaptureManager::CaptureManager() {
-  m_Recorder.reset(new stream::OrderingRecorder());
+  stream::OrderingRecorder& recorder = stream::RecordingSession::Get().GetOrderingRecorder();
 
-  m_MapTrackingService.reset(new MapTrackingService(*this, *m_Recorder));
-  m_WindowTrackingService.reset(new WindowTrackingService(*this, *m_Recorder));
+  m_MapTrackingService.reset(new MapTrackingService(*this, recorder));
+  m_WindowTrackingService.reset(new WindowTrackingService(*this, recorder));
 
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
       m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
 
   m_PluginService.SetDispatchTablesHolder(m_DispatchTablesHolder.get());
   m_PluginService.LoadPlugins();
-  m_LayerManager.LoadLayers(*this, *m_Recorder.get(), m_PluginService);
+  m_LayerManager.LoadLayers(*this, recorder, m_PluginService);
   MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},
                               [](Topic, const MessagePtr&) {
                                 if (m_Instance != nullptr) {

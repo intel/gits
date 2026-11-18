@@ -55,7 +55,7 @@ CaptureManager::CaptureManager() {
   m_LayerManager.LoadLayers();
   // After the layers, so that plugins handle a close request before the recorder closes the
   // stream. Layer hooks run only after this, so a plugin may request closing from its first hook.
-  m_Recorder = std::make_unique<stream::OrderingRecorder>();
+  m_Recorder = &stream::RecordingSession::Get().GetOrderingRecorder();
 #if !defined(_WIN32)
   // Exit handlers run in reverse order of registration, together with the destructors of static
   // objects, so everything constructed before this outlives the handler: the plugins, and the

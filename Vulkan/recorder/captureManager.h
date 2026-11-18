@@ -19,7 +19,7 @@
 #include "mapTrackingService.h"
 #include "windowTrackingService.h"
 #include "descriptorUpdateTemplateService.h"
-#include "orderingRecorder.h"
+#include "recordingSession.h"
 
 #include <atomic>
 #include <shared_mutex>
@@ -34,7 +34,7 @@ public:
   void Shutdown();
 
   GITSKey CreateCommandKey() {
-    return m_CommandUniqueKey.fetch_add(1, std::memory_order_relaxed) + 1;
+    return stream::RecordingSession::Get().CreateCommandKey();
   }
 
   GITSKey CreateHandleKey() {
@@ -147,10 +147,8 @@ private:
   static CaptureManager* m_Instance;
   CaptureLayerManager m_LayerManager;
 
-  std::unique_ptr<stream::OrderingRecorder> m_Recorder;
   //std::atomic<uint32_t> m_RecursionDepth{0};
   static thread_local uint32_t m_RecursionDepth;
-  std::atomic<GITSKey> m_CommandUniqueKey{0};
   std::atomic<GITSKey> m_HandleUniqueKey{0};
   std::atomic<bool> m_Shutdown{false};
   VkGlobalLevelDispatchTable m_GlobalDispatchTable{};

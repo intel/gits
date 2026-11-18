@@ -12,8 +12,14 @@ set(STREAM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(STREAM_HEADER_DIR ${STREAM_SOURCE_DIR}/include)
 
 if(NOT "${ARCH}" STREQUAL "-m32")
-  set(TBB_DEPENDENT_HEADERS ${STREAM_HEADER_DIR}/orderingRecorder.h)
-  set(TBB_DEPENDENT_SOURCES ${STREAM_SOURCE_DIR}/orderingRecorder.cpp)
+  set(TBB_DEPENDENT_HEADERS
+    ${STREAM_HEADER_DIR}/orderingRecorder.h
+    ${STREAM_HEADER_DIR}/recordingSession.h
+  )
+  set(TBB_DEPENDENT_SOURCES
+    ${STREAM_SOURCE_DIR}/orderingRecorder.cpp
+    ${STREAM_SOURCE_DIR}/recordingSession.cpp
+  )
   set(TBB_DEPENDENT_LIBRARIES tbb)
 endif()
 

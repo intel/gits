@@ -12,7 +12,7 @@
 #include "captureLayerManager.h"
 #include "command.h"
 #include "log.h"
-#include "orderingRecorder.h"
+#include "recordingSession.h"
 
 #include <atomic>
 #include <cstddef>
@@ -26,10 +26,10 @@
 
 namespace gits::opengl {
 
-// Owns the single OpenGL capture pipeline: the atomic ordering-key source, the
-// backend-local OrderingRecorder instance (the common ordering service, see
-// modern-opengl-backend-architecture.md "Establish one total capture order"), and the
-// CaptureLayerManager with the registered Pre/Post layer lists.
+// Owns the single OpenGL capture pipeline: the CaptureLayerManager with the registered Pre/Post
+// layer lists, recording through the process-wide stream::RecordingSession whose ordering keys
+// and OrderingRecorder are shared with the other APIs' recorders (see
+// modern-opengl-backend-architecture.md "Establish one total capture order").
 class CaptureManager {
 public:
   // Heap-allocated and intentionally never destroyed via a C++ static destructor,
@@ -48,7 +48,7 @@ public:
   // Every key this hands out MUST reach RecordCommand(), RecordUnsupportedCommand(), or
   // SkipCommandKey() - see SkipCommandKey() for why dropping one stalls the stream forever.
   [[nodiscard]] uint64_t CreateCommandKey() {
-    return m_CommandKey.fetch_add(1, std::memory_order_relaxed) + 1;
+    return stream::RecordingSession::Get().CreateCommandKey();
   }
 
   // Atomically reserves TWO consecutive, strictly-increasing keys as one indivisible unit - a
@@ -74,14 +74,14 @@ public:
   // reordering this command relative to one it had originally out-raced. Reserving both keys
   // together, up front, before either is ever exposed to another thread, has no such window.
   std::pair<uint64_t, uint64_t> CreateCommandKeyPair() {
-    const uint64_t first = m_CommandKey.fetch_add(2, std::memory_order_relaxed) + 1;
+    const uint64_t first = stream::RecordingSession::Get().CreateCommandKeyRange(2);
     return {first, first + 1};
   }
 
   // CreateCommandKeyPair() for `count` keys: reserves {first, ..., first + count - 1} atomically
   // and returns `first`.
   [[nodiscard]] uint64_t CreateCommandKeyRange(uint64_t count) {
-    return m_CommandKey.fetch_add(count, std::memory_order_relaxed) + 1;
+    return stream::RecordingSession::Get().CreateCommandKeyRange(count);
   }
 
   // CreateCommandKeyRange() for a command that can end a frame, whose ordering key is the last
@@ -183,10 +183,8 @@ public:
   // in between) instead of silently overwriting a still-pending key. Asserts the key was
   // actually set - a Pre() override that calls this MUST correspond 1:1 with a
   // PRE_HOOK_KEY_PAIR_COMMANDS entry that always calls SetPendingPreHookKey() first (see that
-  // table's own header comment); 0 can otherwise never be a real key (CreateCommandKeyPair()'s
-  // own m_CommandKey counter starts at 0 and only ever hands out fetch_add results plus 1, so
-  // the smallest key it can ever produce is 1), so it doubles as a safe "never actually set"
-  // sentinel.
+  // table's own header comment); 0 can otherwise never be a real key (RecordingSession keys
+  // start at 1), so it doubles as a safe "never actually set" sentinel.
   uint64_t TakePendingPreHookKey() {
     GITS_ASSERT(s_PendingPreHookKey != 0);
     const uint64_t key = s_PendingPreHookKey;
@@ -253,8 +251,7 @@ private:
   CaptureManager();
   stream::OrderingRecorder& GetOrderingRecorder();
 
-  std::unique_ptr<stream::OrderingRecorder> m_Recorder;
-  std::atomic<uint64_t> m_CommandKey{0};
+  stream::OrderingRecorder* m_Recorder{};
   std::atomic<GITSKey> m_HandleKey{0};
   std::mutex m_FrameEndMutex;
   std::set<uint64_t> m_PendingFrameEnds;
