@@ -10,6 +10,8 @@
 #include "streamHeader.h"
 #include "log.h"
 
+#include <exception>
+
 namespace gits {
 namespace stream {
 
@@ -32,7 +34,9 @@ StreamReader::StreamReader(std::vector<CommandFactory*>& commandFactories, std::
 }
 
 void StreamReader::Close() {
+  std::unique_lock<std::mutex> lock(m_Mutex);
   m_Closed = true;
+  m_DecompressionDoneCondition.notify_all();
 }
 
 void StreamReader::ReadCompressedBlocks() {
@@ -48,7 +52,9 @@ void StreamReader::ReadCompressedBlocks() {
       std::unique_lock<std::mutex> lock(m_Mutex);
       block = FindBlockForRead(lock, compressedSize);
     }
-    GITS_ASSERT(block);
+    if (!block) {
+      break;
+    }
     if (block->DataAlloc < compressedSize) {
       uint64_t size = Align(compressedSize);
       block->Data.reset(new char[size]);
@@ -71,6 +77,7 @@ void StreamReader::ReadCompressedBlocks() {
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_ReadFinished = true;
     m_ReadDoneCondition.notify_all();
+    m_DecompressionDoneCondition.notify_all();
   }
 }
 
@@ -79,7 +86,7 @@ StreamReader::CompressedBlock* StreamReader::FindBlockForRead(std::unique_lock<s
   unsigned blockIndex = 0;
   uint64_t maxAlloc = 0;
   int foundBlock = -1;
-  while (!m_ReadFinished) {
+  while (!m_Closed && !m_RunFinished) {
     Block& block = m_CompressedBlocks[blockIndex];
     if (!block.Full && !block.Decompressing) {
       if (size <= block.DataAlloc) {
@@ -112,7 +119,9 @@ void StreamReader::Decompress(unsigned threadIndex) {
       unsigned blockIndex{};
 
       while (!compressedBlock) {
-        if (!m_DecompressionQueue.empty()) {
+        if (m_RunFinished) {
+          return;
+        } else if (!m_DecompressionQueue.empty()) {
           blockIndex = m_DecompressionQueue.front();
           m_DecompressionQueue.pop();
           compressedBlock = &m_CompressedBlocks[blockIndex];
@@ -129,11 +138,14 @@ void StreamReader::Decompress(unsigned threadIndex) {
       if (uncompressedBlock->Full || uncompressedBlock->Decompressing) {
         if (!m_RunFinished) {
           WaitForRunDone(lock, threadIndex, uncompressedBlock->Index);
-        } else {
+        }
+        if (m_RunFinished) {
+          // The reading thread may wait for this compressed block to be freed.
+          compressedBlock->Decompressing = false;
+          m_DecompressionDoneCondition.notify_all();
           return;
         }
       }
-      GITS_ASSERT(uncompressedBlock);
       uncompressedBlock->Decompressing = true;
     }
 
@@ -195,40 +207,54 @@ void StreamReader::Run() {
   }
   m_ReadingThread = std::thread{&StreamReader::ReadCompressedBlocks, this};
 
-  unsigned blockId{};
-  while (!m_Closed) {
-    ++blockId;
-    UncompressedBlock* block{};
-    {
-      std::unique_lock<std::mutex> lock(m_Mutex);
-      if (m_ReadFinished && blockId > m_LastRead) {
+  // The reading and decompression threads are joined before an exception of a command leaves, as
+  // destroying a joinable thread terminates the process before the player can report it.
+  std::exception_ptr error;
+  try {
+    unsigned blockId{};
+    while (!m_Closed) {
+      ++blockId;
+      UncompressedBlock* block{};
+      {
+        std::unique_lock<std::mutex> lock(m_Mutex);
+        if (m_ReadFinished && blockId > m_LastRead) {
+          break;
+        }
+        block = FindBlockForRun(lock, blockId);
+      }
+      if (!block) {
         break;
       }
-      block = FindBlockForRun(lock, blockId);
-    }
-    GITS_ASSERT(block);
 
-    for (auto& runner : block->Runners) {
-      runner->Run();
-      if (m_Closed) {
-        break;
+      for (auto& runner : block->Runners) {
+        runner->Run();
+        if (m_Closed) {
+          break;
+        }
+      }
+      block->Runners.clear();
+
+      {
+        std::unique_lock<std::mutex> lock(m_Mutex);
+        block->Id = 0;
+        block->DataSize = 0;
+        block->Full = false;
+        NotifyRunDone(block->Index);
       }
     }
-    block->Runners.clear();
-
-    {
-      std::unique_lock<std::mutex> lock(m_Mutex);
-      block->Id = 0;
-      block->DataSize = 0;
-      block->Full = false;
-      NotifyRunDone(block->Index);
-    }
+  } catch (...) {
+    error = std::current_exception();
+    m_Closed = true;
   }
 
+  // A command may have closed the reader or thrown while the reading and decompression threads
+  // wait for blocks to be freed, which no longer happens once the run is finished.
   {
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_RunFinished = true;
     NotifyRunDoneAll();
+    m_ReadDoneCondition.notify_all();
+    m_DecompressionDoneCondition.notify_all();
   }
 
   for (unsigned i = 0; i < NUMBER_OF_DECOMPRESSION_THREADS; ++i) {
@@ -239,12 +265,15 @@ void StreamReader::Run() {
   if (m_ReadingThread.joinable()) {
     m_ReadingThread.join();
   }
+  if (error) {
+    std::rethrow_exception(error);
+  }
 }
 
 StreamReader::UncompressedBlock* StreamReader::FindBlockForRun(std::unique_lock<std::mutex>& lock,
                                                                unsigned blockId) {
   unsigned blockIndex = 0;
-  while (!m_RunFinished) {
+  while (!m_Closed && !m_RunFinished && !(m_ReadFinished && blockId > m_LastRead)) {
     UncompressedBlock& block = m_UncompressedBlocks[blockIndex];
     if (block.Full && block.Id == blockId) {
       return &m_UncompressedBlocks[blockIndex];
@@ -264,7 +293,8 @@ void StreamReader::WaitForRunDone(std::unique_lock<std::mutex>& lock,
                                   unsigned blockIndex) {
   m_WaitsForRunDone[threadIndex].Waiting = true;
   m_WaitsForRunDone[threadIndex].BlockIndex = blockIndex;
-  m_WaitsForRunDone[threadIndex].Condition.wait(lock);
+  m_WaitsForRunDone[threadIndex].Condition.wait(
+      lock, [&] { return !m_WaitsForRunDone[threadIndex].Waiting || m_RunFinished; });
 }
 
 void StreamReader::NotifyRunDone(unsigned blockIndex) {

@@ -88,3 +88,13 @@ target_include_directories(stream_restored_contents_test PRIVATE
 )
 
 set_target_properties(stream_restored_contents_test PROPERTIES FOLDER "common")
+
+# Host-only gate for stopping the stream reader: by an exception of a command or by closing it
+# while every block ahead of the running command is full, and by the end of the stream or by
+# closing it while the running command waits for a block. Run the executable; it prints failures
+# and exits non-zero, also when the reader hangs.
+add_executable(stream_reader_test
+  ${CMAKE_CURRENT_SOURCE_DIR}/tests/streamReaderTest.cpp
+)
+target_link_libraries(stream_reader_test PRIVATE stream configuration log)
+set_target_properties(stream_reader_test PROPERTIES FOLDER "common")
