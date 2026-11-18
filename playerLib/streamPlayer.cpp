@@ -223,6 +223,8 @@ public:
 
   void Run() override {
     ++(*m_FrameCount);
+    MessageBus::get().publish({PUBLISHER_PLAYER, TOPIC_FRAME_END},
+                              std::make_shared<FrameEndMessage>(*m_FrameCount));
 
     m_MessageLoop->RunLoop(*m_FrameCount);
 

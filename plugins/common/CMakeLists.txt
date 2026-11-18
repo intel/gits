@@ -12,6 +12,8 @@ target_sources(plugin_utils
 PRIVATE
   pluginUtils.h
   pluginUtils.cpp
+  statisticsWriter.h
+  statisticsWriter.cpp
 )
 
 target_include_directories(plugin_utils

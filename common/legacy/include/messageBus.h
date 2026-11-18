@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <functional>
 #include <memory>
+#include <mutex>
 
 namespace gits {
 enum PublisherId {
@@ -42,6 +43,10 @@ enum TopicId {
   TOPIC_LOOP_BEGIN,
   TOPIC_LOOP_END,
   TOPIC_SKIP_XESS,
+  // A statistics plugin wrote its statistics file, see StatisticsWrittenMessage
+  TOPIC_STATISTICS_WRITTEN,
+  // The player replayed a frame end of the stream, see FrameEndMessage
+  TOPIC_FRAME_END,
   TOPIC_COUNT
 };
 struct Topic {
@@ -69,8 +74,27 @@ namespace gits {
 class Message;
 using MessagePtr = std::shared_ptr<Message>;
 using SubscriberCb = std::function<void(Topic, const MessagePtr&)>;
-using Subscription = std::pair<unsigned, SubscriberCb>;
 
+struct Subscription {
+  unsigned Id{};
+  SubscriberCb Callback;
+  // Publications running the callback. An unsubscribed callback is destroyed when the last of
+  // them returns.
+  unsigned Calls{};
+  bool Removed{};
+};
+
+struct TopicSubscribers {
+  std::vector<Subscription> Active;
+  // Publications of the topic running. They call the callbacks in Active without the bus locked,
+  // so Active does not change while any of them runs.
+  unsigned Publications{};
+  // Subscriptions to the topic made while it is published, added to Active after the publications.
+  std::vector<Subscription> Pending;
+};
+
+// Callbacks run without the bus locked, so they may publish, subscribe and unsubscribe, and
+// several threads may publish at once.
 class MessageBus : gits::noncopyable {
 public:
   static MessageBus& get() {
@@ -84,8 +108,12 @@ public:
   void publish(Topic topic, const MessagePtr& message);
 
 private:
+  std::pair<TopicSubscribers*, Subscription*> find(unsigned id);
+  static void compact(TopicSubscribers& subs);
+
+  std::mutex mutex_;
   unsigned currentSubscriptionId_ = 0;
-  std::unordered_map<Topic, std::vector<Subscription>> subscribers_;
+  std::unordered_map<Topic, TopicSubscribers> subscribers_;
 };
 
 class Message : gits::noncopyable {
@@ -223,6 +251,49 @@ public:
 class LoopMessage : public Message {
 public:
   LoopMessage() {}
+};
+
+struct StatisticsSummary {
+  unsigned ApiFunctionsNum{};
+  unsigned FramesNum{};
+  unsigned CallsNum{};
+  unsigned StateInitCallsNum{};
+};
+
+// The summary is that of the API alone.
+class StatisticsWrittenMessage : public Message {
+public:
+  StatisticsWrittenMessage(const std::string& api,
+                           const std::string& path,
+                           const StatisticsSummary& summary)
+      : api_(api), path_(path), summary_(summary) {}
+
+  const std::string& getApi() const {
+    return api_;
+  }
+  const std::string& getPath() const {
+    return path_;
+  }
+  const StatisticsSummary& getSummary() const {
+    return summary_;
+  }
+
+private:
+  std::string api_;
+  std::string path_;
+  StatisticsSummary summary_;
+};
+
+class FrameEndMessage : public Message {
+public:
+  explicit FrameEndMessage(unsigned frameNumber) : frameNumber_(frameNumber) {}
+
+  unsigned getFrameNumber() const {
+    return frameNumber_;
+  }
+
+private:
+  unsigned frameNumber_{};
 };
 
 } // namespace gits

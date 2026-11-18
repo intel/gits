@@ -9,24 +9,35 @@
 #include "statisticsService.h"
 #include "yaml-cpp/yaml.h"
 
-#include <fstream>
+#include <algorithm>
 
 namespace gits {
 namespace vulkan {
 
 StatisticsService::StatisticsService(const StatisticsConfig& cfg, gits::MessageBus& msgBus)
-    : m_Cfg(cfg), m_MsgBus(msgBus) {
+    : m_Cfg(cfg), m_MsgBus(msgBus), m_Writer("Vulkan", msgBus) {
   if (cfg.IsCapture) {
     m_SubscriptionId = m_MsgBus.subscribe({PUBLISHER_RECORDER, TOPIC_STREAM_SAVED},
                                           [this](Topic t, const MessagePtr& m) { WriteResults(); });
   } else {
     m_SubscriptionId = m_MsgBus.subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                                           [this](Topic t, const MessagePtr& m) { WriteResults(); });
+    m_FrameEndSubscriptionId = m_MsgBus.subscribe({PUBLISHER_PLAYER, TOPIC_FRAME_END},
+                                                  [this](Topic, const MessagePtr&) { FrameEnd(); });
   }
 }
 
 StatisticsService::~StatisticsService() {
   m_MsgBus.unsubscribe(m_SubscriptionId);
+  if (m_FrameEndSubscriptionId) {
+    m_MsgBus.unsubscribe(*m_FrameEndSubscriptionId);
+  }
+}
+
+void StatisticsService::Present() {
+  if (m_Cfg.IsCapture) {
+    FrameEnd();
+  }
 }
 
 void StatisticsService::StateRestoreBegin() {
@@ -38,8 +49,8 @@ void StatisticsService::StateRestoreEnd() {
   m_StateRestore = false;
 }
 
-void StatisticsService::FrameEnd(bool stateRestore) {
-  if (!m_StateRestore && !stateRestore) {
+void StatisticsService::FrameEnd() {
+  if (!m_StateRestore) {
     ++m_FramesNum;
     for (auto& [name, info] : m_CallInfos) {
       if (info.CurrentFrameNum > 0) {
@@ -60,19 +71,7 @@ void StatisticsService::Command(const std::string& name) {
 }
 
 void StatisticsService::WriteResults() {
-  std::ofstream stream(m_Cfg.Output);
-  GITS_ASSERT(stream.good(), "StatisticsService - failed to create file: " + m_Cfg.Output);
-
-  YAML::Node output;
-  YAML::Node stats = output["Statistics"];
-  stats["ApiFunctionsNum"] = m_CallInfos.size();
-  stats["FramesNum"] = m_FramesNum;
-  stats["CallsNum"] = m_CallsNum;
-  stats["StateInitCallsNum"] = m_StateInitCallsNum;
-  stats["ApplicationCallsNum"] = m_CallsNum - m_StateInitCallsNum;
-  stats["AvgAppCallsNumPerFrame"] = (m_CallsNum - m_StateInitCallsNum) / std::max(m_FramesNum, 1U);
-
-  YAML::Node apiCalls = output["ApiCalls"]["Vulkan"];
+  YAML::Node apiCalls;
   for (auto& [name, info] : m_CallInfos) {
     YAML::Node call;
     call["Name"] = name;
@@ -83,8 +82,12 @@ void StatisticsService::WriteResults() {
     apiCalls.push_back(call);
   }
 
-  stream << output;
-  LOG_INFO << "Statistics printed into " << m_Cfg.Output << " file.";
+  StatisticsSummary summary;
+  summary.ApiFunctionsNum = static_cast<unsigned>(m_CallInfos.size());
+  summary.FramesNum = m_FramesNum;
+  summary.CallsNum = m_CallsNum;
+  summary.StateInitCallsNum = m_StateInitCallsNum;
+  m_Writer.Write(m_Cfg.Output, summary, apiCalls);
 }
 
 } // namespace vulkan

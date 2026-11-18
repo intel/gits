@@ -13,18 +13,20 @@
 #include "yaml-cpp/yaml.h"
 
 #include <algorithm>
-#include <fstream>
 
 namespace gits::opengl {
 
 StatisticsService::StatisticsService(const StatisticsConfig& cfg, gits::MessageBus& msgBus)
-    : m_Cfg(cfg), m_MsgBus(msgBus) {
+    : m_Cfg(cfg), m_MsgBus(msgBus), m_Writer("OpenGL", msgBus) {
   m_SubscriptionId = m_MsgBus.subscribe({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                                         [this](Topic, const MessagePtr&) { WriteResults(); });
+  m_FrameEndSubscriptionId = m_MsgBus.subscribe({PUBLISHER_PLAYER, TOPIC_FRAME_END},
+                                                [this](Topic, const MessagePtr&) { FrameEnd(); });
 }
 
 StatisticsService::~StatisticsService() {
   m_MsgBus.unsubscribe(m_SubscriptionId);
+  m_MsgBus.unsubscribe(m_FrameEndSubscriptionId);
 }
 
 void StatisticsService::Command(std::string_view name, GITSKey key) {
@@ -58,20 +60,7 @@ void StatisticsService::FrameEnd() {
 }
 
 void StatisticsService::WriteResults() {
-  std::ofstream stream(m_Cfg.Output);
-  GITS_ASSERT(stream.good(), "StatisticsService - failed to create file: " + m_Cfg.Output);
-
-  const unsigned applicationCallsNum = m_CallsNum - m_StateInitCallsNum;
-  YAML::Node output;
-  YAML::Node stats = output["Statistics"];
-  stats["ApiFunctionsNum"] = m_CallInfos.size();
-  stats["FramesNum"] = m_FramesNum;
-  stats["CallsNum"] = m_CallsNum;
-  stats["StateInitCallsNum"] = m_StateInitCallsNum;
-  stats["ApplicationCallsNum"] = applicationCallsNum;
-  stats["AvgAppCallsNumPerFrame"] = applicationCallsNum / std::max(m_FramesNum, 1U);
-
-  YAML::Node apiCalls = output["ApiCalls"]["OpenGL"];
+  YAML::Node apiCalls;
   for (const auto& [name, info] : m_CallInfos) {
     YAML::Node call;
     call["Name"] = name;
@@ -82,8 +71,12 @@ void StatisticsService::WriteResults() {
     apiCalls.push_back(call);
   }
 
-  stream << output;
-  LOG_INFO << "Statistics printed into " << m_Cfg.Output << " file.";
+  StatisticsSummary summary;
+  summary.ApiFunctionsNum = static_cast<unsigned>(m_CallInfos.size());
+  summary.FramesNum = m_FramesNum;
+  summary.CallsNum = m_CallsNum;
+  summary.StateInitCallsNum = m_StateInitCallsNum;
+  m_Writer.Write(m_Cfg.Output, summary, apiCalls);
 }
 
 } // namespace gits::opengl

@@ -10,6 +10,7 @@
 
 #include "arguments.h"
 #include "messageBus.h"
+#include "statisticsWriter.h"
 
 #include <functional>
 #include <limits>
@@ -23,7 +24,8 @@ struct StatisticsConfig {
   std::string Output;
 };
 
-// Counts replayed calls per command name and per frame, and writes them on program exit.
+// Counts replayed calls per command name and per frame of the stream, and writes them on program
+// exit. In a stream with two APIs, the frames are ended by the API that presents.
 class StatisticsService {
 public:
   StatisticsService(const StatisticsConfig& cfg, gits::MessageBus& msgBus);
@@ -33,9 +35,9 @@ public:
 
   // Commands whose key has STATE_RESTORE_KEY_MASK set are counted as state initialization.
   void Command(std::string_view name, GITSKey key);
-  void FrameEnd();
 
 private:
+  void FrameEnd();
   void WriteResults();
 
   struct CallInfo {
@@ -48,7 +50,9 @@ private:
 
   const StatisticsConfig m_Cfg;
   gits::MessageBus& m_MsgBus;
+  StatisticsWriter m_Writer;
   unsigned m_SubscriptionId{};
+  unsigned m_FrameEndSubscriptionId{};
   unsigned m_FramesNum{};
   unsigned m_CallsNum{};
   unsigned m_StateInitCallsNum{};

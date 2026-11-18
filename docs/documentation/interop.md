@@ -60,7 +60,10 @@ Vulkan exports, and the OpenGL imports use the handles the replayed exports retu
     check this.
 
 With `Common.Shared.Trace.Enabled`, the player writes the OpenGL and Vulkan commands to the same
-trace files, in the order it runs them.
+trace files, in the order it runs them. When the `Statistics` plugin of both APIs writes to the
+same file, the file has an `ApiCalls` section per API, and its `Statistics` summary counts the
+calls of both APIs. Both plugins count the frames of the stream, which the API that presents
+ends.
 
 ## Subcapture
 

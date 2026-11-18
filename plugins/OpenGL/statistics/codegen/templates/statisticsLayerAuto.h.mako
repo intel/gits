@@ -32,16 +32,12 @@ public:
   void Post(UnsupportedCommand& command) override;
 % for cmd in commands:
 % if cmd.enabled:
-% if cmd.name in frame_end_commands:
-  void Pre(${cmd.name}Command& command) override;
-% endif
   void Post(${cmd.name}Command& command) override;
 % endif
 % endfor
 
 private:
   StatisticsService m_StatisticsService;
-  bool m_SwapEndsFrame{};
 };
 
 } // namespace gits::opengl

@@ -126,3 +126,12 @@ endif()
 add_library(common_interface INTERFACE)
 target_include_directories(common_interface INTERFACE ${COMMON_HEADER_DIR})
 
+# Host-only gate for the message bus: unsubscribing while a topic is published, publishing and
+# subscribing from callbacks, and publishing from several threads. Run the executable; it prints
+# failures and exits non-zero.
+add_executable(common_message_bus_test
+  ${COMMON_SOURCE_DIR}/tests/messageBusTest.cpp
+)
+target_link_libraries(common_message_bus_test PRIVATE common)
+set_target_properties(common_message_bus_test PROPERTIES FOLDER "common")
+
