@@ -47,6 +47,7 @@ public:
   void OnPostTraceRaysIndirect(vkCmdTraceRaysIndirectKHRCommand& command);
 
 private:
+  bool usePatching = false;
   static const uint32_t s_ShaderGroupHandleSize = 32;
 
   struct PatchSBTPushConstantsBuffer {

@@ -20,6 +20,7 @@
 #include "configurator.h"
 #include "logVkErrorLayerAuto.h"
 #include "hudLayer.h"
+#include "multithreadedObjectCreationLayer.h"
 
 namespace gits {
 namespace vulkan {
@@ -107,6 +108,12 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // objects the analysis marked as needed or every live object.
   const bool subcaptureAnalysis = subcaptureActive && !AnalyzerResults::IsAnalysis();
 
+  std::unique_ptr<Layer> multithreadedObjectCreationLayer;
+  if (execute && cfg.vulkan.player.multithreadedShaderCompilation) {
+    multithreadedObjectCreationLayer =
+        std::make_unique<MultithreadedObjectCreationLayer>(playerManager);
+  }
+
   std::unique_ptr<Layer> subcaptureLayer;
   std::unique_ptr<Layer> analyzerLayer;
   std::unique_ptr<Layer> recordingLayer;
@@ -144,6 +151,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
   // Portability must rewrite queue family indices before any other layer
   enablePreLayer(portabilityLayer);
   enablePreLayer(replayCustomizationLayer);
+  enablePreLayer(multithreadedObjectCreationLayer);
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
   }
@@ -203,6 +211,7 @@ void PlayerLayerManager::LoadLayers(PlayerManager& playerManager, PluginService&
 
   retainLayer(std::move(portabilityLayer));
   retainLayer(std::move(replayCustomizationLayer));
+  retainLayer(std::move(multithreadedObjectCreationLayer));
   retainLayer(std::move(logVkErrorLayer));
   retainLayer(std::move(traceLayer));
   // SubcaptureLayer owns the AnalyzerService that AnalyzerLayer references, so it

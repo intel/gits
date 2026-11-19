@@ -10,6 +10,10 @@
 #include "argumentCodersAuto.h"
 #include "argumentCoders.h"
 #include "handleMapService.h"
+#include "log.h"
+#include "vulkanHelpers.h"
+
+#include <cstring>
 
 namespace gits {
 namespace vulkan {
@@ -340,8 +344,12 @@ uint32_t GetSize(const PointerArgument<VkImageCreateInfo>& arg) {
   if (!arg.Value) {
     return sizeof(void*);
   }
-  return sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
-         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->flags, VK_IMAGE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
 }
 
 void Encode(char* dst, uint32_t& offset, const PointerArgument<VkImageCreateInfo>& arg) {
@@ -357,6 +365,24 @@ void Encode(char* dst, uint32_t& offset, const PointerArgument<VkImageCreateInfo
   if (keyCount > 0) {
     std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
     offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_IMAGE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+                "VkImageCreateInfo opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkImageCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
   }
 }
 
@@ -375,6 +401,21 @@ void Decode(char* src, uint32_t& offset, PointerArgument<VkImageCreateInfo>& arg
     arg.HandleKeys.resize(keyCount);
     std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
     offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_IMAGE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkImageCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
   }
 }
 
@@ -415,6 +456,916 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageCreateInfo>& arg) 
   std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
   offset += sizeof(arg.Size);
   arg.Value = reinterpret_cast<VkImageCreateInfo*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+uint32_t GetSize(const VkBufferCreateInfo* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkBufferCreateInfo) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+    if (currentSrcDesc->pQueueFamilyIndices && currentSrcDesc->queueFamilyIndexCount > 0) {
+      blobSize += sizeof(uint32_t) * currentSrcDesc->queueFamilyIndexCount;
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkBufferCreateInfo* src, uint32_t count, char* dst, uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkBufferCreateInfo*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkBufferCreateInfo) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkBufferCreateInfo*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+    if (currentSrcDesc->pQueueFamilyIndices && currentSrcDesc->queueFamilyIndexCount > 0) {
+      currentDstDesc->pQueueFamilyIndices =
+          reinterpret_cast<uint32_t*>(static_cast<uintptr_t>(offset));
+      std::memcpy(dst + offset, currentSrcDesc->pQueueFamilyIndices,
+                  sizeof(uint32_t) * currentSrcDesc->queueFamilyIndexCount);
+      offset += sizeof(uint32_t) * currentSrcDesc->queueFamilyIndexCount;
+    }
+  }
+}
+
+void Decode(const VkBufferCreateInfo* dst, uint32_t count, char* src, uint32_t& offset) {
+  offset += sizeof(VkBufferCreateInfo) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkBufferCreateInfo*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+    if (currentDstDesc->pQueueFamilyIndices && currentDstDesc->queueFamilyIndexCount > 0) {
+      currentDstDesc->pQueueFamilyIndices = AddPtrs(currentDstDesc->pQueueFamilyIndices, src);
+      offset += sizeof(uint32_t) * currentDstDesc->queueFamilyIndexCount;
+    }
+  }
+}
+
+uint32_t GetSize(const PointerArgument<VkBufferCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->flags, VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
+}
+
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkBufferCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+                "VkBufferCreateInfo opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkBufferCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkBufferCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkBufferCreateInfo*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkBufferCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+uint32_t GetSize(const ArrayArgument<VkBufferCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkBufferCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkBufferCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkBufferCreateInfo*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+uint32_t GetSize(const VkImageViewCreateInfo* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkImageViewCreateInfo) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkImageViewCreateInfo* src, uint32_t count, char* dst, uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkImageViewCreateInfo*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkImageViewCreateInfo) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkImageViewCreateInfo*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+  }
+}
+
+void Decode(const VkImageViewCreateInfo* dst, uint32_t count, char* src, uint32_t& offset) {
+  offset += sizeof(VkImageViewCreateInfo) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkImageViewCreateInfo*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+  }
+}
+
+uint32_t GetSize(const PointerArgument<VkImageViewCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->flags, VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
+}
+
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkImageViewCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+                "VkImageViewCreateInfo opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkImageViewCreateInfo has descriptor buffer capture/replay enabled without "
+                  "opaque data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkImageViewCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkImageViewCreateInfo*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkImageViewCreateInfo has descriptor buffer capture/replay enabled without "
+                  "opaque data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+uint32_t GetSize(const ArrayArgument<VkImageViewCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkImageViewCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageViewCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkImageViewCreateInfo*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+uint32_t GetSize(const VkSamplerCreateInfo* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkSamplerCreateInfo) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkSamplerCreateInfo* src, uint32_t count, char* dst, uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkSamplerCreateInfo*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src), sizeof(VkSamplerCreateInfo) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkSamplerCreateInfo*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+  }
+}
+
+void Decode(const VkSamplerCreateInfo* dst, uint32_t count, char* src, uint32_t& offset) {
+  offset += sizeof(VkSamplerCreateInfo) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkSamplerCreateInfo*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+  }
+}
+
+uint32_t GetSize(const PointerArgument<VkSamplerCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->flags, VK_SAMPLER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
+}
+
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkSamplerCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_SAMPLER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+                "VkSamplerCreateInfo opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkSamplerCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+void Decode(char* src, uint32_t& offset, PointerArgument<VkSamplerCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkSamplerCreateInfo*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->flags, VK_SAMPLER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkSamplerCreateInfo has descriptor buffer capture/replay enabled without opaque "
+                  "data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+uint32_t GetSize(const ArrayArgument<VkSamplerCreateInfo>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkSamplerCreateInfo>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkSamplerCreateInfo>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkSamplerCreateInfo*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+uint32_t GetSize(const VkAccelerationStructureCreateInfoKHR* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkAccelerationStructureCreateInfoKHR) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkAccelerationStructureCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src),
+            sizeof(VkAccelerationStructureCreateInfoKHR) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkAccelerationStructureCreateInfoKHR*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+  }
+}
+
+void Decode(const VkAccelerationStructureCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset) {
+  offset += sizeof(VkAccelerationStructureCreateInfoKHR) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkAccelerationStructureCreateInfoKHR*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+  }
+}
+
+uint32_t GetSize(const PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(
+        arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+        "VkAccelerationStructureCreateInfoKHR opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkAccelerationStructureCreateInfoKHR has descriptor buffer capture/replay "
+                  "enabled without opaque data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkAccelerationStructureCreateInfoKHR has descriptor buffer capture/replay "
+                  "enabled without opaque data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+uint32_t GetSize(const ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkAccelerationStructureCreateInfoKHR*>(src + offset);
+  Decode(arg.Value, arg.Size, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+uint32_t GetSize(const VkAccelerationStructureCreateInfo2KHR* src, uint32_t count) {
+  if (!src) {
+    return 0;
+  }
+  auto blobSize = sizeof(VkAccelerationStructureCreateInfo2KHR) * count;
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = &src[i];
+    if (currentSrcDesc->pNext) {
+      blobSize += GetPNextChainSizeInput(currentSrcDesc->pNext);
+    }
+  }
+  return blobSize;
+}
+
+void Encode(const VkAccelerationStructureCreateInfo2KHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset) {
+  if (!src || !dst) {
+    return;
+  }
+  auto* srcDesc = src;
+  auto* dstDesc = reinterpret_cast<VkAccelerationStructureCreateInfo2KHR*>(&dst[offset]);
+  WriteData(reinterpret_cast<const char*>(src),
+            sizeof(VkAccelerationStructureCreateInfo2KHR) * count, dst, offset);
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentSrcDesc = const_cast<VkAccelerationStructureCreateInfo2KHR*>(&srcDesc[i]);
+    auto* currentDstDesc = &dstDesc[i];
+    if (currentSrcDesc->pNext) {
+      currentDstDesc->pNext =
+          reinterpret_cast<decltype(currentDstDesc->pNext)>(static_cast<uintptr_t>(offset));
+      EncodePNextChainInput(dst, offset, currentSrcDesc->pNext);
+    } else {
+      currentDstDesc->pNext = nullptr;
+    }
+  }
+}
+
+void Decode(const VkAccelerationStructureCreateInfo2KHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset) {
+  offset += sizeof(VkAccelerationStructureCreateInfo2KHR) * count;
+
+  for (uint32_t i = 0; i < count; ++i) {
+    auto* currentDstDesc = const_cast<VkAccelerationStructureCreateInfo2KHR*>(&dst[i]);
+    if (currentDstDesc->pNext) {
+      DecodePNextChainInput(src, offset, const_cast<void**>(&currentDstDesc->pNext));
+    }
+  }
+}
+
+uint32_t GetSize(const PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  uint32_t size = sizeof(void*) + GetSize(arg.Value, 1) + sizeof(uint32_t) +
+                  static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    size += sizeof(arg.OpaqueCaptureDescriptorDataSize) + arg.OpaqueCaptureDescriptorDataSize;
+  }
+  return size;
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  Encode(arg.Value, 1, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    GITS_ASSERT(
+        arg.OpaqueCaptureDescriptorData.size() == arg.OpaqueCaptureDescriptorDataSize,
+        "VkAccelerationStructureCreateInfo2KHR opaque data size does not match its payload.");
+    std::memcpy(dst + offset, &arg.OpaqueCaptureDescriptorDataSize,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      const auto* opaqueCreateInfo =
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkAccelerationStructureCreateInfo2KHR has descriptor buffer capture/replay "
+                  "enabled without opaque data node");
+      std::memcpy(dst + offset, arg.OpaqueCaptureDescriptorData.data(),
+                  arg.OpaqueCaptureDescriptorDataSize);
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  arg.Value = reinterpret_cast<VkAccelerationStructureCreateInfo2KHR*>(src + offset);
+  Decode(arg.Value, 1, src, offset);
+  uint32_t keyCount{};
+  std::memcpy(&keyCount, src + offset, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    arg.HandleKeys.resize(keyCount);
+    std::memcpy(arg.HandleKeys.data(), src + offset, sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+  if (isBitSet(arg.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    std::memcpy(&arg.OpaqueCaptureDescriptorDataSize, src + offset,
+                sizeof(arg.OpaqueCaptureDescriptorDataSize));
+    offset += sizeof(arg.OpaqueCaptureDescriptorDataSize);
+    if (arg.OpaqueCaptureDescriptorDataSize > 0) {
+      auto* opaqueCreateInfo = const_cast<VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(
+          static_cast<const VkOpaqueCaptureDescriptorDataCreateInfoEXT*>(getPNextStructure(
+              arg.Value->pNext, VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT)));
+      GITS_ASSERT(opaqueCreateInfo,
+                  "VkAccelerationStructureCreateInfo2KHR has descriptor buffer capture/replay "
+                  "enabled without opaque data node");
+      opaqueCreateInfo->opaqueCaptureDescriptorData = src + offset;
+      offset += arg.OpaqueCaptureDescriptorDataSize;
+    }
+  }
+}
+
+uint32_t GetSize(const ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  if (!arg.Value) {
+    return sizeof(void*);
+  }
+  return sizeof(void*) + sizeof(arg.Size) + GetSize(arg.Value, arg.Size) + sizeof(uint32_t) +
+         static_cast<uint32_t>(arg.HandleKeys.size()) * sizeof(GITSKey);
+}
+
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  std::memcpy(dst + offset, &arg.Value, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    return;
+  }
+  std::memcpy(dst + offset, &arg.Size, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  Encode(arg.Value, arg.Size, dst, offset);
+  uint32_t keyCount = static_cast<uint32_t>(arg.HandleKeys.size());
+  std::memcpy(dst + offset, &keyCount, sizeof(keyCount));
+  offset += sizeof(keyCount);
+  if (keyCount > 0) {
+    std::memcpy(dst + offset, arg.HandleKeys.data(), sizeof(GITSKey) * keyCount);
+    offset += sizeof(GITSKey) * keyCount;
+  }
+}
+
+void Decode(char* src,
+            uint32_t& offset,
+            ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  std::memcpy(&arg.Value, src + offset, sizeof(void*));
+  offset += sizeof(void*);
+  if (!arg.Value) {
+    arg.Size = 0;
+    return;
+  }
+  std::memcpy(&arg.Size, src + offset, sizeof(arg.Size));
+  offset += sizeof(arg.Size);
+  arg.Value = reinterpret_cast<VkAccelerationStructureCreateInfo2KHR*>(src + offset);
   Decode(arg.Value, arg.Size, src, offset);
   uint32_t keyCount{};
   std::memcpy(&keyCount, src + offset, sizeof(keyCount));
@@ -828,6 +1779,21 @@ void Decode(char* src, uint32_t& offset, ArrayArgument<VkRayTracingPipelineCreat
     arg.CaptureReplayHandlesData.resize(captureReplayHandlesDataSize);
     std::memcpy(arg.CaptureReplayHandlesData.data(), src + offset, captureReplayHandlesDataSize);
     offset += captureReplayHandlesDataSize;
+
+    // Assign capture/replay handles when capture/replay feature is used.
+    // Enabling SBT patching removes c/r flag and sets pShaderGroupCaptureReplayHandle
+    // pointers to nullptr (check rayTracingReplayService.cpp).
+    uint8_t* ptr = arg.CaptureReplayHandlesData.data();
+
+    for (uint32_t i = 0; i < arg.Size; ++i) {
+      auto& createInfo = arg.Value[i];
+
+      for (uint32_t g = 0; g < createInfo.groupCount; ++g) {
+        auto& group = const_cast<VkRayTracingShaderGroupCreateInfoKHR&>(createInfo.pGroups[g]);
+        group.pShaderGroupCaptureReplayHandle = ptr;
+        ptr += arg.CaptureReplayHandleSize;
+      }
+    }
   }
 }
 

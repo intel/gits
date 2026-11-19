@@ -7,12 +7,37 @@
 // ===================== end_copyright_notice ==============================
 
 #include "rayTracingCaptureService.h"
+#include "pNextChainCopy.h"
 #include "vulkanHelpers.h"
+
+#include <vector>
 
 namespace gits {
 namespace vulkan {
 
 namespace {
+
+// Copies ray tracing pipeline create infos, with the pNext chain of each copied up to the
+// VkPipelineCreateFlags2CreateInfo, so the pipeline flags can be extended without writing to
+// application memory.
+struct RayTracingPipelineCreateInfosCopy {
+  VkRayTracingPipelineCreateInfoKHR* Copy(const VkRayTracingPipelineCreateInfoKHR* source,
+                                          uint32_t count) {
+    m_CreateInfos.assign(source, source + count);
+    m_PNextCopies.resize(count);
+    for (uint32_t i = 0; i < count; ++i) {
+      m_CreateInfos[i].pNext = m_PNextCopies[i].Copy(
+          source[i].pNext, VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO);
+    }
+    return m_CreateInfos.data();
+  }
+
+private:
+  std::vector<VkRayTracingPipelineCreateInfoKHR> m_CreateInfos;
+  std::vector<PNextChainCopy> m_PNextCopies;
+};
+
+thread_local RayTracingPipelineCreateInfosCopy tl_RayTracingPipelineCreateInfosCopy;
 
 bool IsDedicatedToImage(const void* pNext) {
   auto* pDedicatedInfo = static_cast<const VkMemoryDedicatedAllocateInfo*>(
@@ -403,10 +428,23 @@ void RayTracingCaptureService::OnPreCreateRayTracingPipelinesKHR(
   if (!m_Caps[command.m_device.Key].m_RayTracingPipelineShaderGroupHandleCaptureReplay) {
     return;
   }
+  if (!command.m_pCreateInfos.Value || !command.m_createInfoCount.Value) {
+    return;
+  }
+
+  command.m_pCreateInfos.Value = tl_RayTracingPipelineCreateInfosCopy.Copy(
+      command.m_pCreateInfos.Value, command.m_createInfoCount.Value);
 
   for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
-    command.m_pCreateInfos.Value[i].flags |=
-        VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+    auto& createInfo = command.m_pCreateInfos.Value[i];
+    auto* flags2 = const_cast<VkPipelineCreateFlags2CreateInfo*>(
+        static_cast<const VkPipelineCreateFlags2CreateInfo*>(getPNextStructure(
+            createInfo.pNext, VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO)));
+    if (flags2) {
+      flags2->flags |= VK_PIPELINE_CREATE_2_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+    } else {
+      createInfo.flags |= VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+    }
   }
 }
 

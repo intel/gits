@@ -52,6 +52,7 @@ target_link_libraries(Vulkan_coders PRIVATE
   stream
   Vulkan_layer_interface
   Vulkan_services
+  Vulkan_utils
 )
 
 set_target_properties(Vulkan_coders PROPERTIES FOLDER Vulkan/Vulkan_common)

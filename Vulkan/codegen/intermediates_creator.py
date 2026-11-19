@@ -190,6 +190,7 @@ def parse_member(node) -> Member:
         bitfield=bitfield,
         values=values,
         is_typed_handle=is_typed_handle,
+        object_type=node.get('objecttype') or '',
         selector=selector,
         selection=selection,
         is_inline_struct=is_inline_struct,
@@ -737,7 +738,11 @@ def postprocess(commands, structures, unions, handles, enums, bitmasks, flags, e
 
     handle_names = set(handle.name for handle in handles)
     handle_map = {handle.name: handle for handle in handles}
-    structure_names = set(structure.name for structure in structures)
+    structure_names = {
+        name
+        for structure in structures
+        for name in [structure.name, *structure.aliases]
+    }
     union_names = set(union.name for union in unions)
 
     OPAQUE_POINTER_TYPES = {'xcb_connection_t', 'Display', 'wl_display', 'wl_surface'}

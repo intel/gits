@@ -42,8 +42,14 @@ set(SERVICES_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/windowTrackingService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/descriptorUpdateTemplateService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/pNextChainCopy.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/pNextChainCopy.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingCaptureService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/rayTracingCaptureService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorBufferCaptureService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorBufferCaptureService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorHeapCaptureService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/descriptorHeapCaptureService.cpp
 )
 source_group("services" FILES ${SERVICES_SRC})
 

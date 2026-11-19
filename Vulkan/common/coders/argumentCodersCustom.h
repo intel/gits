@@ -38,6 +38,16 @@ uint32_t GetSize(const DescriptorTemplateDataArgument& arg);
 void Encode(char* dst, uint32_t& offset, const DescriptorTemplateDataArgument& arg);
 void Decode(char* src, uint32_t& offset, DescriptorTemplateDataArgument& arg);
 
+uint32_t GetSize(const VkBufferCreateInfo* src, uint32_t count);
+void Encode(const VkBufferCreateInfo* src, uint32_t count, char* dst, uint32_t& offset);
+void Decode(const VkBufferCreateInfo* dst, uint32_t count, char* src, uint32_t& offset);
+uint32_t GetSize(const PointerArgument<VkBufferCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkBufferCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, PointerArgument<VkBufferCreateInfo>& arg);
+uint32_t GetSize(const ArrayArgument<VkBufferCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkBufferCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkBufferCreateInfo>& arg);
+
 // VkImageCreateInfo - custom coder needed because queueFamiltyIndexCount
 // and pQueueFamilyIndices are only valid for VK_SHARING_MODE_CONCURRENT
 uint32_t GetSize(const VkImageCreateInfo* src, uint32_t count);
@@ -53,6 +63,70 @@ void Decode(char* src, uint32_t& offset, PointerArgument<VkImageCreateInfo>& arg
 uint32_t GetSize(const ArrayArgument<VkImageCreateInfo>& arg);
 void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkImageCreateInfo>& arg);
 void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageCreateInfo>& arg);
+
+uint32_t GetSize(const VkImageViewCreateInfo* src, uint32_t count);
+void Encode(const VkImageViewCreateInfo* src, uint32_t count, char* dst, uint32_t& offset);
+void Decode(const VkImageViewCreateInfo* dst, uint32_t count, char* src, uint32_t& offset);
+uint32_t GetSize(const PointerArgument<VkImageViewCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkImageViewCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, PointerArgument<VkImageViewCreateInfo>& arg);
+uint32_t GetSize(const ArrayArgument<VkImageViewCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkImageViewCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkImageViewCreateInfo>& arg);
+
+uint32_t GetSize(const VkSamplerCreateInfo* src, uint32_t count);
+void Encode(const VkSamplerCreateInfo* src, uint32_t count, char* dst, uint32_t& offset);
+void Decode(const VkSamplerCreateInfo* dst, uint32_t count, char* src, uint32_t& offset);
+uint32_t GetSize(const PointerArgument<VkSamplerCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const PointerArgument<VkSamplerCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, PointerArgument<VkSamplerCreateInfo>& arg);
+uint32_t GetSize(const ArrayArgument<VkSamplerCreateInfo>& arg);
+void Encode(char* dst, uint32_t& offset, const ArrayArgument<VkSamplerCreateInfo>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkSamplerCreateInfo>& arg);
+
+uint32_t GetSize(const VkAccelerationStructureCreateInfoKHR* src, uint32_t count);
+void Encode(const VkAccelerationStructureCreateInfoKHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset);
+void Decode(const VkAccelerationStructureCreateInfoKHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset);
+uint32_t GetSize(const PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+uint32_t GetSize(const ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+
+uint32_t GetSize(const VkAccelerationStructureCreateInfo2KHR* src, uint32_t count);
+void Encode(const VkAccelerationStructureCreateInfo2KHR* src,
+            uint32_t count,
+            char* dst,
+            uint32_t& offset);
+void Decode(const VkAccelerationStructureCreateInfo2KHR* dst,
+            uint32_t count,
+            char* src,
+            uint32_t& offset);
+uint32_t GetSize(const PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+void Decode(char* src,
+            uint32_t& offset,
+            PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+uint32_t GetSize(const ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+void Encode(char* dst,
+            uint32_t& offset,
+            const ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+void Decode(char* src, uint32_t& offset, ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -22,6 +22,11 @@ CUSTOM_HANDLE_STRUCTS = {
     'VkImageCreateInfo',
     'VkRayTracingShaderGroupCreateInfoKHR',
     'VkRayTracingPipelineCreateInfoKHR',
+    'VkBufferCreateInfo',
+    'VkImageViewCreateInfo',
+    'VkSamplerCreateInfo',
+    'VkAccelerationStructureCreateInfoKHR',
+    'VkAccelerationStructureCreateInfo2KHR',
 }
 
 # Structs that need a custom key layout but keep their generated GetSize/Encode/Decode. Unlike
@@ -73,10 +78,16 @@ def union_member_needs_coding(member, structures_by_name, structures_list):
         # Handle members (single or pointer) are carried by the HandleKeys sidecar,
         # never the blob, so no coder work is required here.
         return False
-    if member.is_struct and member.base_type in structures_by_name:
+    structure = structures_by_name.get(member.base_type)
+    if structure is None:
+        for candidate in structures_list:
+            if member.base_type in candidate.aliases:
+                structure = candidate
+                break
+    if member.is_struct and structure is not None:
         if member.is_pointer:
             return True
-        return struct_needs_coder(structures_by_name[member.base_type], structures_list)
+        return struct_needs_coder(structure, structures_list)
     if member.is_pointer:
         # Non-struct pointer union members cannot be raw-copied: the union storage
         # holds a live pointer, not the pointee.
@@ -758,7 +769,7 @@ def _collect_union_cases(member, structures_by_name):
         if um.is_handle:
             cases.append((labels, um.name, um.is_pointer, um.base_type, 'handle', None))
         elif um.is_typed_handle:
-            cases.append((labels, um.name, um.is_pointer, um.base_type, 'typed', None))
+            cases.append((labels, um.name, um.is_pointer, um.base_type, 'typed', um.object_type))
         elif um.is_struct and um.contributes_keys:
             um_struct = structures_by_name.get(um.base_type)
             child = collect_handle_members(um_struct, structures_by_name, include_pnext=True) if um_struct else []
@@ -781,7 +792,7 @@ def collect_handle_members(structure, structures_by_name, include_pnext=False):
         if member.name in ('sType', 'pNext'):
             continue
         if member.is_typed_handle:
-            results.append(('handle_typed_uint64', member.name, None, member.base_type, None))
+            results.append(('handle_typed_uint64', member.name, member.object_type, member.base_type, None))
         elif member.is_handle:
             if member.is_pointer and member.length:
                 results.append(('handle_array_ptr', member.name, member.length, member.base_type, None))
@@ -967,13 +978,13 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
         if kind == 'handle_single':
             lines.append(f'{p}if (idx < keys.size()) {{')
             lines.append(f'{p2}GITSKey key = keys[idx++];')
-            lines.append(f'{p2}{elem_expr}.{access} = key ? reinterpret_cast<{base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;')
+            lines.append(f'{p2}{elem_expr}.{access} = key ? reinterpret_cast<{base_type}>(resolver.Resolve<{base_type}>(key)) : VK_NULL_HANDLE;')
             lines.append(f'{p}}}')
         elif kind == 'handle_typed_uint64':
             if depth == 0:
                 lines.append(f'{p}if (idx < keys.size()) {{')
                 lines.append(f'{p2}GITSKey key = keys[idx++];')
-                lines.append(f'{p2}{elem_expr}.{access} = key ? HandleMapService::Get().GetHandle(key) : 0;')
+                lines.append(f'{p2}{elem_expr}.{access} = resolver.ResolveObject(key, {elem_expr}.{length});')
                 lines.append(f'{p}}}')
         elif kind == 'handle_ptr':
             # The key is consumed unconditionally to stay aligned with the recorder, which always
@@ -984,7 +995,7 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
             lines.append(f'{p2}GITSKey key = keys[idx++];')
             lines.append(f'{p2}if ({elem_expr}.{access}) {{')
             lines.append(f'{p3}size_t dataOffset = handleData.size();')
-            lines.append(f'{p3}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
+            lines.append(f'{p3}handleData.push_back(resolver.Resolve<{base_type}>(key));')
             lines.append(f'{p3}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
             lines.append(f'{p2}}}')
             lines.append(f'{p}}}')
@@ -1010,7 +1021,7 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
             lines.append(f'{p3}handleData.resize(dataOffset + {count});')
             lines.append(f'{p3}for (uint32_t handleIdx = 0; handleIdx < {count}; ++handleIdx) {{')
             lines.append(f'{p4}GITSKey key = keys[idx++];')
-            lines.append(f'{p4}handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;')
+            lines.append(f'{p4}handleData[dataOffset + handleIdx] = resolver.Resolve<{base_type}>(key);')
             lines.append(f'{p3}}}')
             lines.append(f'{p3}{elem_expr}.{access} = reinterpret_cast<{base_type}*>(&handleData[dataOffset]);')
             lines.append(f'{p2}}} else {{')
@@ -1021,10 +1032,10 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
         elif kind == 'handle_fixed_array':
             lines.append(f'{p}for (uint32_t handleIdx = 0; handleIdx < {elem_expr}.{length} && idx < keys.size(); ++handleIdx) {{')
             lines.append(f'{p2}GITSKey key = keys[idx++];')
-            lines.append(f'{p2}{elem_expr}.{access}[handleIdx] = key ? reinterpret_cast<{base_type}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;')
+            lines.append(f'{p2}{elem_expr}.{access}[handleIdx] = key ? reinterpret_cast<{base_type}>(resolver.Resolve<{base_type}>(key)) : VK_NULL_HANDLE;')
             lines.append(f'{p}}}')
         elif kind == 'handle_pnext':
-            lines.append(f'{p}ResolvePNextHandleKeys(keys, idx, handleData, {elem_expr}.pNext);')
+            lines.append(f'{p}ResolvePNextHandleKeys(keys, idx, handleData, {elem_expr}.pNext, resolver);')
         elif kind == 'handle_struct_embedded':
             nested = generate_child_handle_resolve(child, f'{elem_expr}.{access}', depth + 1, indent)
             if nested:
@@ -1076,19 +1087,19 @@ def generate_child_handle_resolve(entries, elem_expr='s', depth=0, indent=2):
                         body.append(f'{p3}GITSKey key = keys[idx++];')
                         body.append(f'{p3}if ({base_expr}) {{')
                         body.append(f'{p4}size_t dataOffset = handleData.size();')
-                        body.append(f'{p4}handleData.push_back(key ? HandleMapService::Get().GetHandle(key) : 0);')
+                        body.append(f'{p4}handleData.push_back(resolver.Resolve<{um_base}>(key));')
                         body.append(f'{p4}const_cast<{um_base}*&>({base_expr}) = reinterpret_cast<{um_base}*>(&handleData[dataOffset]);')
                         body.append(f'{p3}}}')
                         body.append(f'{p2}}}')
                     else:
                         body.append(f'{p2}if (idx < keys.size()) {{')
                         body.append(f'{p3}GITSKey key = keys[idx++];')
-                        body.append(f'{p3}{base_expr} = key ? reinterpret_cast<{um_base}>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;')
+                        body.append(f'{p3}{base_expr} = key ? reinterpret_cast<{um_base}>(resolver.Resolve<{um_base}>(key)) : VK_NULL_HANDLE;')
                         body.append(f'{p2}}}')
                 elif um_kind == 'typed':
                     body.append(f'{p2}if (idx < keys.size()) {{')
                     body.append(f'{p3}GITSKey key = keys[idx++];')
-                    body.append(f'{p3}{base_expr} = key ? HandleMapService::Get().GetHandle(key) : 0;')
+                    body.append(f'{p3}{base_expr} = resolver.ResolveObject(key, {elem_expr}.{access}.{um_child});')
                     body.append(f'{p2}}}')
                 elif um_kind == 'struct':
                     if um_ptr:

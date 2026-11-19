@@ -52,8 +52,19 @@ void ${command.name}Runner::Run() {
   // Handles are only registered when commands are dispatched, so in a
   // null-driver run (ExecuteCommands() == false) the map is empty; skip.
   if (manager.ExecuteCommands()) {
+    const HandleResolver resolver(manager.GetMultithreadedObjectCreationService());
+    % if command.name.startswith('vkDestroy'):
+<%
+    destroyed_handles = [param for param in command.params if param.is_handle and not param.is_pointer]
+%>
+    % if destroyed_handles:
+    if (auto* creationService = manager.GetMultithreadedObjectCreationService()) {
+      creationService->WaitForConsumers(command.m_${destroyed_handles[-1].name}.Key);
+    }
+    % endif
+    % endif
     % for name in input_handle_params:
-    UpdateHandle(manager, command.m_${name});
+    UpdateHandle(command.m_${name}, resolver);
     % endfor
   }
 % endif
@@ -87,10 +98,10 @@ void ${command.name}Runner::Run() {
     success_condition = ' || '.join(f'command.m_Return.Value == {code}' for code in command.success_codes) if command.success_codes else 'command.m_Return.Value == VK_SUCCESS'
 %>
     if (${success_condition}) {
-      UpdateOutputHandle(manager, command.m_${param.name});
+      UpdateOutputHandle(command.m_${param.name});
     }
     % else:
-    UpdateOutputHandle(manager, command.m_${param.name});
+    UpdateOutputHandle(command.m_${param.name});
     % endif
     % elif param.is_struct_with_output_handles and param.is_pointer and not param.is_const:
     % if command.return_type != 'void':
@@ -98,10 +109,10 @@ void ${command.name}Runner::Run() {
     success_condition = ' || '.join(f'command.m_Return.Value == {code}' for code in command.success_codes) if command.success_codes else 'command.m_Return.Value == VK_SUCCESS'
 %>
     if (${success_condition}) {
-      UpdateOutputHandle(manager, command.m_${param.name});
+      UpdateOutputHandle(command.m_${param.name});
     }
     % else:
-    UpdateOutputHandle(manager, command.m_${param.name});
+    UpdateOutputHandle(command.m_${param.name});
     % endif
     % endif
     % endfor

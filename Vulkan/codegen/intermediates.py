@@ -88,6 +88,7 @@ class Member:
     is_union: bool = False
     is_opaque_pointer: bool = False
     is_typed_handle: bool = False  # uint64_t member with objecttype="..." in vk.xml (type-erased handle)
+    object_type: str = ''
     # Union discrimination (vk.xml). On a struct member whose type is a union, `selector` names the
     # sibling field that picks the active union member. On a union's own members, `selection` lists
     # the enum value(s) (comma-separated) that select that member.

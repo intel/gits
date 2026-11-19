@@ -30,6 +30,12 @@ public:
   void Pre(vkCreateDeviceCommand& command) override;
   void Post(vkCreateDeviceCommand& command) override;
   void Pre(vkDestroyDeviceCommand& command) override;
+  void Pre(vkCreateBufferCommand& command) override;
+  void Pre(vkCreateImageCommand& command) override;
+  void Pre(vkCreateImageViewCommand& command) override;
+  void Pre(vkCreateSamplerCommand& command) override;
+  void Pre(vkCreateAccelerationStructureKHRCommand& command) override;
+  void Pre(vkCreateAccelerationStructure2KHRCommand& command) override;
   void Post(vkGetDeviceQueueCommand& command) override;
   void Post(vkGetDeviceQueue2Command& command) override;
   void Post(vkCreateCommandPoolCommand& command) override;
@@ -190,6 +196,10 @@ private:
   struct DeviceMemoryInfo {
     VkPhysicalDeviceMemoryProperties MemoryProperties{};
     uint32_t DeviceGroupSize{1};
+    bool DescriptorBufferEnabled{};
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT DescriptorBufferProperties{};
+    bool DescriptorHeapEnabled{};
+    VkPhysicalDeviceDescriptorHeapPropertiesEXT DescriptorHeapProperties{};
   };
   std::mutex m_DeviceMemoryInfosMutex;
   std::unordered_map<VkDevice, DeviceMemoryInfo> m_DeviceMemoryInfos;
@@ -198,6 +208,16 @@ private:
   // allocation starts zeroed in the recording, so pages read before being written must be zero in
   // the replay as well.
   void ClearHostVisibleMemory(vkAllocateMemoryCommand& command);
+  bool GetDescriptorBufferProperties(VkDevice device,
+                                     VkPhysicalDeviceDescriptorBufferPropertiesEXT& properties);
+  bool GetDescriptorHeapProperties(VkDevice device,
+                                   VkPhysicalDeviceDescriptorHeapPropertiesEXT& properties);
+  static void ValidateOpaqueCaptureDescriptorDataSize(uint32_t recordedSize,
+                                                      size_t replaySize,
+                                                      const char* commandName);
+  static void ValidateOpaqueCaptureDataSize(size_t recordedSize,
+                                            size_t replaySize,
+                                            const char* commandName);
 
   // Serializes the playback thread behind the GPU after every queue submission
   void WaitAfterQueueSubmit(HandleArgument<VkQueue>& queue, VkResult submitResult);

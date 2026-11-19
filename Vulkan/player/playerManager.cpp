@@ -13,6 +13,7 @@
 #include "log.h"
 #include "messageBus.h"
 #include "vulkanCommandFactory.h"
+#include "multithreadedObjectCreationService.h"
 
 namespace gits {
 namespace vulkan {
@@ -37,6 +38,13 @@ void VulkanCommandFactory::CreatePlayer() {
 PlayerManager::~PlayerManager() {
   try {
     LOG_INFO << "PlayerManager: Playback completed. Cleaning up...";
+    if (m_MultithreadedObjectCreationService) {
+      try {
+        m_MultithreadedObjectCreationService->Shutdown();
+      } catch (...) {
+        topmost_exception_handler("PlayerManager pipeline creation shutdown");
+      }
+    }
     // Tear down layers (and their async resource dumpers) before the dispatch
     // tables and driver library go away.  The member-destruction order would
     // otherwise destroy m_LayerManager last -- after dl::close_library below and
@@ -45,6 +53,7 @@ PlayerManager::~PlayerManager() {
     // closed library and dangling dispatch table, dropping that screenshot
     // entirely for a single-frame stream.
     m_LayerManager.Shutdown();
+    m_MultithreadedObjectCreationService.reset();
     m_PluginService.reset();
     stream::ExternalHandleService::Get().CloseReplayedExports();
     dl::close_library(m_Lib);
@@ -59,6 +68,11 @@ PlayerManager::PlayerManager() : m_SwapchainImageSyncService(*this) {
 
   m_DispatchTablesHolder = std::make_unique<DispatchTablesHolder>(
       m_InstanceDispatchTable, m_DeviceDispatchTable, m_DispatchTablesMutex);
+
+  if (Configurator::Get().common.player.execute &&
+      Configurator::Get().vulkan.player.multithreadedShaderCompilation) {
+    m_MultithreadedObjectCreationService = std::make_unique<MultithreadedObjectCreationService>();
+  }
 
   m_PluginService = std::make_unique<PluginService>();
   m_PluginService->SetVkDriverRewindPresentCountPtr(

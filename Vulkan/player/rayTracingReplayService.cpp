@@ -242,6 +242,23 @@ VkDeviceAddress getBufferDeviceAddress(const VkDeviceLevelDispatchTable& dt,
   return vkGetBufferDeviceAddress(device, &addressInfo);
 }
 
+uint32_t GetTotalGroupCount(const VkRayTracingPipelineCreateInfoKHR& createInfo,
+                            const std::unordered_map<VkPipeline, uint32_t>& groupCounts) {
+  uint32_t total = createInfo.groupCount;
+  const auto* libraryInfo = createInfo.pLibraryInfo;
+  if (!libraryInfo || !libraryInfo->pLibraries || !libraryInfo->libraryCount) {
+    return total;
+  }
+
+  return std::accumulate(
+      libraryInfo->pLibraries, libraryInfo->pLibraries + libraryInfo->libraryCount, total,
+      [&groupCounts](uint32_t count, VkPipeline library) {
+        auto it = groupCounts.find(library);
+        GITS_ASSERT(it != groupCounts.end(), "Missing ray tracing pipeline library group count!");
+        return count + it->second;
+      });
+}
+
 } // namespace
 
 void RayTracingReplayService::OnPreCreateDevice(vkCreateDeviceCommand& command) {
@@ -258,6 +275,7 @@ void RayTracingReplayService::OnPreCreateDevice(vkCreateDeviceCommand& command) 
   if (rayTracingPipelineFeatures != nullptr) {
     rayTracingPipelineFeatures->rayTracingPipelineShaderGroupHandleCaptureReplay = VK_FALSE;
   }
+  usePatching = true;
 }
 
 void RayTracingReplayService::OnPostCreateDevice(vkCreateDeviceCommand& command) {
@@ -422,57 +440,44 @@ void RayTracingReplayService::OnPostPushConstants(vkCmdPushConstantsCommand& com
 
 void RayTracingReplayService::OnPreCreateRayTracingPipelines(
     vkCreateRayTracingPipelinesKHRCommand& command) {
+  if (!usePatching) {
+    return;
+  }
 
   // Stop using per pipeline capture/replay features when SBT patching is enabled
-  if (Configurator::Get().vulkan.player.portability.patchShaderGroupHandles) {
-    const auto device = command.m_device.Value;
-    auto& deviceData = m_DevicesData[device];
-    if (deviceData.m_ComputePipeline == VK_NULL_HANDLE) {
-      deviceData.m_Layout = CreatePipelineLayout(device);
-      deviceData.m_ComputePipeline = CreateComputePipeline(device, deviceData.m_Layout);
-    }
+  const auto device = command.m_device.Value;
+  auto& deviceData = m_DevicesData[device];
+  if (deviceData.m_ComputePipeline == VK_NULL_HANDLE) {
+    deviceData.m_Layout = CreatePipelineLayout(device);
+    deviceData.m_ComputePipeline = CreateComputePipeline(device, deviceData.m_Layout);
+  }
 
-    for (uint32_t ci = 0; ci < command.m_createInfoCount.Value; ci++) {
-      auto* pCreateInfo = &command.m_pCreateInfos.Value[ci];
+  for (uint32_t ci = 0; ci < command.m_createInfoCount.Value; ci++) {
+    auto* pCreateInfo = &command.m_pCreateInfos.Value[ci];
+    auto* flags2 = const_cast<VkPipelineCreateFlags2CreateInfo*>(
+        static_cast<const VkPipelineCreateFlags2CreateInfo*>(getPNextStructure(
+            pCreateInfo->pNext, VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO)));
+    if (flags2) {
+      flags2->flags &= ~VK_PIPELINE_CREATE_2_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
+    } else {
       pCreateInfo->flags &=
           ~VK_PIPELINE_CREATE_RAY_TRACING_SHADER_GROUP_HANDLE_CAPTURE_REPLAY_BIT_KHR;
-
-      for (uint32_t g = 0; g < pCreateInfo->groupCount; ++g) {
-        auto* pGroup = const_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&pCreateInfo->pGroups[g]);
-        pGroup->pShaderGroupCaptureReplayHandle = nullptr;
-      }
     }
 
-    return;
-  }
-
-  if (!command.m_pCreateInfos.CaptureReplayHandleSize ||
-      command.m_pCreateInfos.CaptureReplayHandlesData.empty()) {
-    return;
-  }
-
-  // Assign capture/replay handles when capture/replay feature is used (and patching is disabled)
-  uint8_t* ptr = command.m_pCreateInfos.CaptureReplayHandlesData.data();
-
-  for (uint32_t i = 0; i < command.m_createInfoCount.Value; ++i) {
-    auto& createInfo = command.m_pCreateInfos.Value[i];
-
-    for (uint32_t g = 0; g < createInfo.groupCount; ++g) {
-      auto& group = const_cast<VkRayTracingShaderGroupCreateInfoKHR&>(createInfo.pGroups[g]);
-      group.pShaderGroupCaptureReplayHandle = ptr;
-      ptr += command.m_pCreateInfos.CaptureReplayHandleSize;
+    for (uint32_t g = 0; g < pCreateInfo->groupCount; ++g) {
+      auto* pGroup = const_cast<VkRayTracingShaderGroupCreateInfoKHR*>(&pCreateInfo->pGroups[g]);
+      pGroup->pShaderGroupCaptureReplayHandle = nullptr;
     }
   }
 }
 
 void RayTracingReplayService::OnPostCreateRayTracingPipelines(
     vkCreateRayTracingPipelinesKHRCommand& command) {
-  if (!Configurator::Get().vulkan.player.portability.patchShaderGroupHandles ||
-      !command.m_pCreateInfos.Value) {
+  if (!usePatching || !command.m_pCreateInfos.Value) {
     return;
   }
 
-  auto& groupCountsMap = m_DevicesData[command.m_device.Value].m_GroupCounts;
+  auto& groupCounts = m_DevicesData[command.m_device.Value].m_GroupCounts;
 
   // Prepare data for SBT patching
   for (uint32_t ci = 0; ci < command.m_createInfoCount.Value; ci++) {
@@ -481,22 +486,9 @@ void RayTracingReplayService::OnPostCreateRayTracingPipelines(
       continue;
     }
 
-    auto* pCreateInfo = &command.m_pCreateInfos.Value[ci];
-    auto totalGroupCount = pCreateInfo->groupCount;
+    auto totalGroupCount = GetTotalGroupCount(command.m_pCreateInfos.Value[ci], groupCounts);
+    groupCounts[pipeline] = totalGroupCount;
 
-    if (pCreateInfo->pLibraryInfo && pCreateInfo->pLibraryInfo->pLibraries) {
-      for (uint32_t l = 0; l < pCreateInfo->pLibraryInfo->libraryCount; l++) {
-        auto library = pCreateInfo->pLibraryInfo->pLibraries[l];
-        auto it = groupCountsMap.find(library);
-        if (it == groupCountsMap.end()) {
-          continue;
-        }
-
-        totalGroupCount += it->second;
-      }
-    }
-
-    groupCountsMap[pipeline] = totalGroupCount;
     auto totalSize = s_ShaderGroupHandleSize * totalGroupCount;
     m_PipelinesData[command.m_pPipelines.Keys[ci]] = {
         totalGroupCount,                    // uint32_t m_TotalGroupCount;

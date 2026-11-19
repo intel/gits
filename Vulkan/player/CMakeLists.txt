@@ -19,7 +19,10 @@ source_group("" FILES ${ROOT_SRC})
 set(PLAYER_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/replayCustomizationLayer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/multithreadedObjectCreationLayer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/multithreadedObjectCreationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/handleResolver.h
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersPlayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersPlayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersCustom.h
@@ -28,6 +31,10 @@ set(PLAYER_SRC
 source_group("player" FILES ${PLAYER_SRC})
 
 set(SERVICES_SRC
+  ${CMAKE_CURRENT_SOURCE_DIR}/multithreadedObjectCreationService.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/multithreadedObjectCreationService.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/objectCreationTask.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/objectCreationTask.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/windowService.h
   ${CMAKE_CURRENT_SOURCE_DIR}/windowService.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/mapTrackingService.h

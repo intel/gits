@@ -108,6 +108,410 @@ private:
   }
 };
 
+template <>
+struct PointerArgument<VkBufferCreateInfo> {
+  PointerArgument(const VkBufferCreateInfo* v) : Value(const_cast<VkBufferCreateInfo*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkBufferCreateInfo* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkBufferCreateInfo();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
+template <>
+struct PointerArgument<VkImageCreateInfo> {
+  PointerArgument(const VkImageCreateInfo* v) : Value(const_cast<VkImageCreateInfo*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkImageCreateInfo* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkImageCreateInfo();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
+template <>
+struct PointerArgument<VkImageViewCreateInfo> {
+  PointerArgument(const VkImageViewCreateInfo* v) : Value(const_cast<VkImageViewCreateInfo*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkImageViewCreateInfo* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkImageViewCreateInfo();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
+template <>
+struct PointerArgument<VkSamplerCreateInfo> {
+  PointerArgument(const VkSamplerCreateInfo* v) : Value(const_cast<VkSamplerCreateInfo*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkSamplerCreateInfo* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkSamplerCreateInfo();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
+template <>
+struct PointerArgument<VkAccelerationStructureCreateInfoKHR> {
+  PointerArgument(const VkAccelerationStructureCreateInfoKHR* v)
+      : Value(const_cast<VkAccelerationStructureCreateInfoKHR*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkAccelerationStructureCreateInfoKHR* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkAccelerationStructureCreateInfoKHR();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
+template <>
+struct PointerArgument<VkAccelerationStructureCreateInfo2KHR> {
+  PointerArgument(const VkAccelerationStructureCreateInfo2KHR* v)
+      : Value(const_cast<VkAccelerationStructureCreateInfo2KHR*>(v)) {}
+  PointerArgument() {}
+  PointerArgument(const PointerArgument& arg) {
+    CopyFrom(arg);
+  }
+  PointerArgument(PointerArgument&& arg) {
+    if (!arg.Copy) {
+      CopyFrom(arg);
+      return;
+    }
+    Value = std::exchange(arg.Value, nullptr);
+    HandleKeys = std::move(arg.HandleKeys);
+    HandleData = std::move(arg.HandleData);
+    OpaqueCaptureDescriptorDataSize = std::exchange(arg.OpaqueCaptureDescriptorDataSize, 0);
+    OpaqueCaptureDescriptorData = std::move(arg.OpaqueCaptureDescriptorData);
+    Copy = std::exchange(arg.Copy, false);
+  }
+  PointerArgument& operator=(const PointerArgument& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(arg);
+      Swap(tmp);
+    }
+    return *this;
+  }
+  PointerArgument& operator=(PointerArgument&& arg) {
+    if (this != &arg) {
+      PointerArgument tmp(std::move(arg));
+      Swap(tmp);
+    }
+    return *this;
+  }
+  ~PointerArgument() {
+    if (Copy) {
+      delete Value;
+    }
+  }
+  VkAccelerationStructureCreateInfo2KHR* Value{};
+  std::vector<GITSKey> HandleKeys{};
+  std::vector<uint64_t> HandleData{};
+  uint32_t OpaqueCaptureDescriptorDataSize{};
+  std::vector<uint8_t> OpaqueCaptureDescriptorData{};
+  bool Copy{};
+
+private:
+  void CopyFrom(const PointerArgument& arg) {
+    if (arg.Value) {
+      Value = new VkAccelerationStructureCreateInfo2KHR();
+      *Value = *arg.Value;
+    }
+    HandleKeys = arg.HandleKeys;
+    HandleData = arg.HandleData;
+    OpaqueCaptureDescriptorDataSize = arg.OpaqueCaptureDescriptorDataSize;
+    OpaqueCaptureDescriptorData = arg.OpaqueCaptureDescriptorData;
+    Copy = true;
+  }
+  void Swap(PointerArgument& other) {
+    std::swap(Value, other.Value);
+    HandleKeys.swap(other.HandleKeys);
+    HandleData.swap(other.HandleData);
+    std::swap(OpaqueCaptureDescriptorDataSize, other.OpaqueCaptureDescriptorDataSize);
+    OpaqueCaptureDescriptorData.swap(other.OpaqueCaptureDescriptorData);
+    std::swap(Copy, other.Copy);
+  }
+};
+
 template <typename T>
 struct ArrayArgument {
   T* Value{};

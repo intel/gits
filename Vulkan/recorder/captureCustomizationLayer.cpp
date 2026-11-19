@@ -37,6 +37,14 @@ thread_local VkDeviceImageMemoryRequirements
     CaptureCustomizationLayer::s_ImageMemoryRequirementsInfo;
 thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateInfo;
 
+thread_local VkImageCreateInfo CaptureCustomizationLayer::s_ImageCreateCommandInfo;
+thread_local VkImageViewCreateInfo CaptureCustomizationLayer::s_ImageViewCreateCommandInfo;
+thread_local VkSamplerCreateInfo CaptureCustomizationLayer::s_SamplerCreateCommandInfo;
+thread_local VkAccelerationStructureCreateInfoKHR
+    CaptureCustomizationLayer::s_AccelerationStructureCreateCommandInfo;
+thread_local VkAccelerationStructureCreateInfo2KHR
+    CaptureCustomizationLayer::s_AccelerationStructureCreate2CommandInfo;
+
 void CaptureCustomizationLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
   const auto& suppressLayers = Configurator::Get().vulkan.recorder.suppressLayers;
   if (suppressLayers.empty()) {
@@ -410,55 +418,36 @@ void CaptureCustomizationLayer::ModifyBufferCreateInfo(GITSKey deviceKey,
   AddBufferUsage(createInfo, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
   m_RayTracingService.ModifyBufferCreateInfo(deviceKey, createInfo);
+  m_DescriptorBufferService.ModifyBufferCreateInfo(deviceKey, createInfo);
+  m_DescriptorHeapService.ModifyBufferCreateInfo(deviceKey, createInfo);
 }
 
 void CaptureCustomizationLayer::CopyBufferCreateInfo(const VkBufferCreateInfo& createInfo,
                                                      BufferCreateInfoCopy& copy) {
   copy.CreateInfo = createInfo;
-  copy.PNextNodes.clear();
-  if (!getPNextStructure(createInfo.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO)) {
-    return;
-  }
-  const void** link = &copy.CreateInfo.pNext;
-  for (auto* node = static_cast<const VkBaseInStructure*>(createInfo.pNext); node != nullptr;
-       node = node->pNext) {
-    const size_t size = GetPNextStructureSize(node->sType);
-    if (size == 0) {
-      // The application's chain may be read-only, so it is not modified in place.
-      GITS_ASSERT(size != 0, "VkBufferCreateInfo: pNext structure " +
-                                 std::to_string(static_cast<uint32_t>(node->sType)) +
-                                 " is unknown to GITS and precedes VkBufferUsageFlags2CreateInfo, "
-                                 "so GITS cannot add the buffer usage that recording requires. "
-                                 "Record with a GITS build that supports the structure.");
-      return;
-    }
-    auto& storage = copy.PNextNodes.emplace_back((size + sizeof(uint64_t) - 1) / sizeof(uint64_t));
-    std::memcpy(storage.data(), node, size);
-    *link = storage.data();
-    if (node->sType == VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO) {
-      return;
-    }
-    link = reinterpret_cast<const void**>(
-        &reinterpret_cast<VkBaseInStructure*>(storage.data())->pNext);
-  }
+  copy.CreateInfo.pNext =
+      copy.PNext.Copy(createInfo.pNext, VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO);
 }
 
-void CaptureCustomizationLayer::ModifyImageCreateInfo(VkImageCreateInfo& createInfo) {
+void CaptureCustomizationLayer::ModifyImageCreateInfo(GITSKey deviceKey,
+                                                      VkImageCreateInfo& createInfo) {
   if (!isBitSet(createInfo.usage, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)) {
     createInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   }
+  m_DescriptorBufferService.ModifyImageCreateInfo(deviceKey, createInfo);
+  m_DescriptorHeapService.ModifyImageCreateInfo(deviceKey, createInfo);
 }
 
 // Requirements queried from a create info instead of a handle bypass the modifications GITS applies
 // on resource creation, so the application would size its allocations for a resource it never gets
 void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
-    HandleArgument<VkDevice>& device, PointerArgument<VkDeviceBufferMemoryRequirements>& pInfo) {
+    GITSKey deviceKey, PointerArgument<VkDeviceBufferMemoryRequirements>& pInfo) {
   if (!pInfo.Value || !pInfo.Value->pCreateInfo) {
     return;
   }
 
   CopyBufferCreateInfo(*pInfo.Value->pCreateInfo, s_BufferCreateInfo);
-  ModifyBufferCreateInfo(device.Key, s_BufferCreateInfo.CreateInfo);
+  ModifyBufferCreateInfo(deviceKey, s_BufferCreateInfo.CreateInfo);
 
   s_BufferMemoryRequirementsInfo = *pInfo.Value;
   s_BufferMemoryRequirementsInfo.pCreateInfo = &s_BufferCreateInfo.CreateInfo;
@@ -466,13 +455,13 @@ void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
 }
 
 void CaptureCustomizationLayer::PatchMemoryRequirementsInfo(
-    PointerArgument<VkDeviceImageMemoryRequirements>& pInfo) {
+    GITSKey deviceKey, PointerArgument<VkDeviceImageMemoryRequirements>& pInfo) {
   if (!pInfo.Value || !pInfo.Value->pCreateInfo) {
     return;
   }
 
   s_ImageCreateInfo = *pInfo.Value->pCreateInfo;
-  ModifyImageCreateInfo(s_ImageCreateInfo);
+  ModifyImageCreateInfo(deviceKey, s_ImageCreateInfo);
 
   s_ImageMemoryRequirementsInfo = *pInfo.Value;
   s_ImageMemoryRequirementsInfo.pCreateInfo = &s_ImageCreateInfo;
@@ -490,27 +479,27 @@ void CaptureCustomizationLayer::Pre(vkCreateBufferCommand& command) {
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceBufferMemoryRequirementsCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_device, command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceBufferMemoryRequirementsKHRCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_device, command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceImageMemoryRequirementsCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceImageMemoryRequirementsKHRCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceImageSparseMemoryRequirementsCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Pre(vkGetDeviceImageSparseMemoryRequirementsKHRCommand& command) {
-  PatchMemoryRequirementsInfo(command.m_pInfo);
+  PatchMemoryRequirementsInfo(command.m_device.Key, command.m_pInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateBufferCommand& command) {
@@ -519,6 +508,8 @@ void CaptureCustomizationLayer::Post(vkCreateBufferCommand& command) {
   }
 
   m_RayTracingService.OnPostCreateBuffer(command);
+  m_DescriptorBufferService.OnPostCreateBuffer(command);
+  m_DescriptorHeapService.OnPostCreateBuffer(command);
 }
 
 void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
@@ -526,7 +517,63 @@ void CaptureCustomizationLayer::Pre(vkCreateImageCommand& command) {
     return;
   }
 
-  ModifyImageCreateInfo(*command.m_pCreateInfo.Value);
+  s_ImageCreateCommandInfo = *command.m_pCreateInfo.Value;
+  command.m_pCreateInfo.Value = &s_ImageCreateCommandInfo;
+  ModifyImageCreateInfo(command.m_device.Key, s_ImageCreateCommandInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateImageViewCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  s_ImageViewCreateCommandInfo = *command.m_pCreateInfo.Value;
+  command.m_pCreateInfo.Value = &s_ImageViewCreateCommandInfo;
+  m_DescriptorBufferService.ModifyImageViewCreateInfo(command.m_device.Key,
+                                                      s_ImageViewCreateCommandInfo);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateImageViewCommand& command) {
+  m_DescriptorBufferService.OnPostCreateImageView(command);
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateSamplerCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  // Sampler create infos may be reused, so apply recorder modifications to a local copy.
+  s_SamplerCreateCommandInfo = *command.m_pCreateInfo.Value;
+  command.m_pCreateInfo.Value = &s_SamplerCreateCommandInfo;
+
+  m_DescriptorBufferService.ModifySamplerCreateInfo(command.m_device.Key,
+                                                    s_SamplerCreateCommandInfo);
+}
+
+void CaptureCustomizationLayer::Post(vkCreateSamplerCommand& command) {
+  m_DescriptorBufferService.OnPostCreateSampler(command);
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateAccelerationStructureKHRCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  s_AccelerationStructureCreateCommandInfo = *command.m_pCreateInfo.Value;
+  command.m_pCreateInfo.Value = &s_AccelerationStructureCreateCommandInfo;
+  m_DescriptorBufferService.ModifyAccelerationStructureCreateInfo(
+      command.m_device.Key, s_AccelerationStructureCreateCommandInfo);
+}
+
+void CaptureCustomizationLayer::Pre(vkCreateAccelerationStructure2KHRCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  s_AccelerationStructureCreate2CommandInfo = *command.m_pCreateInfo.Value;
+  command.m_pCreateInfo.Value = &s_AccelerationStructureCreate2CommandInfo;
+  m_DescriptorBufferService.ModifyAccelerationStructureCreateInfo(
+      command.m_device.Key, s_AccelerationStructureCreate2CommandInfo);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateInstanceCommand& command) {
@@ -553,6 +600,9 @@ void CaptureCustomizationLayer::Post(vkCreateImageCommand& command) {
   if (command.m_Return.Value != VK_SUCCESS) {
     return;
   }
+
+  m_DescriptorBufferService.OnPostCreateImage(command);
+  m_DescriptorHeapService.OnPostCreateImage(command);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateSwapchainKHRCommand& command) {
@@ -588,6 +638,8 @@ void CaptureCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
   }
 
   m_RayTracingService.OnPreCreateDevice(command);
+  m_DescriptorBufferService.OnPreCreateDevice(command);
+  m_DescriptorHeapService.OnPreCreateDevice(command);
 
   s_DeviceCreateInfo = {};
 #ifdef GITS_PLATFORM_WINDOWS
@@ -639,6 +691,8 @@ void CaptureCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   }
 
   m_RayTracingService.OnPostCreateDevice(command);
+  m_DescriptorBufferService.OnPostCreateDevice(command);
+  m_DescriptorHeapService.OnPostCreateDevice(command);
 }
 
 void CaptureCustomizationLayer::Post(vkAllocateCommandBuffersCommand& command) {
@@ -681,6 +735,8 @@ void CaptureCustomizationLayer::Pre(vkAllocateMemoryCommand& command) {
   command.m_pAllocateInfo.Value = &s_AllocateInfo.AllocateInfoModified;
 
   m_RayTracingService.OnPreAllocateMemory(command);
+  m_DescriptorBufferService.OnPreAllocateMemory(command);
+  m_DescriptorHeapService.OnPreAllocateMemory(command);
 
   auto& mapTrackingService = m_Manager.GetMapTrackingService();
   if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
@@ -706,6 +762,8 @@ void CaptureCustomizationLayer::Post(vkAllocateMemoryCommand& command) {
                                           s_AllocateInfo.AllocateInfoPtr->allocationSize);
 
   m_RayTracingService.OnPostAllocateMemory(command);
+  m_DescriptorBufferService.OnPostAllocateMemory(command);
+  m_DescriptorHeapService.OnPostAllocateMemory(command);
 
   if (!mapTrackingService.IsMemoryMappable(command.m_device.Key,
                                            s_AllocateInfo.AllocateInfoModified.memoryTypeIndex)) {
@@ -921,6 +979,7 @@ void CaptureCustomizationLayer::Post(vkCreateAccelerationStructureKHRCommand& co
   }
 
   m_RayTracingService.OnPostCreateAccelerationStructureKHR(command);
+  m_DescriptorBufferService.OnPostCreateAccelerationStructureKHR(command);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateAccelerationStructure2KHRCommand& command) {
@@ -930,6 +989,11 @@ void CaptureCustomizationLayer::Post(vkCreateAccelerationStructure2KHRCommand& c
   }
 
   m_RayTracingService.OnPostCreateAccelerationStructure2KHR(command);
+  m_DescriptorBufferService.OnPostCreateAccelerationStructure2KHR(command);
+}
+
+void CaptureCustomizationLayer::Post(vkRegisterCustomBorderColorEXTCommand& command) {
+  m_DescriptorHeapService.OnPostRegisterCustomBorderColor(command);
 }
 
 void CaptureCustomizationLayer::Post(vkCreateMicromapEXTCommand& command) {

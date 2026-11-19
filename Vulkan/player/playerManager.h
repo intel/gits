@@ -31,6 +31,7 @@ namespace gits {
 namespace vulkan {
 
 class PluginService;
+class MultithreadedObjectCreationService;
 
 class PlayerManager : public gits::noncopyable {
 public:
@@ -152,6 +153,10 @@ public:
     return m_DeviceDiagnosticService;
   }
 
+  MultithreadedObjectCreationService* GetMultithreadedObjectCreationService() const {
+    return m_MultithreadedObjectCreationService.get();
+  }
+
 private:
   PlayerManager();
 
@@ -159,6 +164,7 @@ private:
   static PlayerManager* m_Instance;
   PlayerLayerManager m_LayerManager;
   std::unique_ptr<PluginService> m_PluginService;
+  std::unique_ptr<MultithreadedObjectCreationService> m_MultithreadedObjectCreationService;
   bool m_ExecuteCommands{true};
   dl::SharedObject m_Lib{nullptr};
   PFN_vkGetInstanceProcAddr m_GetInstanceProcAddr{nullptr};

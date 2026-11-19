@@ -20,10 +20,11 @@ namespace vulkan {
 void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
-                       VkWriteDescriptorSet& s) {
+                       VkWriteDescriptorSet& s,
+                       const HandleResolver& resolver) {
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
-    s.dstSet = key ? reinterpret_cast<VkDescriptorSet>(HandleMapService::Get().GetHandle(key))
+    s.dstSet = key ? reinterpret_cast<VkDescriptorSet>(resolver.Resolve<VkDescriptorSet>(key))
                    : VK_NULL_HANDLE;
   }
   if (s.descriptorCount == 0) {
@@ -36,16 +37,15 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
           s.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
         if (idx < keys.size()) {
           GITSKey key = keys[idx++];
-          elem.sampler = key ? reinterpret_cast<VkSampler>(HandleMapService::Get().GetHandle(key))
-                             : VK_NULL_HANDLE;
+          elem.sampler =
+              key ? reinterpret_cast<VkSampler>(resolver.Resolve<VkSampler>(key)) : VK_NULL_HANDLE;
         }
       }
       if (s.descriptorType != VK_DESCRIPTOR_TYPE_SAMPLER) {
         if (idx < keys.size()) {
           GITSKey key = keys[idx++];
-          elem.imageView =
-              key ? reinterpret_cast<VkImageView>(HandleMapService::Get().GetHandle(key))
-                  : VK_NULL_HANDLE;
+          elem.imageView = key ? reinterpret_cast<VkImageView>(resolver.Resolve<VkImageView>(key))
+                               : VK_NULL_HANDLE;
         }
       }
     }
@@ -55,8 +55,8 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
       auto& elem = const_cast<VkDescriptorBufferInfo&>(s.pBufferInfo[elemIdx]);
       if (idx < keys.size()) {
         GITSKey key = keys[idx++];
-        elem.buffer = key ? reinterpret_cast<VkBuffer>(HandleMapService::Get().GetHandle(key))
-                          : VK_NULL_HANDLE;
+        elem.buffer =
+            key ? reinterpret_cast<VkBuffer>(resolver.Resolve<VkBuffer>(key)) : VK_NULL_HANDLE;
       }
     }
   }
@@ -65,7 +65,7 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
     handleData.resize(handleData.size() + s.descriptorCount);
     for (uint32_t handleIdx = 0; handleIdx < s.descriptorCount && idx < keys.size(); ++handleIdx) {
       GITSKey key = keys[idx++];
-      handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+      handleData[dataOffset + handleIdx] = resolver.Resolve<VkBufferView>(key);
     }
     s.pTexelBufferView = reinterpret_cast<VkBufferView*>(&handleData[dataOffset]);
   }
@@ -74,7 +74,7 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
     handleData.resize(handleData.size() + s.descriptorCount);
     for (uint32_t handleIdx = 0; handleIdx < s.descriptorCount && idx < keys.size(); ++handleIdx) {
       GITSKey key = keys[idx++];
-      handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+      handleData[dataOffset + handleIdx] = resolver.Resolve<VkAccelerationStructureKHR>(key);
     }
     ((VkWriteDescriptorSetAccelerationStructureKHR*)getPNextStructure(
          s.pNext, VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR))
@@ -83,23 +83,23 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
   }
 }
 
-void UpdateHandle(PlayerManager& manager, PointerArgument<VkWriteDescriptorSet>& arg) {
+void UpdateHandle(PointerArgument<VkWriteDescriptorSet>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& arg) {
+void UpdateHandle(ArrayArgument<VkWriteDescriptorSet>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
   }
 }
 
@@ -108,37 +108,38 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkWriteDescriptorSet>& a
 void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
-                       VkPushDescriptorSetInfo& s) {
+                       VkPushDescriptorSetInfo& s,
+                       const HandleResolver& resolver) {
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
-    s.layout = key ? reinterpret_cast<VkPipelineLayout>(HandleMapService::Get().GetHandle(key))
+    s.layout = key ? reinterpret_cast<VkPipelineLayout>(resolver.Resolve<VkPipelineLayout>(key))
                    : VK_NULL_HANDLE;
   }
   if (s.pDescriptorWrites && s.descriptorWriteCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.descriptorWriteCount; ++elemIdx) {
       ResolveHandleKeys(keys, idx, handleData,
-                        const_cast<VkWriteDescriptorSet&>(s.pDescriptorWrites[elemIdx]));
+                        const_cast<VkWriteDescriptorSet&>(s.pDescriptorWrites[elemIdx]), resolver);
     }
   }
 }
 
-void UpdateHandle(PlayerManager& manager, PointerArgument<VkPushDescriptorSetInfo>& arg) {
+void UpdateHandle(PointerArgument<VkPushDescriptorSetInfo>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager, ArrayArgument<VkPushDescriptorSetInfo>& arg) {
+void UpdateHandle(ArrayArgument<VkPushDescriptorSetInfo>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
   }
 }
 
@@ -147,9 +148,10 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkPushDescriptorSetInfo>
 void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
-                       VkImageCreateInfo& s) {}
+                       VkImageCreateInfo& s,
+                       const HandleResolver& resolver) {}
 
-void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageCreateInfo>& arg) {
+void UpdateHandle(PointerArgument<VkImageCreateInfo>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
@@ -157,11 +159,11 @@ void UpdateHandle(PlayerManager& manager, PointerArgument<VkImageCreateInfo>& ar
   if (arg.Value->pNext) {
     arg.HandleData.reserve(arg.HandleKeys.size());
   }
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
-  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager, ArrayArgument<VkImageCreateInfo>& arg) {
+void UpdateHandle(ArrayArgument<VkImageCreateInfo>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
@@ -173,8 +175,8 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkImageCreateInfo>& arg)
     }
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
-    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext);
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
   }
 }
 
@@ -183,14 +185,206 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<VkImageCreateInfo>& arg)
 void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
-                       VkRayTracingPipelineCreateInfoKHR& s) {
+                       VkBufferCreateInfo& s,
+                       const HandleResolver& resolver) {}
+
+void UpdateHandle(PointerArgument<VkBufferCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
+}
+
+void UpdateHandle(ArrayArgument<VkBufferCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
+  }
+}
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkImageViewCreateInfo& s,
+                       const HandleResolver& resolver) {
+  if (idx < keys.size()) {
+    GITSKey key = keys[idx++];
+    s.image = key ? reinterpret_cast<VkImage>(resolver.Resolve<VkImage>(key)) : VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PointerArgument<VkImageViewCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
+}
+
+void UpdateHandle(ArrayArgument<VkImageViewCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
+  }
+}
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkSamplerCreateInfo& s,
+                       const HandleResolver& resolver) {}
+
+void UpdateHandle(PointerArgument<VkSamplerCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
+}
+
+void UpdateHandle(ArrayArgument<VkSamplerCreateInfo>& arg, const HandleResolver& resolver) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
+  }
+}
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkAccelerationStructureCreateInfoKHR& s,
+                       const HandleResolver& resolver) {
+  if (idx < keys.size()) {
+    GITSKey key = keys[idx++];
+    s.buffer = key ? reinterpret_cast<VkBuffer>(resolver.Resolve<VkBuffer>(key)) : VK_NULL_HANDLE;
+  }
+}
+
+void UpdateHandle(PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg,
+                  const HandleResolver& resolver) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
+}
+
+void UpdateHandle(ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg,
+                  const HandleResolver& resolver) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
+  }
+}
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkAccelerationStructureCreateInfo2KHR& s,
+                       const HandleResolver& resolver) {}
+
+void UpdateHandle(PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg,
+                  const HandleResolver& resolver) {
+  if (!arg.Value || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  if (arg.Value->pNext) {
+    arg.HandleData.reserve(arg.HandleKeys.size());
+  }
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
+}
+
+void UpdateHandle(ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg,
+                  const HandleResolver& resolver) {
+  if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
+    return;
+  }
+  uint32_t idx = 0;
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    if (arg.Value[i].pNext) {
+      arg.HandleData.reserve(arg.HandleKeys.size());
+      break;
+    }
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+void ResolveHandleKeys(const std::vector<GITSKey>& keys,
+                       uint32_t& idx,
+                       std::vector<uint64_t>& handleData,
+                       VkRayTracingPipelineCreateInfoKHR& s,
+                       const HandleResolver& resolver) {
 
   if (s.pStages && s.stageCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.stageCount; ++elemIdx) {
       auto& elem = const_cast<VkPipelineShaderStageCreateInfo&>(s.pStages[elemIdx]);
       if (idx < keys.size()) {
         GITSKey key = keys[idx++];
-        elem.module = key ? reinterpret_cast<VkShaderModule>(HandleMapService::Get().GetHandle(key))
+        elem.module = key ? reinterpret_cast<VkShaderModule>(resolver.Resolve<VkShaderModule>(key))
                           : VK_NULL_HANDLE;
       }
     }
@@ -204,48 +398,50 @@ void ResolveHandleKeys(const std::vector<GITSKey>& keys,
       for (uint32_t handleIdx = 0; handleIdx < elem.libraryCount && idx < keys.size();
            ++handleIdx) {
         GITSKey key = keys[idx++];
-        handleData[dataOffset + handleIdx] = key ? HandleMapService::Get().GetHandle(key) : 0;
+        handleData[dataOffset + handleIdx] = resolver.Resolve<VkPipeline>(key);
       }
       elem.pLibraries = reinterpret_cast<VkPipeline*>(&handleData[dataOffset]);
     }
   }
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
-    s.layout = key ? reinterpret_cast<VkPipelineLayout>(HandleMapService::Get().GetHandle(key))
+    s.layout = key ? reinterpret_cast<VkPipelineLayout>(resolver.Resolve<VkPipelineLayout>(key))
                    : VK_NULL_HANDLE;
   }
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
     s.basePipelineHandle =
-        key ? reinterpret_cast<VkPipeline>(HandleMapService::Get().GetHandle(key)) : VK_NULL_HANDLE;
+        key ? reinterpret_cast<VkPipeline>(resolver.Resolve<VkPipeline>(key)) : VK_NULL_HANDLE;
   }
 }
 
-void UpdateHandle(PlayerManager& manager, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+void UpdateHandle(PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg,
+                  const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
-  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg) {
+void UpdateHandle(ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg,
+                  const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
-    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext);
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void UpdateOutputHandle(PlayerManager& manager, HandleArrayOutputArgument<VkPhysicalDevice>& arg) {
+void UpdateOutputHandle(HandleArrayOutputArgument<VkPhysicalDevice>& arg) {
   if (!arg.Value || arg.Size == 0) {
     return;
   }
@@ -281,25 +477,27 @@ namespace {
 
 void ResolveAsBuildPairKeys(const std::vector<GITSKey>& keys,
                             uint32_t& idx,
-                            VkAccelerationStructureBuildGeometryInfoKHR& s) {
+                            VkAccelerationStructureBuildGeometryInfoKHR& s,
+                            const HandleResolver& resolver) {
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
-    s.srcAccelerationStructure =
-        key ? reinterpret_cast<VkAccelerationStructureKHR>(HandleMapService::Get().GetHandle(key))
-            : VK_NULL_HANDLE;
+    s.srcAccelerationStructure = key ? reinterpret_cast<VkAccelerationStructureKHR>(
+                                           resolver.Resolve<VkAccelerationStructureKHR>(key))
+                                     : VK_NULL_HANDLE;
   }
   if (idx < keys.size()) {
     GITSKey key = keys[idx++];
-    s.dstAccelerationStructure =
-        key ? reinterpret_cast<VkAccelerationStructureKHR>(HandleMapService::Get().GetHandle(key))
-            : VK_NULL_HANDLE;
+    s.dstAccelerationStructure = key ? reinterpret_cast<VkAccelerationStructureKHR>(
+                                           resolver.Resolve<VkAccelerationStructureKHR>(key))
+                                     : VK_NULL_HANDLE;
   }
 }
 
 void ResolveAsBuildPNextKeys(const std::vector<GITSKey>& keys,
                              uint32_t& idx,
                              std::vector<uint64_t>& handleData,
-                             VkAccelerationStructureBuildGeometryInfoKHR& s) {
+                             VkAccelerationStructureBuildGeometryInfoKHR& s,
+                             const HandleResolver& resolver) {
   for (uint32_t i = 0; i < s.geometryCount; ++i) {
     const VkAccelerationStructureGeometryKHR* geometry = nullptr;
     if (s.pGeometries) {
@@ -310,9 +508,9 @@ void ResolveAsBuildPNextKeys(const std::vector<GITSKey>& keys,
     if (!geometry || geometry->geometryType != VK_GEOMETRY_TYPE_TRIANGLES_KHR) {
       continue;
     }
-    ResolvePNextHandleKeys(keys, idx, handleData, geometry->geometry.triangles.pNext);
+    ResolvePNextHandleKeys(keys, idx, handleData, geometry->geometry.triangles.pNext, resolver);
   }
-  ResolvePNextHandleKeys(keys, idx, handleData, s.pNext);
+  ResolvePNextHandleKeys(keys, idx, handleData, s.pNext, resolver);
 }
 
 } // namespace
@@ -320,40 +518,40 @@ void ResolveAsBuildPNextKeys(const std::vector<GITSKey>& keys,
 void ResolveHandleKeys(const std::vector<GITSKey>& keys,
                        uint32_t& idx,
                        std::vector<uint64_t>& handleData,
-                       VkAccelerationStructureBuildGeometryInfoKHR& s) {
-  ResolveAsBuildPairKeys(keys, idx, s);
-  ResolveAsBuildPNextKeys(keys, idx, handleData, s);
+                       VkAccelerationStructureBuildGeometryInfoKHR& s,
+                       const HandleResolver& resolver) {
+  ResolveAsBuildPairKeys(keys, idx, s, resolver);
+  ResolveAsBuildPNextKeys(keys, idx, handleData, s, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager,
-                  PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+void UpdateHandle(PointerArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg,
+                  const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
 }
 
-void UpdateHandle(PlayerManager& manager,
-                  ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg) {
+void UpdateHandle(ArrayArgument<VkAccelerationStructureBuildGeometryInfoKHR>& arg,
+                  const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
   uint32_t idx = 0;
   arg.HandleData.reserve(arg.HandleKeys.size());
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveAsBuildPairKeys(arg.HandleKeys, idx, arg.Value[i]);
+    ResolveAsBuildPairKeys(arg.HandleKeys, idx, arg.Value[i], resolver);
   }
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveAsBuildPNextKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+    ResolveAsBuildPNextKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void UpdateOutputHandle(PlayerManager& manager,
-                        ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
+void UpdateOutputHandle(ArrayArgument<VkPhysicalDeviceGroupProperties>& arg) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }

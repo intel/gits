@@ -1875,6 +1875,11 @@ Configuration:
             Description:
               Enable VK_EXT_device_fault during replay and report device fault addresses and
               vendor diagnostics when the device is lost.
+          - Name: multithreadedShaderCompilation
+            Type: bool
+            Default: true
+            Description:
+              Use a thread pool to create pipelines concurrently in a background.
           - Name: Portability
             Type: Group
             Description:
@@ -2170,8 +2175,9 @@ Configuration:
             Default: false
             Arguments: [forceMultithreadedPipelineCompilation]
             Description:
-              Forces pipeline objects to be created concurrently on multiple
+              DEPRECATED Forces pipeline objects to be created concurrently on multiple
               threads.
+            Deprecated: true
           - Name: execCmdBuffsBeforeQueueSubmit
             Type: bool
             Default: false

@@ -10,8 +10,11 @@
 
 #include "layerAuto.h"
 #include "orderingRecorder.h"
+#include "pNextChainCopy.h"
 #include "vulkanHeader2.h"
 #include "rayTracingCaptureService.h"
+#include "descriptorBufferCaptureService.h"
+#include "descriptorHeapCaptureService.h"
 #include <optional>
 
 namespace gits {
@@ -25,7 +28,9 @@ public:
       : Layer("CaptureCustomization"),
         m_Manager(manager),
         m_Recorder(recorder),
-        m_RayTracingService(manager) {}
+        m_RayTracingService(manager),
+        m_DescriptorBufferService(manager),
+        m_DescriptorHeapService(manager) {}
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
   void Pre(vkCreateWin32SurfaceKHRCommand& command) override;
@@ -68,6 +73,12 @@ public:
   void Post(vkCreateBufferCommand& command) override;
   void Pre(vkCreateImageCommand& command) override;
   void Post(vkCreateImageCommand& command) override;
+  void Pre(vkCreateImageViewCommand& command) override;
+  void Post(vkCreateImageViewCommand& command) override;
+  void Pre(vkCreateSamplerCommand& command) override;
+  void Post(vkCreateSamplerCommand& command) override;
+  void Pre(vkCreateAccelerationStructureKHRCommand& command) override;
+  void Pre(vkCreateAccelerationStructure2KHRCommand& command) override;
 
   void Post(vkAllocateCommandBuffersCommand& command) override;
 
@@ -130,6 +141,7 @@ public:
 
   void Post(vkCreateAccelerationStructureKHRCommand& command) override;
   void Post(vkCreateAccelerationStructure2KHRCommand& command) override;
+  void Post(vkRegisterCustomBorderColorEXTCommand& command) override;
   void Post(vkCreateMicromapEXTCommand& command) override;
   void Pre(vkCreateRayTracingPipelinesKHRCommand& command) override;
   void Post(vkCreateRayTracingPipelinesKHRCommand& command) override;
@@ -143,11 +155,12 @@ public:
 
 private:
   void ModifyBufferCreateInfo(GITSKey deviceKey, VkBufferCreateInfo& createInfo);
-  void ModifyImageCreateInfo(VkImageCreateInfo& createInfo);
+  void ModifyImageCreateInfo(GITSKey deviceKey, VkImageCreateInfo& createInfo);
   // The queried create info has to match the one GITS creates the resource with
-  void PatchMemoryRequirementsInfo(HandleArgument<VkDevice>& device,
+  void PatchMemoryRequirementsInfo(GITSKey deviceKey,
                                    PointerArgument<VkDeviceBufferMemoryRequirements>& pInfo);
-  void PatchMemoryRequirementsInfo(PointerArgument<VkDeviceImageMemoryRequirements>& pInfo);
+  void PatchMemoryRequirementsInfo(GITSKey deviceKey,
+                                   PointerArgument<VkDeviceImageMemoryRequirements>& pInfo);
 
   struct AllocateInfo {
     // Pointer to the original data
@@ -180,7 +193,7 @@ private:
   // usage cannot be copied, which fails the recording.
   struct BufferCreateInfoCopy {
     VkBufferCreateInfo CreateInfo{};
-    std::vector<std::vector<uint64_t>> PNextNodes;
+    PNextChainCopy PNext;
   };
   static void CopyBufferCreateInfo(const VkBufferCreateInfo& createInfo,
                                    BufferCreateInfoCopy& copy);
@@ -193,9 +206,18 @@ private:
   static thread_local VkDeviceImageMemoryRequirements s_ImageMemoryRequirementsInfo;
   static thread_local VkImageCreateInfo s_ImageCreateInfo;
 
+  static thread_local VkImageCreateInfo s_ImageCreateCommandInfo;
+  static thread_local VkImageViewCreateInfo s_ImageViewCreateCommandInfo;
+  static thread_local VkSamplerCreateInfo s_SamplerCreateCommandInfo;
+  static thread_local VkAccelerationStructureCreateInfoKHR s_AccelerationStructureCreateCommandInfo;
+  static thread_local VkAccelerationStructureCreateInfo2KHR
+      s_AccelerationStructureCreate2CommandInfo;
+
   CaptureManager& m_Manager;
   stream::OrderingRecorder& m_Recorder;
   RayTracingCaptureService m_RayTracingService;
+  DescriptorBufferCaptureService m_DescriptorBufferService;
+  DescriptorHeapCaptureService m_DescriptorHeapService;
 }; // class CaptureCustomizationLayer
 
 } // namespace vulkan

@@ -119,6 +119,117 @@ void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkBufferCreateInfo& s) {}
+
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkBufferCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkBufferCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageViewCreateInfo& s) {
+  keys.push_back(HandleMapService::Get().GetKeyLenient(s.image));
+}
+
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageViewCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageViewCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkSamplerCreateInfo& s) {}
+
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkSamplerCreateInfo>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkSamplerCreateInfo>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkAccelerationStructureCreateInfoKHR& s) {
+  keys.push_back(HandleMapService::Get().GetKeyLenient(s.buffer));
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkAccelerationStructureCreateInfo2KHR& s) {
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  if (!arg.Value) {
+    return;
+  }
+  CollectHandleKeys(arg.HandleKeys, *arg.Value);
+  CollectPNextHandleKeys(arg.HandleKeys, arg.Value->pNext);
+}
+
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg) {
+  if (!arg.Value || arg.Size == 0) {
+    return;
+  }
+  for (uint32_t i = 0; i < arg.Size; ++i) {
+    CollectHandleKeys(arg.HandleKeys, arg.Value[i]);
+    CollectPNextHandleKeys(arg.HandleKeys, arg.Value[i].pNext);
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkRayTracingPipelineCreateInfoKHR& s) {
   if (s.pStages && s.stageCount > 0) {
     for (uint32_t elemIdx = 0; elemIdx < s.stageCount; ++elemIdx) {

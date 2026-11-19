@@ -16,7 +16,7 @@ namespace vulkan {
 pnext_handle_structs = collect_pnext_handle_structs(structures)
 %>\
 % if pnext_handle_structs:
-void ResolvePNextHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vector<uint64_t>& handleData, const void* pNext) {
+void ResolvePNextHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vector<uint64_t>& handleData, const void* pNext, const HandleResolver& resolver) {
   auto* node = reinterpret_cast<VkBaseOutStructure*>(const_cast<void*>(pNext));
   while (node) {
     switch (node->sType) {
@@ -59,11 +59,11 @@ needs_handle_data = entries_need_handle_data(handle_members)
 % if define:
 #ifdef ${define}
 % endif
-void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vector<uint64_t>& handleData, ${struct_name}& s) {
+void ResolveHandleKeys(const std::vector<GITSKey>& keys, uint32_t& idx, std::vector<uint64_t>& handleData, ${struct_name}& s, const HandleResolver& resolver) {
 ${generate_child_handle_resolve(handle_members, 's', 0)}
 }
 
-void UpdateHandle(PlayerManager& manager, PointerArgument<${struct_name}>& arg) {
+void UpdateHandle(PointerArgument<${struct_name}>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.HandleKeys.empty()) {
     return;
   }
@@ -75,13 +75,13 @@ void UpdateHandle(PlayerManager& manager, PointerArgument<${struct_name}>& arg) 
     arg.HandleData.reserve(arg.HandleKeys.size());
   }
 % endif
-  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value);
+  ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, *arg.Value, resolver);
 % if needs_pnext_resolve:
-  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext);
+  ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value->pNext, resolver);
 % endif
 }
 
-void UpdateHandle(PlayerManager& manager, ArrayArgument<${struct_name}>& arg) {
+void UpdateHandle(ArrayArgument<${struct_name}>& arg, const HandleResolver& resolver) {
   if (!arg.Value || arg.Size == 0 || arg.HandleKeys.empty()) {
     return;
   }
@@ -97,9 +97,9 @@ void UpdateHandle(PlayerManager& manager, ArrayArgument<${struct_name}>& arg) {
   }
 % endif
   for (uint32_t i = 0; i < arg.Size; ++i) {
-    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i]);
+    ResolveHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i], resolver);
 % if needs_pnext_resolve:
-    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext);
+    ResolvePNextHandleKeys(arg.HandleKeys, idx, arg.HandleData, arg.Value[i].pNext, resolver);
 % endif
   }
 }

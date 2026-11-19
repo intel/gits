@@ -27,6 +27,30 @@ void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageCreateInfo& s);
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageCreateInfo>& arg);
 void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageCreateInfo>& arg);
 
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkBufferCreateInfo& s);
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkBufferCreateInfo>& arg);
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkBufferCreateInfo>& arg);
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkImageViewCreateInfo& s);
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkImageViewCreateInfo>& arg);
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkImageViewCreateInfo>& arg);
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkSamplerCreateInfo& s);
+void UpdateHandle(CaptureManager& manager, PointerArgument<VkSamplerCreateInfo>& arg);
+void UpdateHandle(CaptureManager& manager, ArrayArgument<VkSamplerCreateInfo>& arg);
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkAccelerationStructureCreateInfoKHR& s);
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureCreateInfoKHR>& arg);
+
+void CollectHandleKeys(std::vector<GITSKey>& keys, const VkAccelerationStructureCreateInfo2KHR& s);
+void UpdateHandle(CaptureManager& manager,
+                  PointerArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+void UpdateHandle(CaptureManager& manager,
+                  ArrayArgument<VkAccelerationStructureCreateInfo2KHR>& arg);
+
 void CollectHandleKeys(std::vector<GITSKey>& keys, const VkRayTracingPipelineCreateInfoKHR& s);
 void UpdateHandle(CaptureManager& manager, PointerArgument<VkRayTracingPipelineCreateInfoKHR>& arg);
 void UpdateHandle(CaptureManager& manager, ArrayArgument<VkRayTracingPipelineCreateInfoKHR>& arg);

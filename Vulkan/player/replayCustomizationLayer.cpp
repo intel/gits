@@ -38,6 +38,18 @@ bool SkipAccelerationStructureWork() {
   return Configurator::Get().vulkan.player.skipAllRayTracing;
 }
 
+bool HasDeviceExtension(const VkDeviceCreateInfo* createInfo, const char* extensionName) {
+  if (!createInfo || !extensionName) {
+    return false;
+  }
+  for (uint32_t i = 0; i < createInfo->enabledExtensionCount; ++i) {
+    if (std::strcmp(createInfo->ppEnabledExtensionNames[i], extensionName) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // vk.xml gives VkDeviceOrHostAddress no selector, so the coder byte-copies the union and the
 // capture-process hostAddress these entry points use reaches the player verbatim. Call sites guard
 // this with CALL_ONCE - see the host-address section of docs/documentation/Vulkan/Overview.md.
@@ -115,6 +127,38 @@ void ReplayCustomizationLayer::Post(vkCreateDeviceCommand& command) {
   if (command.m_pCreateInfo.Value) {
     memoryInfo.DeviceGroupSize = GetDeviceGroupSize(*command.m_pCreateInfo.Value);
   }
+  if (HasDeviceExtension(command.m_pCreateInfo.Value, VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME)) {
+    auto& dt = m_Manager.GetInstanceDispatchTable(command.m_physicalDevice.Value);
+    auto vkGetPhysicalDeviceProperties2Unified = dt.vkGetPhysicalDeviceProperties2
+                                                     ? dt.vkGetPhysicalDeviceProperties2
+                                                     : dt.vkGetPhysicalDeviceProperties2KHR;
+    GITS_ASSERT(vkGetPhysicalDeviceProperties2Unified,
+                "VK_EXT_descriptor_buffer is enabled but physical device properties cannot be "
+                "queried.");
+
+    memoryInfo.DescriptorBufferProperties.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_BUFFER_PROPERTIES_EXT;
+    VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                                           &memoryInfo.DescriptorBufferProperties};
+    vkGetPhysicalDeviceProperties2Unified(command.m_physicalDevice.Value, &properties);
+    memoryInfo.DescriptorBufferEnabled = true;
+  }
+  if (HasDeviceExtension(command.m_pCreateInfo.Value, VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME)) {
+    auto& dt = m_Manager.GetInstanceDispatchTable(command.m_physicalDevice.Value);
+    auto vkGetPhysicalDeviceProperties2Unified = dt.vkGetPhysicalDeviceProperties2
+                                                     ? dt.vkGetPhysicalDeviceProperties2
+                                                     : dt.vkGetPhysicalDeviceProperties2KHR;
+    GITS_ASSERT(vkGetPhysicalDeviceProperties2Unified,
+                "VK_EXT_descriptor_heap is enabled but physical device properties cannot be "
+                "queried.");
+
+    memoryInfo.DescriptorHeapProperties.sType =
+        VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT;
+    VkPhysicalDeviceProperties2 properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+                                           &memoryInfo.DescriptorHeapProperties};
+    vkGetPhysicalDeviceProperties2Unified(command.m_physicalDevice.Value, &properties);
+    memoryInfo.DescriptorHeapEnabled = true;
+  }
   {
     std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
     m_DeviceMemoryInfos[device] = memoryInfo;
@@ -129,6 +173,148 @@ void ReplayCustomizationLayer::Pre(vkDestroyDeviceCommand& command) {
   m_RayTracingService.OnPreDestroyDevice(command);
   std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
   m_DeviceMemoryInfos.erase(command.m_device.Value);
+}
+
+bool ReplayCustomizationLayer::GetDescriptorBufferProperties(
+    VkDevice device, VkPhysicalDeviceDescriptorBufferPropertiesEXT& properties) {
+  std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
+  auto it = m_DeviceMemoryInfos.find(device);
+  if (it == m_DeviceMemoryInfos.end() || !it->second.DescriptorBufferEnabled) {
+    return false;
+  }
+  properties = it->second.DescriptorBufferProperties;
+  return true;
+}
+
+bool ReplayCustomizationLayer::GetDescriptorHeapProperties(
+    VkDevice device, VkPhysicalDeviceDescriptorHeapPropertiesEXT& properties) {
+  std::lock_guard<std::mutex> lock(m_DeviceMemoryInfosMutex);
+  auto it = m_DeviceMemoryInfos.find(device);
+  if (it == m_DeviceMemoryInfos.end() || !it->second.DescriptorHeapEnabled) {
+    return false;
+  }
+  properties = it->second.DescriptorHeapProperties;
+  return true;
+}
+
+void ReplayCustomizationLayer::ValidateOpaqueCaptureDescriptorDataSize(uint32_t recordedSize,
+                                                                       size_t replaySize,
+                                                                       const char* commandName) {
+  GITS_ASSERT(recordedSize == replaySize, std::string(commandName) +
+                                              ": recorded opaque capture descriptor data size (" +
+                                              std::to_string(recordedSize) +
+                                              ") differs from the replay physical device size (" +
+                                              std::to_string(replaySize) + ").");
+}
+
+void ReplayCustomizationLayer::ValidateOpaqueCaptureDataSize(size_t recordedSize,
+                                                             size_t replaySize,
+                                                             const char* commandName) {
+  GITS_ASSERT(recordedSize == replaySize, std::string(commandName) +
+                                              ": recorded opaque capture data size (" +
+                                              std::to_string(recordedSize) +
+                                              ") differs from the replay physical device size (" +
+                                              std::to_string(replaySize) + ").");
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateBufferCommand& command) {
+  if (command.m_pCreateInfo.Value &&
+      isBitSet(command.m_pCreateInfo.Value->flags,
+               VK_BUFFER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+                                              properties.bufferCaptureReplayDescriptorDataSize,
+                                              "vkCreateBuffer");
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateImageCommand& command) {
+  if (!command.m_pCreateInfo.Value) {
+    return;
+  }
+
+  if (isBitSet(command.m_pCreateInfo.Value->flags,
+               VK_IMAGE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+                                              properties.imageCaptureReplayDescriptorDataSize,
+                                              "vkCreateImage");
+    }
+  }
+
+  if (command.m_Return.Value == VK_SUCCESS &&
+      isBitSet(command.m_pCreateInfo.Value->flags,
+               VK_IMAGE_CREATE_DESCRIPTOR_HEAP_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorHeapPropertiesEXT properties{};
+    if (GetDescriptorHeapProperties(command.m_device.Value, properties) &&
+        properties.imageCaptureReplayOpaqueDataSize > 0) {
+      const auto* opaqueCreateInfo = static_cast<const VkOpaqueCaptureDataCreateInfoEXT*>(
+          getPNextStructure(command.m_pCreateInfo.Value->pNext,
+                            VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DATA_CREATE_INFO_EXT));
+      GITS_ASSERT(opaqueCreateInfo && opaqueCreateInfo->pData,
+                  "vkCreateImage: descriptor heap capture/replay flag is set but recorded opaque "
+                  "capture data is missing.");
+      ValidateOpaqueCaptureDataSize(opaqueCreateInfo->pData->size,
+                                    properties.imageCaptureReplayOpaqueDataSize, "vkCreateImage");
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateImageViewCommand& command) {
+  if (command.m_pCreateInfo.Value &&
+      isBitSet(command.m_pCreateInfo.Value->flags,
+               VK_IMAGE_VIEW_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+                                              properties.imageViewCaptureReplayDescriptorDataSize,
+                                              "vkCreateImageView");
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateSamplerCommand& command) {
+  if (command.m_pCreateInfo.Value &&
+      isBitSet(command.m_pCreateInfo.Value->flags,
+               VK_SAMPLER_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+                                              properties.samplerCaptureReplayDescriptorDataSize,
+                                              "vkCreateSampler");
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateAccelerationStructureKHRCommand& command) {
+  if (command.m_pCreateInfo.Value &&
+      isBitSet(command.m_pCreateInfo.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(
+          command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+          properties.accelerationStructureCaptureReplayDescriptorDataSize,
+          "vkCreateAccelerationStructureKHR");
+    }
+  }
+}
+
+void ReplayCustomizationLayer::Pre(vkCreateAccelerationStructure2KHRCommand& command) {
+  if (command.m_pCreateInfo.Value &&
+      isBitSet(command.m_pCreateInfo.Value->createFlags,
+               VK_ACCELERATION_STRUCTURE_CREATE_DESCRIPTOR_BUFFER_CAPTURE_REPLAY_BIT_EXT)) {
+    VkPhysicalDeviceDescriptorBufferPropertiesEXT properties{};
+    if (GetDescriptorBufferProperties(command.m_device.Value, properties)) {
+      ValidateOpaqueCaptureDescriptorDataSize(
+          command.m_pCreateInfo.OpaqueCaptureDescriptorDataSize,
+          properties.accelerationStructureCaptureReplayDescriptorDataSize,
+          "vkCreateAccelerationStructure2KHR");
+    }
+  }
 }
 
 void ReplayCustomizationLayer::Post(vkGetDeviceQueueCommand& command) {
