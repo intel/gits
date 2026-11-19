@@ -29,7 +29,9 @@ void BenchmarkLayer::Pre(CreateDXGIFactory2Command& command) {
 }
 
 void BenchmarkLayer::Post(IDXGISwapChainPresentCommand& command) {
-  if (command.Skip || command.m_Result.Value != S_OK || command.m_Flags.Value & DXGI_PRESENT_TEST ||
+  // Present can return a success code such as DXGI_STATUS_OCCLUDED (locked desktop). The frame is
+  // complete, so count it.
+  if (command.Skip || FAILED(command.m_Result.Value) || command.m_Flags.Value & DXGI_PRESENT_TEST ||
       IsStateRestoreKey(command.Key)) {
     return;
   }
@@ -38,7 +40,7 @@ void BenchmarkLayer::Post(IDXGISwapChainPresentCommand& command) {
 }
 
 void BenchmarkLayer::Post(IDXGISwapChain1Present1Command& command) {
-  if (command.Skip || command.m_Result.Value != S_OK ||
+  if (command.Skip || FAILED(command.m_Result.Value) ||
       command.m_PresentFlags.Value & DXGI_PRESENT_TEST || IsStateRestoreKey(command.Key)) {
     return;
   }

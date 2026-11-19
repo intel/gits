@@ -54,4 +54,6 @@ Scalar `Config:` keys can be overridden with `GITS_PLUGIN_*` environment variabl
 
 **Benchmark** measures CPU time between presents. **Statistics** counts API usage. They are complementary, not interchangeable.
 
+`Benchmark`, `StableClockGpuFrameBenchmark` and `GpuCommandBenchmark` count every present that succeeds, including success codes such as `DXGI_STATUS_OCCLUDED`. Replay on a locked desktop returns that code, on screen and offscreen, so the CSV files have the same rows in both modes.
+
 

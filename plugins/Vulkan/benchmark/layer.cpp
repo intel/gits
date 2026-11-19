@@ -21,7 +21,7 @@ void BenchmarkLayer::Pre(vkCreateInstanceCommand& command) {
 }
 
 void BenchmarkLayer::Post(vkQueuePresentKHRCommand& command) {
-  // A present elided by offscreen replay still ends a frame, so m_Skip is not checked.
+  // Offscreen replay skips the real present (m_Skip), but the frame is complete, so count it.
   // VK_SUBOPTIMAL_KHR still presented a frame. The present recorded after state restore is not an
   // application frame.
   if (IsStateRestoreKey(command.m_Key) ||
