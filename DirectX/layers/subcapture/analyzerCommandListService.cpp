@@ -1019,7 +1019,7 @@ void AnalyzerCommandListService::Command(
       if (it != m_TlasesBeforeRange.end()) {
         m_TlasBuildKeys.erase(it->second);
       }
-      if (m_FirstFrame || m_RestoreTlases || m_CommandListSubcapture) {
+      if (m_RestoreTlases || m_CommandListSubcapture) {
         m_TlasesBeforeRange[std::make_pair(c.m_pDesc.DestAccelerationStructureKey,
                                            c.m_pDesc.DestAccelerationStructureOffset)] = c.Key;
         m_TlasBuildKeys.insert(c.Key);
