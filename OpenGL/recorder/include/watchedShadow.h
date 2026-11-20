@@ -37,12 +37,14 @@ public:
 #endif
 
   enum class Tracking {
-    // The OS write watch, queried over the whole shadow, for shadows queried once at unmap.
+    // The OS write watch: a query costs the whole shadow, however little was written.
     WriteWatch,
-    // Read-only pages whose first write faults, for shadows queried before many commands: a query
-    // then costs only the written pages. Pages can also be refreshed from the driver mapping on
-    // their next access. The OS itself cannot write read-only pages or read stale ones, so a
-    // system call given such memory as a buffer fails instead of faulting.
+    // Read-only pages whose first write faults: a query costs only the written pages, but each
+    // first write after a query costs a fault. Pages can also be refreshed from the driver
+    // mapping on their next access. The OS itself cannot write read-only pages or read stale
+    // ones, so a system call given such memory as a buffer fails instead of faulting. The
+    // recorder writes refreshed bytes through a second, always writable view of the same memory,
+    // so that the application's view never becomes writable before its page is tracked.
     PageProtection
   };
 
@@ -54,6 +56,9 @@ public:
 
   void* Data() const {
     return m_Data;
+  }
+  Tracking GetTracking() const {
+    return m_Tracking;
   }
   // Forgets the written pages.
   void ResetWriteWatch();

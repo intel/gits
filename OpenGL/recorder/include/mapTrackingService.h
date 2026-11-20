@@ -360,6 +360,8 @@ private:
       const std::function<bool(GLint&)>& queryStorageFlags);
 
   // Callers hold m_MappedBuffersMutex.
+  void ForgetMappedRangeCounts(const MappedRange& range);
+  // Callers hold m_MappedBuffersMutex.
   void EraseMappedRange(std::unordered_map<Key, MappedRange, KeyHash>::iterator it);
 
   std::mutex m_MappedBuffersMutex;
@@ -367,6 +369,8 @@ private:
   // Entries of m_MappedBuffers whose writes PublishMappedWrites() publishes. Modified under
   // m_MappedBuffersMutex; read without it so that commands check it cheaply.
   std::atomic<size_t> m_PublishedBeforeUseMaps{0};
+  // Those of them with write-watch shadows, likewise.
+  std::atomic<size_t> m_WriteWatchPublishedMaps{0};
   // Entries of m_MappedBuffers with GpuWritten, likewise.
   std::atomic<size_t> m_GpuWrittenMaps{0};
   // Entries of m_MappedBuffers for which MappedRange::MayDeferInvalidation() holds, likewise.

@@ -1733,6 +1733,17 @@ Configuration:
             Type: bool
             Default: true
             Description: Prevent the application from loading program binaries, which only the recording driver is guaranteed to load, so it compiles its shaders from source.
+          - Name: persistentMapWriteTracking
+            Type: OpenGLPersistentMapWriteTracking
+            Default: WriteWatch
+            OSVisibility: [WINDOWS]
+            Description:
+              How the recorder finds the application's writes to write-only coherent or
+              implicit-flush persistent buffer maps, before each command that may read them.
+              WriteWatch scans the whole mapping on each such command. PageProtection costs a
+              page fault on the first write to each page after a scan, and suits applications
+              that issue many commands per frame while writing little of large mappings.
+              Readable persistent maps always use PageProtection.
           - Name: endFrameSleep
             Type: uint32_t
             Default: 0

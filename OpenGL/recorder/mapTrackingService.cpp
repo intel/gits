@@ -11,6 +11,7 @@
 #include "bufferShadowService.h"
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
+#include "configurator.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"
@@ -35,6 +36,15 @@ namespace gits::opengl {
 namespace {
 
 thread_local bool t_InPrimitivePair = false;
+
+// For a mapping published before use. A readable one may become GPU-written, whose refresh needs
+// page protection.
+WatchedShadow::Tracking PublishedShadowTracking(GLbitfield access) {
+  const bool pageProtection = Configurator::Get().opengl.recorder.persistentMapWriteTracking ==
+                              OpenGLPersistentMapWriteTracking::PAGE_PROTECTION;
+  return pageProtection || (access & GL_MAP_READ_BIT) != 0 ? WatchedShadow::Tracking::PageProtection
+                                                           : WatchedShadow::Tracking::WriteWatch;
+}
 
 void RequireShadowMapAlignment() {
   const auto [major, minor] = CurrentContextGLVersion();
@@ -506,9 +516,8 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
                                                                   &alignment);
     GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
     range.RangePolicy.Type = CaptureRangePolicy::Mode::DirtyPages;
-    // Published before each command, so a query must not cost the whole mapping.
     range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
-                                    !invalidated, WatchedShadow::Tracking::PageProtection);
+                                    !invalidated, PublishedShadowTracking(access));
     void* applicationPointer = range.Source.ApplicationPointer;
     StoreMappedRange(CurrentShareGroup(), buffer, std::move(range));
     return applicationPointer;
@@ -1077,6 +1086,9 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
     }
     if (PublishesBeforeUse(range.Access)) {
       m_PublishedBeforeUseMaps.fetch_add(1, std::memory_order_release);
+      if (range.Source.Shadow->GetTracking() == WatchedShadow::Tracking::WriteWatch) {
+        m_WriteWatchPublishedMaps.fetch_add(1, std::memory_order_release);
+      }
     }
     if (range.GpuWritten) {
       m_GpuWrittenMaps.fetch_add(1, std::memory_order_release);
@@ -1190,22 +1202,30 @@ std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRan
   if (it == m_MappedBuffers.end()) {
     return std::nullopt;
   }
+  ForgetMappedRangeCounts(it->second);
   MappedRange range = std::move(it->second);
-  EraseMappedRange(it);
+  m_MappedBuffers.erase(it);
   return range;
+}
+
+void MapTrackingService::ForgetMappedRangeCounts(const MappedRange& range) {
+  if (PublishesBeforeUse(range.Access)) {
+    m_PublishedBeforeUseMaps.fetch_sub(1, std::memory_order_release);
+    if (range.Source.Shadow->GetTracking() == WatchedShadow::Tracking::WriteWatch) {
+      m_WriteWatchPublishedMaps.fetch_sub(1, std::memory_order_release);
+    }
+  }
+  if (range.GpuWritten) {
+    m_GpuWrittenMaps.fetch_sub(1, std::memory_order_release);
+  }
+  if (range.MayDeferInvalidation()) {
+    m_DeferredInvalidationMaps.fetch_sub(1, std::memory_order_release);
+  }
 }
 
 void MapTrackingService::EraseMappedRange(
     std::unordered_map<Key, MappedRange, KeyHash>::iterator it) {
-  if (PublishesBeforeUse(it->second.Access)) {
-    m_PublishedBeforeUseMaps.fetch_sub(1, std::memory_order_release);
-  }
-  if (it->second.GpuWritten) {
-    m_GpuWrittenMaps.fetch_sub(1, std::memory_order_release);
-  }
-  if (it->second.MayDeferInvalidation()) {
-    m_DeferredInvalidationMaps.fetch_sub(1, std::memory_order_release);
-  }
+  ForgetMappedRangeCounts(it->second);
   m_MappedBuffers.erase(it);
 }
 
@@ -1214,10 +1234,12 @@ void MapTrackingService::PublishMappedWrites() {
     return;
   }
   stream::RecordingSession::Get().PublishHostWrites();
-  // Most commands follow no write to a persistent map. Taken pages leave the pending count before
-  // their publication completes, so publications in flight are checked after it.
+  // Most commands follow no write to a persistent map, which write watch cannot tell unqueried.
+  // Taken pages leave the pending count before their publication completes, so publications in
+  // flight are checked after it.
   if (m_PublishedBeforeUseMaps.load(std::memory_order_acquire) == 0 ||
-      (WatchedShadow::PendingWrittenPages() == 0 &&
+      (m_WriteWatchPublishedMaps.load(std::memory_order_acquire) == 0 &&
+       WatchedShadow::PendingWrittenPages() == 0 &&
        m_PublicationsInFlight.load(std::memory_order_acquire) == 0)) {
     return;
   }

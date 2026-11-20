@@ -69,6 +69,12 @@ Enums:
         Labels: [OglSingleDraw]
       - Value: DRAWS_RANGE
         Labels: [OglDrawsRange]
+  - Name: OpenGLPersistentMapWriteTracking
+    Values:
+      - Value: WRITE_WATCH
+        Description: Query the OS write watch over the whole mapping
+      - Value: PAGE_PROTECTION
+        Description: Fault on the first write to each page after a query
   - Name: VulkanRecorderMode
     Values:
       - Value: ALL

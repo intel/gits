@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-// Host-only tests for page-protected shadows of persistent maps: publication must report every
+// Host-only tests for watched shadows of persistent maps: publication must report every
 // page written since the last one, and a refresh from the driver mapping must never replace bytes
 // the application wrote, including from other threads while the shadow is published or refreshed.
 
@@ -94,6 +94,24 @@ void TestWrittenPagesAreCounted() {
   }
   Check(WatchedShadow::PendingWrittenPages() == pending,
         "a destroyed shadow's written pages no longer count");
+}
+
+void TestWriteWatchPagesAreTaken() {
+  const uint64_t pending = WatchedShadow::PendingWrittenPages();
+  WatchedShadow shadow(kSize, WatchedShadow::Tracking::WriteWatch);
+  shadow.ResetWriteWatch();
+  Check(shadow.MayHaveWrittenPages() && WatchedShadow::PendingWrittenPages() == pending,
+        "a write-watch shadow may always have written pages, and adds none to the count");
+  Check(shadow.TakeDirtyRanges(shadow.Data(), kSize).empty(),
+        "a reset write-watch shadow has no writes");
+  Bytes(shadow)[kPage + 1] = 1;
+  Bytes(shadow)[2 * kPage + 5] = 2;
+  Bytes(shadow)[6 * kPage] = 3;
+  Check(
+      Equal(shadow.TakeDirtyRanges(shadow.Data(), kSize), {{kPage, 2 * kPage}, {6 * kPage, kPage}}),
+      "pages written under write watch are taken as runs");
+  Check(shadow.TakeDirtyRanges(shadow.Data(), kSize).empty(),
+        "pages taken under write watch are not taken again");
 }
 
 void TestStalePagesRefreshOnAccess() {
@@ -208,6 +226,7 @@ void TestConcurrentWritesSurviveRefresh(bool withBaseline) {
 int main() {
   TestWrittenPagesAreTaken();
   TestWrittenPagesAreCounted();
+  TestWriteWatchPagesAreTaken();
   TestStalePagesRefreshOnAccess();
   TestWrittenPagesDoNotBecomeStale();
   TestWrittenPagesMergeRefresh();
