@@ -28,18 +28,15 @@ namespace gits::opengl {
 // feature entirely.
 //
 // Returns `pixels` unchanged when no such buffer object is bound (the common, client-memory
-// case this backend already supports). Returns nullptr when one is bound, logging a
-// one-time-per-command-name degraded-fidelity warning instead of copying `byteSize` bytes from
-// what would actually be a small integer offset misread as an address - nullptr here is
-// exclusively a signal to the CALLER (recorderWrappersAuto.cpp.mako) to skip the client-memory
-// ArrayArgument<T> capture for this call, never itself the value serialized onto the wire:
-// every caller of either guard ALSO unconditionally captures this parameter's
+// case this backend already supports). Returns nullptr when one is bound, instead of copying
+// `byteSize` bytes from what would actually be a small integer offset misread as an address -
+// nullptr here is exclusively a signal to the CALLER (recorderWrappersAuto.cpp.mako) to skip
+// the client-memory ArrayArgument<T> capture for this call, never itself the value serialized
+// onto the wire: every caller of either guard ALSO unconditionally captures this parameter's
 // own raw, un-guarded bit pattern into a companion m_<param>RawPointer field (see
-// pointer_needs_raw_offset_capture()'s own header comment, generator_helpers.py), so a bound
-// buffer's real offset still round-trips to replay correctly even though the byte payload
-// itself does not. Full PBO round-trip support (tying the offset to the buffer's own tracked
-// contents, rather than just preserving the offset value) remains out of scope for this pass -
-// see modern-opengl-backend-architecture.md's PBO scope decision.
+// pointer_needs_raw_offset_capture()'s own header comment, generator_helpers.py), so the
+// replay passes the same offset into the replayed buffer, whose contents the stream records
+// through its own buffer commands. `commandName` is unused.
 const void* GuardUnpackPixelsPointer(const char* commandName, const void* pixels);
 const void* GuardPackPixelsPointer(const char* commandName, const void* pixels);
 

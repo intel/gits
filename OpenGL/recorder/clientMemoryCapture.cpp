@@ -209,9 +209,6 @@ bool ContextSupportsPixelBufferObject() {
                                   "GL_ARB_pixel_buffer_object", 2, 1, "GL_EXT_pixel_buffer_object");
 }
 
-std::mutex g_PixelBufferGuardMutex;
-std::unordered_set<std::string> g_WarnedPixelBufferGuardCommands;
-
 // The exact, sole condition under which
 // GuardPixelsPointer() below redirects `pixels` into buffer-offset mode (returns nullptr
 // instead of the real pointer) - factored out so UnpackPixelsPointerIsBufferOffset()/
@@ -231,19 +228,8 @@ bool PixelBufferObjectIsBound(GLenum bindingPname) {
   return ContextSupportsPixelBufferObject() && QueryBoundBufferQuiet(bindingPname) != 0;
 }
 
-const void* GuardPixelsPointer(const char* commandName, const void* pixels, GLenum bindingPname) {
-  if (!PixelBufferObjectIsBound(bindingPname)) {
-    return pixels;
-  }
-  std::lock_guard<std::mutex> lock(g_PixelBufferGuardMutex);
-  if (g_WarnedPixelBufferGuardCommands.insert(commandName).second) {
-    LOG_WARNING << commandName
-                << ": a pixel buffer object is bound - the pixels/data parameter "
-                   "is a buffer-relative byte offset, not a client pointer; this "
-                   "call's pixel payload will not be captured (degraded fidelity) "
-                   "rather than risk copying from an invalid address";
-  }
-  return nullptr;
+const void* GuardPixelsPointer(const void* pixels, GLenum bindingPname) {
+  return PixelBufferObjectIsBound(bindingPname) ? nullptr : pixels;
 }
 
 std::mutex g_QueryBufferGuardMutex;
@@ -266,12 +252,12 @@ bool QueryBufferIsBound() {
   return ContextSupportsQueryBufferObject() && QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) != 0;
 }
 
-const void* GuardUnpackPixelsPointer(const char* commandName, const void* pixels) {
-  return GuardPixelsPointer(commandName, pixels, GL_PIXEL_UNPACK_BUFFER_BINDING);
+const void* GuardUnpackPixelsPointer(const char* /*commandName*/, const void* pixels) {
+  return GuardPixelsPointer(pixels, GL_PIXEL_UNPACK_BUFFER_BINDING);
 }
 
-const void* GuardPackPixelsPointer(const char* commandName, const void* pixels) {
-  return GuardPixelsPointer(commandName, pixels, GL_PIXEL_PACK_BUFFER_BINDING);
+const void* GuardPackPixelsPointer(const char* /*commandName*/, const void* pixels) {
+  return GuardPixelsPointer(pixels, GL_PIXEL_PACK_BUFFER_BINDING);
 }
 
 // See these two functions' own header comment
