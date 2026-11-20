@@ -439,6 +439,79 @@ GLint QueryPackSkipPixels() {
   return value;
 }
 
+namespace {
+
+// 0 for a target that does not name one image of a texture level.
+int TextureLevelDimensions(GLenum target) {
+  switch (target) {
+  case GL_TEXTURE_1D:
+    return 1;
+  case GL_TEXTURE_2D:
+  case GL_TEXTURE_1D_ARRAY:
+  case GL_TEXTURE_RECTANGLE:
+  case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+  case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+  case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+  case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+  case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+  case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
+    return 2;
+  case GL_TEXTURE_3D:
+  case GL_TEXTURE_2D_ARRAY:
+  case GL_TEXTURE_CUBE_MAP_ARRAY:
+    return 3;
+  default:
+    return 0;
+  }
+}
+
+template <typename SizeFunction>
+auto WithTextureLevelPackTransfer(GLenum target,
+                                  GLint level,
+                                  GLenum format,
+                                  GLenum type,
+                                  const char* commandName,
+                                  SizeFunction sizeFunction) {
+  const int dimensions = TextureLevelDimensions(target);
+  GLint width = 0;
+  GLint height = 1;
+  GLint depth = 1;
+  if (dimensions != 0 && level >= 0) {
+    auto getLevelParameter =
+        g_DispatchTable.glGetTexLevelParameteriv.load(std::memory_order_acquire);
+    getLevelParameter(target, level, GL_TEXTURE_WIDTH, &width);
+    if (dimensions >= 2) {
+      getLevelParameter(target, level, GL_TEXTURE_HEIGHT, &height);
+    }
+    if (dimensions == 3) {
+      getLevelParameter(target, level, GL_TEXTURE_DEPTH, &depth);
+    }
+  }
+  // A 1D image is packed as an image of height 1, which the pack row state applies to as well.
+  return sizeFunction(dimensions != 0 && level >= 0, format, type, width, height,
+                      QueryPackAlignment(), depth, dimensions == 3 ? QueryPackImageHeight() : 0,
+                      dimensions == 3 ? QueryPackSkipImages() : 0, QueryPackRowLength(),
+                      QueryPackSkipRows(), QueryPackSkipPixels(), commandName);
+}
+
+} // namespace
+
+uint64_t ComputeTextureLevelPackByteSize(
+    GLenum target, GLint level, GLenum format, GLenum type, const char* commandName) {
+  return WithTextureLevelPackTransfer(
+      target, level, format, type, commandName, [](bool known, auto... transfer) -> uint64_t {
+        return known ? ComputePixelTransferByteSize(transfer...) : 0;
+      });
+}
+
+bool TextureLevelPackSizeIsUnknown(
+    GLenum target, GLint level, GLenum format, GLenum type, const char* commandName) {
+  return WithTextureLevelPackTransfer(target, level, format, type, commandName,
+                                      [](bool known, auto... transfer) {
+                                        return !known || PixelTransferSizeIsUnknown(transfer...);
+                                      });
+}
+
 bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
   if (!TryResolveRealFunction("glGetBufferParameteriv")) {
     return false;

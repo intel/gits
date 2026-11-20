@@ -356,14 +356,16 @@ class EndToEndPixelTransferTests(unittest.TestCase):
         self.assertEqual(override.length_source_kind, LengthSourceKind.SIBLING_PARAM)
         self.assertEqual(override.length_source_value, 'imageSize')
 
-    def test_gettteximage_stays_disabled(self) -> None:
+    def test_gettteximage_is_not_derived_but_has_a_hand_entry(self) -> None:
         # glGetTexImage's COMPSIZE(target,level,format,type) does not start with
-        # (format, type, ...) - must stay disabled, not silently mis-derived.
+        # (format, type, ...) - never derived; its texture-level entry is hand-written.
         cmd = self._get_command(Api.GL, 'glGetTexImage')
         param = next(p for p in cmd.params if p.name == 'pixels')
-        self.assertIsNone(pointer_override_for(cmd, 'pixels'))
-        self.assertFalse(
-            _is_param_capturable(cmd.name, param, [p for p in cmd.params if p is not param]))
+        others = [p for p in cmd.params if p is not param]
+        self.assertIsNone(derive_pixel_transfer_override(param, others))
+        self.assertIs(pointer_override_for(cmd, 'pixels'),
+                      POINTER_PARAM_OVERRIDES[('glGetTexImage', 'pixels')])
+        self.assertTrue(_is_param_capturable(cmd.name, param, others))
 
 
 class PointerNeedsPixelTransferUnknownFlagTests(unittest.TestCase):
@@ -449,10 +451,14 @@ class PixelTransferSizeIsUnknownCppHelperTests(unittest.TestCase):
             self) -> None:
         source = self._RECORDER_WRAPPERS_AUTO_CPP_MAKO.read_text(encoding='utf-8')
         # Populated exactly twice: once for the IN-direction case (before the real call, next
-        # to the RawPointer companion), once for the OUT-direction case (after Capture()).
+        # to the RawPointer companion), once for the OUT-direction case (after Capture()), where
+        # a texture-level read-back uses TextureLevelPackSizeIsUnknown() instead.
         matches = re.findall(
-            r'command\.m_\$\{p\.name\}SizeUnknown\.Value = PixelTransferSizeIsUnknown\(',
+            r'command\.m_\$\{p\.name\}SizeUnknown\.Value = '
+            r'(?:PixelTransferSizeIsUnknown|\$\{size_unknown_out\})\(',
             source)
+        self.assertIn("size_unknown_out = 'PixelTransferSizeIsUnknown'", source)
+        self.assertIn("size_unknown_out = 'TextureLevelPackSizeIsUnknown'", source)
         self.assertEqual(len(matches), 2,
                          'Expected exactly one IN-direction and one OUT-direction '
                          'm_<param>SizeUnknown population site')

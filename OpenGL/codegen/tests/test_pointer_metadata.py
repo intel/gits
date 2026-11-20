@@ -313,6 +313,29 @@ class ValidatePointerOverrideTests(unittest.TestCase):
             _validate_pointer_override(
                 'glTexImage2D', param, override, other_params=[fmt, typ, width, height])
 
+    def test_texture_level_pixel_transfer_size_shape(self) -> None:
+        param = Parameter(name='pixels', type='void *')
+        siblings = [
+            Parameter(name='target', type='GLenum'), Parameter(name='level', type='GLint'),
+            Parameter(name='format', type='GLenum', group='PixelFormat'),
+            Parameter(name='type', type='GLenum', group='PixelType'),
+            Parameter(name='width', type='GLsizei'),
+        ]
+        valid = PointerParamOverride(
+            direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.PIXEL_TRANSFER_SIZE,
+            pixel_format_param='format', pixel_type_param='type',
+            pixel_texture_target_param='target', pixel_texture_level_param='level')
+        _validate_pointer_override('glGetTexImage', param, valid, other_params=siblings)
+
+        for invalid in (
+            replace(valid, pixel_texture_level_param=None),
+            replace(valid, pixel_width_param='width'),
+            replace(valid, direction=PointerDirection.IN),
+            replace(valid, pixel_texture_level_param='lod'),
+        ):
+            with self.subTest(override=invalid), self.assertRaises(ValueError):
+                _validate_pointer_override('glGetTexImage', param, invalid, other_params=siblings)
+
     def test_query_buffer_guard_requires_out_direction(self) -> None:
         # GL_QUERY_BUFFER only ever redirects an OUT-direction (driver-written) result - an
         # IN-direction user would leave the flag silently inert.
@@ -944,10 +967,20 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glSelectBuffer', 'glFeedbackBuffer',           # driver retains the pointer
             'glCullParameterfvEXT',                         # IN array declared without const
             'glGenFencesNV', 'glDeleteFencesNV',            # names without object-name mapping
-            'glGetTexImage',                                # OUT void*, pack-buffer offset
         ):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
+
+    def test_texture_level_read_back_is_enabled(self) -> None:
+        cmd = self._get_command(Api.GL, 'glGetTexImage')
+        self.assertTrue(cmd.enabled)
+        override = pointer_override_for(cmd, 'pixels')
+        self.assertEqual(override.direction, PointerDirection.OUT)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.PIXEL_TRANSFER_SIZE)
+        self.assertEqual(
+            (override.pixel_texture_target_param, override.pixel_texture_level_param),
+            ('target', 'level'))
+        self.assertIsNone(override.pixel_width_param)
 
     def test_attached_shaders_query_is_enabled(self) -> None:
         cmd = self._get_command(Api.GL, 'glGetAttachedShaders')

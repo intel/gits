@@ -391,7 +391,32 @@ def _validate_pointer_override(
                 f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's pixel_depth_param "
                 f"requires pixel_height_param to also be set - no 1D-with-depth shape exists"
             )
-        for field_name in ('pixel_format_param', 'pixel_type_param', 'pixel_width_param'):
+        texture_level = (override.pixel_texture_target_param is not None or
+                         override.pixel_texture_level_param is not None)
+        if texture_level:
+            if (override.pixel_texture_target_param is None or
+                    override.pixel_texture_level_param is None):
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's "
+                    f"pixel_texture_target_param and pixel_texture_level_param must be set "
+                    f"together"
+                )
+            if (override.pixel_width_param is not None or
+                    override.pixel_height_param is not None or
+                    override.pixel_depth_param is not None):
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's texture level "
+                    f"params replace pixel_width_param/pixel_height_param/pixel_depth_param"
+                )
+            if override.direction is not PointerDirection.OUT:
+                raise ValueError(
+                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's texture level "
+                    f"params are only defined for an OUT read-back"
+                )
+        required_fields = ['pixel_format_param', 'pixel_type_param']
+        if not texture_level:
+            required_fields.append('pixel_width_param')
+        for field_name in required_fields:
             if getattr(override, field_name) is None:
                 raise ValueError(
                     f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE override must set "
@@ -399,7 +424,8 @@ def _validate_pointer_override(
                 )
         for field_name in (
             'pixel_format_param', 'pixel_type_param', 'pixel_width_param',
-            'pixel_height_param', 'pixel_depth_param',
+            'pixel_height_param', 'pixel_depth_param', 'pixel_texture_target_param',
+            'pixel_texture_level_param',
         ):
             sibling_name = getattr(override, field_name)
             if sibling_name is None:

@@ -310,6 +310,12 @@ class PointerParamOverride:
     pixel_width_param: str | None = None
     pixel_height_param: str | None = None
     pixel_depth_param: str | None = None
+    # A read-back of a whole texture level (glGetTexImage) has no dimension siblings: instead
+    # these name the `target`/`level` siblings, and ComputeTextureLevelPackByteSize()
+    # (recorder/include/clientMemoryCapture.h) queries that level's dimensions after the call.
+    # OUT only, and exclusive with pixel_width_param/pixel_height_param/pixel_depth_param.
+    pixel_texture_target_param: str | None = None
+    pixel_texture_level_param: str | None = None
 
     # Only meaningful when length_source_kind is CLEAR_BUFFER_VALUE_COUNT - the sibling
     # `buffer` enum param name ComputeClearBufferValueCount() needs. None for every other kind.
@@ -881,6 +887,15 @@ POINTER_PARAM_OVERRIDES: dict[tuple[str, str], PointerParamOverride] = {
     # same reason as glTexImage2D's above: `void *pixels`, COMPSIZE(format,type,width,height)
     # matches pixel_transfer_metadata.py's fallback derivation (including its OUT-direction
     # case, `param.type == 'void *'`) exactly, so the hand entry was pure redundancy.
+
+    # glGetTexImage's `pixels`: COMPSIZE(target,level,format,type) - a whole texture level,
+    # sized from that level's own dimensions. Like glReadPixels' `pixels`, it is a pack-buffer
+    # offset whenever GL_PIXEL_PACK_BUFFER is bound.
+    ('glGetTexImage', 'pixels'): PointerParamOverride(
+        direction=PointerDirection.OUT,
+        length_source_kind=LengthSourceKind.PIXEL_TRANSFER_SIZE,
+        pixel_format_param='format', pixel_type_param='type',
+        pixel_texture_target_param='target', pixel_texture_level_param='level'),
 
     # wglDescribePixelFormat's `ppfd`: a single OUT PIXELFORMATDESCRIPTOR struct - the OUT
     # counterpart of wglSetPixelFormat/SetPixelFormat's own IN `ppfd` above, same FIXED_COUNT

@@ -10,6 +10,7 @@
 
 #include "glTypes.h"
 
+#include <cstdint>
 #include <utility>
 
 namespace gits::opengl {
@@ -148,6 +149,18 @@ bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value);
 // queried through glGetBufferParameteri64v on a GL 3.2+ context; older contexts only have the
 // 32-bit getter of GetBoundBufferParameter. False (and `size` untouched) if no getter resolved.
 bool GetBoundBufferSize(GLenum target, GLint64& size);
+
+// ComputePixelTransferByteSize()/PixelTransferSizeIsUnknown() (pixelTransferSize.h) for a
+// read-back of a whole texture level (glGetTexImage): `level` of the texture bound to `target`,
+// packed with the current GL_PACK_* state. The level's width, height and depth are queried
+// with glGetTexLevelParameteriv, so these must run after the read-back itself, on the same
+// bindings. The target's dimensionality selects the pack state that applies, as for a 1D, 2D
+// or 3D transfer. The size is unknown for a negative level or a target that is not one image
+// (GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BUFFER, multisample targets); no query is made for those.
+uint64_t ComputeTextureLevelPackByteSize(
+    GLenum target, GLint level, GLenum format, GLenum type, const char* commandName);
+bool TextureLevelPackSizeIsUnknown(
+    GLenum target, GLint level, GLenum format, GLenum type, const char* commandName);
 
 // TODO: Helper functions that are broadly useful should be moved to a common helper file.
 

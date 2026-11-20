@@ -463,6 +463,19 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 ## queried and passed here too, mirroring the IN-direction branch's own unconditional query of
 ## the GL_UNPACK_* counterparts.
 <%
+    if override.pixel_texture_level_param:
+        compute_size_out = 'ComputeTextureLevelPackByteSize'
+        size_unknown_out = 'TextureLevelPackSizeIsUnknown'
+        pixel_transfer_args_out = (
+            f'{override.pixel_texture_target_param}, {override.pixel_texture_level_param}, '
+            f'{override.pixel_format_param}, {override.pixel_type_param}, "{cmd.name}"')
+    else:
+        compute_size_out = 'ComputePixelTransferByteSize'
+        size_unknown_out = 'PixelTransferSizeIsUnknown'
+        pixel_transfer_args_out = None
+%>\
+% if pixel_transfer_args_out is None:
+<%
     pixel_transfer_args_out = (
         f'{override.pixel_format_param}, {override.pixel_type_param}, '
         f'{override.pixel_width_param}, '
@@ -487,7 +500,8 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
         f'QueryPackSkipPixels(), "{cmd.name}"'
     )
 %>\
-  command.m_${p.name}.Capture(${capture_arg_expr}, ComputePixelTransferByteSize(${pixel_transfer_args_out}));
+% endif
+  command.m_${p.name}.Capture(${capture_arg_expr}, ${compute_size_out}(${pixel_transfer_args_out}));
   // See pointer_needs_pixel_transfer_unknown_flag()'s
   // own header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
   // comment (pixelTransferSize.h). Same argument list as the Capture() call immediately
@@ -495,7 +509,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // genuine-zero or unknown; GL_PACK_* pixel-store state cannot have changed between the two
   // calls (no intervening GL call), and every warning either might log is warn-once per
   // commandName regardless, so this second call never double-logs.
-  command.m_${p.name}SizeUnknown.Value = PixelTransferSizeIsUnknown(${pixel_transfer_args_out});
+  command.m_${p.name}SizeUnknown.Value = ${size_unknown_out}(${pixel_transfer_args_out});
   // See PackPixelsPointerIsBufferOffset()'s
   // own header comment (clientMemoryCapture.h). Uses ${p.name} here too - this wrapper's
   // own, ORIGINAL, never-guarded parameter, the same one m_${p.name}RawPointer.Value below

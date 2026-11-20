@@ -1,6 +1,6 @@
 {
     "command_count": {
-        "GL": 2850,
+        "GL": 2851,
         "WGL": 69,
         "EGL": 0,
         "GLX": 69
@@ -2856,7 +2856,8 @@
             "ID_GLSIGNALSEMAPHOREEXT": 987166,
             "ID_GLWAITSEMAPHOREEXT": 987167,
             "ID_GLMEMORYOBJECTPARAMETERIVEXT": 987168,
-            "ID_GLGETATTACHEDSHADERS": 987169
+            "ID_GLGETATTACHEDSHADERS": 987169,
+            "ID_GLGETTEXIMAGE": 987170
         },
         "WGL": {
             "ID_WGLBEGINFRAMETRACKINGI3D": 992512,
