@@ -651,6 +651,18 @@ bool StateTrackingService::ListChangesTextures(GITSKey shareGroup,
   });
 }
 
+bool StateTrackingService::ListReferences(GITSKey shareGroup, GITSKey buffer) const {
+  const auto references = [&](const std::pair<GITSKey, GLuint>& owner, const DisplayList& list) {
+    return owner.first == shareGroup &&
+           std::find(list.Buffers.begin(), list.Buffers.end(), buffer) != list.Buffers.end();
+  };
+  return std::any_of(m_DisplayLists.begin(), m_DisplayLists.end(),
+                     [&](const auto& entry) { return references(entry.first, entry.second); }) ||
+         std::any_of(m_CompilingLists.begin(), m_CompilingLists.end(), [&](const auto& entry) {
+           return references(entry.second.first, entry.second.second);
+         });
+}
+
 void StateTrackingService::AddListCommand(uint32_t threadId,
                                           std::shared_ptr<StoredCommand> command) {
   const auto compiling = m_CompilingLists.find(threadId);

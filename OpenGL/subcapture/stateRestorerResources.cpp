@@ -374,6 +374,7 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
   const auto owner = m_State.CurrentShareGroup(threadId);
   m_Context = owner.second;
   if (!m_State.HasResidentHandle(key) && !(kind == GLObjectKind::Texture && m_State.Viewed(key)) &&
+      !(kind == GLObjectKind::Buffer && m_State.ListReferences(owner.first, key)) &&
       (kind == GLObjectKind::Sampler || !Attached(owner.first, owner.second, kind, name, true))) {
     return snapshot;
   }
@@ -487,6 +488,7 @@ std::vector<GITSKey> StateRestorer::DetachedDeleted(uint32_t threadId) {
   std::erase_if(detached, [&](GITSKey key) {
     const ObjectState& object = *m_State.Object(key);
     return m_State.HasResidentHandle(key) || m_State.Viewed(key) ||
+           (object.Kind == GLObjectKind::Buffer && m_State.ListReferences(shareGroup, key)) ||
            (object.Kind != GLObjectKind::Sampler &&
             Attached(shareGroup, context, object.Kind, object.LiveName, false));
   });

@@ -344,6 +344,9 @@ public:
   // Whether executing `list`, or any list of `shareGroup` when none is given, can change texture
   // images.
   bool ListChangesTextures(GITSKey shareGroup, std::optional<GLuint> list) const;
+  // Whether the state a display list of `shareGroup` was compiled with, or is being compiled
+  // with, references `buffer`.
+  bool ListReferences(GITSKey shareGroup, GITSKey buffer) const;
   void AddListCommand(uint32_t threadId, std::shared_ptr<StoredCommand> command);
   void EndList(uint32_t threadId, ListCompileState reset);
   void CreateFontLists(uint32_t threadId,

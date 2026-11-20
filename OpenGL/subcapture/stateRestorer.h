@@ -55,12 +55,12 @@ public:
   ListCompileState ResetListCompileState();
   // The buffer, texture, renderbuffer or sampler `key` of the share group current on `threadId`,
   // read back before its deletion, or for a texture with immutable storage kept readable; empty
-  // for one no container, resident handle nor tracked view keeps once it is deleted, and for one
-  // GL has no object for, or cannot read.
+  // for one no container, resident handle, tracked view nor display list compile state keeps
+  // once it is deleted, and for one GL has no object for, or cannot read.
   ObjectSnapshot CaptureDeleted(uint32_t threadId, GLObjectKind kind, GITSKey key);
   // The deleted buffers, textures, renderbuffers and samplers the context current on `threadId`
   // deleted, which none of its containers, nor a buffer texture, references any more, and no
-  // resident handle nor tracked view keeps.
+  // resident handle, tracked view nor display list compile state keeps.
   std::vector<GITSKey> DetachedDeleted(uint32_t threadId);
 
 private:
