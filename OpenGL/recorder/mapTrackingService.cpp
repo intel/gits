@@ -495,8 +495,7 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   if (publishedBeforeUse) {
     // The application uses a watched shadow. Its written pages reach the driver mapping and the
     // stream at PublishMappedWrites() and at unmap. Reads from the shadow return the buffer
-    // contents: OnSubData() copies GL updates into it, and GPU writes during writable persistent
-    // maps are unsupported.
+    // contents: OnSubData() copies GL updates into it, and RefreshGpuWrittenMaps() GPU results.
     GITS_ASSERT(invalidated || initialBytes.size() == static_cast<size_t>(length),
                 "Writable coherent or implicit-flush persistent buffer maps require reading the "
                 "buffer contents before the map");
@@ -578,14 +577,73 @@ MapTrackingService::MappedBufferUpdate MapTrackingService::PrepareFlushMappedUpd
 void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
                                                 const std::vector<WatchedShadow::ByteRange>& dirty,
                                                 KeyedUpdates& updates) {
-  for (const WatchedShadow::ByteRange& run : dirty) {
-    auto bytes = range.Source.Snapshot(run.Offset, run.Length);
-    range.Source.WriteBack(run.Offset, bytes);
-    const MapRelativeRange interval{static_cast<GLintptr>(run.Offset),
-                                    static_cast<GLsizeiptr>(run.Length)};
+  const auto append = [&](size_t offset, size_t length) {
+    auto bytes = range.Source.Snapshot(offset, length);
+    range.Source.WriteBack(offset, bytes);
+    if (range.GpuWritten) {
+      std::memcpy(range.Source.Baseline.data() + offset, bytes.data(), length);
+    }
+    const MapRelativeRange interval{static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(length)};
     updates.emplace_back(CaptureManager::Get().CreateCommandKey(),
                          MakeMappedUpdate(range, interval, std::move(bytes)));
+  };
+  for (const WatchedShadow::ByteRange& run : dirty) {
+    if (!range.GpuWritten) {
+      append(run.Offset, run.Length);
+      continue;
+    }
+    // Unchanged bytes between changed ones may be GPU results newer than the shadow.
+    const auto* current = static_cast<const uint8_t*>(range.Source.ApplicationPointer);
+    const uint8_t* baseline = range.Source.Baseline.data();
+    size_t index = run.Offset;
+    const size_t end = run.Offset + run.Length;
+    while (index < end) {
+      if (current[index] == baseline[index]) {
+        ++index;
+        continue;
+      }
+      const size_t start = index;
+      while (index < end && current[index] != baseline[index]) {
+        ++index;
+      }
+      append(start, index - start);
+    }
   }
+}
+
+void MapTrackingService::TakePublishedUpdates(MappedRange& range, KeyedUpdates& updates) {
+  const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
+                                                          static_cast<size_t>(range.Length));
+  AppendPublishedUpdates(range, dirty, updates);
+}
+
+void MapTrackingService::RefreshFromDriver(MappedRange& range) {
+  const auto length = static_cast<size_t>(range.Length);
+  auto* shadow = static_cast<uint8_t*>(range.Source.ApplicationPointer);
+  std::memcpy(shadow, range.Source.DriverPointer, length);
+  range.Source.Shadow->ResetWriteWatch();
+  range.Source.Baseline.assign(shadow, shadow + length);
+}
+
+std::string MapTrackingService::DescribeMapping(const char* command,
+                                                GLenum target,
+                                                GLuint buffer,
+                                                const MappedRange& range) {
+  std::ostringstream description;
+  description << '(';
+  if (command != nullptr) {
+    description << command;
+    if (target != 0) {
+      description << '(' << GetGLenumString(GLenumApi::GL, target, GLenumGroup::BufferTargetARB)
+                  << ')';
+    }
+    description << " on ";
+  }
+  description << "buffer " << buffer << ", mapped range [" << range.Offset << ", "
+              << range.Offset + range.Length << ") with "
+              << GetBitmaskString(GLenumApi::GL, range.Access, GLenumGroup::MapBufferAccessMask)
+              << ')';
+  return description.str();
 }
 
 void MapTrackingService::RecordOrSkipMappedUpdate(uint64_t key,
@@ -661,6 +719,23 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   // Untracked or read-only maps need no snapshot and no ordering key.
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
+  }
+  if (range->GpuWritten) {
+    KeyedUpdates updates;
+    TakePublishedUpdates(*range, updates);
+    const GLboolean result = realUnmap();
+    if (result != GL_TRUE) {
+      LOG_WARNING << "MapTrackingService (" << callerName << "): real unmap of buffer " << buffer
+                  << " returned GL_FALSE (data store contents corrupted per spec) - no "
+                     "MappedDataMetaCommand recorded for this unmap";
+    }
+    for (auto& [key, update] : updates) {
+      if (result != GL_TRUE) {
+        update.reset();
+      }
+      RecordOrSkipMappedUpdate(key, update);
+    }
+    return result;
   }
   const bool useDirtyPageCapture = range->RangePolicy.Type == CaptureRangePolicy::Mode::DirtyPages;
   std::optional<MapRelativeRange> interval;
@@ -895,8 +970,12 @@ void MapTrackingService::OnSubData(
   const auto mapOffset = static_cast<size_t>(begin - mapBegin);
   auto* destination = static_cast<uint8_t*>(range.Source.ApplicationPointer) + mapOffset;
   const auto length = static_cast<size_t>(end - begin);
-  std::memcpy(destination, static_cast<const uint8_t*>(data) + (begin - offset), length);
+  const auto* source = static_cast<const uint8_t*>(data) + (begin - offset);
+  std::memcpy(destination, source, length);
   range.Source.Shadow->ResetWriteWatch(destination, length);
+  if (range.GpuWritten) {
+    std::memcpy(range.Source.Baseline.data() + mapOffset, source, length);
+  }
 }
 
 void MapTrackingService::PublishBeforeDelete(GLsizei count, const GLuint* buffers) {
@@ -922,9 +1001,7 @@ void MapTrackingService::PublishBeforeDelete(GLsizei count, const GLuint* buffer
                                "published before use keep their writes at deletion");
         continue;
       }
-      const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
-                                                              static_cast<size_t>(range.Length));
-      AppendPublishedUpdates(range, dirty, updates);
+      TakePublishedUpdates(range, updates);
     }
   }
   for (const auto& [key, update] : updates) {
@@ -950,6 +1027,34 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
   const GLbitfield access = range.Access;
   const Key key{shareGroup, buffer};
   range.Map = key;
+  // A buffer bound for GPU writes before the map may still be bound.
+  constexpr GLbitfield persistentWrite = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
+  const bool isPersistentWrite = (access & persistentWrite) == persistentWrite;
+  const bool untrusted =
+      isPersistentWrite && BufferShadowService::Get().IsUntrusted(shareGroup, buffer);
+  if (untrusted) {
+    // Unlike for GPU result writes, no later command reports the writes of these.
+    if (const char* writer = BufferShadowService::Get().UnhookedGpuWriter(shareGroup, buffer)) {
+      GITS_ASSERT(false, "Writable persistent mappings of buffers that image stores, external "
+                         "memory, or shaders through a resident address may write are "
+                         "unsupported: a mapped snapshot could overwrite replayed GPU results "
+                         "with stale bytes " +
+                             DescribeMapping(writer, 0, buffer, range));
+    }
+    if (!PublishesBeforeUse(access)) {
+      GITS_ASSERT(false, "Explicit-flush noncoherent writable persistent mappings of buffers the "
+                         "GPU may write are unsupported: a flushed snapshot could record GPU "
+                         "results as the application's writes " +
+                             DescribeMapping(nullptr, 0, buffer, range));
+    }
+    GITS_ASSERT((access & GL_MAP_READ_BIT) != 0,
+                "Writable persistent mappings without GL_MAP_READ_BIT of buffers the GPU may "
+                "write are unsupported: publishing the application's writes could overwrite GPU "
+                "results the recorder cannot read " +
+                    DescribeMapping(nullptr, 0, buffer, range));
+    RefreshFromDriver(range);
+    range.GpuWritten = true;
+  }
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
     const auto previous = m_MappedBuffers.find(key);
@@ -959,13 +1064,25 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
     if (PublishesBeforeUse(range.Access)) {
       m_PublishedBeforeUseMaps.fetch_add(1, std::memory_order_release);
     }
+    if (range.GpuWritten) {
+      m_GpuWrittenMaps.fetch_add(1, std::memory_order_release);
+    }
     if (range.MayDeferInvalidation()) {
       m_DeferredInvalidationMaps.fetch_add(1, std::memory_order_release);
     }
     m_MappedBuffers.emplace(key, std::move(range));
   }
-  // Do not hold the map mutex while calling BufferShadowService. Its GPU-write hooks
-  // hold the shadow mutex while acquiring the map mutex; reversing that order could deadlock.
+  // GPU writes in another context may have looked for the map before it was registered.
+  // BufferShadowService marks their buffers untrusted before looking, so either they found the map
+  // or this finds the buffer untrusted.
+  if (isPersistentWrite && !untrusted &&
+      BufferShadowService::Get().IsUntrusted(shareGroup, buffer)) {
+    if (const char* writer = BufferShadowService::Get().UnhookedGpuWriter(shareGroup, buffer)) {
+      AssertNoWritablePersistentMap(writer, 0, shareGroup, buffer);
+    }
+    OnGpuResultWrite(nullptr, 0, shareGroup, buffer);
+  }
+  // Neither this service nor BufferShadowService calls the other while holding its own mutex.
   if (access & GL_MAP_WRITE_BIT) {
     BufferShadowService::Get().OnMapWrite(shareGroup, buffer, access);
   }
@@ -981,19 +1098,74 @@ void MapTrackingService::AssertNoWritablePersistentMap(const char* command,
   if (it == m_MappedBuffers.end() || (it->second.Access & unsupported) != unsupported) {
     return;
   }
-  std::ostringstream message;
-  message << "GPU or GL buffer updates during a writable persistent mapping are unsupported: "
-             "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
-             "replayed GPU results with stale bytes ("
-          << command;
-  if (target != 0) {
-    message << '(' << GetGLenumString(GLenumApi::GL, target, GLenumGroup::BufferTargetARB) << ')';
+  GITS_ASSERT(false,
+              "GPU copies, clears, image stores, and external writes during a writable persistent "
+              "mapping are unsupported: a mapped snapshot could overwrite replayed GPU results "
+              "with stale bytes " +
+                  DescribeMapping(command, target, buffer, it->second));
+}
+
+void MapTrackingService::OnGpuResultWrite(const char* command,
+                                          GLenum target,
+                                          uint64_t shareGroup,
+                                          GLuint buffer) {
+  KeyedUpdates updates;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
+    if (it == m_MappedBuffers.end() || it->second.GpuWritten) {
+      return;
+    }
+    MappedRange& range = it->second;
+    constexpr GLbitfield persistentWrite = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
+    if (!PublishesBeforeUse(range.Access)) {
+      // Other mappings expose the driver mapping itself, or the GPU must not use them.
+      if ((range.Access & persistentWrite) == persistentWrite) {
+        GITS_ASSERT(false, "GPU writes during an explicit-flush noncoherent writable persistent "
+                           "mapping are unsupported: a flushed snapshot could record GPU results "
+                           "as the application's writes " +
+                               DescribeMapping(command, target, buffer, range));
+      }
+      return;
+    }
+    if ((range.Access & GL_MAP_READ_BIT) == 0) {
+      GITS_ASSERT(false,
+                  "GPU writes during a writable persistent mapping without GL_MAP_READ_BIT are "
+                  "unsupported: publishing the application's writes could overwrite GPU results "
+                  "the recorder cannot read " +
+                      DescribeMapping(command, target, buffer, range));
+      return;
+    }
+    // The application's writes so far reach the driver before its contents become the baseline.
+    TakePublishedUpdates(range, updates);
+    RefreshFromDriver(range);
+    range.GpuWritten = true;
+    m_GpuWrittenMaps.fetch_add(1, std::memory_order_release);
   }
-  message << " on buffer " << buffer << ", mapped range [" << it->second.Offset << ", "
-          << it->second.Offset + it->second.Length << ") with "
-          << GetBitmaskString(GLenumApi::GL, it->second.Access, GLenumGroup::MapBufferAccessMask)
-          << ')';
-  GITS_ASSERT(false, message.str());
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
+}
+
+void MapTrackingService::RefreshGpuWrittenMaps() {
+  if (m_GpuWrittenMaps.load(std::memory_order_acquire) == 0) {
+    return;
+  }
+  const uint64_t shareGroup = CurrentShareGroup();
+  KeyedUpdates updates;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    for (auto& [key, range] : m_MappedBuffers) {
+      if (key.ShareGroup != shareGroup || !range.GpuWritten) {
+        continue;
+      }
+      TakePublishedUpdates(range, updates);
+      RefreshFromDriver(range);
+    }
+  }
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
 }
 
 std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRange(
@@ -1013,6 +1185,9 @@ void MapTrackingService::EraseMappedRange(
     std::unordered_map<Key, MappedRange, KeyHash>::iterator it) {
   if (PublishesBeforeUse(it->second.Access)) {
     m_PublishedBeforeUseMaps.fetch_sub(1, std::memory_order_release);
+  }
+  if (it->second.GpuWritten) {
+    m_GpuWrittenMaps.fetch_sub(1, std::memory_order_release);
   }
   if (it->second.MayDeferInvalidation()) {
     m_DeferredInvalidationMaps.fetch_sub(1, std::memory_order_release);
@@ -1041,7 +1216,7 @@ void MapTrackingService::PublishMappedWrites() {
       AppendPublishedUpdates(range, dirty, updates);
     }
   }
-  // BufferShadowService locks its mutex before the map mutex, so record after releasing it.
+  // Recording reaches BufferShadowService, so record after releasing the map mutex.
   for (const auto& [key, update] : updates) {
     RecordOrSkipMappedUpdate(key, update);
   }

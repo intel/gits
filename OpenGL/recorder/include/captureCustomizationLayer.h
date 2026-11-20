@@ -50,6 +50,19 @@ public:
   void Pre(glImportSemaphoreWin32HandleEXTCommand& command) override;
 
   void Post(wglCreateContextAttribsARBCommand& command) override;
+
+  // Host syncs after which the application may read completed GPU writes through persistent
+  // mappings. See MapTrackingService::RefreshGpuWrittenMaps.
+  void Post(glClientWaitSyncCommand& command) override;
+  void Post(glClientWaitSyncAPPLECommand& command) override;
+  void Post(glGetSyncivCommand& command) override;
+  void Post(glFinishCommand& command) override;
+  void Post(glGetQueryObjectuivCommand& command) override;
+  void Post(glGetQueryObjectuivARBCommand& command) override;
+  void Post(glGetQueryObjecti64vCommand& command) override;
+  void Post(glGetQueryObjecti64vEXTCommand& command) override;
+  void Post(glGetQueryObjectui64vCommand& command) override;
+  void Post(glGetQueryObjectui64vEXTCommand& command) override;
 };
 
 } // namespace gits::opengl

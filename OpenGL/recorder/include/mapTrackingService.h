@@ -29,6 +29,7 @@
 #include <mutex>
 #include <optional>
 #include <span>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -123,6 +124,15 @@ public:
                                      GLenum target,
                                      uint64_t shareGroup,
                                      GLuint buffer);
+  // Before GPU work may write `buffer` through `target`: a writable persistent mapping of it whose
+  // writes are published before use gets the GPU results at RefreshGpuWrittenMaps(), and from
+  // then on publishes only the bytes the application changed. Such mappings without
+  // GL_MAP_READ_BIT, and other writable persistent mappings, are unsupported.
+  void OnGpuResultWrite(const char* command, GLenum target, uint64_t shareGroup, GLuint buffer);
+  // After a host sync that makes completed GPU writes visible to the application: publishes the
+  // pending writes to GPU-written mappings of the current share group, then copies the driver
+  // contents into their shadows.
+  void RefreshGpuWrittenMaps();
 
   // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
   // target, for an untracked target or one with nothing bound.
@@ -174,7 +184,6 @@ private:
 
   std::mutex m_StatisticsMutex;
   std::map<std::pair<bool, uint32_t>, MapStatistics> m_Statistics;
-
   // Buffer names are unique within a share group, not process-globally.
   struct Key {
     uint64_t ShareGroup;
@@ -243,6 +252,10 @@ private:
     // Whether an update of this mapping was taken. Only the first update of a mapping carries
     // its invalidation bits, so a later update does not discard the bytes of earlier ones.
     bool Updated{false};
+    // Whether GPU work may write this shadow-backed mapping. Source.Baseline then holds the
+    // shadow contents as of the last refresh or publication, and only bytes differing from it
+    // are published, so that publishing does not overwrite GPU results.
+    bool GpuWritten{false};
 
     // Whether the driver accepts a glBufferSubData-family update of [offset, offset + size) of
     // the buffer during this mapping.
@@ -268,11 +281,22 @@ private:
   MappedBufferUpdate PrepareFlushMappedUpdate(MappedRange& range, MapRelativeRange interval);
   using KeyedUpdates = std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>>;
   // Copies the written pages in `dirty` of a mapping published before use to the driver mapping,
-  // and appends their updates, each with its reserved key. Callers hold m_MappedBuffersMutex and
-  // record the updates after releasing it.
+  // and appends their updates, each with its reserved key. Of a GPU-written mapping, only the
+  // changed bytes are copied, as separate updates. Callers hold m_MappedBuffersMutex, or own
+  // `range`, and record the updates after releasing it.
   void AppendPublishedUpdates(MappedRange& range,
                               const std::vector<WatchedShadow::ByteRange>& dirty,
                               KeyedUpdates& updates);
+  // AppendPublishedUpdates() for the pages written since the last call.
+  void TakePublishedUpdates(MappedRange& range, KeyedUpdates& updates);
+  // Copies the driver mapping into the shadow of a readable mapping published before use, and
+  // makes it the baseline. Callers hold m_MappedBuffersMutex, or own `range`.
+  static void RefreshFromDriver(MappedRange& range);
+  // `command` is null when no command is rejected, and `target` 0 when the buffer is named.
+  static std::string DescribeMapping(const char* command,
+                                     GLenum target,
+                                     GLuint buffer,
+                                     const MappedRange& range);
   // After the real GL call, record the captured update at the reserved key or skip that key.
   void RecordOrSkipMappedUpdate(uint64_t key, const std::optional<MappedBufferUpdate>& update);
 
@@ -339,6 +363,8 @@ private:
   // Entries of m_MappedBuffers whose writes PublishMappedWrites() publishes. Modified under
   // m_MappedBuffersMutex; read without it so that commands check it cheaply.
   std::atomic<size_t> m_PublishedBeforeUseMaps{0};
+  // Entries of m_MappedBuffers with GpuWritten, likewise.
+  std::atomic<size_t> m_GpuWrittenMaps{0};
   // Entries of m_MappedBuffers for which MappedRange::MayDeferInvalidation() holds, likewise.
   std::atomic<size_t> m_DeferredInvalidationMaps{0};
 

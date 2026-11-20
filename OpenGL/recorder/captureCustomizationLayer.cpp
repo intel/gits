@@ -12,6 +12,7 @@
 #include "externalHandleService.h"
 #include "glEnumsAuto.h"
 #include "log.h"
+#include "mapTrackingService.h"
 #include "openglDriversAuto.h"
 
 namespace gits::opengl {
@@ -41,6 +42,26 @@ void RecordExportKey(CommandT& command, const char* commandName) {
               << "stream cannot replay the import. Only handles exported by Vulkan are supported.";
   }
   command.m_handle.Value = static_cast<uintptr_t>(exportKey);
+}
+
+void RefreshAfterSignaledWait(GLenum result) {
+  if (result == GL_ALREADY_SIGNALED || result == GL_CONDITION_SATISFIED) {
+    MapTrackingService::Get().RefreshGpuWrittenMaps();
+  }
+}
+
+// A query result read into client memory waits until the query completes, and the reported
+// availability tells that it did. Written into a query buffer, it does neither.
+template <typename CommandT>
+void RefreshAfterQueryResult(CommandT& command) {
+  const auto& values = command.m_params.Data;
+  if (values.empty()) {
+    return;
+  }
+  const GLenum pname = command.m_pname.Value;
+  if (pname == GL_QUERY_RESULT || (pname == GL_QUERY_RESULT_AVAILABLE && values[0] != 0)) {
+    MapTrackingService::Get().RefreshGpuWrittenMaps();
+  }
 }
 
 } // namespace
@@ -134,6 +155,51 @@ void CaptureCustomizationLayer::Post(wglCreateContextAttribsARBCommand& command)
                   "OpenGL ES contexts are not supported by the recorder");
     }
   }
+}
+
+void CaptureCustomizationLayer::Post(glClientWaitSyncCommand& command) {
+  RefreshAfterSignaledWait(command.m_Return.Value);
+}
+
+void CaptureCustomizationLayer::Post(glClientWaitSyncAPPLECommand& command) {
+  RefreshAfterSignaledWait(command.m_Return.Value);
+}
+
+void CaptureCustomizationLayer::Post(glGetSyncivCommand& command) {
+  // The generated wrapper does not copy `values`; the application's array holds the result.
+  const GLint* values = command.m_values.Pointer;
+  if (command.m_pname.Value == GL_SYNC_STATUS && command.m_count.Value > 0 && values != nullptr &&
+      values[0] == GL_SIGNALED) {
+    MapTrackingService::Get().RefreshGpuWrittenMaps();
+  }
+}
+
+void CaptureCustomizationLayer::Post(glFinishCommand&) {
+  MapTrackingService::Get().RefreshGpuWrittenMaps();
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjectuivCommand& command) {
+  RefreshAfterQueryResult(command);
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjectuivARBCommand& command) {
+  RefreshAfterQueryResult(command);
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjecti64vCommand& command) {
+  RefreshAfterQueryResult(command);
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjecti64vEXTCommand& command) {
+  RefreshAfterQueryResult(command);
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjectui64vCommand& command) {
+  RefreshAfterQueryResult(command);
+}
+
+void CaptureCustomizationLayer::Post(glGetQueryObjectui64vEXTCommand& command) {
+  RefreshAfterQueryResult(command);
 }
 
 } // namespace gits::opengl

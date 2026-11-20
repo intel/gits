@@ -97,6 +97,19 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     return realFunction(${param_names});
 % endif
   }
+% if cmd.name in buffer_content_hooks and buffer_content_hooks[cmd.name].before_call:
+<%
+    hook = buffer_content_hooks[cmd.name]
+%>\
+  // See buffer_content_hooks.py's BufferContentHook.before_call.
+% if hook.guard:
+  if (${hook.guard}) {
+    BufferShadowService::Get().${hook.call};
+  }
+% else:
+  BufferShadowService::Get().${hook.call};
+% endif
+% endif
 % if cmd.name in buffer_content_hooks and buffer_content_hooks[cmd.name].prepare:
 <%
     hook = buffer_content_hooks[cmd.name]
@@ -386,7 +399,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // See generator_recorder.py's PRIMITIVE_PAIR_COMMANDS.
   MapTrackingService::Get().SetInPrimitivePair(${'true' if primitive_pair_commands[cmd.name] else 'false'});
 % endif
-% if cmd.name in buffer_content_hooks:
+% if cmd.name in buffer_content_hooks and not buffer_content_hooks[cmd.name].before_call:
 <%
     hook = buffer_content_hooks[cmd.name]
     hook_conditions = (['!command.m_Skip'] if cmd.enabled else []) + ([hook.guard] if hook.guard else [])

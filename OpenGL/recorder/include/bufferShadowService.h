@@ -58,13 +58,22 @@ public:
   static BufferShadowService& Get();
 
   // `command` names the GL command in the error raised when it lets the GPU write a buffer the
-  // application holds persistently mapped for writing.
+  // application holds persistently mapped for writing in an unsupported way.
   void OnData(const char* command, BufferRef ref, uint64_t size, const void* data);
   // Before a glBufferSubData-family call reserves its key. See
   // MapTrackingService::PublishInvalidationBeforeSubData.
   void BeforeSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
   void OnSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
+  // GL commands writing the buffer, such as copies and clears, which a writable persistent
+  // mapping does not support.
   void OnGpuWrite(const char* command, BufferRef ref);
+  // GL commands after which the GPU or external memory may write the buffer in commands that are
+  // not hooked, such as image stores to a buffer texture, which a writable persistent mapping
+  // does not support, whether they come before or during it.
+  void OnUnhookedGpuWriter(const char* command, BufferRef ref);
+  // Transform feedback, query results, and the binding points of OnBind and OnBindIndexed, which
+  // readable persistent mappings see after a host sync. See MapTrackingService::OnGpuResultWrite.
+  void OnGpuResultWrite(const char* command, BufferRef ref);
   // Contents undefined until the next complete upload or seeding.
   void OnUndefined(BufferRef ref);
   void OnBind(const char* command, GLenum target, GLuint buffer);
@@ -72,6 +81,11 @@ public:
   void OnBindIndexed(const char* command, GLenum target, GLsizei count, const GLuint* buffers);
   void OnDelete(GLsizei n, const GLuint* buffers);
 
+  // Whether the GPU or external memory may have written the buffer.
+  bool IsUntrusted(uint64_t shareGroup, GLuint buffer);
+  // The command after which the GPU or external memory may write the buffer in commands that are
+  // not hooked, or null.
+  const char* UnhookedGpuWriter(uint64_t shareGroup, GLuint buffer);
   // MapTrackingService reports writable map creation and published mapped bytes here.
   // GL_MAP_INVALIDATE_BUFFER_BIT leaves only the mapped range known.
   void OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfield access);
@@ -120,8 +134,13 @@ private:
 
   // Resolves `ref` on the current context; Buffer 0 when nothing is bound.
   Key Resolve(BufferRef ref);
-  // `target` is the binding point the buffer was addressed through, or 0 when named directly.
-  void MarkUntrusted(const char* command, GLenum target, const Key& key);
+  // Callers notify MapTrackingService without holding m_Mutex: it records published mapped writes,
+  // which reach OnMappedBytes. `unhookedWriter` is the command, if any, after which the GPU or
+  // external memory may write the buffer in commands that are not hooked.
+  void MarkUntrusted(const Key& key, const char* unhookedWriter = nullptr);
+  // Before telling MapTrackingService of a GPU write to `key`'s buffer: a map registered
+  // concurrently then either is found or finds the buffer untrusted.
+  void MarkUntrustedBeforeMapCheck(const Key& key, const char* unhookedWriter = nullptr);
   bool ReadThroughStaging(uint64_t shareGroup,
                           uint64_t offset,
                           uint64_t size,
@@ -129,7 +148,9 @@ private:
 
   std::mutex m_Mutex;
   std::unordered_map<Key, Shadow, KeyHash> m_Shadows;
-  std::unordered_set<Key, KeyHash> m_Untrusted;
+  // The untrusted buffers, each with the first command after which the GPU or external memory
+  // may write it in commands that are not hooked, or null. The names are string literals.
+  std::unordered_map<Key, const char*, KeyHash> m_Untrusted;
   // Recorder-owned staging buffer per (share group, context). A context is current on one
   // thread at a time, so its staging sequence never runs concurrently with another's.
   using StagingKey = std::pair<uint64_t, uintptr_t>;

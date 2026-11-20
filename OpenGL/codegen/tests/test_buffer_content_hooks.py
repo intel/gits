@@ -45,13 +45,15 @@ class BufferContentHooksTests(unittest.TestCase):
                 'OnGpuWrite("glNamedCopyBufferSubDataEXT", BufferRef::ByName(writeBuffer))',
             'glClearBufferSubData':
                 'OnGpuWrite("glClearBufferSubData", BufferRef::ByTarget(target))',
-            'glTexBuffer': 'OnGpuWrite("glTexBuffer", BufferRef::ByName(buffer))',
+            'glTexBuffer': 'OnUnhookedGpuWriter("glTexBuffer", BufferRef::ByName(buffer))',
             'glTransformFeedbackBufferRange':
-                'OnGpuWrite("glTransformFeedbackBufferRange", BufferRef::ByName(buffer))',
+                'OnGpuResultWrite("glTransformFeedbackBufferRange", BufferRef::ByName(buffer))',
             'glGetQueryBufferObjectuiv':
-                'OnGpuWrite("glGetQueryBufferObjectuiv", BufferRef::ByName(buffer))',
+                'OnGpuResultWrite("glGetQueryBufferObjectuiv", BufferRef::ByName(buffer))',
             'glBufferStorageMemEXT':
-                'OnGpuWrite("glBufferStorageMemEXT", BufferRef::ByTarget(target))',
+                'OnUnhookedGpuWriter("glBufferStorageMemEXT", BufferRef::ByTarget(target))',
+            'glMakeNamedBufferResidentNV':
+                'OnUnhookedGpuWriter("glMakeNamedBufferResidentNV", BufferRef::ByName(buffer))',
             'glInvalidateBufferSubData': 'OnUndefined(BufferRef::ByName(buffer))',
             'glMapNamedBufferRange': 'OnUndefined(BufferRef::ByName(buffer))',
             'glBindBufferARB': 'OnBind("glBindBufferARB", target, buffer)',
@@ -85,6 +87,18 @@ class BufferContentHooksTests(unittest.TestCase):
             for term in hook.guard.split(' && '):
                 with self.subTest(command=cmd.name, term=term):
                     self.assertIn(types[term.removesuffix(' >= 0')], signed)
+
+    def test_query_result_writes_are_hooked_before_the_call(self) -> None:
+        expected = {
+            'glGetQueryBufferObjectiv': True,
+            'glGetQueryBufferObjectui64v': True,
+            'glTransformFeedbackBufferBase': False,
+            'glBindBufferBase': False,
+            'glCopyBufferSubData': False,
+        }
+        for name, before_call in expected.items():
+            with self.subTest(command=name):
+                self.assertEqual(self.hooks[name].before_call, before_call)
 
     def test_uploads_are_prepared_before_their_key(self) -> None:
         expected = {

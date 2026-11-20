@@ -35,12 +35,19 @@ class BufferContentHook:
     (GLsizeiptr, GLintptr), and a negative one is a call the driver rejects without touching the
     buffer, which must not reach the unsigned `call` arguments.
 
+    `before_call` runs the call before the command publishes mapped writes and reserves its key,
+    for commands that have the GPU write the buffer themselves: starting to track the GPU writes
+    of a persistent mapping publishes the pages written meanwhile, whole, which must replay before
+    the GPU write and not overwrite it. Hooks of commands that only bind a buffer run after the
+    call, as the GPU writes it through the binding only in later commands.
+
     `prepare`, when set, is another BufferShadowService member call, under `guard`, made before
     the command publishes mapped writes and reserves its key, while `call` still runs after the
     call.
     """
     call: str
     guard: str | None = None
+    before_call: bool = False
     prepare: str | None = None
 
 
@@ -81,11 +88,18 @@ def _sub_data(command: str, names: set[str]) -> BufferContentHook | None:
                              prepare=f'BeforeSubData({arguments})')
 
 
-def _gpu_write(target: str, buffer: str):
+def _gpu_write(target: str, buffer: str, hook: str = 'OnGpuWrite'):
     def build(command: str, names: set[str]) -> str | None:
         ref = _ref(names, target, buffer)
-        return None if ref is None else f'OnGpuWrite({_command(command)}, {ref})'
+        return None if ref is None else f'{hook}({_command(command)}, {ref})'
     return build
+
+
+def _before_call(build):
+    def wrapped(command: str, names: set[str]) -> BufferContentHook | None:
+        call = build(command, names)
+        return None if call is None else BufferContentHook(call=call, before_call=True)
+    return wrapped
 
 
 def _undefined(command: str, names: set[str]) -> str | None:
@@ -122,13 +136,20 @@ _FAMILIES = (
     (re.compile(r'^gl(CopyNamed|NamedCopy)BufferSubData(EXT)?$'),
      _gpu_write('writeTarget', 'writeBuffer')),
     (re.compile(r'^glClear(Named)?Buffer(Sub)?Data(EXT)?$'), _gpu_write('target', 'buffer')),
-    # A buffer texture can be written by image stores.
+    # After these, the GPU or external memory may write the buffer in commands that are not
+    # hooked: image stores to a buffer texture, external memory, and shaders through a resident
+    # address.
     (re.compile(r'^gl(Tex|Texture|MultiTex)Buffer(Range)?(ARB|EXT|OES)?$'),
-     _gpu_write('', 'buffer')),
-    (re.compile(r'^glTransformFeedbackBuffer(Base|Range)$'), _gpu_write('', 'buffer')),
-    (re.compile(r'^glGetQueryBufferObject'), _gpu_write('', 'buffer')),
-    (re.compile(r'^gl(Named)?BufferStorage(Mem|External)EXT$'), _gpu_write('target', 'buffer')),
-    (re.compile(r'^glMake(Named)?BufferResidentNV$'), _gpu_write('target', 'buffer')),
+     _gpu_write('', 'buffer', 'OnUnhookedGpuWriter')),
+    # Transform feedback and query results reach persistent mappings like shader writes do.
+    (re.compile(r'^glTransformFeedbackBuffer(Base|Range)$'),
+     _gpu_write('', 'buffer', 'OnGpuResultWrite')),
+    (re.compile(r'^glGetQueryBufferObject'),
+     _before_call(_gpu_write('', 'buffer', 'OnGpuResultWrite'))),
+    (re.compile(r'^gl(Named)?BufferStorage(Mem|External)EXT$'),
+     _gpu_write('target', 'buffer', 'OnUnhookedGpuWriter')),
+    (re.compile(r'^glMake(Named)?BufferResidentNV$'),
+     _gpu_write('target', 'buffer', 'OnUnhookedGpuWriter')),
     (re.compile(r'^gl(Named)?BufferPageCommitment(ARB|EXT|MemNV)?$'), _undefined),
     (re.compile(r'^glInvalidateBuffer(Sub)?Data$'), _undefined),
     # Maps MapTrackingService tracks have custom wrappers (mapTrackingWrappers.cpp) that update
