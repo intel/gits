@@ -472,8 +472,10 @@ def derive_pointer_param_override(
         those are image/buffer read-backs whose pointer can be a pack-buffer offset.
     Exceptions found by auditing every newly enabled command are in
     _GENERIC_DERIVATION_DENYLIST. Two object-name shapes are also refused:
-      - An existing-object name array written by the driver (glGetAttachedShaders): object-name
-        resolution runs before the call, when the array is not filled yet.
+      - An existing-object name array written by the driver (glExtGetShadersQCOM): object-name
+        resolution runs before the call, when the array is not filled yet. Those listed in
+        DISCARDED_NAME_OUTPUT_FIELDS (glGetAttachedShaders) have no object-name override and
+        become DISCARDED_OUTPUT instead.
       - A Gen/Create/Delete name array gl.xml does not tag with class= (NV fences, AMD perf
         monitors, ...): a namespace without object-name mapping would replay raw names.
     """

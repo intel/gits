@@ -664,7 +664,7 @@ class ShaderObjectsARBTests(unittest.TestCase):
                 self.assertTrue(self.commands[name].enabled)
 
     def test_attached_objects_query_stays_disabled(self) -> None:
-        # Like glGetAttachedShaders: its `obj` output array has no class.
+        # Its `obj` output array has no class.
         self.assertFalse(self.commands['glGetAttachedObjectsARB'].enabled)
 
     def test_classes_are_inherited_from_the_alias(self) -> None:

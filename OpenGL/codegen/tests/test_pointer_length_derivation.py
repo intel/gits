@@ -187,10 +187,18 @@ class DerivePointerParamOverrideTests(unittest.TestCase):
         self.assertIsNone(derive_pointer_param_override('glGenFencesNV', param, [sibling]))
 
     def test_out_lookup_object_name_array_is_not_derived(self) -> None:
+        param = Parameter(name='shaders', type='GLuint *', len='maxShaders', class_='shader')
+        sibling = Parameter(name='maxShaders', type='GLint')
+        self.assertIsNone(
+            derive_pointer_param_override('glExtGetShadersQCOM', param, [sibling]))
+
+    def test_discarded_name_output_is_discarded_output(self) -> None:
         param = Parameter(name='shaders', type='GLuint *', len='maxCount', class_='shader')
         sibling = Parameter(name='maxCount', type='GLsizei')
-        self.assertIsNone(
-            derive_pointer_param_override('glGetAttachedShaders', param, [sibling]))
+        override = derive_pointer_param_override('glGetAttachedShaders', param, [sibling])
+        self.assertEqual(override.direction, PointerDirection.OUT)
+        self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+        self.assertEqual(override.length_source_value, 'maxCount')
 
     def test_const_void_byte_count_is_in(self) -> None:
         param = Parameter(name='data', type='const void *', len='size')

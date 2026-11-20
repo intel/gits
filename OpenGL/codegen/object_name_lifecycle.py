@@ -255,6 +255,14 @@ UNMAPPED_HANDLE_ARB_FIELDS: frozenset[tuple[str, str]] = frozenset({
     ('glGetHandleARB', 'return_value'),
 })
 
+# Driver-written arrays of names of objects that already exist. Nothing on replay reads them:
+# a later command that passes one of these names back records it through its own LOOKUP field.
+# They carry no ObjectNameOverride, so the array is a LengthSourceKind.DISCARDED_OUTPUT (see
+# pointer_length_derivation.py) instead of a mapped name array.
+DISCARDED_NAME_OUTPUT_FIELDS: frozenset[tuple[str, str]] = frozenset({
+    ('glGetAttachedShaders', 'shaders'),
+})
+
 # gl.xml classes whose recorded names are replayed verbatim, without ObjectNameMapService. Display
 # lists: glNewList defines any unused name (glGenLists only reserves a range), and on replay only
 # the stream itself creates lists, so every recorded name is a valid replay-time name. Identity
@@ -542,7 +550,7 @@ def resolve_object_name_override(
     explicit = _EXPLICIT_OVERRIDES.get((command_name, field_name))
     if explicit is not None:
         return explicit
-    if class_ is None:
+    if class_ is None or (command_name, field_name) in DISCARDED_NAME_OUTPUT_FIELDS:
         return None
     if class_ not in _CLASS_TO_KIND:
         raise KeyError(

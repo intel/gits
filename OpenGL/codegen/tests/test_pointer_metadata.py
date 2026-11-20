@@ -14,7 +14,7 @@ from pathlib import Path
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
-from generator_helpers import pointer_needs_raw_offset_capture
+from generator_helpers import pointer_needs_raw_offset_capture, pointer_override_for
 from intermediates import Api, Parameter
 from intermediates_creator import (
     FILE_TO_API,
@@ -944,11 +944,17 @@ class EndToEndEnabledGateTests(unittest.TestCase):
             'glSelectBuffer', 'glFeedbackBuffer',           # driver retains the pointer
             'glCullParameterfvEXT',                         # IN array declared without const
             'glGenFencesNV', 'glDeleteFencesNV',            # names without object-name mapping
-            'glGetAttachedShaders',                         # OUT existing-object names
             'glGetTexImage',                                # OUT void*, pack-buffer offset
         ):
             with self.subTest(command=name):
                 self.assertFalse(self._get_command(Api.GL, name).enabled)
+
+    def test_attached_shaders_query_is_enabled(self) -> None:
+        cmd = self._get_command(Api.GL, 'glGetAttachedShaders')
+        self.assertTrue(cmd.enabled)
+        override = pointer_override_for(cmd, 'shaders')
+        self.assertEqual(override.length_source_kind, LengthSourceKind.DISCARDED_OUTPUT)
+        self.assertEqual(override.length_source_value, 'maxCount')
 
     def test_debug_callback_stays_disabled(self) -> None:
         # glDebugMessageCallback takes an application callback function pointer - structurally

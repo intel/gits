@@ -25,6 +25,7 @@ from array_of_arrays_metadata import (
 )
 from intermediates import Api, CmdType, Command, EnumType, EnumValue, Parameter, ReturnValue, TypeFacts
 from object_name_lifecycle import (
+    DISCARDED_NAME_OUTPUT_FIELDS,
     HANDLE_ARB_CLASSES,
     IDENTITY_NAME_CLASSES,
     UNMAPPED_HANDLE_ARB_FIELDS,
@@ -746,6 +747,8 @@ def _requires_object_name_override(command_name: str, field: Parameter) -> bool:
     if field.type_facts.is_mapped_handle:
         return False
     if field.class_ in IDENTITY_NAME_CLASSES:
+        return False
+    if (command_name, field.name) in DISCARDED_NAME_OUTPUT_FIELDS:
         return False
     if field.class_ is None and field.type_facts.base_type == 'GLhandleARB':
         return (command_name, field.name) not in UNMAPPED_HANDLE_ARB_FIELDS
