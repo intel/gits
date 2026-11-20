@@ -72,14 +72,24 @@ public:
   // forgets them in the same step, so a concurrent write is reported by the next call.
   std::vector<ByteRange> TakeDirtyRanges(const void* data, size_t size);
 
-  // Page protection only. A stale page holding bytes of [data, data + size) first gets them from
+  // When a stale page gets the source bytes.
+  enum class Refresh {
+    // On its first read or write.
+    OnAccess,
+    // On its first read only. A page written first keeps its earlier bytes where it is not
+    // written, which equal the baseline, so later reads there miss newer source bytes.
+    OnRead
+  };
+
+  // Page protection only. A stale page holding bytes of [data, data + size) gets them from
   // `source`, laid out like `data`, and into `baseline` when it is not empty. Both outlive the
   // shadow or the next call; `baseline` covers the whole range.
-  void SetRefreshSource(void* data, size_t size, const void* source, std::span<uint8_t> baseline);
+  void SetRefreshSource(
+      void* data, size_t size, const void* source, std::span<uint8_t> baseline, Refresh refresh);
   // Page protection only. Makes every page not written since the last TakeDirtyRanges() stale,
-  // so that its next access refreshes it. A written page instead gets the source bytes at once
-  // where it still holds the baseline bytes, and keeps the bytes written to it; without a
-  // baseline it keeps all its bytes.
+  // so that it is refreshed as SetRefreshSource() selects. A written page instead gets the
+  // source bytes at once where it still holds the baseline bytes, and keeps the bytes written to
+  // it; without a baseline it keeps all its bytes.
   void MarkUnwrittenStale();
 
   // Whether pages may have been written since they were last taken or reset; always true for
@@ -136,6 +146,7 @@ private:
   size_t m_RefreshSize{0};
   const uint8_t* m_RefreshSource{};
   std::span<uint8_t> m_RefreshBaseline;
+  Refresh m_Refresh{Refresh::OnAccess};
 };
 
 // The runs of consecutive pages of pageSize bytes at the ascending addresses in pages, clipped to

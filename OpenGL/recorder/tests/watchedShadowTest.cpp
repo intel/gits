@@ -35,6 +35,7 @@ using gits::opengl::WatchedShadow;
 constexpr size_t kPage = 4096;
 constexpr size_t kPages = 8;
 constexpr size_t kSize = kPages * kPage;
+constexpr auto kOnAccess = WatchedShadow::Refresh::OnAccess;
 
 volatile uint8_t* Bytes(WatchedShadow& shadow) {
   return static_cast<volatile uint8_t*>(shadow.Data());
@@ -120,7 +121,7 @@ void TestStalePagesRefreshOnAccess() {
   std::vector<uint8_t> baseline(kSize, 0);
   shadow.ResetWriteWatch();
   Bytes(shadow)[3 * kPage] = 7;
-  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), baseline);
+  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), baseline, kOnAccess);
   shadow.MarkUnwrittenStale();
   Check(Bytes(shadow)[10] == 0xAB, "a stale page reads the driver contents");
   Check(baseline[10] == 0xAB && baseline[kPage] == 0,
@@ -137,11 +138,27 @@ void TestStalePagesRefreshOnAccess() {
         "each stale page refreshes once");
 }
 
+void TestStalePagesRefreshOnRead() {
+  WatchedShadow shadow(kSize, WatchedShadow::Tracking::PageProtection);
+  std::vector<uint8_t> source(kSize, 0xAB);
+  std::vector<uint8_t> baseline(kSize, 0);
+  shadow.ResetWriteWatch();
+  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), baseline,
+                          WatchedShadow::Refresh::OnRead);
+  shadow.MarkUnwrittenStale();
+  Bytes(shadow)[kPage + 3] = 9;
+  Check(Bytes(shadow)[kPage + 3] == 9 && Bytes(shadow)[kPage + 4] == 0 && baseline[kPage] == 0,
+        "writing a stale page keeps its earlier bytes and the baseline");
+  Check(Equal(shadow.TakeDirtyRanges(shadow.Data(), kSize), {{kPage, kPage}}),
+        "writing a stale page makes it written");
+  Check(Bytes(shadow)[10] == 0xAB && baseline[10] == 0xAB, "reading a stale page refreshes it");
+}
+
 void TestWrittenPagesDoNotBecomeStale() {
   WatchedShadow shadow(kSize, WatchedShadow::Tracking::PageProtection);
   std::vector<uint8_t> source(kSize, 0xCD);
   shadow.ResetWriteWatch();
-  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), {});
+  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), {}, kOnAccess);
   Bytes(shadow)[2 * kPage] = 1;
   shadow.MarkUnwrittenStale();
   Check(Bytes(shadow)[2 * kPage] == 1 && Bytes(shadow)[2 * kPage + 1] == 0,
@@ -154,7 +171,7 @@ void TestWrittenPagesMergeRefresh() {
   std::vector<uint8_t> source(kSize, 0x5A);
   std::vector<uint8_t> baseline(kSize, 0);
   shadow.ResetWriteWatch();
-  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), baseline);
+  shadow.SetRefreshSource(shadow.Data(), kSize, source.data(), baseline, kOnAccess);
   Bytes(shadow)[2 * kPage + 1] = 1;
   shadow.MarkUnwrittenStale();
   Check(baseline[2 * kPage] == 0x5A && baseline[2 * kPage + 1] == 0,
@@ -174,7 +191,8 @@ void TestConcurrentWritesSurviveRefresh(bool withBaseline) {
   std::vector<uint8_t> baseline(kSize, 0);
   shadow.ResetWriteWatch();
   shadow.SetRefreshSource(shadow.Data(), kSize, source.data(),
-                          withBaseline ? std::span<uint8_t>(baseline) : std::span<uint8_t>());
+                          withBaseline ? std::span<uint8_t>(baseline) : std::span<uint8_t>(),
+                          kOnAccess);
   std::atomic<size_t> running{writers};
   std::vector<std::thread> threads;
   for (size_t writer = 0; writer < writers; ++writer) {
@@ -228,6 +246,7 @@ int main() {
   TestWrittenPagesAreCounted();
   TestWriteWatchPagesAreTaken();
   TestStalePagesRefreshOnAccess();
+  TestStalePagesRefreshOnRead();
   TestWrittenPagesDoNotBecomeStale();
   TestWrittenPagesMergeRefresh();
   TestConcurrentWritesSurviveRefresh(false);

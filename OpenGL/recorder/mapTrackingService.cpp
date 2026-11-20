@@ -669,8 +669,11 @@ void MapTrackingService::StartGpuWriteTracking(MappedRange& range, KeyedUpdates&
   // page, published whole into the baseline, or on a page written again that differs from it.
   range.Source.Baseline.assign(shadow, shadow + length);
   TakePublishedUpdates(range, updates);
-  range.Source.Shadow->SetRefreshSource(shadow, length, range.Source.DriverPointer,
-                                        range.Source.Baseline);
+  const bool refreshOnRead = Configurator::Get().opengl.recorder.gpuWrittenMapRefresh ==
+                             OpenGLGpuWrittenMapRefresh::ON_READ;
+  range.Source.Shadow->SetRefreshSource(
+      shadow, length, range.Source.DriverPointer, range.Source.Baseline,
+      refreshOnRead ? WatchedShadow::Refresh::OnRead : WatchedShadow::Refresh::OnAccess);
   range.Source.Shadow->MarkUnwrittenStale();
   range.GpuWritten = true;
 }

@@ -1744,6 +1744,19 @@ Configuration:
               page fault on the first write to each page after a scan, and suits applications
               that issue many commands per frame while writing little of large mappings.
               Readable persistent maps always use PageProtection.
+          - Name: gpuWrittenMapRefresh
+            Type: OpenGLGpuWrittenMapRefresh
+            Default: OnAccess
+            OSVisibility: [WINDOWS]
+            Description:
+              When the recorder copies GPU results into readable persistent buffer maps that GPU
+              work may write. After a host sync, OnAccess copies each page from the driver mapping
+              on its first read or write. OnRead copies it on its first read only. A page
+              written first then keeps its earlier contents where the application does not write
+              it, so reading those bytes later misses GPU results, and a write of the value the
+              page held before is not recorded if GPU work changed that byte. It suits
+              applications that only write such maps, or only read them, when reading the driver
+              mapping is slow.
           - Name: endFrameSleep
             Type: uint32_t
             Default: 0

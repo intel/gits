@@ -104,7 +104,9 @@ bool HandleShadowAccess(uintptr_t address, bool write) {
   using PageState = WatchedShadow::PageState;
   const PageState state = shadow.m_PageStates[page];
   if (state == PageState::Stale) {
-    shadow.RefreshPage(page);
+    if (!write || shadow.m_Refresh == WatchedShadow::Refresh::OnAccess) {
+      shadow.RefreshPage(page);
+    }
     if (!write) {
       shadow.ProtectPages(page, 1, PageState::ReadOnly);
       return true;
@@ -308,10 +310,8 @@ void WatchedShadow::ResetWriteWatch() {
   ForgetWrittenPages();
 }
 
-void WatchedShadow::SetRefreshSource(void* data,
-                                     size_t size,
-                                     const void* source,
-                                     std::span<uint8_t> baseline) {
+void WatchedShadow::SetRefreshSource(
+    void* data, size_t size, const void* source, std::span<uint8_t> baseline, Refresh refresh) {
   GITS_ASSERT(m_Tracking == Tracking::PageProtection,
               "Only page-protected shadows are refreshed from the driver mapping");
   GITS_ASSERT(baseline.empty() || baseline.size() == size, "Invalid shadow refresh baseline size");
@@ -320,6 +320,7 @@ void WatchedShadow::SetRefreshSource(void* data,
   m_RefreshSize = size;
   m_RefreshSource = static_cast<const uint8_t*>(source);
   m_RefreshBaseline = baseline;
+  m_Refresh = refresh;
 }
 
 void WatchedShadow::MarkUnwrittenStale() {
@@ -419,7 +420,8 @@ void WatchedShadow::ResetWriteWatch() {}
 void WatchedShadow::SetRefreshSource(void* /*data*/,
                                      size_t /*size*/,
                                      const void* /*source*/,
-                                     std::span<uint8_t> /*baseline*/) {
+                                     std::span<uint8_t> /*baseline*/,
+                                     Refresh /*refresh*/) {
   GITS_ASSERT(false, "Buffer map shadows are not refreshed on this platform");
 }
 

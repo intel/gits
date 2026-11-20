@@ -75,6 +75,12 @@ Enums:
         Description: Query the OS write watch over the whole mapping
       - Value: PAGE_PROTECTION
         Description: Fault on the first write to each page after a query
+  - Name: OpenGLGpuWrittenMapRefresh
+    Values:
+      - Value: ON_ACCESS
+        Description: Copy each page from the driver mapping on its first read or write
+      - Value: ON_READ
+        Description: Copy each page from the driver mapping on its first read only
   - Name: VulkanRecorderMode
     Values:
       - Value: ALL
