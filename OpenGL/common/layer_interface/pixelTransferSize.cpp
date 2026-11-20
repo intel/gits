@@ -20,52 +20,22 @@ namespace gits::opengl {
 
 namespace {
 
-// Warn-once state for the ComputePixelTransferByteSize() gating below -
-// mirrors OpenGL/recorder/clientMemoryCapture.cpp's own warn-once conventions (e.g.
-// g_WarnedPixelBufferGuardCommands), kept local to this translation unit since this is the
-// only place that needs it.
+// Warn-once state for the defensive negative-pixel-store-value guard in
+// ComputePixelTransferByteSize(), which guards a state that a spec-conforming driver can never
+// actually produce - see WarnNegativePixelStoreState()'s own message.
 std::mutex g_PixelStoreWarningMutex;
 std::unordered_set<std::string> g_WarnedPixelStoreCommands;
 
-// Logs a single warning per unique `commandName` when ComputePixelTransferByteSize() gates a
-// 3D transfer's capture off because of non-default GL_(UN)PACK_IMAGE_HEIGHT/
-// GL_(UN)PACK_SKIP_IMAGES state - see that function's own header comment for
-// why this is the safe choice rather than guessing at the full formula.
-void WarnNonDefaultImagePixelStoreState(const char* commandName) {
+void WarnNegativePixelStoreState(const char* commandName) {
   std::lock_guard<std::mutex> lock(g_PixelStoreWarningMutex);
   const std::string key = commandName != nullptr ? commandName : "<unknown pixel-transfer call>";
   if (g_WarnedPixelStoreCommands.insert(key).second) {
     LOG_WARNING << key
-                << ": non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES pixel-store "
-                   "state on a 3D pixel-transfer call - this recorder does not track those two "
-                   "parameters (see pixelTransferSize.h's own comment), and computing this "
-                   "call's captured byte range without them would silently under-count it, "
-                   "risking an out-of-bounds read/write on replay. Skipping capture for this "
-                   "call (0 bytes) instead of guessing at the wrong size.";
-  }
-}
-
-// Warn-once state for the defensive negative-pixel-store-value guard below, kept separate from
-// g_PixelStoreWarningMutex/g_WarnedPixelStoreCommands above (and its own distinct message) so
-// the two gates remain independently diagnosable from the log alone - see
-// ComputePixelTransferByteSize()'s own header comment (pixelTransferSize.h). Unlike that
-// gate (a genuine, expected-in-practice 3D-only limitation), this one guards a state that a
-// spec-conforming driver can never actually produce - see this function's own comment.
-std::mutex g_RowPixelStoreWarningMutex;
-std::unordered_set<std::string> g_WarnedRowPixelStoreCommands;
-
-void WarnNonDefaultRowPixelStoreState(const char* commandName) {
-  std::lock_guard<std::mutex> lock(g_RowPixelStoreWarningMutex);
-  const std::string key = commandName != nullptr ? commandName : "<unknown pixel-transfer call>";
-  if (g_WarnedRowPixelStoreCommands.insert(key).second) {
-    LOG_WARNING << key
-                << ": GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS "
-                   "query returned a negative value on a pixel-transfer call - a "
-                   "spec-conforming driver never allows any of the three to be set negative "
-                   "(glPixelStorei itself rejects a negative value for any of them with "
-                   "GL_INVALID_VALUE), so this should never happen in practice. Skipping "
-                   "capture for this call (0 bytes) rather than feeding a nonsensical negative "
-                   "value into this call's byte-range computation.";
+                << ": a GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS/IMAGE_HEIGHT/SKIP_IMAGES "
+                   "query returned a negative value on a pixel-transfer call - glPixelStorei "
+                   "rejects a negative value for any of them with GL_INVALID_VALUE, so this "
+                   "should never happen. Skipping capture for this call (0 bytes) rather than "
+                   "feeding a negative value into this call's byte-range computation.";
   }
 }
 
@@ -237,28 +207,14 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   if (width <= 0 || height <= 0 || depth <= 0) {
     return 0;
   }
-  // GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES gating - see this function's own header
-  // comment for the full rationale. Only ever non-zero when the caller
-  // (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) queried a genuinely live, non-default
-  // value for a command that actually has a `depth` dimension - a 2D-or-1D caller never passes
-  // anything but the defaults (0, 0), so this can never fire for one.
-  if (imageHeight != 0 || skipImages != 0) {
-    WarnNonDefaultImagePixelStoreState(commandName);
-    return 0;
-  }
-  // GL_(UN)PACK_ROW_LENGTH/GL_(UN)PACK_SKIP_ROWS/GL_(UN)PACK_SKIP_PIXELS are incorporated
-  // directly into the byte-range arithmetic below (see this function's own header comment,
-  // pixelTransferSize.h, for the exact GL pixel-store spec formula this implements and the
-  // live-testing verification that replaced the previous, more conservative "gate to unknown"
-  // behavior for these three). The only thing checked here defensively is that none of them is
-  // negative - glPixelStorei itself rejects a negative ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS with
-  // GL_INVALID_VALUE and leaves the corresponding state unchanged, so a live glGetIntegerv
-  // query should never observe one; if it somehow did, feeding a negative value into the
-  // unsigned arithmetic below would be a can't-happen-but-must-not-silently-misbehave case, so
-  // this treats it exactly like every other genuinely unknown/unrecognized input: skip capture
-  // and warn, rather than guess.
-  if (rowLength < 0 || skipRows < 0 || skipPixels < 0) {
-    WarnNonDefaultRowPixelStoreState(commandName);
+  // The pixel-store values are incorporated directly into the byte-range arithmetic below (see
+  // this function's own header comment, pixelTransferSize.h, for the GL pixel-store formula).
+  // glPixelStorei rejects a negative value for any of them with GL_INVALID_VALUE and leaves the
+  // state unchanged, so a live glGetIntegerv query never observes one; if it somehow did,
+  // feeding it into the unsigned arithmetic below would misbehave silently, so this skips
+  // capture and warns instead.
+  if (rowLength < 0 || skipRows < 0 || skipPixels < 0 || imageHeight < 0 || skipImages < 0) {
+    WarnNegativePixelStoreState(commandName);
     return 0;
   }
   // GL only ever allows 1/2/4/8 here (see this function's own header comment) - a caller-
@@ -327,7 +283,7 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   // buffer's bounds exactly like the pre-64-bit-widening bug this function was originally fixed
   // for (see MultiplyOverflows' own comment). Every multiplication below is therefore checked
   // explicitly; on overflow this returns 0, the same sentinel value already used above for an
-  // unrecognized format/type combination and non-default pixel-store state - but, per this
+  // unrecognized format/type combination and a negative pixel-store value - but, per this
   // function's own header comment, unlike THOSE cases, NOT the same
   // sentinel used for width/height/depth <= 0 further up: that one specific 0 is a genuine,
   // real zero-byte transfer, not "size could not be determined". See
@@ -355,40 +311,23 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
   }
   const uint64_t rowStride = rowStrideUnits * rowAlignment;
 
-  // 3D-aware generalization of the plain 2D case (see this function's own header comment for
-  // the derivation): every image below the last needs a full `height` rows of full padded
-  // `rowStride` (the next image starts immediately after, so even that image's own last row
-  // needs full padding), and only the very last row of the very last image needs no trailing
-  // padding past its own pixel data - i.e. (depth*height - 1) fully-padded rows plus one
-  // unpadded final row, collapsing to the plain 2D formula when depth == 1
-  // (depth*height - 1 == height - 1). Only reached once the imageHeight/skipImages gating
-  // above has already passed (both 0, i.e. GL's own defaults) - `height` is therefore already
-  // known to be the real per-layer row count this transfer uses, not merely assumed to be.
-  // Checked the same way as every other multiply/add here:
-  // depth and height are each already known <= INT32_MAX (GLsizei), so their product alone
-  // cannot overflow uint64_t, but it is still checked explicitly for consistency with every
-  // other step in this function rather than relied on by inspection.
-  const uint64_t depthU64 = static_cast<uint64_t>(depth);
-  const uint64_t heightU64 = static_cast<uint64_t>(height);
-  if (MultiplyOverflows(depthU64, heightU64)) {
+  // Fully padded rows before the final row of the final image: each of the
+  // GL_(UN)PACK_SKIP_IMAGES skipped images and the depth - 1 images before the final one spans
+  // GL_(UN)PACK_IMAGE_HEIGHT rows (the transfer's own `height` when that is 0), followed by the
+  // GL_(UN)PACK_SKIP_ROWS skipped rows and the height - 1 rows before the final one. With
+  // IMAGE_HEIGHT and SKIP_IMAGES at their defaults this is depth * height - 1 + skipRows, the
+  // plain 2D formula when depth == 1. Every operand is non-negative and at most INT32_MAX
+  // (checked above), so only the multiplication can overflow.
+  const uint64_t imageRows =
+      static_cast<uint64_t>(imageHeight > 0 ? imageHeight : static_cast<GLint>(height));
+  const uint64_t imagesBeforeFinal =
+      static_cast<uint64_t>(skipImages) + static_cast<uint64_t>(depth) - 1;
+  if (MultiplyOverflows(imagesBeforeFinal, imageRows)) {
     return 0;
   }
-  const uint64_t totalRows = depthU64 * heightU64;
-
-  // GL_(UN)PACK_SKIP_ROWS shifts the whole transfer's starting row later, within the
-  // client-supplied buffer, by `skipRows` full, fully-padded rows (see this function's own
-  // header comment) - a skipped row needs exactly the same full-`rowStride` treatment as any
-  // other non-final row, so it is folded directly into the same "every row but the very last
-  // needs a full padded rowStride" count the totalRows-1 term below already computes, rather
-  // than kept as a separate multiply/add term. skipRowsU64 is already known non-negative
-  // (checked at this function's own entry above); totalRows is already known >= 1 (`height`/
-  // `depth` were both checked > 0 above), so `totalRows - 1` cannot underflow.
-  const uint64_t skipRowsU64 = static_cast<uint64_t>(skipRows);
-  const uint64_t imageRowsMinusOne = totalRows - 1;
-  if (skipRowsU64 > (std::numeric_limits<uint64_t>::max)() - imageRowsMinusOne) {
-    return 0;
-  }
-  const uint64_t rowsNeedingFullStride = skipRowsU64 + imageRowsMinusOne;
+  const uint64_t rowsNeedingFullStride = imagesBeforeFinal * imageRows +
+                                         static_cast<uint64_t>(skipRows) +
+                                         static_cast<uint64_t>(height) - 1;
   if (MultiplyOverflows(rowStride, rowsNeedingFullStride)) {
     return 0;
   }
@@ -443,14 +382,14 @@ bool PixelTransferSizeIsUnknown(GLenum format,
   if (width <= 0 || height <= 0 || depth <= 0) {
     return false;
   }
-  // Every other 0 return from here on IS the "size unknown/unreplayable" sentinel (untracked
-  // pixel-store state, an unrecognized format/type combination, or an overflowing size
+  // Every other 0 return from here on IS the "size unknown/unreplayable" sentinel (a negative
+  // pixel-store value, an unrecognized format/type combination, or an overflowing size
   // computation) - see that function's own header comment. Calling it again here (rather than
   // threading its already-computed result through) is deliberate: it keeps this predicate a
   // thin, always-in-sync wrapper with no size/gating logic of its own to drift out of step,
-  // and every gate it might hit warns at most once per commandName regardless of how many
-  // times it is called (see WarnNonDefaultImagePixelStoreState()/WarnNonDefaultRowPixelStoreState()
-  // above), so this second call never double-logs.
+  // and the one gate that warns does so at most once per commandName regardless of how many
+  // times it is called (see WarnNegativePixelStoreState() above), so this second call never
+  // double-logs.
   return ComputePixelTransferByteSize(format, type, width, height, alignment, depth, imageHeight,
                                       skipImages, rowLength, skipRows, skipPixels,
                                       commandName) == 0;

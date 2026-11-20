@@ -46,18 +46,16 @@ namespace gits::opengl {
 // the full derivation and the live-testing verification behind it (this applies uniformly to
 // every pixel-transfer call, 1D/2D/3D alike, not just a 3D-shaped one: a sub-rectangle upload
 // via glTexSubImage2D whose source data is embedded in a larger, non-default-ROW_LENGTH image
-// - a very common real-world pattern - is the concrete motivating case). Unlike
-// GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES below (still gated - see that pair's own
-// comment for why), these three are never a source of "size unknown" on their own; only a
-// negative value (which a spec-conforming driver can never actually produce - see
-// pixelTransferSize.cpp's own comment) still gates capture off, as a defensive can't-happen
-// guard rather than a real, expected-in-practice limitation.
+// - a very common real-world pattern - is the concrete motivating case), and so are
+// GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES for a 3D transfer (see that pair's own
+// comment below). None of them is a source of "size unknown" on its own; only a negative value
+// (which a spec-conforming driver can never actually produce - see pixelTransferSize.cpp's own
+// comment) gates capture off, as a defensive can't-happen guard.
 //
 // Returns 0 for a non-positive `width`/`height`/`depth` (a genuine, real zero-byte transfer -
 // see this function's own comment below), an unrecognized or invalid `format`/`type`
-// combination (see ComputeTexelByteSize()), non-default GL_(UN)PACK_IMAGE_HEIGHT/GL_(UN)PACK_SKIP_IMAGES state on a 3D
-// transfer (still gated - see below), a negative GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS
-// (a can't-happen defensive guard - see above), or an intermediate/final size computation that
+// combination (see ComputeTexelByteSize()), a negative pixel-store value (a can't-happen
+// defensive guard - see above), or an intermediate/final size computation that
 // would overflow uint64_t - rather than guessing, or silently returning a wrapped-around value
 // that no longer reflects the real transfer size.
 //
@@ -95,26 +93,16 @@ namespace gits::opengl {
 // `imageHeight`/`skipImages` (default 0/0, GL's own defaults) are GL_UNPACK_IMAGE_HEIGHT/
 // GL_UNPACK_SKIP_IMAGES (or, for an OUT-direction transfer, their GL_PACK_* counterparts) -
 // see QueryUnpackImageHeight()/QueryUnpackSkipImages()/QueryPackImageHeight()/
-// QueryPackSkipImages() below. Unlike ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS above (a bounded,
-// documented "a few bytes short/long" limitation), an app that sets a non-default
-// GL_UNPACK_IMAGE_HEIGHT (which changes how many rows each layer of a 3D transfer actually
-// occupies in client memory) or a non-zero GL_UNPACK_SKIP_IMAGES (which shifts every captured
-// layer's real offset later by that many full layers) before a 3D transfer would make the
-// plain `depth * height` formula UNDER-count by a multiple of a full image's worth of rows -
-// not a few bytes, but potentially the entire remainder of the buffer. Rather than guess at
-// incorporating these into the byte-range arithmetic
-// without a way to verify the result against a real driver, this function takes the safe,
-// conservative option instead - if either is non-default for a call that actually has a third
-// dimension (i.e. a real caller passed a non-zero `imageHeight`/`skipImages` argument; see
-// commandsAuto.h.mako/recorderWrappersAuto.cpp.mako, which only ever do this for a command with
-// its own `depth` param), this function returns 0 (this header's own existing "size unknown,
-// capture degrades gracefully" sentinel - see this comment's paragraph on that above) instead
-// of a wrong, under-counted byte range, and logs a single warning per unique `commandName` (via
-// LOG_WARNING - see pixelTransferSize.cpp) so the gap is visible rather than silent. A 2D-or-1D
-// caller never passes a non-zero `imageHeight`/`skipImages` at all (GL_UNPACK_IMAGE_HEIGHT/
-// GL_UNPACK_SKIP_IMAGES have no effect on a 2D-or-1D transfer regardless of their live value),
-// so this can never fire for one - only a genuine 3D transfer with actually non-default
-// pixel-store state loses capture, not every 3D transfer unconditionally.
+// QueryPackSkipImages() below. GL_UNPACK_IMAGE_HEIGHT, when positive, replaces `height` as
+// the number of rows each image of a 3D transfer occupies in client memory, and
+// GL_UNPACK_SKIP_IMAGES skips that many whole images before the first one, so the GL
+// pixel-store formula extends the row addressing below to
+//     imageStride = rowStride * (IMAGE_HEIGHT > 0 ? IMAGE_HEIGHT : height)
+//     byteOffset(image, row) = (SKIP_IMAGES + image) * imageStride + byteOffset(row)
+// and the captured range ends with the final row of image depth - 1. A 2D-or-1D caller never
+// passes a non-zero `imageHeight`/`skipImages` at all (GL ignores both for a transfer with no
+// third dimension; see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako, which only query
+// them for a command with its own `depth` param).
 //
 // `rowLength`/`skipRows`/`skipPixels` (default 0/0/0, GL's own defaults) are
 // GL_UNPACK_ROW_LENGTH/GL_UNPACK_SKIP_ROWS/GL_UNPACK_SKIP_PIXELS (or, for an OUT-direction
@@ -161,14 +149,13 @@ namespace gits::opengl {
 // against a different, replay-time buffer layout to get wrong. Verified against a live capture/
 // replay round-trip with a non-default GL_UNPACK_ROW_LENGTH sub-rectangle upload (see this
 // change's own commit message for the exact repro and result) rather than derived from the
-// spec text alone. A negative value for any of the three (see this header's own top comment,
-// and pixelTransferSize.cpp's own comment) is the one remaining case that still gates capture
-// off, logging its own single warning per unique `commandName` (see pixelTransferSize.cpp) -
-// distinct from, and independent of, the IMAGE_HEIGHT/SKIP_IMAGES gate above.
+// spec text alone. A negative pixel-store value (see this header's own top comment, and
+// pixelTransferSize.cpp's own comment) is the one remaining case that still gates capture
+// off, logging a single warning per unique `commandName` (see pixelTransferSize.cpp).
 //
-// `commandName` (default nullptr) is used only for the two diagnostics above - never part of
-// the size computation itself. Given the previous paragraph, a caller now risks the gated case
-// on every call (not just a 3D one), so every enabled pixel-transfer call site
+// `commandName` (default nullptr) is used only for that diagnostic - never part of the size
+// computation itself. A caller risks the gated case on every call (not just a 3D one), so
+// every enabled pixel-transfer call site
 // (commandsAuto.h.mako/recorderWrappersAuto.cpp.mako) always passes it explicitly; omitting it
 // is only meaningful for a hypothetical caller outside the generated code path that can
 // independently guarantee every one of GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/SKIP_PIXELS/
@@ -189,7 +176,7 @@ uint64_t ComputePixelTransferByteSize(GLenum format,
 // The required companion predicate to
 // ComputePixelTransferByteSize() above: distinguishes its one truly-safe 0 return (a genuine,
 // real zero-byte transfer - non-positive `width`/`height`/`depth`) from every other 0 return
-// (untracked pixel-store state, an unrecognized `format`/`type` combination, or an overflowing
+// (a negative pixel-store value, an unrecognized `format`/`type` combination, or an overflowing
 // size computation), none of which mean "call away with an empty buffer, GL will not touch
 // it" - see that function's own header comment above for the full rationale.
 //

@@ -113,8 +113,7 @@ ${aoa_override.element_length_param if aoa_override.element_length_param else 'n
 ## header comment - so it is simply omitted from the call rather than passed explicitly). Only
 ## when pixel_depth_param IS set (a genuine 3D transfer) do we also query and pass
 ## GL_UNPACK_IMAGE_HEIGHT/GL_UNPACK_SKIP_IMAGES - see ComputePixelTransferByteSize's own header
-## comment for why a 3D transfer with non-default pixel-store state there
-## gates capture off instead of under-counting it; a 2D-or-1D command never needs to query
+## comment for how a 3D transfer's size includes them; a 2D-or-1D command never needs to query
 ## either (GL ignores both without a third dimension), so those two args are simply omitted
 ## (defaulting to 0, 0) rather than queried needlessly. GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/
 ## SKIP_PIXELS and this command's own name, by contrast (see

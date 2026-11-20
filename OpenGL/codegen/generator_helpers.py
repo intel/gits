@@ -220,8 +220,8 @@ def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | N
     value.
 
     ComputePixelTransferByteSize() returning 0 does not always mean "this call transfers zero
-    real bytes" - it is also the exact same sentinel returned for non-default/untracked
-    pixel-store state, an unrecognized format/type combination, or an overflowing size
+    real bytes" - it is also the exact same sentinel returned for a negative pixel-store
+    value, an unrecognized format/type combination, or an overflowing size
     computation, none of which are safe to treat as "empty buffer, call away" at replay time
     (see PixelTransferSizeIsUnknown()'s own header comment for exactly how the two categories
     are told apart). A parameter meeting this predicate gets an extra, unconditionally-

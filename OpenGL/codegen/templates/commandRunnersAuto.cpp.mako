@@ -530,7 +530,7 @@ void ${cmd.name}Runner::Run() {
         alreadyWarned = true;
         LOG_WARNING << "Replay skipped ${cmd.name} call (degraded fidelity): this call's "
                        "pixel-transfer byte size could not be determined at record time "
-                       "(non-default pixel-store state, an unrecognized format/type "
+                       "(a negative pixel-store value, an unrecognized format/type "
                        "combination, or an overflowing size computation), so no captured buffer "
                        "can safely stand in for the real, unknown-sized transfer this call "
                        "would otherwise perform.";
