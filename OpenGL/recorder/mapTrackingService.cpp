@@ -575,6 +575,19 @@ MapTrackingService::MappedBufferUpdate MapTrackingService::PrepareFlushMappedUpd
   return MakeMappedUpdate(range, interval, std::move(bytes));
 }
 
+void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
+                                                const std::vector<WatchedShadow::ByteRange>& dirty,
+                                                KeyedUpdates& updates) {
+  for (const WatchedShadow::ByteRange& run : dirty) {
+    auto bytes = range.Source.Snapshot(run.Offset, run.Length);
+    range.Source.WriteBack(run.Offset, bytes);
+    const MapRelativeRange interval{static_cast<GLintptr>(run.Offset),
+                                    static_cast<GLsizeiptr>(run.Length)};
+    updates.emplace_back(CaptureManager::Get().CreateCommandKey(),
+                         MakeMappedUpdate(range, interval, std::move(bytes)));
+  }
+}
+
 void MapTrackingService::RecordOrSkipMappedUpdate(uint64_t key,
                                                   const std::optional<MappedBufferUpdate>& update) {
   if (!update) {
@@ -886,6 +899,39 @@ void MapTrackingService::OnSubData(
   range.Source.Shadow->ResetWriteWatch(destination, length);
 }
 
+void MapTrackingService::PublishBeforeDelete(GLsizei count, const GLuint* buffers) {
+  if (buffers == nullptr) {
+    return;
+  }
+  const uint64_t shareGroup = CurrentShareGroup();
+  KeyedUpdates updates;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    for (GLsizei index = 0; index < count; ++index) {
+      const auto mapped = m_MappedBuffers.find(Key{shareGroup, buffers[index]});
+      if (mapped == m_MappedBuffers.end()) {
+        continue;
+      }
+      MappedRange& range = mapped->second;
+      if (!PublishesBeforeUse(range.Access)) {
+        GITS_ASSERT(false, "Deleting buffer " + std::to_string(buffers[index]) +
+                               " while it is mapped with " +
+                               GetBitmaskString(GLenumApi::GL, range.Access,
+                                                GLenumGroup::MapBufferAccessMask) +
+                               " is unsupported: only persistent mappings whose writes are "
+                               "published before use keep their writes at deletion");
+        continue;
+      }
+      const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
+                                                              static_cast<size_t>(range.Length));
+      AppendPublishedUpdates(range, dirty, updates);
+    }
+  }
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
+}
+
 void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
   if (buffers == nullptr) {
     return;
@@ -894,11 +940,6 @@ void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   for (GLsizei index = 0; index < count; ++index) {
     const auto mapped = m_MappedBuffers.find(Key{shareGroup, buffers[index]});
-    GITS_ASSERT(mapped == m_MappedBuffers.end(),
-                "Deleting a mapped buffer is unsupported: capture does not track implicit unmap "
-                "and retained-object lifetimes at deletion, so it cannot safely discard the "
-                "mapping or GPU-write classification. This workload requires additional recorder "
-                "support");
     if (mapped != m_MappedBuffers.end()) {
       EraseMappedRange(mapped);
     }
@@ -988,7 +1029,7 @@ void MapTrackingService::PublishMappedWrites() {
     return;
   }
   const uint64_t shareGroup = CurrentShareGroup();
-  std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>> updates;
+  KeyedUpdates updates;
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
     for (auto& [key, range] : m_MappedBuffers) {
@@ -997,14 +1038,7 @@ void MapTrackingService::PublishMappedWrites() {
       }
       const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
                                                               static_cast<size_t>(range.Length));
-      for (const WatchedShadow::ByteRange& run : dirty) {
-        auto bytes = range.Source.Snapshot(run.Offset, run.Length);
-        range.Source.WriteBack(run.Offset, bytes);
-        const MapRelativeRange interval{static_cast<GLintptr>(run.Offset),
-                                        static_cast<GLsizeiptr>(run.Length)};
-        updates.emplace_back(CaptureManager::Get().CreateCommandKey(),
-                             MakeMappedUpdate(range, interval, std::move(bytes)));
-      }
+      AppendPublishedUpdates(range, dirty, updates);
     }
   }
   // BufferShadowService locks its mutex before the map mutex, so record after releasing it.

@@ -32,7 +32,7 @@ from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_
                                 DrawableIdentities, drawable_identities, mapped_write_publishers,
                                 query_buffer_publishers)
 from handle_lifecycle import FRAME_END_COMMANDS
-from intermediates import Api, CmdType, Command, ReturnValue
+from intermediates import Api, CmdType, Command, Parameter, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
     extract_commands_from_registry,
@@ -442,6 +442,23 @@ class MappedWritePublisherTests(unittest.TestCase):
         self.assertLess(prepare, body.index('MapTrackingService::Get().PublishMappedWrites();'))
         self.assertLess(body.index('CaptureManager::Get().CreateCommandKey()'),
                         body.index('BufferShadowService::Get().OnSubData(data);'))
+
+    def test_deletion_uses_a_copy_of_the_names(self) -> None:
+        command = Command(
+            name='glDeleteBuffers', api=Api.GL, enabled=False, command_type=CmdType.NONE,
+            return_value=ReturnValue(type='void'),
+            params=[Parameter(name='n', type='GLsizei'),
+                    Parameter(name='buffers', type='const GLuint *')])
+        rendered = render_commands(
+            [command], frozenset(),
+            buffer_content_hooks={'glDeleteBuffers': BufferContentHook(call='OnDelete(n, buffers)')})
+        body = extract_wrapper_body(rendered, 'glDeleteBuffers')
+        copy = body.index('buffers = deletedBuffers.data();')
+        self.assertLess(copy, body.index('MapTrackingService::Get().PublishBeforeDelete(n, buffers);'))
+        # The nested call is the first one; the others must follow the copy.
+        calls = [match.start() for match in re.finditer(r'realFunction\(n, buffers\);', body)]
+        self.assertLess(copy, calls[-1])
+        self.assertLess(copy, body.index('MapTrackingService::Get().OnDelete(n, buffers);'))
 
     def test_writes_are_published_before_the_key_is_reserved(self) -> None:
         rendered = render_commands([fake_command('glDrawArrays'), fake_command('glBindBuffer')],

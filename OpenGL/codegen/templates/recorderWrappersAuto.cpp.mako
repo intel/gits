@@ -63,6 +63,7 @@ ${AUTO_GENERATED_HEADER}
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace gits::opengl {
 
@@ -118,6 +119,16 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   if (QueryBufferIsBound()) {
     MapTrackingService::Get().PublishMappedWrites();
   }
+% elif cmd.name in ('glDeleteBuffers', 'glDeleteBuffersARB'):
+  // The names may be in a persistent mapping of a deleted buffer, whose shadow is freed once
+  // MapTrackingService forgets the mapping, so the call and every hook use a copy.
+  std::vector<GLuint> deletedBuffers;
+  if (n > 0 && buffers != nullptr) {
+    deletedBuffers.assign(buffers, buffers + n);
+    buffers = deletedBuffers.data();
+  }
+  // The deletion unmaps its buffers, so their published writes must replay before it.
+  MapTrackingService::Get().PublishBeforeDelete(n, buffers);
 % endif
   // Reserved here - before the real driver dispatch below - rather than deferred into
   // CaptureManager::RecordCommand/RecordUnsupportedCommand (as it used to be), so concurrent

@@ -112,6 +112,11 @@ public:
   // update yet, records an update that carries the invalidation, so the upload replays after it.
   void PublishInvalidationBeforeSubData(
       uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data);
+  // Before glDeleteBuffers, which implicitly unmaps the buffers it deletes: publishes the writes
+  // to their persistent mappings, as their retained objects may still be used, and the driver
+  // mappings are gone once the call returns. Other mappings of deleted buffers are unsupported.
+  void PublishBeforeDelete(GLsizei count, const GLuint* buffers);
+  // After glDeleteBuffers, forgets the mappings of the deleted buffers.
   void OnDelete(GLsizei count, const GLuint* buffers);
   // `command` and `target` (0 when the buffer is named directly) only describe the rejected call.
   void AssertNoWritablePersistentMap(const char* command,
@@ -261,6 +266,13 @@ private:
                                       MapRelativeRange interval,
                                       std::vector<uint8_t> bytes);
   MappedBufferUpdate PrepareFlushMappedUpdate(MappedRange& range, MapRelativeRange interval);
+  using KeyedUpdates = std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>>;
+  // Copies the written pages in `dirty` of a mapping published before use to the driver mapping,
+  // and appends their updates, each with its reserved key. Callers hold m_MappedBuffersMutex and
+  // record the updates after releasing it.
+  void AppendPublishedUpdates(MappedRange& range,
+                              const std::vector<WatchedShadow::ByteRange>& dirty,
+                              KeyedUpdates& updates);
   // After the real GL call, record the captured update at the reserved key or skip that key.
   void RecordOrSkipMappedUpdate(uint64_t key, const std::optional<MappedBufferUpdate>& update);
 
