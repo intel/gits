@@ -276,6 +276,9 @@ private:
     GLbitfield Access{0};
     std::vector<uint8_t> Bytes;
     bool First{true}; // Whether it is the first update of its mapping.
+    // The spans relative to Offset whose bytes Bytes holds one after another, keeping the bytes
+    // between them; empty when Bytes covers [Offset, Offset + Length).
+    std::vector<WatchedShadow::ByteRange> Spans;
   };
 
   MappedBufferUpdate MakeMappedUpdate(MappedRange& range,
@@ -285,7 +288,8 @@ private:
   using KeyedUpdates = std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>>;
   // Copies the written pages in `dirty` of a mapping published before use to the driver mapping,
   // and into Source.Baseline when it has one, and appends their updates, each with its reserved
-  // key. Of a GPU-written mapping, only the changed bytes are copied, as separate updates.
+  // key. Of a GPU-written mapping, only the changed bytes are copied, as the spans of one update
+  // per run.
   // Callers hold m_MappedBuffersMutex, or own `range`, and record the updates after releasing it.
   void AppendPublishedUpdates(MappedRange& range,
                               const std::vector<WatchedShadow::ByteRange>& dirty,

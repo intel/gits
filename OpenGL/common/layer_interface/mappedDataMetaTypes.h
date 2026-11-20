@@ -31,9 +31,8 @@ namespace gits::opengl {
 // OpenGLCommandFactory for CommandId::ID_META_MAPPED_DATA - mirrors UnsupportedCommand/
 // UnsupportedCommandRunner's structural precedent (a hand-written meta-command with a
 // hand-written factory registration, no generated counterpart) and Vulkan's own
-// MappedDataMetaCommand naming (Vulkan/common/layer_interface/commandsCustom.h), simplified to
-// the single-region shape "update on unmap only" ever produces (Vulkan's own type carries a
-// multi-region MemoryRegions list, needed for its continuous dirty-tracking - not needed here).
+// MappedDataMetaCommand naming (Vulkan/common/layer_interface/commandsCustom.h). One command
+// covers one range of one buffer; publications of GPU-written persistent maps fill it sparsely.
 class MappedDataMetaCommand : public Command {
 public:
   MappedDataMetaCommand(uint32_t threadId) : Command(CommandId::ID_META_MAPPED_DATA, threadId) {}
@@ -44,6 +43,10 @@ public:
   Argument<uint64_t> m_Offset{};
   Argument<uint64_t> m_Length{};
   Argument<GLbitfield> m_Access{};
+  // Pairs of an offset relative to m_Offset and a length, of the spans whose bytes m_Data holds
+  // one after another; the bytes between them keep their contents, which may be newer GPU
+  // results. Empty when m_Data holds the whole range.
+  ArrayArgument<uint64_t> m_Spans{};
   ArrayArgument<uint8_t> m_Data{};
 };
 
@@ -67,7 +70,7 @@ public:
 inline uint64_t GetSize(const MappedDataMetaCommand& command) {
   return GetSize(command.m_Key) + GetSize(command.m_ThreadId) + GetSize(command.m_Buffer) +
          GetSize(command.m_Offset) + GetSize(command.m_Length) + GetSize(command.m_Access) +
-         GetSize(command.m_Data);
+         GetSize(command.m_Spans) + GetSize(command.m_Data);
 }
 
 inline void Encode(const MappedDataMetaCommand& command, char* dest) {
@@ -78,6 +81,7 @@ inline void Encode(const MappedDataMetaCommand& command, char* dest) {
   Encode(dest, offset, command.m_Offset);
   Encode(dest, offset, command.m_Length);
   Encode(dest, offset, command.m_Access);
+  Encode(dest, offset, command.m_Spans);
   Encode(dest, offset, command.m_Data);
 }
 
@@ -89,6 +93,7 @@ inline void Decode(const char* src, MappedDataMetaCommand& command) {
   Decode(src, offset, command.m_Offset);
   Decode(src, offset, command.m_Length);
   Decode(src, offset, command.m_Access);
+  Decode(src, offset, command.m_Spans);
   Decode(src, offset, command.m_Data);
 }
 

@@ -321,7 +321,7 @@ void BufferShadowService::OnMapUnchanged(uint64_t shareGroup, GLuint buffer) {
 void BufferShadowService::OnMappedBytes(uint64_t shareGroup,
                                         GLuint buffer,
                                         uint64_t offset,
-                                        const std::vector<uint8_t>& bytes) {
+                                        std::span<const uint8_t> bytes) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Shadows.find({shareGroup, buffer});
   if (it == m_Shadows.end()) {

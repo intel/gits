@@ -161,4 +161,23 @@ inline std::vector<WatchedShadow::ByteRange> PageRuns(std::span<const uintptr_t>
   return runs;
 }
 
+// The maximal spans of bytes differing from baseline, of the same size, relative to their start.
+inline std::vector<WatchedShadow::ByteRange> ChangedSpans(std::span<const uint8_t> bytes,
+                                                          std::span<const uint8_t> baseline) {
+  std::vector<WatchedShadow::ByteRange> spans;
+  size_t index = 0;
+  while (index < bytes.size()) {
+    if (bytes[index] == baseline[index]) {
+      ++index;
+      continue;
+    }
+    const size_t first = index;
+    while (index < bytes.size() && bytes[index] != baseline[index]) {
+      ++index;
+    }
+    spans.push_back({first, index - first});
+  }
+  return spans;
+}
+
 } // namespace gits::opengl

@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
+#include <span>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -96,7 +97,7 @@ public:
   void OnMappedBytes(uint64_t shareGroup,
                      GLuint buffer,
                      uint64_t offset,
-                     const std::vector<uint8_t>& bytes);
+                     std::span<const uint8_t> bytes);
 
   enum class ReadSource {
     Copy,

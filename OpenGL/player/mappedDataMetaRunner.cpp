@@ -29,9 +29,18 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
                 << " did not resolve to a live buffer - skipping this buffer-map update";
     return;
   }
-  GITS_ASSERT(command.m_Data.Data.size() == command.m_Length.Value,
-              "MappedDataMeta payload size does not match its mapped length; streams recorded "
-              "before map access bits were stored must be recorded again");
+  const std::vector<uint64_t>& spans = command.m_Spans.Data;
+  uint64_t spanBytes = 0;
+  GITS_ASSERT(spans.size() % 2 == 0, "MappedDataMeta spans are not offset and length pairs");
+  for (size_t index = 0; index < spans.size(); index += 2) {
+    GITS_ASSERT(spans[index] <= command.m_Length.Value &&
+                    spans[index + 1] <= command.m_Length.Value - spans[index],
+                "MappedDataMeta span exceeds its mapped length");
+    spanBytes += spans[index + 1];
+  }
+  GITS_ASSERT(command.m_Data.Data.size() == (spans.empty() ? command.m_Length.Value : spanBytes),
+              "MappedDataMeta payload size does not match its mapped length or spans; streams "
+              "recorded before spans were stored must be recorded again");
 
   // Temporarily bind the resolved buffer to GL_COPY_WRITE_BUFFER (no rendering-pipeline
   // meaning of its own) rather than whichever target originally recorded this map, so this
@@ -46,7 +55,8 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
 
   // Synchronization and invalidation follow the application's map: an unsynchronized map that
   // invalidated the buffer wrote to storage no earlier draw still reads. The recorder keeps the
-  // invalidation bits only on the first update of a mapping, so later ones keep its bytes.
+  // invalidation bits only on the first update of a mapping, so later ones keep its bytes, and
+  // never on an update with spans, which keeps the bytes between them.
   constexpr GLbitfield replayed =
       GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
   const GLbitfield access = GL_MAP_WRITE_BIT | (command.m_Access.Value & replayed);
@@ -57,7 +67,15 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
                          static_cast<GLsizeiptr>(command.m_Length.Value), access);
   GLboolean unmapResult = GL_TRUE;
   if (pointer != nullptr) {
-    std::memcpy(pointer, command.m_Data.Data.data(), command.m_Data.Data.size());
+    if (spans.empty()) {
+      std::memcpy(pointer, command.m_Data.Data.data(), command.m_Data.Data.size());
+    } else {
+      const uint8_t* source = command.m_Data.Data.data();
+      for (size_t index = 0; index < spans.size(); index += 2) {
+        std::memcpy(static_cast<uint8_t*>(pointer) + spans[index], source, spans[index + 1]);
+        source += spans[index + 1];
+      }
+    }
     auto realUnmapBuffer = player::g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
     unmapResult = realUnmapBuffer(GL_COPY_WRITE_BUFFER);
   } else {

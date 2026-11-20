@@ -58,21 +58,40 @@ void RequireShadowMapAlignment() {
 // cast: a mapped range can legitimately approach or exceed 4 GiB on this x64-only backend, and
 // narrowing here would reintroduce the exact truncation bug MappedDataMetaCommand's already
 // 64-bit coding path was fixed to avoid (see mappedDataMetaTypes.h).
+// `spans`, when not empty, are the spans relative to `offset` whose bytes `bytes` holds.
 void RecordMappedDataMetaCommand(uint64_t key,
                                  uint64_t shareGroup,
                                  GLuint buffer,
                                  GLintptr offset,
                                  GLsizeiptr length,
                                  GLbitfield access,
+                                 std::span<const WatchedShadow::ByteRange> spans,
                                  const std::vector<uint8_t>& bytes) {
-  BufferShadowService::Get().OnMappedBytes(shareGroup, buffer, static_cast<uint64_t>(offset),
-                                           bytes);
+  std::vector<uint64_t> spanPairs;
+  if (spans.empty()) {
+    BufferShadowService::Get().OnMappedBytes(shareGroup, buffer, static_cast<uint64_t>(offset),
+                                             bytes);
+  } else {
+    spanPairs.reserve(2 * spans.size());
+    size_t source = 0;
+    for (const WatchedShadow::ByteRange& span : spans) {
+      BufferShadowService::Get().OnMappedBytes(
+          shareGroup, buffer, static_cast<uint64_t>(offset) + span.Offset,
+          std::span<const uint8_t>(bytes).subspan(source, span.Length));
+      source += span.Length;
+      spanPairs.push_back(span.Offset);
+      spanPairs.push_back(span.Length);
+    }
+  }
   MappedDataMetaCommand command(CurrentThreadId());
   command.m_Buffer.Value = buffer;
   UpdateHandle(command.m_Buffer, GLObjectKind::Buffer);
   command.m_Offset.Value = static_cast<uint64_t>(offset);
   command.m_Length.Value = static_cast<uint64_t>(length);
   command.m_Access.Value = access;
+  if (!spanPairs.empty()) {
+    command.m_Spans = ArrayArgument<uint64_t>(spanPairs.data(), spanPairs.size());
+  }
   command.m_Data = ArrayArgument<uint8_t>(bytes.data(), bytes.size());
   command.m_Key = key;
   CaptureManager::Get().RecordCommand(command, new MappedDataMetaSerializer(command));
@@ -604,22 +623,34 @@ void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
       append(run.Offset, run.Length);
       continue;
     }
-    // Unchanged bytes between changed ones may be GPU results newer than the shadow.
-    const auto* current = static_cast<const uint8_t*>(range.Source.ApplicationPointer);
-    const uint8_t* baseline = range.Source.Baseline.data();
-    size_t index = run.Offset;
-    const size_t end = run.Offset + run.Length;
-    while (index < end) {
-      if (current[index] == baseline[index]) {
-        ++index;
-        continue;
-      }
-      const size_t start = index;
-      while (index < end && current[index] != baseline[index]) {
-        ++index;
-      }
-      append(start, index - start);
+    // Unchanged bytes between changed ones may be GPU results newer than the shadow, so the run
+    // publishes only its changed spans, in one update rather than one per span.
+    const auto snapshot = range.Source.Snapshot(run.Offset, run.Length);
+    const auto changed = ChangedSpans(
+        snapshot, std::span<const uint8_t>(range.Source.Baseline).subspan(run.Offset, run.Length));
+    if (changed.empty()) {
+      continue;
     }
+    const size_t first = changed.front().Offset;
+    const size_t end = changed.back().Offset + changed.back().Length;
+    std::vector<uint8_t> bytes;
+    std::vector<WatchedShadow::ByteRange> spans;
+    spans.reserve(changed.size());
+    for (const WatchedShadow::ByteRange& span : changed) {
+      const auto spanBytes = std::span<const uint8_t>(snapshot).subspan(span.Offset, span.Length);
+      const size_t offset = run.Offset + span.Offset;
+      range.Source.WriteBack(offset, spanBytes);
+      std::memcpy(range.Source.Baseline.data() + offset, spanBytes.data(), span.Length);
+      bytes.insert(bytes.end(), spanBytes.begin(), spanBytes.end());
+      spans.push_back({span.Offset - first, span.Length});
+    }
+    const MapRelativeRange interval{static_cast<GLintptr>(run.Offset + first),
+                                    static_cast<GLsizeiptr>(end - first)};
+    auto update = MakeMappedUpdate(range, interval, std::move(bytes));
+    if (spans.size() > 1) {
+      update.Spans = std::move(spans);
+    }
+    updates.emplace_back(CaptureManager::Get().CreateCommandKey(), std::move(update));
   }
 }
 
@@ -672,12 +703,18 @@ void MapTrackingService::RecordOrSkipMappedUpdate(uint64_t key,
     return;
   }
   // A replay map covers only the update's interval, which the update overwrites, so only
-  // invalidating the whole buffer would discard bytes of another update.
+  // invalidating the whole buffer would discard bytes of another update. An update with spans
+  // overwrites only them, so it invalidates nothing.
   constexpr GLbitfield invalidation = GL_MAP_INVALIDATE_BUFFER_BIT;
-  RecordMappedDataMetaCommand(
-      key, update->Map.ShareGroup, update->Map.Buffer, update->Offset, update->Length,
-      update->First ? update->Access : update->Access & ~invalidation, update->Bytes);
-  NoteUpdate(update->IsRange, update->Access, update->Length);
+  GLbitfield access = update->First ? update->Access : update->Access & ~invalidation;
+  if (!update->Spans.empty()) {
+    access &= ~(GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+  }
+  RecordMappedDataMetaCommand(key, update->Map.ShareGroup, update->Map.Buffer, update->Offset,
+                              update->Length, access, update->Spans, update->Bytes);
+  NoteUpdate(update->IsRange, update->Access,
+             update->Spans.empty() ? update->Length
+                                   : static_cast<GLsizeiptr>(update->Bytes.size()));
 }
 
 void MapTrackingService::FlushMappedRange(GLuint buffer,
