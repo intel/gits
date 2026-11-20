@@ -57,14 +57,17 @@ class BufferShadowService {
 public:
   static BufferShadowService& Get();
 
-  void OnData(BufferRef ref, uint64_t size, const void* data);
-  void OnSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
-  void OnGpuWrite(BufferRef ref);
+  // `command` names the GL command in the error raised when it updates a buffer the application
+  // holds persistently mapped for writing.
+  void OnData(const char* command, BufferRef ref, uint64_t size, const void* data);
+  void OnSubData(
+      const char* command, BufferRef ref, uint64_t offset, uint64_t size, const void* data);
+  void OnGpuWrite(const char* command, BufferRef ref);
   // Contents undefined until the next complete upload or seeding.
   void OnUndefined(BufferRef ref);
-  void OnBind(GLenum target, GLuint buffer);
-  void OnBindIndexed(GLenum target, GLuint buffer);
-  void OnBindIndexed(GLenum target, GLsizei count, const GLuint* buffers);
+  void OnBind(const char* command, GLenum target, GLuint buffer);
+  void OnBindIndexed(const char* command, GLenum target, GLuint buffer);
+  void OnBindIndexed(const char* command, GLenum target, GLsizei count, const GLuint* buffers);
   void OnDelete(GLsizei n, const GLuint* buffers);
 
   // MapTrackingService reports writable map creation and published mapped bytes here.
@@ -115,7 +118,8 @@ private:
 
   // Resolves `ref` on the current context; Buffer 0 when nothing is bound.
   Key Resolve(BufferRef ref);
-  void MarkUntrusted(const Key& key);
+  // `target` is the binding point the buffer was addressed through, or 0 when named directly.
+  void MarkUntrusted(const char* command, GLenum target, const Key& key);
   bool ReadThroughStaging(uint64_t shareGroup,
                           uint64_t offset,
                           uint64_t size,

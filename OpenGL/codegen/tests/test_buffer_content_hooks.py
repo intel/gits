@@ -31,24 +31,32 @@ class BufferContentHooksTests(unittest.TestCase):
     def test_representative_calls(self) -> None:
         expected = {
             'glBufferData':
-                'OnData(BufferRef::ByTarget(target), static_cast<uint64_t>(size), data)',
-            'glNamedBufferStorage':
-                'OnData(BufferRef::ByName(buffer), static_cast<uint64_t>(size), data)',
-            'glBufferSubDataARB':
-                'OnSubData(BufferRef::ByTarget(target), static_cast<uint64_t>(offset), '
+                'OnData("glBufferData", BufferRef::ByTarget(target), '
                 'static_cast<uint64_t>(size), data)',
-            'glCopyBufferSubData': 'OnGpuWrite(BufferRef::ByTarget(writeTarget))',
-            'glNamedCopyBufferSubDataEXT': 'OnGpuWrite(BufferRef::ByName(writeBuffer))',
-            'glClearBufferSubData': 'OnGpuWrite(BufferRef::ByTarget(target))',
-            'glTexBuffer': 'OnGpuWrite(BufferRef::ByName(buffer))',
-            'glTransformFeedbackBufferRange': 'OnGpuWrite(BufferRef::ByName(buffer))',
-            'glGetQueryBufferObjectuiv': 'OnGpuWrite(BufferRef::ByName(buffer))',
-            'glBufferStorageMemEXT': 'OnGpuWrite(BufferRef::ByTarget(target))',
+            'glNamedBufferStorage':
+                'OnData("glNamedBufferStorage", BufferRef::ByName(buffer), '
+                'static_cast<uint64_t>(size), data)',
+            'glBufferSubDataARB':
+                'OnSubData("glBufferSubDataARB", BufferRef::ByTarget(target), '
+                'static_cast<uint64_t>(offset), static_cast<uint64_t>(size), data)',
+            'glCopyBufferSubData':
+                'OnGpuWrite("glCopyBufferSubData", BufferRef::ByTarget(writeTarget))',
+            'glNamedCopyBufferSubDataEXT':
+                'OnGpuWrite("glNamedCopyBufferSubDataEXT", BufferRef::ByName(writeBuffer))',
+            'glClearBufferSubData':
+                'OnGpuWrite("glClearBufferSubData", BufferRef::ByTarget(target))',
+            'glTexBuffer': 'OnGpuWrite("glTexBuffer", BufferRef::ByName(buffer))',
+            'glTransformFeedbackBufferRange':
+                'OnGpuWrite("glTransformFeedbackBufferRange", BufferRef::ByName(buffer))',
+            'glGetQueryBufferObjectuiv':
+                'OnGpuWrite("glGetQueryBufferObjectuiv", BufferRef::ByName(buffer))',
+            'glBufferStorageMemEXT':
+                'OnGpuWrite("glBufferStorageMemEXT", BufferRef::ByTarget(target))',
             'glInvalidateBufferSubData': 'OnUndefined(BufferRef::ByName(buffer))',
             'glMapNamedBufferRange': 'OnUndefined(BufferRef::ByName(buffer))',
-            'glBindBufferARB': 'OnBind(target, buffer)',
-            'glBindBufferRangeNV': 'OnBindIndexed(target, buffer)',
-            'glBindBuffersBase': 'OnBindIndexed(target, count, buffers)',
+            'glBindBufferARB': 'OnBind("glBindBufferARB", target, buffer)',
+            'glBindBufferRangeNV': 'OnBindIndexed("glBindBufferRangeNV", target, buffer)',
+            'glBindBuffersBase': 'OnBindIndexed("glBindBuffersBase", target, count, buffers)',
             'glDeleteBuffers': 'OnDelete(n, buffers)',
         }
         for name, call in expected.items():

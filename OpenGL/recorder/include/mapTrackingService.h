@@ -98,7 +98,11 @@ public:
 
   void OnBufferData(GLuint buffer, const std::function<bool(GLint&)>& queryMapped);
   void OnDelete(GLsizei count, const GLuint* buffers);
-  void AssertNoWritablePersistentMap(uint64_t shareGroup, GLuint buffer);
+  // `command` and `target` (0 when the buffer is named directly) only describe the rejected call.
+  void AssertNoWritablePersistentMap(const char* command,
+                                     GLenum target,
+                                     uint64_t shareGroup,
+                                     GLuint buffer);
 
   // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
   // target, for an untracked target or one with nothing bound.

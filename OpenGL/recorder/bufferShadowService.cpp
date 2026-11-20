@@ -16,6 +16,7 @@
 #include "openglDriversAuto.h"
 
 #include <cstring>
+#include <sstream>
 
 namespace gits::opengl {
 
@@ -87,13 +88,17 @@ BufferShadowService::Key BufferShadowService::Resolve(BufferRef ref) {
   return {shareGroup, buffer};
 }
 
-void BufferShadowService::MarkUntrusted(const Key& key) {
-  MapTrackingService::Get().AssertNoWritablePersistentMap(key.ShareGroup, key.Buffer);
+void BufferShadowService::MarkUntrusted(const char* command, GLenum target, const Key& key) {
+  MapTrackingService::Get().AssertNoWritablePersistentMap(command, target, key.ShareGroup,
+                                                          key.Buffer);
   m_Untrusted.insert(key);
   m_Shadows.erase(key);
 }
 
-void BufferShadowService::OnData(BufferRef ref, uint64_t size, const void* data) {
+void BufferShadowService::OnData(const char* command,
+                                 BufferRef ref,
+                                 uint64_t size,
+                                 const void* data) {
   const bool clientMemoryTarget = IsClientMemoryTarget(ref.Target);
   // Without a staging copy a buffer never seen on GL_ELEMENT_ARRAY_BUFFER could not be read later
   // if it gets bound there, so every upload is kept.
@@ -111,7 +116,7 @@ void BufferShadowService::OnData(BufferRef ref, uint64_t size, const void* data)
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
   if (clientMemoryTarget) {
-    MarkUntrusted(key);
+    MarkUntrusted(command, ref.Target, key);
     return;
   }
   if (m_Untrusted.count(key) != 0) {
@@ -136,12 +141,11 @@ void BufferShadowService::OnData(BufferRef ref, uint64_t size, const void* data)
   shadow.KnownBeforeMap = false;
 }
 
-void BufferShadowService::OnSubData(BufferRef ref,
-                                    uint64_t offset,
-                                    uint64_t size,
-                                    const void* data) {
+void BufferShadowService::OnSubData(
+    const char* command, BufferRef ref, uint64_t offset, uint64_t size, const void* data) {
   const Key key = Resolve(ref);
-  MapTrackingService::Get().AssertNoWritablePersistentMap(key.ShareGroup, key.Buffer);
+  MapTrackingService::Get().AssertNoWritablePersistentMap(command, ref.Target, key.ShareGroup,
+                                                          key.Buffer);
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Shadows.find(key);
   if (it == m_Shadows.end()) {
@@ -155,13 +159,13 @@ void BufferShadowService::OnSubData(BufferRef ref,
   std::memcpy(shadow.Bytes.data() + offset, data, size);
 }
 
-void BufferShadowService::OnGpuWrite(BufferRef ref) {
+void BufferShadowService::OnGpuWrite(const char* command, BufferRef ref) {
   const Key key = Resolve(ref);
   if (key.Buffer == 0) {
     return;
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
-  MarkUntrusted(key);
+  MarkUntrusted(command, ref.Target, key);
 }
 
 void BufferShadowService::OnUndefined(BufferRef ref) {
@@ -179,7 +183,7 @@ void BufferShadowService::OnUndefined(BufferRef ref) {
   }
 }
 
-void BufferShadowService::OnBind(GLenum target, GLuint buffer) {
+void BufferShadowService::OnBind(const char* command, GLenum target, GLuint buffer) {
   // The GPU writes the buffer bound here (pixel packs, query results); every other generic
   // binding point only reads, or needs an indexed binding to write.
   if (buffer == 0 || (target != GL_PIXEL_PACK_BUFFER && target != GL_QUERY_BUFFER &&
@@ -188,14 +192,17 @@ void BufferShadowService::OnBind(GLenum target, GLuint buffer) {
   }
   const Key key{CurrentShareGroup(), buffer};
   std::lock_guard<std::mutex> lock(m_Mutex);
-  MarkUntrusted(key);
+  MarkUntrusted(command, target, key);
 }
 
-void BufferShadowService::OnBindIndexed(GLenum target, GLuint buffer) {
-  OnBindIndexed(target, 1, &buffer);
+void BufferShadowService::OnBindIndexed(const char* command, GLenum target, GLuint buffer) {
+  OnBindIndexed(command, target, 1, &buffer);
 }
 
-void BufferShadowService::OnBindIndexed(GLenum target, GLsizei count, const GLuint* buffers) {
+void BufferShadowService::OnBindIndexed(const char* command,
+                                        GLenum target,
+                                        GLsizei count,
+                                        const GLuint* buffers) {
   if (buffers == nullptr ||
       (target != GL_TRANSFORM_FEEDBACK_BUFFER && target != GL_SHADER_STORAGE_BUFFER &&
        target != GL_ATOMIC_COUNTER_BUFFER)) {
@@ -205,7 +212,7 @@ void BufferShadowService::OnBindIndexed(GLenum target, GLsizei count, const GLui
   std::lock_guard<std::mutex> lock(m_Mutex);
   for (GLsizei i = 0; i < count; ++i) {
     if (buffers[i] != 0) {
-      MarkUntrusted({shareGroup, buffers[i]});
+      MarkUntrusted(command, target, {shareGroup, buffers[i]});
     }
   }
 }
@@ -225,10 +232,15 @@ void BufferShadowService::OnDelete(GLsizei n, const GLuint* buffers) {
 
 void BufferShadowService::OnMapWrite(uint64_t shareGroup, GLuint buffer, GLbitfield access) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  GITS_ASSERT((access & GL_MAP_PERSISTENT_BIT) == 0 || m_Untrusted.count({shareGroup, buffer}) == 0,
-              "Writable persistent mappings of GPU-write-capable buffers are unsupported: "
-              "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
-              "replayed GPU results with stale bytes");
+  if ((access & GL_MAP_PERSISTENT_BIT) != 0 && m_Untrusted.count({shareGroup, buffer}) != 0) {
+    std::ostringstream message;
+    message << "Writable persistent mappings of GPU-write-capable buffers are unsupported: "
+               "capture does not track GPU-to-CPU visibility, so a mapped snapshot could "
+               "overwrite replayed GPU results with stale bytes (buffer "
+            << buffer << " mapped with "
+            << GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) << ')';
+    GITS_ASSERT(false, message.str());
+  }
   auto it = m_Shadows.find({shareGroup, buffer});
   if (it != m_Shadows.end()) {
     it->second.KnownBeforeMap =

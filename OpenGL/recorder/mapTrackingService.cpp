@@ -840,14 +840,29 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
   }
 }
 
-void MapTrackingService::AssertNoWritablePersistentMap(uint64_t shareGroup, GLuint buffer) {
+void MapTrackingService::AssertNoWritablePersistentMap(const char* command,
+                                                       GLenum target,
+                                                       uint64_t shareGroup,
+                                                       GLuint buffer) {
   std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
   const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
   constexpr GLbitfield unsupported = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
-  GITS_ASSERT(it == m_MappedBuffers.end() || (it->second.Access & unsupported) != unsupported,
-              "GPU or GL buffer updates during a writable persistent mapping are unsupported: "
-              "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
-              "replayed GPU results with stale bytes");
+  if (it == m_MappedBuffers.end() || (it->second.Access & unsupported) != unsupported) {
+    return;
+  }
+  std::ostringstream message;
+  message << "GPU or GL buffer updates during a writable persistent mapping are unsupported: "
+             "capture does not track GPU-to-CPU visibility, so a mapped snapshot could overwrite "
+             "replayed GPU results with stale bytes ("
+          << command;
+  if (target != 0) {
+    message << '(' << GetGLenumString(GLenumApi::GL, target, GLenumGroup::BufferTargetARB) << ')';
+  }
+  message << " on buffer " << buffer << ", mapped range [" << it->second.Offset << ", "
+          << it->second.Offset + it->second.Length << ") with "
+          << GetBitmaskString(GLenumApi::GL, it->second.Access, GLenumGroup::MapBufferAccessMask)
+          << ')';
+  GITS_ASSERT(false, message.str());
 }
 
 std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRange(

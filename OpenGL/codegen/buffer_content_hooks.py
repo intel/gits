@@ -28,12 +28,19 @@ from intermediates import Command
 class BufferContentHook:
     """`call` is the BufferShadowService member call, over the command's parameters.
 
+    Calls that can update a buffer the application holds persistently mapped take the command
+    name first, so the recorder can name the command it rejects.
+
     `guard`, when set, is a C++ condition the call runs under: sizes and offsets are signed
     (GLsizeiptr, GLintptr), and a negative one is a call the driver rejects without touching the
     buffer, which must not reach the unsigned `call` arguments.
     """
     call: str
     guard: str | None = None
+
+
+def _command(command: str) -> str:
+    return f'"{command}"'
 
 
 def _ref(names: set[str], target: str, buffer: str) -> str | None:
@@ -52,50 +59,54 @@ def _non_negative(*exprs: str) -> str:
     return ' && '.join(f'{expr} >= 0' for expr in exprs)
 
 
-def _data(names: set[str]) -> BufferContentHook | None:
+def _data(command: str, names: set[str]) -> BufferContentHook | None:
     ref = _ref(names, 'target', 'buffer')
     if ref is None or not {'size', 'data'} <= names:
         return None
-    return BufferContentHook(call=f'OnData({ref}, {_size("size")}, data)',
+    return BufferContentHook(call=f'OnData({_command(command)}, {ref}, {_size("size")}, data)',
                              guard=_non_negative('size'))
 
 
-def _sub_data(names: set[str]) -> BufferContentHook | None:
+def _sub_data(command: str, names: set[str]) -> BufferContentHook | None:
     ref = _ref(names, 'target', 'buffer')
     if ref is None or not {'offset', 'size', 'data'} <= names:
         return None
     return BufferContentHook(
-        call=f'OnSubData({ref}, {_size("offset")}, {_size("size")}, data)',
+        call=f'OnSubData({_command(command)}, {ref}, {_size("offset")}, {_size("size")}, data)',
         guard=_non_negative('offset', 'size'))
 
 
 def _gpu_write(target: str, buffer: str):
-    def build(names: set[str]) -> str | None:
+    def build(command: str, names: set[str]) -> str | None:
         ref = _ref(names, target, buffer)
-        return None if ref is None else f'OnGpuWrite({ref})'
+        return None if ref is None else f'OnGpuWrite({_command(command)}, {ref})'
     return build
 
 
-def _undefined(names: set[str]) -> str | None:
+def _undefined(command: str, names: set[str]) -> str | None:
     ref = _ref(names, 'target', 'buffer')
     return None if ref is None else f'OnUndefined({ref})'
 
 
-def _bind(names: set[str]) -> str | None:
-    return 'OnBind(target, buffer)' if {'target', 'buffer'} <= names else None
+def _bind(command: str, names: set[str]) -> str | None:
+    if not {'target', 'buffer'} <= names:
+        return None
+    return f'OnBind({_command(command)}, target, buffer)'
 
 
-def _bind_indexed(names: set[str]) -> str | None:
-    return 'OnBindIndexed(target, buffer)' if {'target', 'buffer'} <= names else None
+def _bind_indexed(command: str, names: set[str]) -> str | None:
+    if not {'target', 'buffer'} <= names:
+        return None
+    return f'OnBindIndexed({_command(command)}, target, buffer)'
 
 
-def _bind_indexed_multi(names: set[str]) -> str | None:
+def _bind_indexed_multi(command: str, names: set[str]) -> str | None:
     if not {'target', 'count', 'buffers'} <= names:
         return None
-    return 'OnBindIndexed(target, count, buffers)'
+    return f'OnBindIndexed({_command(command)}, target, count, buffers)'
 
 
-def _delete(names: set[str]) -> str | None:
+def _delete(command: str, names: set[str]) -> str | None:
     return 'OnDelete(n, buffers)' if {'n', 'buffers'} <= names else None
 
 
@@ -129,7 +140,7 @@ def buffer_content_hook_for(cmd: Command) -> BufferContentHook | None:
     names = {p.name for p in cmd.params}
     for pattern, build in _FAMILIES:
         if pattern.match(cmd.name):
-            hook = build(names)
+            hook = build(cmd.name, names)
             if isinstance(hook, str):
                 hook = BufferContentHook(call=hook)
             return hook
