@@ -113,3 +113,16 @@ target_include_directories(OpenGL_recorder_page_runs_test PRIVATE
 )
 
 set_target_properties(OpenGL_recorder_page_runs_test PROPERTIES FOLDER OpenGL)
+
+if(WIN32)
+  # Host-only gate for the page-protected shadows of persistent maps, run like the one above.
+  add_executable(OpenGL_recorder_watched_shadow_test
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/watchedShadowTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/watchedShadow.cpp
+  )
+  target_include_directories(OpenGL_recorder_watched_shadow_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+  target_link_libraries(OpenGL_recorder_watched_shadow_test PRIVATE log)
+  set_target_properties(OpenGL_recorder_watched_shadow_test PROPERTIES FOLDER OpenGL)
+endif()

@@ -356,14 +356,15 @@ void MapTrackingService::ByteSource::PrepareOwnedShadow(GLintptr offset,
                                                         GLsizeiptr length,
                                                         size_t alignment,
                                                         std::span<const uint8_t> initialBytes,
-                                                        bool initialize) {
+                                                        bool initialize,
+                                                        WatchedShadow::Tracking tracking) {
   GITS_ASSERT(!initialize || initialBytes.size() == static_cast<size_t>(length),
               "Cannot initialize buffer-map shadow memory without complete initial bytes");
   GITS_ASSERT(alignment <= std::numeric_limits<size_t>::max() - static_cast<size_t>(length),
               "Cannot allocate aligned shadow for buffer map");
   const auto allocationSize = static_cast<size_t>(length) + alignment;
   try {
-    Shadow = std::make_unique<WatchedShadow>(allocationSize);
+    Shadow = std::make_unique<WatchedShadow>(allocationSize, tracking);
   } catch (const std::bad_alloc&) {
     GITS_ASSERT(false, "Cannot allocate write watch for buffer map");
   }
@@ -505,8 +506,9 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
                                                                   &alignment);
     GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
     range.RangePolicy.Type = CaptureRangePolicy::Mode::DirtyPages;
+    // Published before each command, so a query must not cost the whole mapping.
     range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
-                                    !invalidated);
+                                    !invalidated, WatchedShadow::Tracking::PageProtection);
     void* applicationPointer = range.Source.ApplicationPointer;
     StoreMappedRange(CurrentShareGroup(), buffer, std::move(range));
     return applicationPointer;
@@ -529,7 +531,8 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
                                                                     &alignment);
       GITS_ASSERT(alignment > 0, "Invalid buffer map alignment reported by driver");
       range.Source.PrepareOwnedShadow(offset, length, static_cast<size_t>(alignment), initialBytes,
-                                      NeedsInitialShadowContents(access));
+                                      NeedsInitialShadowContents(access),
+                                      WatchedShadow::Tracking::WriteWatch);
       if (useDirtyPageCapture && !invalidated) {
         range.Source.Baseline.assign(initialBytes.begin(), initialBytes.end());
       }
@@ -580,7 +583,7 @@ void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
   const auto append = [&](size_t offset, size_t length) {
     auto bytes = range.Source.Snapshot(offset, length);
     range.Source.WriteBack(offset, bytes);
-    if (range.GpuWritten) {
+    if (!range.Source.Baseline.empty()) {
       std::memcpy(range.Source.Baseline.data() + offset, bytes.data(), length);
     }
     const MapRelativeRange interval{static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(length)};
@@ -612,17 +615,24 @@ void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
 }
 
 void MapTrackingService::TakePublishedUpdates(MappedRange& range, KeyedUpdates& updates) {
+  m_PublicationsInFlight.fetch_add(1, std::memory_order_release);
   const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
                                                           static_cast<size_t>(range.Length));
   AppendPublishedUpdates(range, dirty, updates);
+  m_PublicationsInFlight.fetch_sub(1, std::memory_order_release);
 }
 
-void MapTrackingService::RefreshFromDriver(MappedRange& range) {
+void MapTrackingService::StartGpuWriteTracking(MappedRange& range, KeyedUpdates& updates) {
   const auto length = static_cast<size_t>(range.Length);
   auto* shadow = static_cast<uint8_t*>(range.Source.ApplicationPointer);
-  std::memcpy(shadow, range.Source.DriverPointer, length);
-  range.Source.Shadow->ResetWriteWatch();
+  // Copied before the written pages are taken, so that a write meanwhile is either on a taken
+  // page, published whole into the baseline, or on a page written again that differs from it.
   range.Source.Baseline.assign(shadow, shadow + length);
+  TakePublishedUpdates(range, updates);
+  range.Source.Shadow->SetRefreshSource(shadow, length, range.Source.DriverPointer,
+                                        range.Source.Baseline);
+  range.Source.Shadow->MarkUnwrittenStale();
+  range.GpuWritten = true;
 }
 
 std::string MapTrackingService::DescribeMapping(const char* command,
@@ -971,11 +981,15 @@ void MapTrackingService::OnSubData(
   auto* destination = static_cast<uint8_t*>(range.Source.ApplicationPointer) + mapOffset;
   const auto length = static_cast<size_t>(end - begin);
   const auto* source = static_cast<const uint8_t*>(data) + (begin - offset);
-  std::memcpy(destination, source, length);
-  range.Source.Shadow->ResetWriteWatch(destination, length);
-  if (range.GpuWritten) {
-    std::memcpy(range.Source.Baseline.data() + mapOffset, source, length);
+  // The application may pass a pointer into its own mapping.
+  if (!range.GpuWritten) {
+    std::memmove(destination, source, length);
+    return;
   }
+  // Writing a stale page refreshes it into the baseline, which must then get the update.
+  const std::vector<uint8_t> bytes(source, source + length);
+  std::memcpy(destination, bytes.data(), length);
+  std::memcpy(range.Source.Baseline.data() + mapOffset, bytes.data(), length);
 }
 
 void MapTrackingService::PublishBeforeDelete(GLsizei count, const GLuint* buffers) {
@@ -1027,6 +1041,7 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
   const GLbitfield access = range.Access;
   const Key key{shareGroup, buffer};
   range.Map = key;
+  KeyedUpdates updates;
   // A buffer bound for GPU writes before the map may still be bound.
   constexpr GLbitfield persistentWrite = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
   const bool isPersistentWrite = (access & persistentWrite) == persistentWrite;
@@ -1052,8 +1067,7 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
                 "write are unsupported: publishing the application's writes could overwrite GPU "
                 "results the recorder cannot read " +
                     DescribeMapping(nullptr, 0, buffer, range));
-    RefreshFromDriver(range);
-    range.GpuWritten = true;
+    StartGpuWriteTracking(range, updates);
   }
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
@@ -1085,6 +1099,9 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
   // Neither this service nor BufferShadowService calls the other while holding its own mutex.
   if (access & GL_MAP_WRITE_BIT) {
     BufferShadowService::Get().OnMapWrite(shareGroup, buffer, access);
+  }
+  for (const auto& [updateKey, update] : updates) {
+    RecordOrSkipMappedUpdate(updateKey, update);
   }
 }
 
@@ -1136,10 +1153,7 @@ void MapTrackingService::OnGpuResultWrite(const char* command,
                       DescribeMapping(command, target, buffer, range));
       return;
     }
-    // The application's writes so far reach the driver before its contents become the baseline.
-    TakePublishedUpdates(range, updates);
-    RefreshFromDriver(range);
-    range.GpuWritten = true;
+    StartGpuWriteTracking(range, updates);
     m_GpuWrittenMaps.fetch_add(1, std::memory_order_release);
   }
   for (const auto& [key, update] : updates) {
@@ -1160,7 +1174,7 @@ void MapTrackingService::RefreshGpuWrittenMaps() {
         continue;
       }
       TakePublishedUpdates(range, updates);
-      RefreshFromDriver(range);
+      range.Source.Shadow->MarkUnwrittenStale();
     }
   }
   for (const auto& [key, update] : updates) {
@@ -1200,7 +1214,11 @@ void MapTrackingService::PublishMappedWrites() {
     return;
   }
   stream::RecordingSession::Get().PublishHostWrites();
-  if (m_PublishedBeforeUseMaps.load(std::memory_order_acquire) == 0) {
+  // Most commands follow no write to a persistent map. Taken pages leave the pending count before
+  // their publication completes, so publications in flight are checked after it.
+  if (m_PublishedBeforeUseMaps.load(std::memory_order_acquire) == 0 ||
+      (WatchedShadow::PendingWrittenPages() == 0 &&
+       m_PublicationsInFlight.load(std::memory_order_acquire) == 0)) {
     return;
   }
   const uint64_t shareGroup = CurrentShareGroup();
@@ -1208,12 +1226,11 @@ void MapTrackingService::PublishMappedWrites() {
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
     for (auto& [key, range] : m_MappedBuffers) {
-      if (key.ShareGroup != shareGroup || !PublishesBeforeUse(range.Access)) {
+      if (key.ShareGroup != shareGroup || !PublishesBeforeUse(range.Access) ||
+          !range.Source.Shadow->MayHaveWrittenPages()) {
         continue;
       }
-      const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,
-                                                              static_cast<size_t>(range.Length));
-      AppendPublishedUpdates(range, dirty, updates);
+      TakePublishedUpdates(range, updates);
     }
   }
   // Recording reaches BufferShadowService, so record after releasing the map mutex.

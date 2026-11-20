@@ -100,8 +100,8 @@ public:
   void OnBufferData(GLuint buffer, const std::function<bool(GLint&)>& queryMapped);
   // After a glBufferSubData-family call, copies its bytes into the application's shadow of a
   // persistent mapping of `buffer`, so publishing a page the application writes later does not
-  // restore the bytes the update replaced. The update replays as its own command, so the pages it
-  // covers entirely are not published again.
+  // restore the bytes the update replaced. The pages it writes are published again, as a
+  // concurrent application write to them would otherwise be lost.
   void OnSubData(
       uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data);
   // Whether a mapping may need PublishInvalidationBeforeSubData(). Reads no locked state, so that
@@ -130,8 +130,9 @@ public:
   // GL_MAP_READ_BIT, and other writable persistent mappings, are unsupported.
   void OnGpuResultWrite(const char* command, GLenum target, uint64_t shareGroup, GLuint buffer);
   // After a host sync that makes completed GPU writes visible to the application: publishes the
-  // pending writes to GPU-written mappings of the current share group, then copies the driver
-  // contents into their shadows.
+  // pending writes to GPU-written mappings of the current share group, then makes their shadow
+  // pages get the driver contents on their next access, or at once, except for the bytes the
+  // application changed, for pages written meanwhile.
   void RefreshGpuWrittenMaps();
 
   // Asks the real driver which buffer is bound to `target`. Returns 0, warning once per
@@ -231,7 +232,8 @@ private:
                             GLsizeiptr length,
                             size_t alignment,
                             std::span<const uint8_t> initialBytes,
-                            bool initialize);
+                            bool initialize,
+                            WatchedShadow::Tracking tracking);
     void* TranslatePointer(void* pointer) const;
     std::vector<uint8_t> Snapshot(size_t offset, size_t length) const;
     void WriteBack(size_t offset, std::span<const uint8_t> bytes) const;
@@ -253,8 +255,9 @@ private:
     // its invalidation bits, so a later update does not discard the bytes of earlier ones.
     bool Updated{false};
     // Whether GPU work may write this shadow-backed mapping. Source.Baseline then holds the
-    // shadow contents as of the last refresh or publication, and only bytes differing from it
-    // are published, so that publishing does not overwrite GPU results.
+    // shadow contents as of the last page refresh or publication, and only bytes differing from
+    // it are published, so that publishing does not overwrite GPU results. The shadow refreshes
+    // pages into it, so it is not reallocated.
     bool GpuWritten{false};
 
     // Whether the driver accepts a glBufferSubData-family update of [offset, offset + size) of
@@ -281,17 +284,18 @@ private:
   MappedBufferUpdate PrepareFlushMappedUpdate(MappedRange& range, MapRelativeRange interval);
   using KeyedUpdates = std::vector<std::pair<uint64_t, std::optional<MappedBufferUpdate>>>;
   // Copies the written pages in `dirty` of a mapping published before use to the driver mapping,
-  // and appends their updates, each with its reserved key. Of a GPU-written mapping, only the
-  // changed bytes are copied, as separate updates. Callers hold m_MappedBuffersMutex, or own
-  // `range`, and record the updates after releasing it.
+  // and into Source.Baseline when it has one, and appends their updates, each with its reserved
+  // key. Of a GPU-written mapping, only the changed bytes are copied, as separate updates.
+  // Callers hold m_MappedBuffersMutex, or own `range`, and record the updates after releasing it.
   void AppendPublishedUpdates(MappedRange& range,
                               const std::vector<WatchedShadow::ByteRange>& dirty,
                               KeyedUpdates& updates);
   // AppendPublishedUpdates() for the pages written since the last call.
   void TakePublishedUpdates(MappedRange& range, KeyedUpdates& updates);
-  // Copies the driver mapping into the shadow of a readable mapping published before use, and
-  // makes it the baseline. Callers hold m_MappedBuffersMutex, or own `range`.
-  static void RefreshFromDriver(MappedRange& range);
+  // Makes a readable mapping published before use GPU-written: appends the updates of its
+  // pending writes, and its unwritten shadow pages get the driver contents on their next access.
+  // Callers hold m_MappedBuffersMutex or own `range`, and record the updates after releasing it.
+  void StartGpuWriteTracking(MappedRange& range, KeyedUpdates& updates);
   // `command` is null when no command is rejected, and `target` 0 when the buffer is named.
   static std::string DescribeMapping(const char* command,
                                      GLenum target,
@@ -367,6 +371,9 @@ private:
   std::atomic<size_t> m_GpuWrittenMaps{0};
   // Entries of m_MappedBuffers for which MappedRange::MayDeferInvalidation() holds, likewise.
   std::atomic<size_t> m_DeferredInvalidationMaps{0};
+  // TakePublishedUpdates() calls between taking written pages and reserving the keys of their
+  // updates, once the pages are no longer counted by WatchedShadow::PendingWrittenPages().
+  std::atomic<size_t> m_PublicationsInFlight{0};
 
   // Warn-once state for unrecognized targets, missing bindings, and unsupported coherent maps.
   // Map/unmap is a low-frequency path, so a plain mutex is sufficient.
