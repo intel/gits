@@ -108,6 +108,15 @@ bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
   return queryStorageFlags(flags) && (flags & GL_MAP_READ_BIT) != 0;
 }
 
+// Writable coherent maps, and writable persistent maps without a declared flush, whose writes
+// drivers make visible to GPU work before unmap even when the map is not coherent. Their writes
+// are published before each command that may use them.
+bool PublishesBeforeUse(GLbitfield access) {
+  constexpr GLbitfield required = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT;
+  return (access & required) == required &&
+         ((access & GL_MAP_COHERENT_BIT) != 0 || (access & GL_MAP_FLUSH_EXPLICIT_BIT) == 0);
+}
+
 void PersistentMapSanityCheck(GLintptr offset,
                               GLsizeiptr length,
                               GLbitfield access,
@@ -200,11 +209,9 @@ void MapTrackingService::LogStatistics() {
 
 bool MapTrackingService::NeedsInitialShadowContents(GLbitfield access) {
   constexpr GLbitfield invalidate = GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-  if ((access & GL_MAP_COHERENT_BIT) != 0) {
+  if (PublishesBeforeUse(access)) {
     // Published pages are copied whole, so the shadow must hold the buffer contents.
-    return WatchedShadow::kTracksWrites &&
-           (access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT)) == GL_MAP_WRITE_BIT &&
-           (access & invalidate) == 0;
+    return WatchedShadow::kTracksWrites && (access & invalidate) == 0;
   }
   constexpr GLbitfield required = GL_MAP_WRITE_BIT;
   constexpr GLbitfield excluded = GL_MAP_READ_BIT | GL_MAP_INVALIDATE_RANGE_BIT |
@@ -452,13 +459,15 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   const bool invalidated =
       (access & (GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT)) != 0;
   const bool unsynchronized = (access & GL_MAP_UNSYNCHRONIZED_BIT) != 0;
+  const bool publishedBeforeUse = PublishesBeforeUse(access);
   const char* unsupported = nullptr;
-  if (coherent && readable) {
-    unsupported = "Readable coherent persistent buffer maps are unsupported";
-  } else if (coherent && !WatchedShadow::kTracksWrites) {
-    unsupported = "Coherent persistent buffer maps are unsupported on this platform";
-  } else if (persistent && !readable && !coherent) {
-    unsupported = "Write-only persistent noncoherent buffer maps are unsupported";
+  if (coherent && !writable) {
+    unsupported = "Read-only coherent persistent buffer maps are unsupported";
+  } else if (publishedBeforeUse && !WatchedShadow::kTracksWrites) {
+    unsupported = "Writable coherent or implicit-flush persistent buffer maps are unsupported on "
+                  "this platform";
+  } else if (persistent && !readable && !publishedBeforeUse) {
+    unsupported = "Write-only persistent noncoherent explicit-flush buffer maps are unsupported";
   }
   if (unsupported != nullptr) {
     GITS_ASSERT(
@@ -470,11 +479,13 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
   }
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
                     offset, length, access, true};
-  if (coherent) {
-    // The application writes a watched shadow. Its written pages reach the driver mapping and the
-    // stream at PublishMappedWrites() and at unmap.
+  if (publishedBeforeUse) {
+    // The application uses a watched shadow. Its written pages reach the driver mapping and the
+    // stream at PublishMappedWrites() and at unmap. Reads from the shadow return the buffer
+    // contents, as GPU writes during writable persistent maps are unsupported.
     GITS_ASSERT(invalidated || initialBytes.size() == static_cast<size_t>(length),
-                "Coherent buffer maps require reading the buffer contents before the map");
+                "Writable coherent or implicit-flush persistent buffer maps require reading the "
+                "buffer contents before the map");
     RequireShadowMapAlignment();
     GLint alignment = 0;
     g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_MIN_MAP_BUFFER_ALIGNMENT,
@@ -817,8 +828,8 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
     if (previous != m_MappedBuffers.end()) {
       EraseMappedRange(previous);
     }
-    if (IsCoherent(range)) {
-      m_CoherentMaps.fetch_add(1, std::memory_order_release);
+    if (PublishesBeforeUse(range.Access)) {
+      m_PublishedBeforeUseMaps.fetch_add(1, std::memory_order_release);
     }
     m_MappedBuffers.emplace(key, std::move(range));
   }
@@ -852,14 +863,10 @@ std::optional<MapTrackingService::MappedRange> MapTrackingService::TakeMappedRan
   return range;
 }
 
-bool MapTrackingService::IsCoherent(const MappedRange& range) {
-  return (range.Access & GL_MAP_COHERENT_BIT) != 0;
-}
-
 void MapTrackingService::EraseMappedRange(
     std::unordered_map<Key, MappedRange, KeyHash>::iterator it) {
-  if (IsCoherent(it->second)) {
-    m_CoherentMaps.fetch_sub(1, std::memory_order_release);
+  if (PublishesBeforeUse(it->second.Access)) {
+    m_PublishedBeforeUseMaps.fetch_sub(1, std::memory_order_release);
   }
   m_MappedBuffers.erase(it);
 }
@@ -869,7 +876,7 @@ void MapTrackingService::PublishMappedWrites() {
     return;
   }
   stream::RecordingSession::Get().PublishHostWrites();
-  if (m_CoherentMaps.load(std::memory_order_acquire) == 0) {
+  if (m_PublishedBeforeUseMaps.load(std::memory_order_acquire) == 0) {
     return;
   }
   const uint64_t shareGroup = CurrentShareGroup();
@@ -877,7 +884,7 @@ void MapTrackingService::PublishMappedWrites() {
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
     for (auto& [key, range] : m_MappedBuffers) {
-      if (key.ShareGroup != shareGroup || !IsCoherent(range)) {
+      if (key.ShareGroup != shareGroup || !PublishesBeforeUse(range.Access)) {
         continue;
       }
       const auto dirty = range.Source.Shadow->TakeDirtyRanges(range.Source.ApplicationPointer,

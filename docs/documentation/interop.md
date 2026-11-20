@@ -45,8 +45,9 @@ Not supported:
   stream fails to replay it.
 - File descriptor imports (`glImportMemoryFdEXT`, `glImportSemaphoreFdEXT`), and therefore
   interop on Linux.
-- Coherent persistent maps that the application reads (`GL_MAP_READ_BIT`), and coherent
-  persistent maps on Linux. The recorder stops with an assertion naming the map.
+- Read-only coherent persistent maps, and on Linux, writable coherent persistent maps and
+  writable persistent maps without `GL_MAP_FLUSH_EXPLICIT_BIT`. The recorder stops with an
+  assertion naming the map.
 
 ## Replay
 

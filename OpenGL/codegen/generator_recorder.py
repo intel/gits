@@ -108,7 +108,7 @@ assert FRAME_END_COMMANDS <= PRE_HOOK_EXTRA_KEY_COMMANDS.keys()
 # mipmap generation, the other pixel unpacks a GL_PIXEL_UNPACK_BUFFER may source, query results
 # written into a buffer, and the semaphore signals and waits. Their Wrapper_<cmd> calls
 # MapTrackingService::PublishMappedWrites() before reserving its key, so writes through coherent
-# maps and host writes to memory GL imports from Vulkan replay before the command accesses the
+# and implicit-flush persistent maps and host writes to memory GL imports from Vulkan replay before the command accesses the
 # memory, and the pages they wrote are not published again over what it wrote. Buffer maps and flushes have custom wrappers
 # (recorder/mapTrackingWrappers.cpp), which these patterns exclude.
 _MAPPED_WRITE_PUBLISHER_RE = re.compile(

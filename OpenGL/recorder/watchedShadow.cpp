@@ -28,10 +28,13 @@ namespace gits::opengl {
 namespace {
 
 size_t GetPageSize() {
-  SYSTEM_INFO systemInfo{};
-  GetSystemInfo(&systemInfo);
-  GITS_ASSERT(systemInfo.dwPageSize != 0, "Cannot determine write-watch page size");
-  return systemInfo.dwPageSize;
+  static const size_t pageSize = [] {
+    SYSTEM_INFO systemInfo{};
+    GetSystemInfo(&systemInfo);
+    GITS_ASSERT(systemInfo.dwPageSize != 0, "Cannot determine write-watch page size");
+    return static_cast<size_t>(systemInfo.dwPageSize);
+  }();
+  return pageSize;
 }
 
 } // namespace
@@ -41,6 +44,14 @@ WatchedShadow::WatchedShadow(size_t size) : m_Size(size) {
   if (m_Data == nullptr) {
     GITS_ASSERT(false, "Cannot allocate write watch for buffer map (Windows error " +
                            std::to_string(GetLastError()) + ")");
+  }
+  const size_t pageSize = GetPageSize();
+  try {
+    m_Pages.resize(size / pageSize + (size % pageSize != 0));
+  } catch (const std::bad_alloc&) {
+    VirtualFree(m_Data, 0, MEM_RELEASE);
+    m_Data = nullptr;
+    GITS_ASSERT(false, "Cannot allocate write-watch page list");
   }
 }
 
@@ -59,18 +70,12 @@ void WatchedShadow::ResetWriteWatch() const {
 
 std::vector<uintptr_t> WatchedShadow::QueryDirtyPages(bool reset, size_t& pageSize) const {
   pageSize = GetPageSize();
-  const size_t numWatchedPages = m_Size / pageSize + (m_Size % pageSize != 0);
+  const size_t numWatchedPages = m_Pages.size();
   // GetWriteWatch takes watched page count as input and overwrites it with dirty page count.
   ULONG_PTR numDirtyPages = static_cast<ULONG_PTR>(numWatchedPages);
-  std::vector<void*> pages;
-  try {
-    pages.resize(numWatchedPages);
-  } catch (const std::bad_alloc&) {
-    GITS_ASSERT(false, "Cannot allocate write-watch page list");
-  }
   DWORD granularity = 0;
-  const UINT error = GetWriteWatch(reset ? WRITE_WATCH_FLAG_RESET : 0, m_Data, m_Size, pages.data(),
-                                   &numDirtyPages, &granularity);
+  const UINT error = GetWriteWatch(reset ? WRITE_WATCH_FLAG_RESET : 0, m_Data, m_Size,
+                                   m_Pages.data(), &numDirtyPages, &granularity);
   if (error != 0) {
     const DWORD windowsError = GetLastError();
     GITS_ASSERT(false, "Cannot query write watch for buffer map (returned " +
@@ -80,7 +85,7 @@ std::vector<uintptr_t> WatchedShadow::QueryDirtyPages(bool reset, size_t& pageSi
   GITS_ASSERT(granularity == pageSize && numDirtyPages <= numWatchedPages,
               "Invalid write-watch page count or granularity");
   std::vector<uintptr_t> dirtyPages(numDirtyPages);
-  std::transform(pages.begin(), pages.begin() + numDirtyPages, dirtyPages.begin(),
+  std::transform(m_Pages.begin(), m_Pages.begin() + numDirtyPages, dirtyPages.begin(),
                  [](void* page) { return reinterpret_cast<uintptr_t>(page); });
   std::sort(dirtyPages.begin(), dirtyPages.end());
   return dirtyPages;

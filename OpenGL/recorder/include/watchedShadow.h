@@ -59,6 +59,9 @@ private:
 
   void* m_Data{};
   size_t m_Size;
+  // GetWriteWatch's output list, sized for every watched page once, as queries can precede each
+  // GL command. Callers do not query one shadow concurrently.
+  mutable std::vector<void*> m_Pages;
 };
 
 // The runs of consecutive pages of pageSize bytes at the ascending addresses in pages, clipped to
