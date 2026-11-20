@@ -294,12 +294,7 @@ void StateRestorer::RestoreUniforms(GITSKey key, GLuint program) {
 // Subroutine selections belong to the context and glUseProgram resets them, so they are restored
 // for the current program only.
 void StateRestorer::RestoreSubroutines(GLuint program) {
-  std::vector<GLenum> stages{GL_VERTEX_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER,
-                             GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
-  if (Supports(4, 3, "GL_ARB_compute_shader")) {
-    stages.push_back(GL_COMPUTE_SHADER);
-  }
-  for (GLenum stage : stages) {
+  for (GLenum stage : SubroutineStages()) {
     // The locations query can fail for a stage the program has no shader for, which has no
     // subroutine uniforms.
     GLint uniforms = 0;
@@ -323,6 +318,18 @@ void StateRestorer::RestoreSubroutines(GLuint program) {
     }
     Emit<glUniformSubroutinesuivCommandSerializer>(command);
   }
+}
+
+std::vector<GLenum> StateRestorer::SubroutineStages() const {
+  if (!Supports(4, 0, "GL_ARB_shader_subroutine")) {
+    return {};
+  }
+  std::vector<GLenum> stages{GL_VERTEX_SHADER, GL_TESS_CONTROL_SHADER, GL_TESS_EVALUATION_SHADER,
+                             GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER};
+  if (Supports(4, 3, "GL_ARB_compute_shader")) {
+    stages.push_back(GL_COMPUTE_SHADER);
+  }
+  return stages;
 }
 
 void StateRestorer::EmitUniform(GLuint program,

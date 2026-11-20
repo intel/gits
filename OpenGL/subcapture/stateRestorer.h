@@ -160,6 +160,12 @@ private:
                                    GLenum internalFormat,
                                    GLint depthSize,
                                    GLint stencilSize);
+  // Every sample of the multisample texture or renderbuffer `key`, `name` on the replay driver
+  // and of `target`, written into its storage restored in the subcapture.
+  void RestoreMultisampleContents(GITSKey key, GLenum target, GLuint name);
+  // A program of the subcapture drawing a triangle that covers the viewport with
+  // `fragmentSource`.
+  GITSKey EmitSampleProgram(const std::string& fragmentSource);
   void RestoreSampler(GITSKey key, GLuint name);
   void RestoreShader(GITSKey key, GLuint name);
   void EmitShader(GITSKey key, GLenum type, const std::string& source, bool compile);
@@ -167,6 +173,8 @@ private:
   void RestoreUniforms(GITSKey key, GLuint program);
   void EmitUniform(GLuint program, GLint location, GLint capturedLocation, GLenum type);
   void RestoreSubroutines(GLuint program);
+  // The shader stages that can have subroutine uniforms, none without subroutines.
+  std::vector<GLenum> SubroutineStages() const;
   void RestoreArbPrograms(GITSKey shareGroup);
   void RestoreDisplayLists(GITSKey shareGroup);
 
@@ -214,6 +222,9 @@ private:
   void RestoreTextureUnit(GLint unit, bool coordinates, bool environment);
   void RestoreBindings();
   void RestoreActiveQueries();
+  // The target of a query active on the replay driver that draws count in, on vertex stream 0;
+  // GL_NONE if none is.
+  GLenum ActiveDrawQuery() const;
   void RestoreArbProgramBindings();
 
   const StateTrackingService& m_State;
@@ -228,6 +239,8 @@ private:
   // The share group and context whose names are mapped at the first key lookup.
   std::optional<std::pair<GITSKey, GITSKey>> m_UnmappedNames;
   uint32_t m_ThreadId{};
+  // The context made current last.
+  GITSKey m_Context{};
   // The recorded threads made current on, and the recorded display of those that used GLX.
   std::map<uint32_t, Display*> m_UsedThreads;
   HDC m_LiveDc{};

@@ -71,6 +71,10 @@ struct MakeCurrent {
 struct ContextState {
   GITSKey ShareGroup{};
   std::shared_ptr<MakeCurrent> LastMakeCurrent;
+  // Whether transform feedback was begun and not ended, which GL before 4.0 cannot be asked.
+  bool TransformFeedbackActive{};
+  // Whether conditional rendering was begun and not ended, which GL cannot be asked.
+  bool ConditionalRenderActive{};
 };
 
 // Commands that create an object again as it was read back, and the objects they reference.
@@ -246,6 +250,9 @@ public:
   void DestroyPbuffer(GITSKey pbuffer);
   // The size of the pbuffer a recorded DC belongs to; std::nullopt for other DCs.
   std::optional<std::pair<GLsizei, GLsizei>> PbufferSize(HDC dc) const;
+
+  void SetTransformFeedbackActive(uint32_t threadId, bool active);
+  void SetConditionalRenderActive(uint32_t threadId, bool active);
 
   void CreateObject(GLObjectKind kind, uint32_t threadId, GITSKey key);
   // `liveName` is the name of a deleted shader or program GL keeps until it is detached or no

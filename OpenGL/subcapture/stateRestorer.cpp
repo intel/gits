@@ -697,6 +697,7 @@ bool StateRestorer::SwitchTo(const MakeCurrent& current) {
   DrainErrors();
   Emit(current.Call);
   m_ThreadId = current.ThreadId;
+  m_Context = current.Context;
   m_UsedThreads[current.ThreadId] = current.GlxDisplay;
 
   ReadVersion();
@@ -1509,6 +1510,31 @@ void StateRestorer::RestoreActiveQueries() {
       }
     }
   }
+}
+
+GLenum StateRestorer::ActiveDrawQuery() const {
+  for (const QueryTarget& target : QUERY_TARGETS) {
+    // Paused transform feedback writes no primitives, and draws run no compute shaders.
+    switch (target.Target) {
+    case GL_TIME_ELAPSED:
+    case GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN:
+    case GL_TRANSFORM_FEEDBACK_OVERFLOW:
+    case GL_TRANSFORM_FEEDBACK_STREAM_OVERFLOW:
+    case GL_COMPUTE_SHADER_INVOCATIONS:
+      continue;
+    default:
+      break;
+    }
+    if (!Supports(target.Major, target.Minor, target.Extension)) {
+      continue;
+    }
+    GLint query = 0;
+    GL_FN(glGetQueryiv)(target.Target, GL_CURRENT_QUERY, &query);
+    if (query != 0) {
+      return target.Target;
+    }
+  }
+  return GL_NONE;
 }
 
 // Restores the indexed transform feedback buffers of the bound transform feedback, or the other

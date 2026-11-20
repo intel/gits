@@ -288,6 +288,20 @@ std::optional<std::pair<GLsizei, GLsizei>> StateTrackingService::PbufferSize(HDC
   return size->second;
 }
 
+void StateTrackingService::SetTransformFeedbackActive(uint32_t threadId, bool active) {
+  const auto context = m_Contexts.find(CurrentContext(threadId));
+  if (context != m_Contexts.end()) {
+    context->second.TransformFeedbackActive = active;
+  }
+}
+
+void StateTrackingService::SetConditionalRenderActive(uint32_t threadId, bool active) {
+  const auto context = m_Contexts.find(CurrentContext(threadId));
+  if (context != m_Contexts.end()) {
+    context->second.ConditionalRenderActive = active;
+  }
+}
+
 GITSKey StateTrackingService::CurrentContext(uint32_t threadId) const {
   const auto thread = m_Threads.find(threadId);
   return thread != m_Threads.end() ? thread->second->Context : 0;

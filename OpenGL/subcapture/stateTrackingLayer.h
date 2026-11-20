@@ -334,6 +334,18 @@ public:
   void Post(glCreateTransformFeedbacksCommand& command) override;
   void Post(glDeleteTransformFeedbacksCommand& command) override;
   void Post(glDeleteTransformFeedbacksNVCommand& command) override;
+  void Post(glBeginTransformFeedbackCommand& command) override;
+  void Post(glBeginTransformFeedbackEXTCommand& command) override;
+  void Post(glBeginTransformFeedbackNVCommand& command) override;
+  void Post(glEndTransformFeedbackCommand& command) override;
+  void Post(glEndTransformFeedbackEXTCommand& command) override;
+  void Post(glEndTransformFeedbackNVCommand& command) override;
+  void Post(glBeginConditionalRenderCommand& command) override;
+  void Post(glBeginConditionalRenderNVCommand& command) override;
+  void Post(glBeginConditionalRenderNVXCommand& command) override;
+  void Post(glEndConditionalRenderCommand& command) override;
+  void Post(glEndConditionalRenderNVCommand& command) override;
+  void Post(glEndConditionalRenderNVXCommand& command) override;
 
   // ---- Syncs ------------------------------------------------------------
   void Post(glFenceSyncCommand& command) override;

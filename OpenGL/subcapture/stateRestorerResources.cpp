@@ -154,6 +154,37 @@ void FailCompressedRead(GLuint texture, GLint level, const char* step, GLenum er
   GITS_ASSERT(false, message.str());
 }
 
+// Stops the subcapture when the samples of the multisample object `key` cannot be restored, since
+// its restored storage would have undefined contents.
+void FailSamples(GITSKey key, const std::string& reason) {
+  std::ostringstream message;
+  message << "Subcapture: the samples of multisample object " << key
+          << " cannot be restored: " << reason;
+  GITS_ASSERT(false, message.str());
+}
+
+void FailSampleRead(GITSKey key, const char* step, GLenum error) {
+  std::ostringstream reason;
+  reason << step << " to read them raised GL error 0x" << std::hex << error << std::dec << ".";
+  if (error == GL_OUT_OF_MEMORY) {
+    reason << " The replay system ran out of GPU memory; record the subcapture on a system with "
+              "more GPU memory.";
+  } else {
+    reason << " They cannot be read on this system.";
+  }
+  FailSamples(key, reason.str());
+}
+
+// Clears the GL error flags, returning how many errors they held, so that the error of a call
+// checked next is its own.
+int TakeErrors() {
+  int errors = 0;
+  while (errors < 64 && GL_FN(glGetError)() != GL_NO_ERROR) {
+    ++errors;
+  }
+  return errors;
+}
+
 // The compressed formats glCopyImageSubData can copy to and from uncompressed ones: those of its
 // copy compatibility classes, with the S3TC formats of GL_EXT_texture_compression_s3tc and
 // GL_EXT_texture_sRGB.
@@ -225,10 +256,7 @@ int ReadCompressedImage(GLenum target,
   const GLsizei maxLayers = std::max(GetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS), 1);
   const size_t layerSize = static_cast<size_t>(columns) * rows * blockSize;
   const GLuint bound = GetName(GL_TEXTURE_BINDING_2D_ARRAY);
-  int errors = 0;
-  while (errors < 64 && GL_FN(glGetError)() != GL_NO_ERROR) {
-    ++errors;
-  }
+  const int errors = TakeErrors();
   // glCopyImageSubData requires a complete texture, so only the level read is in use meanwhile.
   // A texture with a handle was complete when the handle was created, and GL rejects changing
   // its parameters or defining its images again since, so it is copied as it is.
@@ -344,6 +372,7 @@ ObjectSnapshot StateRestorer::CaptureDeleted(uint32_t threadId, GLObjectKind kin
     return snapshot;
   }
   const auto owner = m_State.CurrentShareGroup(threadId);
+  m_Context = owner.second;
   if (!m_State.HasResidentHandle(key) && !(kind == GLObjectKind::Texture && m_State.Viewed(key)) &&
       (kind == GLObjectKind::Sampler || !Attached(owner.first, owner.second, kind, name, true))) {
     return snapshot;
@@ -889,6 +918,7 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
       command.m_fixedsamplelocations.Value = fixed;
       Emit<glTexImage3DMultisampleCommandSerializer>(command);
     }
+    RestoreMultisampleContents(key, target, name);
     return;
   }
 
@@ -1343,6 +1373,7 @@ void StateRestorer::RestoreRenderbuffer(GITSKey key, GLuint name) {
     command.m_width.Value = width;
     command.m_height.Value = height;
     Emit<glRenderbufferStorageMultisampleCommandSerializer>(command);
+    RestoreMultisampleContents(key, GL_RENDERBUFFER, name);
   } else {
     glRenderbufferStorageCommand command;
     command.m_target.Value = GL_RENDERBUFFER;
@@ -1350,8 +1381,8 @@ void StateRestorer::RestoreRenderbuffer(GITSKey key, GLuint name) {
     command.m_width.Value = width;
     command.m_height.Value = height;
     Emit<glRenderbufferStorageCommandSerializer>(command);
-    // Multisampled contents and stencil-only renderbuffers, which no texture format matches
-    // before GL 4.4, keep the storage only.
+    // Stencil-only renderbuffers, which no texture format matches before GL 4.4, keep the
+    // storage only.
     if (m_Version.AtLeast(3, 0) && (depthSize > 0 || stencilSize == 0)) {
       RestoreRenderbufferContents(key, name, width, height, static_cast<GLenum>(internalFormat),
                                   depthSize, stencilSize);
@@ -1443,6 +1474,977 @@ void StateRestorer::RestoreRenderbufferContents(GITSKey key,
   remove.m_framebuffers.Value = {0};
   remove.m_framebuffers.HasValue = true;
   Emit<glDeleteFramebuffersCommandSerializer>(remove);
+}
+
+namespace {
+
+// The images of a multisample texture or renderbuffer drawn separately.
+enum class SampleAspect {
+  Color,
+  Depth,
+  Stencil,
+};
+
+constexpr const char* COVERING_TRIANGLE_SHADER =
+    "#version 150\n"
+    "void main() {\n"
+    "  gl_Position = vec4(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0, 0.0, "
+    "1.0);\n"
+    "}\n";
+
+constexpr std::pair<GLenum, GLenum> SAMPLE_TEXTURE_BINDINGS[] = {
+    {GL_TEXTURE_2D, GL_TEXTURE_BINDING_2D},
+    {GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_BINDING_2D_MULTISAMPLE},
+    {GL_TEXTURE_2D_MULTISAMPLE_ARRAY, GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY},
+};
+
+// The GLSL sampler prefix and output type of a color format of `componentType`.
+std::pair<const char*, const char*> ColorShaderTypes(GLint componentType) {
+  if (componentType == GL_INT) {
+    return {"i", "ivec4"};
+  }
+  if (componentType == GL_UNSIGNED_INT) {
+    return {"u", "uvec4"};
+  }
+  return {"", "vec4"};
+}
+
+// Depth and stencil samples pass through color textures, which hold them exactly.
+GLenum SampleTextureFormat(SampleAspect aspect, GLenum internalFormat) {
+  if (aspect == SampleAspect::Depth) {
+    return GL_R32F;
+  }
+  return aspect == SampleAspect::Stencil ? GL_R32UI : internalFormat;
+}
+
+bool SrgbFormat(GLenum internalFormat) {
+  return internalFormat == GL_SRGB || internalFormat == GL_SRGB8 ||
+         internalFormat == GL_SRGB_ALPHA || internalFormat == GL_SRGB8_ALPHA8;
+}
+
+GLenum SampleAttachment(GLint depthSize, GLint stencilSize) {
+  if (depthSize > 0 && stencilSize > 0) {
+    return GL_DEPTH_STENCIL_ATTACHMENT;
+  }
+  if (depthSize > 0) {
+    return GL_DEPTH_ATTACHMENT;
+  }
+  return stencilSize > 0 ? GL_STENCIL_ATTACHMENT : GL_COLOR_ATTACHMENT0;
+}
+
+// Copies sample `sampleIndex` of layer `layer` of the multisample texture on unit 0 to the color
+// output.
+std::string SampleReadShader(SampleAspect aspect, GLint componentType, bool array) {
+  const auto [prefix, output] = aspect == SampleAspect::Depth     ? std::pair{"", "float"}
+                                : aspect == SampleAspect::Stencil ? std::pair{"u", "uint"}
+                                                                  : ColorShaderTypes(componentType);
+  std::ostringstream source;
+  source << "#version 150\n"
+         << "uniform " << prefix << "sampler2DMS" << (array ? "Array" : "") << " source;\n"
+         << "uniform int layer;\n"
+         << "uniform int sampleIndex;\n"
+         << "out " << output << " value;\n"
+         << "void main() {\n"
+         << "  value = texelFetch(source, "
+         << (array ? "ivec3(ivec2(gl_FragCoord.xy), layer)" : "ivec2(gl_FragCoord.xy)")
+         << ", sampleIndex)" << (aspect == SampleAspect::Color ? "" : ".r") << ";\n"
+         << "}\n";
+  return source.str();
+}
+
+// Writes the single-sample texture on unit 0: color as the color output, depth as the fragment
+// depth, and stencil bit `stencilBit` by discarding the fragments without it.
+std::string SampleWriteShader(SampleAspect aspect, GLint componentType, GLint stencilBit) {
+  std::ostringstream source;
+  source << "#version 150\n";
+  if (aspect == SampleAspect::Color) {
+    const auto [prefix, output] = ColorShaderTypes(componentType);
+    source << "uniform " << prefix << "sampler2D source;\n"
+           << "out " << output << " value;\n"
+           << "void main() {\n"
+           << "  value = texelFetch(source, ivec2(gl_FragCoord.xy), 0);\n"
+           << "}\n";
+  } else if (aspect == SampleAspect::Depth) {
+    source << "uniform sampler2D source;\n"
+           << "void main() {\n"
+           << "  gl_FragDepth = texelFetch(source, ivec2(gl_FragCoord.xy), 0).r;\n"
+           << "}\n";
+  } else {
+    source << "uniform usampler2D source;\n"
+           << "void main() {\n"
+           << "  if ((texelFetch(source, ivec2(gl_FragCoord.xy), 0).r & " << (1u << stencilBit)
+           << "u) == 0u) {\n"
+           << "    discard;\n"
+           << "  }\n"
+           << "}\n";
+  }
+  return source.str();
+}
+
+// The replay driver state the readback of multisample samples draws with, set for it and put
+// back, with its temporary objects deleted, once done, as the replay continues after it.
+class SampleReadback {
+public:
+  SampleReadback(bool compatibility,
+                 bool viewportArrays,
+                 bool separateShaderObjects,
+                 bool pauseTransformFeedback,
+                 const std::vector<GLenum>& subroutineStages)
+      : m_Compatibility(compatibility),
+        m_ViewportArrays(viewportArrays),
+        m_PauseTransformFeedback(pauseTransformFeedback) {
+    // A program cannot be used while transform feedback is active and not paused.
+    if (m_PauseTransformFeedback) {
+      GL_FN(glPauseTransformFeedback)();
+    }
+    m_Program = GetName(GL_CURRENT_PROGRAM);
+    m_Pipeline = separateShaderObjects ? GetName(GL_PROGRAM_PIPELINE_BINDING) : 0;
+    KeepProgram(separateShaderObjects);
+    SaveSubroutines(subroutineStages);
+    m_VertexArray = GetName(GL_VERTEX_ARRAY_BINDING);
+    m_DrawFramebuffer = GetName(GL_DRAW_FRAMEBUFFER_BINDING);
+    m_ReadFramebuffer = GetName(GL_READ_FRAMEBUFFER_BINDING);
+    m_UnpackBuffer = GetName(GL_PIXEL_UNPACK_BUFFER_BINDING);
+    m_ActiveTexture = GetInteger(GL_ACTIVE_TEXTURE);
+    GL_FN(glActiveTexture)(GL_TEXTURE0);
+    for (const auto& [target, binding] : SAMPLE_TEXTURE_BINDINGS) {
+      m_Textures.emplace_back(target, GetName(binding));
+    }
+    // Only viewport and scissor rectangle 0 are drawn with.
+    if (m_ViewportArrays) {
+      GL_FN(glGetFloati_v)(GL_VIEWPORT, 0, m_Viewport);
+      m_Scissor = GL_FN(glIsEnabledi)(GL_SCISSOR_TEST, 0) != GL_FALSE;
+      GL_FN(glDisablei)(GL_SCISSOR_TEST, 0);
+    } else {
+      GL_FN(glGetFloatv)(GL_VIEWPORT, m_Viewport);
+      m_Scissor = GL_FN(glIsEnabled)(GL_SCISSOR_TEST) != GL_FALSE;
+      GL_FN(glDisable)(GL_SCISSOR_TEST);
+    }
+    m_Blend = GL_FN(glIsEnabledi)(GL_BLEND, 0) != GL_FALSE;
+    GL_FN(glDisablei)(GL_BLEND, 0);
+    GL_FN(glGetBooleani_v)(GL_COLOR_WRITEMASK, 0, m_ColorMask);
+    GL_FN(glColorMaski)(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    GL_FN(glGetIntegerv)(GL_POLYGON_MODE, m_PolygonModes);
+    GL_FN(glPolygonMode)(GL_FRONT_AND_BACK, GL_FILL);
+
+    std::vector<GLenum> capabilities{GL_CULL_FACE,          GL_DITHER,
+                                     GL_COLOR_LOGIC_OP,     GL_POLYGON_SMOOTH,
+                                     GL_RASTERIZER_DISCARD, GL_FRAMEBUFFER_SRGB};
+    if (m_Compatibility) {
+      capabilities.insert(capabilities.end(), {GL_ALPHA_TEST, GL_POLYGON_STIPPLE});
+      m_ClampFragmentColor = GetInteger(GL_CLAMP_FRAGMENT_COLOR);
+      GL_FN(glClampColor)(GL_CLAMP_FRAGMENT_COLOR, GL_FALSE);
+    }
+    // The covering triangle writes no clip distances.
+    const GLint clipDistances = GetInteger(GL_MAX_CLIP_DISTANCES);
+    for (GLint i = 0; i < clipDistances; ++i) {
+      capabilities.push_back(GL_CLIP_DISTANCE0 + static_cast<GLenum>(i));
+    }
+    for (GLenum cap : capabilities) {
+      m_Capabilities.emplace_back(cap, GL_FN(glIsEnabled)(cap) != GL_FALSE);
+      GL_FN(glDisable)(cap);
+    }
+
+    GL_FN(glBindBuffer)(GL_PIXEL_UNPACK_BUFFER, 0);
+    GL_FN(glGenVertexArrays)(1, &m_DrawVertexArray);
+    GL_FN(glBindVertexArray)(m_DrawVertexArray);
+  }
+
+  SampleReadback(const SampleReadback&) = delete;
+  SampleReadback& operator=(const SampleReadback&) = delete;
+
+  ~SampleReadback() {
+    GL_FN(glUseProgram)(m_Program);
+    for (const auto& [stage, indices] : m_Subroutines) {
+      GL_FN(glUniformSubroutinesuiv)(stage, static_cast<GLsizei>(indices.size()), indices.data());
+    }
+    if (m_KeepingPipeline != 0) {
+      GL_FN(glDeleteProgramPipelines)(1, &m_KeepingPipeline);
+    }
+    for (GLuint program : m_Programs) {
+      GL_FN(glDeleteProgram)(program);
+    }
+    GL_FN(glBindVertexArray)(m_VertexArray);
+    GL_FN(glDeleteVertexArrays)(1, &m_DrawVertexArray);
+    if (!m_Framebuffers.empty()) {
+      GL_FN(glDeleteFramebuffers)
+      (static_cast<GLsizei>(m_Framebuffers.size()), m_Framebuffers.data());
+    }
+    GL_FN(glBindFramebuffer)(GL_DRAW_FRAMEBUFFER, m_DrawFramebuffer);
+    GL_FN(glBindFramebuffer)(GL_READ_FRAMEBUFFER, m_ReadFramebuffer);
+    if (m_SwizzledTexture != 0) {
+      GL_FN(glBindTexture)(m_SwizzledTarget, m_SwizzledTexture);
+      GL_FN(glTexParameteriv)(m_SwizzledTarget, GL_TEXTURE_SWIZZLE_RGBA, m_Swizzle);
+    }
+    if (!m_TemporaryTextures.empty()) {
+      GL_FN(glDeleteTextures)
+      (static_cast<GLsizei>(m_TemporaryTextures.size()), m_TemporaryTextures.data());
+    }
+    for (const auto& [target, texture] : m_Textures) {
+      GL_FN(glBindTexture)(target, texture);
+    }
+    GL_FN(glActiveTexture)(static_cast<GLenum>(m_ActiveTexture));
+    GL_FN(glBindBuffer)(GL_PIXEL_UNPACK_BUFFER, m_UnpackBuffer);
+
+    if (m_ViewportArrays) {
+      GL_FN(glViewportIndexedfv)(0, m_Viewport);
+      SetIndexed(GL_SCISSOR_TEST, m_Scissor);
+    } else {
+      GL_FN(glViewport)
+      (static_cast<GLint>(m_Viewport[0]), static_cast<GLint>(m_Viewport[1]),
+       static_cast<GLsizei>(m_Viewport[2]), static_cast<GLsizei>(m_Viewport[3]));
+      Set(GL_SCISSOR_TEST, m_Scissor);
+    }
+    SetIndexed(GL_BLEND, m_Blend);
+    GL_FN(glColorMaski)(0, m_ColorMask[0], m_ColorMask[1], m_ColorMask[2], m_ColorMask[3]);
+    if (m_Compatibility && m_PolygonModes[0] != m_PolygonModes[1]) {
+      GL_FN(glPolygonMode)(GL_FRONT, static_cast<GLenum>(m_PolygonModes[0]));
+      GL_FN(glPolygonMode)(GL_BACK, static_cast<GLenum>(m_PolygonModes[1]));
+    } else {
+      GL_FN(glPolygonMode)(GL_FRONT_AND_BACK, static_cast<GLenum>(m_PolygonModes[0]));
+    }
+    for (const auto& [cap, enabled] : m_Capabilities) {
+      Set(cap, enabled);
+    }
+    if (m_Compatibility) {
+      GL_FN(glClampColor)(GL_CLAMP_FRAGMENT_COLOR, static_cast<GLenum>(m_ClampFragmentColor));
+    }
+    if (m_PauseTransformFeedback) {
+      GL_FN(glResumeTransformFeedback)();
+    }
+  }
+
+  // Whether the program in use survives the readback switching programs.
+  bool KeepsProgram() const {
+    return m_ProgramKept;
+  }
+
+  // Samples `texture`, bound to `target` on unit 0, with the identity swizzle instead of
+  // `swizzle`, which texelFetch applies.
+  void Unswizzle(GLenum target, GLuint texture, const GLint (&swizzle)[4]) {
+    m_SwizzledTarget = target;
+    m_SwizzledTexture = texture;
+    std::copy(std::begin(swizzle), std::end(swizzle), m_Swizzle);
+    const GLint identity[4]{GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
+    GL_FN(glTexParameteriv)(target, GL_TEXTURE_SWIZZLE_RGBA, identity);
+  }
+
+  GLuint Texture() {
+    GLuint texture = 0;
+    GL_FN(glGenTextures)(1, &texture);
+    m_TemporaryTextures.push_back(texture);
+    return texture;
+  }
+
+  GLuint Framebuffer() {
+    GLuint framebuffer = 0;
+    GL_FN(glGenFramebuffers)(1, &framebuffer);
+    m_Framebuffers.push_back(framebuffer);
+    return framebuffer;
+  }
+
+  // A program drawing the covering triangle with `fragmentSource`; 0 if it does not link.
+  GLuint Program(const std::string& fragmentSource) {
+    const GLuint program = GL_FN(glCreateProgram)();
+    const std::pair<GLenum, const char*> stages[] = {
+        {GL_VERTEX_SHADER, COVERING_TRIANGLE_SHADER},
+        {GL_FRAGMENT_SHADER, fragmentSource.c_str()},
+    };
+    for (const auto& [type, text] : stages) {
+      const GLuint shader = GL_FN(glCreateShader)(type);
+      GL_FN(glShaderSource)(shader, 1, &text, nullptr);
+      GL_FN(glCompileShader)(shader);
+      GL_FN(glAttachShader)(program, shader);
+      GL_FN(glDeleteShader)(shader);
+    }
+    GL_FN(glLinkProgram)(program);
+    GLint linked = GL_FALSE;
+    GL_FN(glGetProgramiv)(program, GL_LINK_STATUS, &linked);
+    if (linked == GL_FALSE) {
+      GL_FN(glDeleteProgram)(program);
+      return 0;
+    }
+    m_Programs.push_back(program);
+    return program;
+  }
+
+  void SetViewport(GLsizei width, GLsizei height) const {
+    if (m_ViewportArrays) {
+      GL_FN(glViewportIndexedf)
+      (0, 0.0f, 0.0f, static_cast<GLfloat>(width), static_cast<GLfloat>(height));
+    } else {
+      GL_FN(glViewport)(0, 0, width, height);
+    }
+  }
+
+private:
+  // A program flagged for deletion is deleted once no longer in use, unless a program pipeline
+  // holds it as its active program, which takes the program in use to be linked.
+  void KeepProgram(bool separateShaderObjects) {
+    GLint deleted = GL_FALSE;
+    if (m_Program != 0) {
+      GL_FN(glGetProgramiv)(m_Program, GL_DELETE_STATUS, &deleted);
+    }
+    if (deleted == GL_FALSE) {
+      return;
+    }
+    if (!separateShaderObjects) {
+      m_ProgramKept = false;
+      return;
+    }
+    GL_FN(glGenProgramPipelines)(1, &m_KeepingPipeline);
+    GL_FN(glActiveShaderProgram)(m_KeepingPipeline, m_Program);
+    GLint active = 0;
+    GL_FN(glGetProgramPipelineiv)(m_KeepingPipeline, GL_ACTIVE_PROGRAM, &active);
+    m_ProgramKept = static_cast<GLuint>(active) == m_Program;
+  }
+
+  // Using a program resets the subroutine selections, so those of the programs in use for
+  // `stages` are set again after the readback.
+  void SaveSubroutines(const std::vector<GLenum>& stages) {
+    for (GLenum stage : stages) {
+      GLint program = static_cast<GLint>(m_Program);
+      if (program == 0 && m_Pipeline != 0) {
+        GL_FN(glGetProgramPipelineiv)(m_Pipeline, stage, &program);
+      }
+      if (program == 0) {
+        continue;
+      }
+      // The locations query can fail for a stage the program has no shader for, which has no
+      // subroutine uniforms.
+      const auto name = static_cast<GLuint>(program);
+      GLint uniforms = 0;
+      GL_FN(glGetProgramStageiv)(name, stage, GL_ACTIVE_SUBROUTINE_UNIFORMS, &uniforms);
+      GLint locations = 0;
+      if (uniforms > 0) {
+        GL_FN(glGetProgramStageiv)
+        (name, stage, GL_ACTIVE_SUBROUTINE_UNIFORM_LOCATIONS, &locations);
+      }
+      if (locations <= 0) {
+        continue;
+      }
+      std::vector<GLuint> indices(static_cast<size_t>(locations));
+      for (GLint location = 0; location < locations; ++location) {
+        GL_FN(glGetUniformSubroutineuiv)(stage, location, &indices[static_cast<size_t>(location)]);
+      }
+      m_Subroutines.emplace_back(stage, std::move(indices));
+    }
+  }
+
+  static void Set(GLenum cap, bool enabled) {
+    if (enabled) {
+      GL_FN(glEnable)(cap);
+    } else {
+      GL_FN(glDisable)(cap);
+    }
+  }
+  static void SetIndexed(GLenum cap, bool enabled) {
+    if (enabled) {
+      GL_FN(glEnablei)(cap, 0);
+    } else {
+      GL_FN(glDisablei)(cap, 0);
+    }
+  }
+
+  bool m_Compatibility{};
+  bool m_ViewportArrays{};
+  bool m_PauseTransformFeedback{};
+  GLuint m_Program{};
+  GLuint m_Pipeline{};
+  bool m_ProgramKept{true};
+  GLuint m_KeepingPipeline{};
+  std::vector<std::pair<GLenum, std::vector<GLuint>>> m_Subroutines;
+  GLenum m_SwizzledTarget{};
+  GLuint m_SwizzledTexture{};
+  GLint m_Swizzle[4]{GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
+  GLuint m_VertexArray{};
+  GLuint m_DrawFramebuffer{};
+  GLuint m_ReadFramebuffer{};
+  GLuint m_UnpackBuffer{};
+  GLint m_ActiveTexture{};
+  std::vector<std::pair<GLenum, GLuint>> m_Textures;
+  GLfloat m_Viewport[4]{};
+  bool m_Scissor{};
+  bool m_Blend{};
+  GLboolean m_ColorMask[4]{GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
+  GLint m_PolygonModes[2]{GL_FILL, GL_FILL};
+  GLint m_ClampFragmentColor{};
+  std::vector<std::pair<GLenum, bool>> m_Capabilities;
+  GLuint m_DrawVertexArray{};
+  std::vector<GLuint> m_Programs;
+  std::vector<GLuint> m_Framebuffers;
+  std::vector<GLuint> m_TemporaryTextures;
+};
+
+} // namespace
+
+GITSKey StateRestorer::EmitSampleProgram(const std::string& fragmentSource) {
+  const GITSKey program = m_Recorder.CreateStateRestoreObjectKey();
+  glCreateProgramCommand create;
+  create.m_Return.Key = program;
+  Emit<glCreateProgramCommandSerializer>(create);
+  const std::pair<GLenum, std::string> stages[] = {
+      {GL_VERTEX_SHADER, COVERING_TRIANGLE_SHADER},
+      {GL_FRAGMENT_SHADER, fragmentSource},
+  };
+  for (const auto& [type, source] : stages) {
+    const GITSKey shader = m_Recorder.CreateStateRestoreObjectKey();
+    EmitShader(shader, type, source, true);
+    glAttachShaderCommand attach;
+    attach.m_program.Key = program;
+    attach.m_shader.Key = shader;
+    Emit<glAttachShaderCommandSerializer>(attach);
+    glDeleteShaderCommand remove;
+    remove.m_shader.Key = shader;
+    Emit<glDeleteShaderCommandSerializer>(remove);
+  }
+  glLinkProgramCommand link;
+  link.m_program.Key = program;
+  Emit<glLinkProgramCommandSerializer>(link);
+  return program;
+}
+
+// Multisample contents have no readback nor upload. Every sample is drawn on the replay driver
+// into a single-sample texture and read back, then drawn in the subcapture from a texture into
+// the restored storage, with the sample mask selecting the sample. A renderbuffer is read through
+// a multisample texture it is blitted to. Depth is written as the fragment depth, and stencil one
+// bit per draw. The context state restore sets the state these draws change again. Samples that
+// cannot be read stop the subcapture.
+void StateRestorer::RestoreMultisampleContents(GITSKey key, GLenum target, GLuint name) {
+  if (!m_Version.AtLeast(3, 2)) {
+    FailSamples(key, "they are read with GL 3.2; record the subcapture on a system with it.");
+  }
+  const auto context = m_State.Contexts().find(m_Context);
+  const ContextState* tracked = context != m_State.Contexts().end() ? &context->second : nullptr;
+  // Conditional rendering can discard the draws and blits reading the samples without an error.
+  if (tracked != nullptr && tracked->ConditionalRenderActive) {
+    FailSamples(key, "conditional rendering is active, and could discard the draws reading them; "
+                     "start the subcapture range outside of it.");
+  }
+  // A program whose relink failed stays in use, but cannot be used again once switched from.
+  if (const GLuint program = GetName(GL_CURRENT_PROGRAM); program != 0) {
+    GLint linked = GL_FALSE;
+    GL_FN(glGetProgramiv)(program, GL_LINK_STATUS, &linked);
+    if (linked == GL_FALSE) {
+      FailSamples(key, "the program in use failed its last link, so it could not be used again "
+                       "after the draws reading them; start the subcapture range where a linked "
+                       "program is in use.");
+    }
+  }
+  // Transform feedback that is active cannot be paused, nor asked about, before GL 4.0.
+  bool transformFeedback = false;
+  if (Supports(4, 0, "GL_ARB_transform_feedback2")) {
+    transformFeedback =
+        GetInteger(GL_TRANSFORM_FEEDBACK_ACTIVE) && !GetInteger(GL_TRANSFORM_FEEDBACK_PAUSED);
+  } else if (tracked != nullptr && tracked->TransformFeedbackActive) {
+    FailSamples(key, "transform feedback is active, and pausing it while they are read takes "
+                     "GL 4.0 or GL_ARB_transform_feedback2; record the subcapture on a system "
+                     "with it.");
+  }
+  // A query result cannot be kept apart from the draws reading the samples.
+  if (const GLenum query = ActiveDrawQuery(); query != GL_NONE) {
+    std::ostringstream reason;
+    reason << "a query of target 0x" << std::hex << query << std::dec
+           << " is active, and the draws reading them would count in it; start the subcapture "
+              "range where no such query is active.";
+    FailSamples(key, reason.str());
+  }
+  SampleReadback live(m_Version.Compatibility, Supports(4, 1, "GL_ARB_viewport_array"),
+                      Supports(4, 1, "GL_ARB_separate_shader_objects"), transformFeedback,
+                      SubroutineStages());
+  if (!live.KeepsProgram()) {
+    FailSamples(key, "the program in use is flagged for deletion, and keeping it while they are "
+                     "read takes GL 4.1 or GL_ARB_separate_shader_objects; record the subcapture "
+                     "on a system with it.");
+  }
+
+  GLenum textureTarget = target;
+  if (target == GL_RENDERBUFFER) {
+    const GLuint bound = GetName(GL_RENDERBUFFER_BINDING);
+    GL_FN(glBindRenderbuffer)(GL_RENDERBUFFER, name);
+    GLint width = 0;
+    GLint height = 0;
+    GLint internalFormat = 0;
+    GLint samples = 0;
+    GLint depthSize = 0;
+    GLint stencilSize = 0;
+    GL_FN(glGetRenderbufferParameteriv)(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &width);
+    GL_FN(glGetRenderbufferParameteriv)(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &height);
+    GL_FN(glGetRenderbufferParameteriv)
+    (GL_RENDERBUFFER, GL_RENDERBUFFER_INTERNAL_FORMAT, &internalFormat);
+    GL_FN(glGetRenderbufferParameteriv)(GL_RENDERBUFFER, GL_RENDERBUFFER_SAMPLES, &samples);
+    GL_FN(glGetRenderbufferParameteriv)(GL_RENDERBUFFER, GL_RENDERBUFFER_DEPTH_SIZE, &depthSize);
+    GL_FN(glGetRenderbufferParameteriv)
+    (GL_RENDERBUFFER, GL_RENDERBUFFER_STENCIL_SIZE, &stencilSize);
+    GL_FN(glBindRenderbuffer)(GL_RENDERBUFFER, bound);
+    if (depthSize == 0 && stencilSize > 0 && !Supports(4, 4, "GL_ARB_texture_stencil8")) {
+      FailSamples(key, "stencil-only samples are read with GL 4.4 or GL_ARB_texture_stencil8; "
+                       "record the subcapture on a system with it.");
+    }
+
+    textureTarget = GL_TEXTURE_2D_MULTISAMPLE;
+    const GLuint copy = live.Texture();
+    GL_FN(glBindTexture)(textureTarget, copy);
+    m_RaisedErrors += TakeErrors();
+    GL_FN(glTexImage2DMultisample)
+    (textureTarget, samples, static_cast<GLenum>(internalFormat), width, height, GL_TRUE);
+    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+      FailSampleRead(key, "allocating a multisample texture", error);
+    }
+    // A blit between multisample framebuffers needs the same sample count.
+    GLint copySamples = 0;
+    GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, GL_TEXTURE_SAMPLES, &copySamples);
+    if (copySamples != samples) {
+      std::ostringstream reason;
+      reason << "no multisample texture of format 0x" << std::hex << internalFormat << std::dec
+             << " has " << samples << " samples on this system to read them through.";
+      FailSamples(key, reason.str());
+    }
+    const GLenum attachment = SampleAttachment(depthSize, stencilSize);
+    GLbitfield mask = GL_COLOR_BUFFER_BIT;
+    if (attachment != GL_COLOR_ATTACHMENT0) {
+      mask =
+          (depthSize > 0 ? GL_DEPTH_BUFFER_BIT : 0) | (stencilSize > 0 ? GL_STENCIL_BUFFER_BIT : 0);
+    }
+    // Before GL 4.1, a framebuffer whose draw or read buffer selects a missing color attachment is
+    // incomplete, so a depth or stencil one selects no color buffer for both.
+    const auto selectBuffers = [attachment] {
+      if (attachment != GL_COLOR_ATTACHMENT0) {
+        GL_FN(glDrawBuffer)(GL_NONE);
+        GL_FN(glReadBuffer)(GL_NONE);
+      }
+    };
+    const GLuint source = live.Framebuffer();
+    GL_FN(glBindFramebuffer)(GL_FRAMEBUFFER, source);
+    GL_FN(glFramebufferRenderbuffer)(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, name);
+    selectBuffers();
+    GL_FN(glBindFramebuffer)(GL_FRAMEBUFFER, live.Framebuffer());
+    GL_FN(glFramebufferTexture2D)(GL_FRAMEBUFFER, attachment, textureTarget, copy, 0);
+    selectBuffers();
+    GL_FN(glBindFramebuffer)(GL_READ_FRAMEBUFFER, source);
+    GL_FN(glBlitFramebuffer)(0, 0, width, height, 0, 0, width, height, mask, GL_NEAREST);
+    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+      FailSampleRead(key, "blitting the renderbuffer", error);
+    }
+  } else {
+    GL_FN(glBindTexture)(target, name);
+    // texelFetch applies the swizzle, and stencil is sampled by the depth stencil texture mode. A
+    // handle makes the parameters of its texture immutable, so the samples of a texture with one
+    // are read from a copy of its storage when they need changing.
+    GLint swizzle[4]{GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA};
+    if (Supports(3, 3, "GL_ARB_texture_swizzle")) {
+      GL_FN(glGetTexParameteriv)(target, GL_TEXTURE_SWIZZLE_RGBA, swizzle);
+    }
+    const bool swizzled = swizzle[0] != GL_RED || swizzle[1] != GL_GREEN || swizzle[2] != GL_BLUE ||
+                          swizzle[3] != GL_ALPHA;
+    GLint depthSize = 0;
+    GLint stencilSize = 0;
+    GL_FN(glGetTexLevelParameteriv)(target, 0, GL_TEXTURE_DEPTH_SIZE, &depthSize);
+    GL_FN(glGetTexLevelParameteriv)(target, 0, GL_TEXTURE_STENCIL_SIZE, &stencilSize);
+    const bool depthStencil =
+        depthSize > 0 && stencilSize > 0 && Supports(4, 3, "GL_ARB_stencil_texturing");
+    if (m_State.HandleCreated(key) && (swizzled || depthStencil)) {
+      if (!Supports(4, 3, "GL_ARB_copy_image")) {
+        FailSamples(key, "they are read through parameters a handle makes immutable, and copying "
+                         "them takes GL 4.3 or GL_ARB_copy_image; record the subcapture on a "
+                         "system with it.");
+      }
+      const TextureLevel source = QueryLevel(target, 0);
+      GLint samples = 0;
+      GLint fixed = GL_TRUE;
+      GL_FN(glGetTexLevelParameteriv)(target, 0, GL_TEXTURE_SAMPLES, &samples);
+      GL_FN(glGetTexLevelParameteriv)(target, 0, GL_TEXTURE_FIXED_SAMPLE_LOCATIONS, &fixed);
+      const auto format = static_cast<GLenum>(source.InternalFormat);
+      const auto fixedLocations = static_cast<GLboolean>(fixed);
+      const GLsizei layers = std::max(source.Depth, 1);
+      const GLuint copy = live.Texture();
+      GL_FN(glBindTexture)(target, copy);
+      m_RaisedErrors += TakeErrors();
+      if (target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY) {
+        GL_FN(glTexImage3DMultisample)
+        (target, samples, format, source.Width, source.Height, layers, fixedLocations);
+      } else {
+        GL_FN(glTexImage2DMultisample)
+        (target, samples, format, source.Width, source.Height, fixedLocations);
+      }
+      if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+        FailSampleRead(key, "allocating a multisample texture", error);
+      }
+      GL_FN(glCopyImageSubData)
+      (name, target, 0, 0, 0, 0, copy, target, 0, 0, 0, 0, source.Width, source.Height, layers);
+      if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+        FailSampleRead(key, "copying a multisample texture", error);
+      }
+    } else if (swizzled) {
+      live.Unswizzle(target, name, swizzle);
+    }
+  }
+
+  const TextureLevel level = QueryLevel(textureTarget, 0);
+  GLint samples = 0;
+  GLint depthSize = 0;
+  GLint stencilSize = 0;
+  GLint componentType = GL_NONE;
+  GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, GL_TEXTURE_SAMPLES, &samples);
+  GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, GL_TEXTURE_DEPTH_SIZE, &depthSize);
+  GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, GL_TEXTURE_STENCIL_SIZE, &stencilSize);
+  for (GLenum pname : {GL_TEXTURE_RED_TYPE, GL_TEXTURE_ALPHA_TYPE}) {
+    GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, pname, &componentType);
+    if (componentType != GL_NONE) {
+      break;
+    }
+  }
+  if (level.Width == 0 || level.Height == 0 || samples == 0) {
+    return;
+  }
+  // Depth is read as a 32-bit float, which holds normalized depth of up to 24 bits exactly.
+  if (depthSize > 24) {
+    GLint depthType = GL_NONE;
+    GL_FN(glGetTexLevelParameteriv)(textureTarget, 0, GL_TEXTURE_DEPTH_TYPE, &depthType);
+    if (depthType == GL_UNSIGNED_NORMALIZED) {
+      FailSamples(key, "their depth has more than 24 normalized bits, which the floating-point "
+                       "texture they are read through cannot hold exactly.");
+    }
+  }
+  // GL clamps a larger viewport without an error, so the draws would not cover every sample.
+  GLint maxViewport[2]{};
+  GL_FN(glGetIntegerv)(GL_MAX_VIEWPORT_DIMS, maxViewport);
+  if (level.Width > maxViewport[0] || level.Height > maxViewport[1]) {
+    std::ostringstream reason;
+    reason << "they are " << level.Width << "x" << level.Height
+           << ", larger than the viewports the draws reading and writing them can have ("
+           << maxViewport[0] << "x" << maxViewport[1]
+           << "); record the subcapture on a system with larger viewport limits.";
+    FailSamples(key, reason.str());
+  }
+  const auto internalFormat = static_cast<GLenum>(level.InternalFormat);
+  const bool array = textureTarget == GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+  const GLint layers = array ? level.Depth : 1;
+  const GLenum attachment = SampleAttachment(depthSize, stencilSize);
+  const bool srgb = SrgbFormat(internalFormat);
+
+  std::vector<SampleAspect> aspects;
+  if (depthSize > 0) {
+    aspects.push_back(SampleAspect::Depth);
+  }
+  const bool stencilTexturing = Supports(4, 3, "GL_ARB_stencil_texturing");
+  if (stencilSize > 0 && stencilTexturing) {
+    aspects.push_back(SampleAspect::Stencil);
+  } else if (stencilSize > 0) {
+    FailSamples(key, "stencil samples are read with GL 4.3 or GL_ARB_stencil_texturing; record "
+                     "the subcapture on a system with it.");
+  }
+  if (depthSize == 0 && stencilSize == 0) {
+    aspects.push_back(SampleAspect::Color);
+  }
+  // Depth and stencil of one texture are sampled by its depth stencil texture mode.
+  const bool depthStencilMode = stencilTexturing && depthSize > 0 && stencilSize > 0;
+  GLint savedMode = GL_DEPTH_COMPONENT;
+  if (depthStencilMode) {
+    GL_FN(glGetTexParameteriv)(textureTarget, GL_DEPTH_STENCIL_TEXTURE_MODE, &savedMode);
+  }
+
+  const GITSKey vertexArray = m_Recorder.CreateStateRestoreObjectKey();
+  glGenVertexArraysCommand genVertexArray;
+  genVertexArray.m_n.Value = 1;
+  genVertexArray.m_arrays.Key = {vertexArray};
+  genVertexArray.m_arrays.Value = {0};
+  genVertexArray.m_arrays.HasValue = true;
+  Emit<glGenVertexArraysCommandSerializer>(genVertexArray);
+  glBindVertexArrayCommand bindVertexArray;
+  bindVertexArray.m_array.Key = vertexArray;
+  Emit<glBindVertexArrayCommandSerializer>(bindVertexArray);
+  const GITSKey framebuffer = m_Recorder.CreateStateRestoreObjectKey();
+  glGenFramebuffersCommand genFramebuffer;
+  genFramebuffer.m_n.Value = 1;
+  genFramebuffer.m_framebuffers.Key = {framebuffer};
+  genFramebuffer.m_framebuffers.Value = {0};
+  genFramebuffer.m_framebuffers.HasValue = true;
+  Emit<glGenFramebuffersCommandSerializer>(genFramebuffer);
+  glBindFramebufferCommand bindFramebuffer;
+  bindFramebuffer.m_target.Value = GL_FRAMEBUFFER;
+  bindFramebuffer.m_framebuffer.Key = framebuffer;
+  Emit<glBindFramebufferCommandSerializer>(bindFramebuffer);
+  if (target == GL_RENDERBUFFER) {
+    glFramebufferRenderbufferCommand attach;
+    attach.m_target.Value = GL_DRAW_FRAMEBUFFER;
+    attach.m_attachment.Value = attachment;
+    attach.m_renderbuffertarget.Value = GL_RENDERBUFFER;
+    attach.m_renderbuffer.Key = key;
+    Emit<glFramebufferRenderbufferCommandSerializer>(attach);
+  } else if (!array) {
+    glFramebufferTexture2DCommand attach;
+    attach.m_target.Value = GL_DRAW_FRAMEBUFFER;
+    attach.m_attachment.Value = attachment;
+    attach.m_textarget.Value = target;
+    attach.m_texture.Key = key;
+    Emit<glFramebufferTexture2DCommandSerializer>(attach);
+  }
+  // Before GL 4.1, a depth or stencil framebuffer is complete with no color draw and read buffer.
+  glDrawBufferCommand drawBuffer;
+  drawBuffer.m_buf.Value = attachment == GL_COLOR_ATTACHMENT0 ? GL_COLOR_ATTACHMENT0 : GL_NONE;
+  Emit<glDrawBufferCommandSerializer>(drawBuffer);
+  glReadBufferCommand readBuffer;
+  readBuffer.m_src.Value = drawBuffer.m_buf.Value;
+  Emit<glReadBufferCommandSerializer>(readBuffer);
+  glViewportCommand viewport;
+  viewport.m_width.Value = level.Width;
+  viewport.m_height.Value = level.Height;
+  Emit<glViewportCommandSerializer>(viewport);
+  std::vector<GLenum> disabled{GL_BLEND,
+                               GL_CULL_FACE,
+                               GL_SCISSOR_TEST,
+                               GL_DITHER,
+                               GL_COLOR_LOGIC_OP,
+                               GL_POLYGON_SMOOTH,
+                               GL_RASTERIZER_DISCARD,
+                               GL_SAMPLE_ALPHA_TO_COVERAGE,
+                               GL_SAMPLE_ALPHA_TO_ONE,
+                               GL_SAMPLE_COVERAGE};
+  if (Supports(4, 0, "GL_ARB_sample_shading")) {
+    disabled.push_back(GL_SAMPLE_SHADING);
+  }
+  if (m_Version.Compatibility) {
+    disabled.insert(disabled.end(), {GL_ALPHA_TEST, GL_POLYGON_STIPPLE});
+  }
+  for (GLenum cap : disabled) {
+    EmitCapability(cap, false);
+  }
+  EmitCapability(GL_MULTISAMPLE, true);
+  EmitCapability(GL_SAMPLE_MASK, true);
+  EmitCapability(GL_FRAMEBUFFER_SRGB, srgb);
+  glPolygonModeCommand polygonMode;
+  polygonMode.m_face.Value = GL_FRONT_AND_BACK;
+  polygonMode.m_mode.Value = GL_FILL;
+  Emit<glPolygonModeCommandSerializer>(polygonMode);
+  glColorMaskCommand colorMask;
+  colorMask.m_red.Value = GL_TRUE;
+  colorMask.m_green.Value = GL_TRUE;
+  colorMask.m_blue.Value = GL_TRUE;
+  colorMask.m_alpha.Value = GL_TRUE;
+  Emit<glColorMaskCommandSerializer>(colorMask);
+  glActiveTextureCommand activeTexture;
+  activeTexture.m_texture.Value = GL_TEXTURE0;
+  Emit<glActiveTextureCommandSerializer>(activeTexture);
+  const GITSKey upload = m_Recorder.CreateStateRestoreObjectKey();
+  glGenTexturesCommand genTexture;
+  genTexture.m_n.Value = 1;
+  genTexture.m_textures.Key = {upload};
+  genTexture.m_textures.Value = {0};
+  genTexture.m_textures.HasValue = true;
+  Emit<glGenTexturesCommandSerializer>(genTexture);
+  glBindTextureCommand bindTexture;
+  bindTexture.m_target.Value = GL_TEXTURE_2D;
+  bindTexture.m_texture.Key = upload;
+  Emit<glBindTextureCommandSerializer>(bindTexture);
+  for (GLenum pname : {GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER}) {
+    glTexParameteriCommand parameter;
+    parameter.m_target.Value = GL_TEXTURE_2D;
+    parameter.m_pname.Value = pname;
+    parameter.m_param.Value = GL_NEAREST;
+    Emit<glTexParameteriCommandSerializer>(parameter);
+  }
+
+  const auto emitUseProgram = [this](GITSKey program) {
+    glUseProgramCommand use;
+    use.m_program.Key = program;
+    Emit<glUseProgramCommandSerializer>(use);
+  };
+  const auto emitDraw = [this] {
+    glDrawArraysCommand draw;
+    draw.m_mode.Value = GL_TRIANGLES;
+    draw.m_count.Value = 3;
+    Emit<glDrawArraysCommandSerializer>(draw);
+  };
+  const auto words = static_cast<GLuint>((samples + 31) / 32);
+  const auto emitSampleMask = [this, words](GLuint sample) {
+    for (GLuint word = 0; word < words; ++word) {
+      glSampleMaskiCommand command;
+      command.m_maskNumber.Value = word;
+      command.m_mask.Value = word == sample / 32 ? 1u << (sample % 32) : 0u;
+      Emit<glSampleMaskiCommandSerializer>(command);
+    }
+  };
+
+  std::vector<GITSKey> programs;
+  const GLuint resolvedFramebuffer = live.Framebuffer();
+  live.SetViewport(level.Width, level.Height);
+  // An unsized format of the multisample storage is given the single-sample texture with the
+  // type it is read back with, which glTexStorage2D could not take.
+  const PixelFormat colorFormat = ReadbackFormat(textureTarget, 0, m_Version.Compatibility);
+  for (SampleAspect aspect : aspects) {
+    const GLenum sampleFormat = SampleTextureFormat(aspect, internalFormat);
+    const PixelFormat allocation = aspect == SampleAspect::Depth ? PixelFormat{GL_RED, GL_FLOAT, 4}
+                                   : aspect == SampleAspect::Stencil
+                                       ? PixelFormat{GL_RED_INTEGER, GL_UNSIGNED_INT, 4}
+                                       : colorFormat;
+    const GLuint readProgram = live.Program(SampleReadShader(aspect, componentType, array));
+    const GLuint resolved = live.Texture();
+    GL_FN(glBindTexture)(GL_TEXTURE_2D, resolved);
+    m_RaisedErrors += TakeErrors();
+    GL_FN(glTexImage2D)
+    (GL_TEXTURE_2D, 0, static_cast<GLint>(sampleFormat), level.Width, level.Height, 0,
+     allocation.Format, allocation.Type, nullptr);
+    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+      FailSampleRead(key, "allocating a texture", error);
+    }
+    GL_FN(glBindFramebuffer)(GL_DRAW_FRAMEBUFFER, resolvedFramebuffer);
+    GL_FN(glFramebufferTexture2D)
+    (GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, resolved, 0);
+    if (readProgram == 0) {
+      FailSamples(key, "the shader reading them does not link on this system.");
+    }
+    if (const GLenum status = GL_FN(glCheckFramebufferStatus)(GL_DRAW_FRAMEBUFFER);
+        status != GL_FRAMEBUFFER_COMPLETE) {
+      std::ostringstream reason;
+      reason << "a texture of format 0x" << std::hex << sampleFormat
+             << " to draw them into is not renderable on this system (framebuffer status 0x"
+             << status << std::dec << ").";
+      FailSamples(key, reason.str());
+    }
+    GL_FN(glUseProgram)(readProgram);
+    const GLint layerLocation = GL_FN(glGetUniformLocation)(readProgram, "layer");
+    const GLint sampleLocation = GL_FN(glGetUniformLocation)(readProgram, "sampleIndex");
+    if (aspect == SampleAspect::Color && srgb) {
+      GL_FN(glEnable)(GL_FRAMEBUFFER_SRGB);
+    } else {
+      GL_FN(glDisable)(GL_FRAMEBUFFER_SRGB);
+    }
+    if (depthStencilMode) {
+      GL_FN(glTexParameteri)
+      (textureTarget, GL_DEPTH_STENCIL_TEXTURE_MODE,
+       aspect == SampleAspect::Stencil ? GL_STENCIL_INDEX : GL_DEPTH_COMPONENT);
+    }
+    const PixelFormat format = ReadbackFormat(GL_TEXTURE_2D, 0, m_Version.Compatibility);
+
+    std::vector<GITSKey> writePrograms;
+    if (aspect == SampleAspect::Stencil) {
+      for (GLint bit = 0; bit < stencilSize; ++bit) {
+        writePrograms.push_back(EmitSampleProgram(SampleWriteShader(aspect, componentType, bit)));
+      }
+    } else {
+      writePrograms.push_back(EmitSampleProgram(SampleWriteShader(aspect, componentType, 0)));
+      emitUseProgram(writePrograms.front());
+    }
+    programs.insert(programs.end(), writePrograms.begin(), writePrograms.end());
+    EmitCapability(GL_DEPTH_TEST, aspect == SampleAspect::Depth);
+    EmitCapability(GL_STENCIL_TEST, aspect == SampleAspect::Stencil);
+    if (aspect == SampleAspect::Depth) {
+      glDepthFuncCommand depthFunc;
+      depthFunc.m_func.Value = GL_ALWAYS;
+      Emit<glDepthFuncCommandSerializer>(depthFunc);
+      glDepthMaskCommand depthMask;
+      depthMask.m_flag.Value = GL_TRUE;
+      Emit<glDepthMaskCommandSerializer>(depthMask);
+    } else if (aspect == SampleAspect::Stencil) {
+      glStencilFuncCommand stencilFunc;
+      stencilFunc.m_func.Value = GL_ALWAYS;
+      stencilFunc.m_ref.Value = 0xFF;
+      stencilFunc.m_mask.Value = 0xFF;
+      Emit<glStencilFuncCommandSerializer>(stencilFunc);
+      glStencilOpCommand stencilOp;
+      stencilOp.m_fail.Value = GL_REPLACE;
+      stencilOp.m_zfail.Value = GL_REPLACE;
+      stencilOp.m_zpass.Value = GL_REPLACE;
+      Emit<glStencilOpCommandSerializer>(stencilOp);
+      glClearStencilCommand clearStencil;
+      Emit<glClearStencilCommandSerializer>(clearStencil);
+    }
+
+    m_RaisedErrors += TakeErrors();
+    for (GLint layer = 0; layer < layers; ++layer) {
+      if (array) {
+        glFramebufferTextureLayerCommand attach;
+        attach.m_target.Value = GL_DRAW_FRAMEBUFFER;
+        attach.m_attachment.Value = attachment;
+        attach.m_texture.Key = key;
+        attach.m_layer.Value = layer;
+        Emit<glFramebufferTextureLayerCommandSerializer>(attach);
+      }
+      // Stencil bits are only set, from cleared stencil.
+      if (aspect == SampleAspect::Stencil) {
+        glStencilMaskCommand stencilMask;
+        stencilMask.m_mask.Value = 0xFF;
+        Emit<glStencilMaskCommandSerializer>(stencilMask);
+        glClearCommand clear;
+        clear.m_mask.Value = GL_STENCIL_BUFFER_BIT;
+        Emit<glClearCommandSerializer>(clear);
+      }
+      for (GLint sample = 0; sample < samples; ++sample) {
+        GL_FN(glUniform1i)(layerLocation, layer);
+        GL_FN(glUniform1i)(sampleLocation, sample);
+        GL_FN(glDrawArrays)(GL_TRIANGLES, 0, 3);
+        if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+          FailSampleRead(key, "drawing a sample", error);
+        }
+        std::vector<uint8_t> pixels(static_cast<size_t>(level.Width) *
+                                    static_cast<size_t>(level.Height) * format.PixelSize);
+        GL_FN(glGetTexImage)(GL_TEXTURE_2D, 0, format.Format, format.Type, pixels.data());
+        if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
+          FailSampleRead(key, "reading a sample back", error);
+        }
+
+        glTexImage2DCommand image;
+        image.m_target.Value = GL_TEXTURE_2D;
+        image.m_internalformat.Value = static_cast<GLint>(sampleFormat);
+        image.m_width.Value = level.Width;
+        image.m_height.Value = level.Height;
+        image.m_format.Value = format.Format;
+        image.m_type.Value = format.Type;
+        image.m_pixels.Data = std::move(pixels);
+        image.m_pixels.HasValue = true;
+        Emit<glTexImage2DCommandSerializer>(image);
+        emitSampleMask(static_cast<GLuint>(sample));
+        if (aspect != SampleAspect::Stencil) {
+          emitDraw();
+          continue;
+        }
+        for (GLint bit = 0; bit < stencilSize; ++bit) {
+          emitUseProgram(writePrograms[static_cast<size_t>(bit)]);
+          glStencilMaskCommand stencilMask;
+          stencilMask.m_mask.Value = 1u << bit;
+          Emit<glStencilMaskCommandSerializer>(stencilMask);
+          emitDraw();
+        }
+      }
+    }
+  }
+  if (depthStencilMode) {
+    GL_FN(glTexParameteri)(textureTarget, GL_DEPTH_STENCIL_TEXTURE_MODE, savedMode);
+  }
+
+  emitUseProgram(0);
+  for (GITSKey program : programs) {
+    glDeleteProgramCommand remove;
+    remove.m_program.Key = program;
+    Emit<glDeleteProgramCommandSerializer>(remove);
+  }
+  glBindVertexArrayCommand unbindVertexArray;
+  Emit<glBindVertexArrayCommandSerializer>(unbindVertexArray);
+  glDeleteVertexArraysCommand deleteVertexArray;
+  deleteVertexArray.m_n.Value = 1;
+  deleteVertexArray.m_arrays.Key = {vertexArray};
+  deleteVertexArray.m_arrays.Value = {0};
+  deleteVertexArray.m_arrays.HasValue = true;
+  Emit<glDeleteVertexArraysCommandSerializer>(deleteVertexArray);
+  glBindFramebufferCommand unbindFramebuffer;
+  unbindFramebuffer.m_target.Value = GL_FRAMEBUFFER;
+  Emit<glBindFramebufferCommandSerializer>(unbindFramebuffer);
+  glDeleteFramebuffersCommand deleteFramebuffer;
+  deleteFramebuffer.m_n.Value = 1;
+  deleteFramebuffer.m_framebuffers.Key = {framebuffer};
+  deleteFramebuffer.m_framebuffers.Value = {0};
+  deleteFramebuffer.m_framebuffers.HasValue = true;
+  Emit<glDeleteFramebuffersCommandSerializer>(deleteFramebuffer);
+  glDeleteTexturesCommand deleteTexture;
+  deleteTexture.m_n.Value = 1;
+  deleteTexture.m_textures.Key = {upload};
+  deleteTexture.m_textures.Value = {0};
+  deleteTexture.m_textures.HasValue = true;
+  Emit<glDeleteTexturesCommandSerializer>(deleteTexture);
+  // The blits restoring the contents of later renderbuffers write samples unmasked and unconverted.
+  EmitCapability(GL_SAMPLE_MASK, false);
+  EmitCapability(GL_FRAMEBUFFER_SRGB, false);
 }
 
 void StateRestorer::RestoreSampler(GITSKey key, GLuint name) {

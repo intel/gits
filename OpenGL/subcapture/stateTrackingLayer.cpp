@@ -1785,6 +1785,54 @@ void StateTrackingLayer::Post(glDeleteTransformFeedbacksNVCommand& command) {
   DeleteObjects(m_State, GLObjectKind::TransformFeedback, command.m_ids);
 }
 
+void StateTrackingLayer::Post(glBeginTransformFeedbackCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glBeginTransformFeedbackEXTCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glBeginTransformFeedbackNVCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glEndTransformFeedbackCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, false);
+}
+
+void StateTrackingLayer::Post(glEndTransformFeedbackEXTCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, false);
+}
+
+void StateTrackingLayer::Post(glEndTransformFeedbackNVCommand& command) {
+  m_State.SetTransformFeedbackActive(command.m_ThreadId, false);
+}
+
+void StateTrackingLayer::Post(glBeginConditionalRenderCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glBeginConditionalRenderNVCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glBeginConditionalRenderNVXCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, true);
+}
+
+void StateTrackingLayer::Post(glEndConditionalRenderCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, false);
+}
+
+void StateTrackingLayer::Post(glEndConditionalRenderNVCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, false);
+}
+
+void StateTrackingLayer::Post(glEndConditionalRenderNVXCommand& command) {
+  m_State.SetConditionalRenderActive(command.m_ThreadId, false);
+}
+
 // ---- Syncs --------------------------------------------------------------
 
 void StateTrackingLayer::Post(glFenceSyncCommand& command) {
