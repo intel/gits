@@ -43,6 +43,9 @@ public:
     return m_Data;
   }
   void ResetWriteWatch() const;
+  // Resets only the pages lying entirely inside [data, data + size), so writes to the rest of a
+  // partly covered page are still reported.
+  void ResetWriteWatch(const void* data, size_t size) const;
   // Returns one enclosing range relative to data, clipped to [data, data + size).
   // Without a baseline, includes touched page portions; with one, only differing bytes on
   // touched pages. Returns std::nullopt when no bytes qualify.

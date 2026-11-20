@@ -20,6 +20,7 @@
 #include "recordingSession.h"
 #include "systemApi.h"
 
+#include <algorithm>
 #include <cstring>
 #include <functional>
 #include <limits>
@@ -117,10 +118,16 @@ bool PublishesBeforeUse(GLbitfield access) {
          ((access & GL_MAP_COHERENT_BIT) != 0 || (access & GL_MAP_FLUSH_EXPLICIT_BIT) == 0);
 }
 
-void PersistentMapSanityCheck(GLintptr offset,
-                              GLsizeiptr length,
-                              GLbitfield access,
-                              const MapTrackingService::BufferParameterCallback& parameter) {
+struct PersistentStorage {
+  GLint64 Size{0};
+  GLbitfield Flags{0};
+};
+
+PersistentStorage PersistentMapSanityCheck(
+    GLintptr offset,
+    GLsizeiptr length,
+    GLbitfield access,
+    const MapTrackingService::BufferParameterCallback& parameter) {
   const auto [major, minor] = CurrentContextGLVersion();
   GITS_ASSERT(major > 4 || (major == 4 && minor >= 4) ||
                   CurrentContextHasExtension(major, "GL_ARB_buffer_storage") ||
@@ -147,6 +154,7 @@ void PersistentMapSanityCheck(GLintptr offset,
       access & (GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
   GITS_ASSERT((storageFlags & requiredStorageFlags) == requiredStorageFlags,
               "Persistent buffer storage flags do not permit requested mapping access");
+  return PersistentStorage{size, static_cast<GLbitfield>(storageFlags)};
 }
 
 } // namespace
@@ -474,15 +482,21 @@ void* MapTrackingService::RegisterRange(GLuint buffer,
         false, std::string(unsupported) + " (access: " +
                    GetBitmaskString(GLenumApi::GL, access, GLenumGroup::MapBufferAccessMask) + ')');
   }
-  if (persistent) {
-    PersistentMapSanityCheck(offset, length, access, parameter);
-  }
+  const PersistentStorage storage =
+      persistent ? PersistentMapSanityCheck(offset, length, access, parameter)
+                 : PersistentStorage{};
   MappedRange range{ByteSource{ByteSource::Kind::DriverPointer, driverPointer, driverPointer},
-                    offset, length, access, true};
+                    offset,
+                    length,
+                    access,
+                    true,
+                    storage.Size,
+                    storage.Flags};
   if (publishedBeforeUse) {
     // The application uses a watched shadow. Its written pages reach the driver mapping and the
     // stream at PublishMappedWrites() and at unmap. Reads from the shadow return the buffer
-    // contents, as GPU writes during writable persistent maps are unsupported.
+    // contents: OnSubData() copies GL updates into it, and GPU writes during writable persistent
+    // maps are unsupported.
     GITS_ASSERT(invalidated || initialBytes.size() == static_cast<size_t>(length),
                 "Writable coherent or implicit-flush persistent buffer maps require reading the "
                 "buffer contents before the map");
@@ -799,6 +813,79 @@ void MapTrackingService::OnBufferData(GLuint buffer,
   }
 }
 
+bool MapTrackingService::MappedRange::AcceptsSubData(uint64_t offset, uint64_t size) const {
+  // The driver rejects the update during a mapping that is not persistent, of storage without
+  // GL_DYNAMIC_STORAGE_BIT, or past the end of the buffer, leaving its contents unchanged.
+  const auto bufferSize = static_cast<uint64_t>(BufferSize);
+  return (Access & GL_MAP_PERSISTENT_BIT) != 0 && (StorageFlags & GL_DYNAMIC_STORAGE_BIT) != 0 &&
+         offset <= bufferSize && size <= bufferSize - offset;
+}
+
+bool MapTrackingService::MappedRange::MayDeferInvalidation() const {
+  return (Access & GL_MAP_INVALIDATE_BUFFER_BIT) != 0 && (Access & GL_MAP_PERSISTENT_BIT) != 0 &&
+         (StorageFlags & GL_DYNAMIC_STORAGE_BIT) != 0 &&
+         Source.Type == ByteSource::Kind::WatchedShadow;
+}
+
+bool MapTrackingService::MayDeferInvalidation() const {
+  return m_DeferredInvalidationMaps.load(std::memory_order_acquire) != 0;
+}
+
+void MapTrackingService::PublishInvalidationBeforeSubData(
+    uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data) {
+  if (data == nullptr || size == 0) {
+    return;
+  }
+  std::optional<MappedBufferUpdate> update;
+  uint64_t key = 0;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
+    if (it == m_MappedBuffers.end()) {
+      return;
+    }
+    MappedRange& range = it->second;
+    if (range.Updated || !range.MayDeferInvalidation() || !range.AcceptsSubData(offset, size)) {
+      return;
+    }
+    // The first byte of the shadow carries the invalidation: the invalidated contents are
+    // undefined until written, and a page the application writes is published again.
+    auto bytes = range.Source.Snapshot(0, 1);
+    range.Source.WriteBack(0, bytes);
+    update = MakeMappedUpdate(range, MapRelativeRange{0, 1}, std::move(bytes));
+    key = CaptureManager::Get().CreateCommandKey();
+  }
+  RecordOrSkipMappedUpdate(key, update);
+}
+
+void MapTrackingService::OnSubData(
+    uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data) {
+  if (data == nullptr || size == 0) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+  const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
+  if (it == m_MappedBuffers.end()) {
+    return;
+  }
+  MappedRange& range = it->second;
+  if (!range.AcceptsSubData(offset, size) || range.Source.Type != ByteSource::Kind::WatchedShadow) {
+    return;
+  }
+  const auto mapBegin = static_cast<uint64_t>(range.Offset);
+  const uint64_t mapEnd = mapBegin + static_cast<uint64_t>(range.Length);
+  const uint64_t begin = std::max(offset, mapBegin);
+  const uint64_t end = std::min(offset + size, mapEnd);
+  if (begin >= end) {
+    return;
+  }
+  const auto mapOffset = static_cast<size_t>(begin - mapBegin);
+  auto* destination = static_cast<uint8_t*>(range.Source.ApplicationPointer) + mapOffset;
+  const auto length = static_cast<size_t>(end - begin);
+  std::memcpy(destination, static_cast<const uint8_t*>(data) + (begin - offset), length);
+  range.Source.Shadow->ResetWriteWatch(destination, length);
+}
+
 void MapTrackingService::OnDelete(GLsizei count, const GLuint* buffers) {
   if (buffers == nullptr) {
     return;
@@ -830,6 +917,9 @@ void MapTrackingService::StoreMappedRange(uint64_t shareGroup, GLuint buffer, Ma
     }
     if (PublishesBeforeUse(range.Access)) {
       m_PublishedBeforeUseMaps.fetch_add(1, std::memory_order_release);
+    }
+    if (range.MayDeferInvalidation()) {
+      m_DeferredInvalidationMaps.fetch_add(1, std::memory_order_release);
     }
     m_MappedBuffers.emplace(key, std::move(range));
   }
@@ -882,6 +972,9 @@ void MapTrackingService::EraseMappedRange(
     std::unordered_map<Key, MappedRange, KeyHash>::iterator it) {
   if (PublishesBeforeUse(it->second.Access)) {
     m_PublishedBeforeUseMaps.fetch_sub(1, std::memory_order_release);
+  }
+  if (it->second.MayDeferInvalidation()) {
+    m_DeferredInvalidationMaps.fetch_sub(1, std::memory_order_release);
   }
   m_MappedBuffers.erase(it);
 }

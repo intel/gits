@@ -28,15 +28,20 @@ from intermediates import Command
 class BufferContentHook:
     """`call` is the BufferShadowService member call, over the command's parameters.
 
-    Calls that can update a buffer the application holds persistently mapped take the command
-    name first, so the recorder can name the command it rejects.
+    Calls that can let the GPU write a buffer the application holds persistently mapped take the
+    command name first, so the recorder can name the command it rejects.
 
     `guard`, when set, is a C++ condition the call runs under: sizes and offsets are signed
     (GLsizeiptr, GLintptr), and a negative one is a call the driver rejects without touching the
     buffer, which must not reach the unsigned `call` arguments.
+
+    `prepare`, when set, is another BufferShadowService member call, under `guard`, made before
+    the command publishes mapped writes and reserves its key, while `call` still runs after the
+    call.
     """
     call: str
     guard: str | None = None
+    prepare: str | None = None
 
 
 def _command(command: str) -> str:
@@ -71,9 +76,9 @@ def _sub_data(command: str, names: set[str]) -> BufferContentHook | None:
     ref = _ref(names, 'target', 'buffer')
     if ref is None or not {'offset', 'size', 'data'} <= names:
         return None
-    return BufferContentHook(
-        call=f'OnSubData({_command(command)}, {ref}, {_size("offset")}, {_size("size")}, data)',
-        guard=_non_negative('offset', 'size'))
+    arguments = f'{ref}, {_size("offset")}, {_size("size")}, data'
+    return BufferContentHook(call=f'OnSubData({arguments})', guard=_non_negative('offset', 'size'),
+                             prepare=f'BeforeSubData({arguments})')
 
 
 def _gpu_write(target: str, buffer: str):

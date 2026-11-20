@@ -57,11 +57,13 @@ class BufferShadowService {
 public:
   static BufferShadowService& Get();
 
-  // `command` names the GL command in the error raised when it updates a buffer the application
-  // holds persistently mapped for writing.
+  // `command` names the GL command in the error raised when it lets the GPU write a buffer the
+  // application holds persistently mapped for writing.
   void OnData(const char* command, BufferRef ref, uint64_t size, const void* data);
-  void OnSubData(
-      const char* command, BufferRef ref, uint64_t offset, uint64_t size, const void* data);
+  // Before a glBufferSubData-family call reserves its key. See
+  // MapTrackingService::PublishInvalidationBeforeSubData.
+  void BeforeSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
+  void OnSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
   void OnGpuWrite(const char* command, BufferRef ref);
   // Contents undefined until the next complete upload or seeding.
   void OnUndefined(BufferRef ref);

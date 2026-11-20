@@ -96,6 +96,19 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
     return realFunction(${param_names});
 % endif
   }
+% if cmd.name in buffer_content_hooks and buffer_content_hooks[cmd.name].prepare:
+<%
+    hook = buffer_content_hooks[cmd.name]
+%>\
+  // See buffer_content_hooks.py's BufferContentHook.prepare.
+% if hook.guard:
+  if (${hook.guard}) {
+    BufferShadowService::Get().${hook.prepare};
+  }
+% else:
+  BufferShadowService::Get().${hook.prepare};
+% endif
+% endif
 % if cmd.name in mapped_write_publishers:
   // See generator_recorder.py's mapped_write_publishers(): the published writes must replay before
   // this command, so they are recorded before its key is reserved.

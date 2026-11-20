@@ -25,6 +25,7 @@ from pathlib import Path
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
+from buffer_content_hooks import BufferContentHook
 from generator_helpers import mako_render
 from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
                                 PRE_HOOK_KEY_PAIR_COMMANDS, PRIMITIVE_PAIR_COMMANDS,
@@ -66,7 +67,8 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
                     frame_end_commands: frozenset[str] = frozenset(),
                     mapped_write_publishers: frozenset[str] = frozenset(),
                     primitive_pair_commands: dict[str, bool] | None = None,
-                    query_buffer_publishers: frozenset[str] = frozenset()) -> str:
+                    query_buffer_publishers: frozenset[str] = frozenset(),
+                    buffer_content_hooks: dict[str, BufferContentHook] | None = None) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
         handle_param_to_erase_on_success={}, mapped_handle_service_names={},
@@ -77,7 +79,7 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
         frame_end_commands=frame_end_commands, mapped_write_publishers=mapped_write_publishers,
         query_buffer_publishers=query_buffer_publishers,
         primitive_pair_commands=primitive_pair_commands or {},
-        client_array_setters={}, buffer_content_hooks={})
+        client_array_setters={}, buffer_content_hooks=buffer_content_hooks or {})
     assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
     return rendered
 
@@ -427,6 +429,19 @@ class MappedWritePublisherTests(unittest.TestCase):
         publish = body.index('MapTrackingService::Get().PublishMappedWrites();')
         self.assertLess(bound, publish)
         self.assertLess(publish, body.index('CaptureManager::Get().CreateCommandKey()'))
+
+    def test_uploads_are_prepared_before_writes_are_published(self) -> None:
+        hook = BufferContentHook(call='OnSubData(data)', guard='size >= 0',
+                                 prepare='BeforeSubData(data)')
+        rendered = render_commands([fake_command('glBufferSubData')], frozenset(),
+                                   mapped_write_publishers=frozenset({'glBufferSubData'}),
+                                   buffer_content_hooks={'glBufferSubData': hook})
+        body = extract_wrapper_body(rendered, 'glBufferSubData')
+        prepare = body.index('BufferShadowService::Get().BeforeSubData(data);')
+        self.assertLess(body.index('if (size >= 0) {'), prepare)
+        self.assertLess(prepare, body.index('MapTrackingService::Get().PublishMappedWrites();'))
+        self.assertLess(body.index('CaptureManager::Get().CreateCommandKey()'),
+                        body.index('BufferShadowService::Get().OnSubData(data);'))
 
     def test_writes_are_published_before_the_key_is_reserved(self) -> None:
         rendered = render_commands([fake_command('glDrawArrays'), fake_command('glBindBuffer')],

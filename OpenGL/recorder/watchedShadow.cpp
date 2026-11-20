@@ -68,6 +68,20 @@ void WatchedShadow::ResetWriteWatch() const {
   }
 }
 
+void WatchedShadow::ResetWriteWatch(const void* data, size_t size) const {
+  const size_t pageSize = GetPageSize();
+  const auto begin = reinterpret_cast<uintptr_t>(data);
+  const uintptr_t first = (begin + pageSize - 1) / pageSize * pageSize;
+  const uintptr_t last = (begin + size) / pageSize * pageSize;
+  if (first >= last) {
+    return;
+  }
+  if (::ResetWriteWatch(reinterpret_cast<void*>(first), last - first) != 0) {
+    GITS_ASSERT(false, "Cannot reset write watch for buffer map (Windows error " +
+                           std::to_string(GetLastError()) + ")");
+  }
+}
+
 std::vector<uintptr_t> WatchedShadow::QueryDirtyPages(bool reset, size_t& pageSize) const {
   pageSize = GetPageSize();
   const size_t numWatchedPages = m_Pages.size();
@@ -109,6 +123,8 @@ WatchedShadow::~WatchedShadow() {
 }
 
 void WatchedShadow::ResetWriteWatch() const {}
+
+void WatchedShadow::ResetWriteWatch(const void* /*data*/, size_t /*size*/) const {}
 
 std::vector<uintptr_t> WatchedShadow::QueryDirtyPages(bool /*reset*/, size_t& pageSize) const {
   GITS_ASSERT(false, "Buffer map shadows do not track writes on this platform");

@@ -37,8 +37,8 @@ class BufferContentHooksTests(unittest.TestCase):
                 'OnData("glNamedBufferStorage", BufferRef::ByName(buffer), '
                 'static_cast<uint64_t>(size), data)',
             'glBufferSubDataARB':
-                'OnSubData("glBufferSubDataARB", BufferRef::ByTarget(target), '
-                'static_cast<uint64_t>(offset), static_cast<uint64_t>(size), data)',
+                'OnSubData(BufferRef::ByTarget(target), static_cast<uint64_t>(offset), '
+                'static_cast<uint64_t>(size), data)',
             'glCopyBufferSubData':
                 'OnGpuWrite("glCopyBufferSubData", BufferRef::ByTarget(writeTarget))',
             'glNamedCopyBufferSubDataEXT':
@@ -85,6 +85,21 @@ class BufferContentHooksTests(unittest.TestCase):
             for term in hook.guard.split(' && '):
                 with self.subTest(command=cmd.name, term=term):
                     self.assertIn(types[term.removesuffix(' >= 0')], signed)
+
+    def test_uploads_are_prepared_before_their_key(self) -> None:
+        expected = {
+            'glBufferSubData':
+                'BeforeSubData(BufferRef::ByTarget(target), static_cast<uint64_t>(offset), '
+                'static_cast<uint64_t>(size), data)',
+            'glNamedBufferSubDataEXT':
+                'BeforeSubData(BufferRef::ByName(buffer), static_cast<uint64_t>(offset), '
+                'static_cast<uint64_t>(size), data)',
+            'glBufferData': None,
+            'glCopyBufferSubData': None,
+        }
+        for name, prepare in expected.items():
+            with self.subTest(command=name):
+                self.assertEqual(self.hooks[name].prepare, prepare)
 
     def test_readers_are_not_hooked(self) -> None:
         for name in ('glGetBufferSubData', 'glBindVertexBuffer', 'glVertexArrayElementBuffer',

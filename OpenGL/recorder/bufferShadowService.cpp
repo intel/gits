@@ -141,11 +141,26 @@ void BufferShadowService::OnData(const char* command,
   shadow.KnownBeforeMap = false;
 }
 
-void BufferShadowService::OnSubData(
-    const char* command, BufferRef ref, uint64_t offset, uint64_t size, const void* data) {
+void BufferShadowService::BeforeSubData(BufferRef ref,
+                                        uint64_t offset,
+                                        uint64_t size,
+                                        const void* data) {
+  if (!MapTrackingService::Get().MayDeferInvalidation()) {
+    return;
+  }
   const Key key = Resolve(ref);
-  MapTrackingService::Get().AssertNoWritablePersistentMap(command, ref.Target, key.ShareGroup,
-                                                          key.Buffer);
+  if (key.Buffer != 0) {
+    MapTrackingService::Get().PublishInvalidationBeforeSubData(key.ShareGroup, key.Buffer, offset,
+                                                               size, data);
+  }
+}
+
+void BufferShadowService::OnSubData(BufferRef ref,
+                                    uint64_t offset,
+                                    uint64_t size,
+                                    const void* data) {
+  const Key key = Resolve(ref);
+  MapTrackingService::Get().OnSubData(key.ShareGroup, key.Buffer, offset, size, data);
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto it = m_Shadows.find(key);
   if (it == m_Shadows.end()) {

@@ -97,6 +97,21 @@ public:
                               std::span<const uint8_t> initialBytes = {});
 
   void OnBufferData(GLuint buffer, const std::function<bool(GLint&)>& queryMapped);
+  // After a glBufferSubData-family call, copies its bytes into the application's shadow of a
+  // persistent mapping of `buffer`, so publishing a page the application writes later does not
+  // restore the bytes the update replaced. The update replays as its own command, so the pages it
+  // covers entirely are not published again.
+  void OnSubData(
+      uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data);
+  // Whether a mapping may need PublishInvalidationBeforeSubData(). Reads no locked state, so that
+  // uploads check it cheaply.
+  bool MayDeferInvalidation() const;
+  // Before a glBufferSubData-family call reserves its key: the driver invalidated the buffer when
+  // the application mapped it, but replay invalidates it at the first update of the mapping. If
+  // the driver accepts the upload during a mapping with GL_MAP_INVALIDATE_BUFFER_BIT that has no
+  // update yet, records an update that carries the invalidation, so the upload replays after it.
+  void PublishInvalidationBeforeSubData(
+      uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data);
   void OnDelete(GLsizei count, const GLuint* buffers);
   // `command` and `target` (0 when the buffer is named directly) only describe the rejected call.
   void AssertNoWritablePersistentMap(const char* command,
@@ -214,11 +229,22 @@ private:
     GLsizeiptr Length{0};
     GLbitfield Access{0};
     bool IsRange{true}; // Whether it is a range mapping or a whole-buffer mapping.
+    // GL_BUFFER_SIZE and GL_BUFFER_STORAGE_FLAGS of a persistently mapped buffer, which decide
+    // whether the driver accepts a glBufferSubData-family update during the mapping.
+    GLint64 BufferSize{0};
+    GLbitfield StorageFlags{0};
     CaptureRangePolicy RangePolicy;
     Key Map{0, 0};
     // Whether an update of this mapping was taken. Only the first update of a mapping carries
     // its invalidation bits, so a later update does not discard the bytes of earlier ones.
     bool Updated{false};
+
+    // Whether the driver accepts a glBufferSubData-family update of [offset, offset + size) of
+    // the buffer during this mapping.
+    bool AcceptsSubData(uint64_t offset, uint64_t size) const;
+    // Whether the first update carries GL_MAP_INVALIDATE_BUFFER_BIT, which would discard the
+    // uploads the driver accepts before it.
+    bool MayDeferInvalidation() const;
   };
 
   struct MappedBufferUpdate {
@@ -301,6 +327,8 @@ private:
   // Entries of m_MappedBuffers whose writes PublishMappedWrites() publishes. Modified under
   // m_MappedBuffersMutex; read without it so that commands check it cheaply.
   std::atomic<size_t> m_PublishedBeforeUseMaps{0};
+  // Entries of m_MappedBuffers for which MappedRange::MayDeferInvalidation() holds, likewise.
+  std::atomic<size_t> m_DeferredInvalidationMaps{0};
 
   // Warn-once state for unrecognized targets, missing bindings, and unsupported coherent maps.
   // Map/unmap is a low-frequency path, so a plain mutex is sufficient.
