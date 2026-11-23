@@ -29,13 +29,13 @@ class ModuleRegistry {
 public:
   static ModuleRegistry& GetInstance();
 
+  // Loads the module DLLs and creates their panels, once.
   void CreateModules();
   void DestroyModules();
 
-  const std::vector<ModuleBasePanel*>& Modules() const {
-    return m_Panels;
+  size_t Count() const {
+    return m_Entries.size();
   }
-  // The ids of the created modules, in the order of Modules().
   std::vector<ModuleId> Ids() const;
 
   ModuleBasePanel* Find(const ModuleId& id) const;
@@ -45,15 +45,21 @@ public:
 
   void AddActivePlugins(GitsAction action, Api api, Configuration& config) const;
 
+  // Draws the sidebar buttons; true when the user changed a checkbox or the selection.
   bool RenderModuleButtons();
-  ImGuiHelper::TabGroup<ModuleId>* BtnsModules{nullptr};
+  // The sidebar buttons, one per module; null while no module is loaded.
+  ImGuiHelper::TabGroup<ModuleId>* Buttons() const {
+    return m_Buttons.get();
+  }
 
 private:
-  ModuleRegistry();
+  ModuleRegistry() = default;
 
   void LoadModules();
-
-  void RebuildButtons();
+  void CreateButtons();
+  // Activates or deactivates the module and shows the result on its button. Returns whether the
+  // module is in the requested state.
+  bool SetActive(const ModuleId& id, bool active);
 
   // The panel's virtual destructor lives in the module, so the module's heap frees it.
   using ModulePanel = std::unique_ptr<ModuleBasePanel>;
@@ -63,10 +69,8 @@ private:
     ModulePanel Panel;
   };
 
-  std::map<ModuleId, ImGuiHelper::ButtonGroupItem> m_EntryMap;
-
   std::vector<Entry> m_Entries;
-  std::vector<ModuleBasePanel*> m_Panels;
+  std::unique_ptr<ImGuiHelper::TabGroup<ModuleId>> m_Buttons;
   bool m_ModulesLoaded{false};
 };
 

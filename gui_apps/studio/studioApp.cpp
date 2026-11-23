@@ -48,7 +48,7 @@ void StudioApp::CreateUI() {
 
   auto& registry = ModuleRegistry::GetInstance();
   // for now it's only one module in here, so let's just acticvate it...
-  if (registry.Modules().size() == 1) {
+  if (registry.Count() == 1) {
     registry.EnableModule(registry.Ids().front());
   }
 };

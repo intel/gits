@@ -84,14 +84,14 @@ void ContentPanel::Render() {
     ImGui::TableSetColumnIndex(0);
 
     if (registry.RenderModuleButtons()) {
-      if (registry.BtnsModules->HasSelection()) {
+      if (registry.Buttons()->HasSelection()) {
         m_BtnsSideBar.DeselectEntry();
       }
     }
     ImGui::Separator();
     if (m_BtnsSideBar.Render(true)) {
-      if (registry.BtnsModules != nullptr) {
-        registry.BtnsModules->DeselectEntry();
+      if (registry.Buttons() != nullptr) {
+        registry.Buttons()->DeselectEntry();
       }
     }
 
@@ -124,10 +124,10 @@ void ContentPanel::Render() {
         renderDummy = true;
         break;
       }
-    } else if (registry.BtnsModules != nullptr) {
+    } else if (registry.Buttons() != nullptr) {
       renderDummy = true;
-      if (registry.BtnsModules->HasSelection()) {
-        auto selection = registry.BtnsModules->Selected();
+      if (registry.Buttons()->HasSelection()) {
+        auto selection = registry.Buttons()->Selected();
         if (auto* module = ModuleRegistry::GetInstance().Find(selection)) {
           renderDummy = false;
           ImGui::BeginChild(module->GetName(), ImVec2(area.x, area.y), true);
@@ -170,8 +170,8 @@ void ContentPanel::ShowSidebarPanel(SideBarItem panel) {
   };
 
   if (canNavigate && m_BtnsSideBar.IsEnabled(panel)) {
-    if (registry.BtnsModules != nullptr) {
-      registry.BtnsModules->DeselectEntry();
+    if (registry.Buttons() != nullptr) {
+      registry.Buttons()->DeselectEntry();
     }
     m_BtnsSideBar.SelectEntry(panel);
   }
@@ -211,8 +211,8 @@ void ContentPanel::AppEventCallback(const Event& e) {
     deselectModules = true;
   }
 
-  if (deselectModules && registry.BtnsModules != nullptr) {
-    registry.BtnsModules->DeselectEntry();
+  if (deselectModules && registry.Buttons() != nullptr) {
+    registry.Buttons()->DeselectEntry();
   }
 }
 

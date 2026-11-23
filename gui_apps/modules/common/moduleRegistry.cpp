@@ -38,21 +38,16 @@ bool SameName(const std::string& lhs, const std::string& rhs) {
   });
 }
 
-void ActivateModule(ModuleBasePanel& module) {
+void SetModuleActive(ModuleBasePanel& module, bool active) {
   try {
-    module.Activate();
+    if (active) {
+      module.Activate();
+    } else {
+      module.Deactivate();
+    }
   } catch (const std::exception& exception) {
-    LOG_ERROR << "ModuleRegistry: Activating " << module.GetName()
-              << " failed: " << exception.what();
-  }
-}
-
-void DeactivateModule(ModuleBasePanel& module) {
-  try {
-    module.Deactivate();
-  } catch (const std::exception& exception) {
-    LOG_ERROR << "ModuleRegistry: Deactivating " << module.GetName()
-              << " failed: " << exception.what();
+    LOG_ERROR << "ModuleRegistry: " << (active ? "Activating " : "Deactivating ")
+              << module.GetName() << " failed: " << exception.what();
   }
 }
 
@@ -108,22 +103,25 @@ ModuleContext StudioModuleContext() {
 
 } // namespace
 
-ModuleRegistry::ModuleRegistry() {
-  m_EntryMap = std::map<ModuleId, ImGuiHelper::ButtonGroupItem>();
-}
-
 ModuleRegistry& ModuleRegistry::GetInstance() {
-  // Function local, so it is built by the first registration rather than
-  // depending on the order static objects across translation units run in.
   static ModuleRegistry instance;
   return instance;
 }
 
-void ModuleRegistry::RebuildButtons() {
-  delete BtnsModules;
-  BtnsModules = m_EntryMap.empty()
-                    ? nullptr
-                    : new ImGuiHelper::TabGroup<ModuleId>(m_EntryMap, false, true, true);
+void ModuleRegistry::CreateButtons() {
+  std::map<ModuleId, ImGuiHelper::ButtonGroupItem> items;
+  for (const auto& entry : m_Entries) {
+    const char* name = entry.Panel->GetName();
+    const char* nameHint = entry.Panel->GetNameHint();
+    items.emplace(entry.Id, ImGuiHelper::ButtonGroupItem{
+                                name != nullptr ? name : "", nameHint != nullptr ? nameHint : "",
+                                ImGuiHelper::ButtonStatus::BUTTON_STATUS_DEFAULT, "", true, true,
+                                ImGuiHelper::ItemType::CheckableButton});
+  }
+  // A button group needs at least one item.
+  if (!items.empty()) {
+    m_Buttons = std::make_unique<ImGuiHelper::TabGroup<ModuleId>>(items, false, true, true);
+  }
 }
 
 // Module DLLs live in Modules/<id>/module.dll next to Studio, or in the GITS installation when
@@ -181,12 +179,6 @@ void ModuleRegistry::LoadModules() {
           LOG_ERROR << "ModuleRegistry: " << path << " did not create a panel";
           continue;
         }
-        const char* name = panel->GetName();
-        const char* nameHint = panel->GetNameHint();
-        m_EntryMap.emplace(id, ImGuiHelper::ButtonGroupItem{
-                                   name != nullptr ? name : "", nameHint != nullptr ? nameHint : "",
-                                   ImGuiHelper::ButtonStatus::BUTTON_STATUS_DEFAULT, "", true, true,
-                                   ImGuiHelper::ItemType::CheckableButton});
         m_Entries.push_back(Entry{id, std::move(panel)});
       } catch (const std::exception& exception) {
         LOG_ERROR << "ModuleRegistry: Creating " << path << " failed: " << exception.what();
@@ -196,86 +188,61 @@ void ModuleRegistry::LoadModules() {
     LOG_ERROR << "ModuleRegistry: Loading modules failed: " << exception.what();
   }
 #endif
-  RebuildButtons();
+  CreateButtons();
 }
 
 void ModuleRegistry::CreateModules() {
-  if (!m_ModulesLoaded) {
-    LoadModules();
+  if (m_ModulesLoaded) {
+    return;
   }
-  m_Panels.clear();
-  m_Panels.reserve(m_Entries.size());
-  for (const auto& entry : m_Entries) {
-    m_Panels.push_back(entry.Panel.get());
-  }
-  LOG_INFO << "ModuleRegistry: Created " << m_Panels.size() << " modules";
+  LoadModules();
+  LOG_INFO << "ModuleRegistry: Created " << m_Entries.size() << " modules";
 }
 
 void ModuleRegistry::DestroyModules() {
-  m_Panels.clear();
-  // Reverse registration order, mirroring how members of a panel would go.
-  for (auto it = m_Entries.rbegin(); it != m_Entries.rend(); ++it) {
-    it->Panel.reset();
+  m_Buttons.reset();
+  // Reverse load order, mirroring how members of a panel would go.
+  while (!m_Entries.empty()) {
+    m_Entries.pop_back();
   }
 }
 
 std::vector<ModuleId> ModuleRegistry::Ids() const {
   std::vector<ModuleId> ids;
   for (const auto& entry : m_Entries) {
-    if (entry.Panel != nullptr) {
-      ids.push_back(entry.Id);
-    }
+    ids.push_back(entry.Id);
   }
   return ids;
 }
 
 ModuleBasePanel* ModuleRegistry::Find(const ModuleId& id) const {
-  auto it = std::find_if(m_Entries.begin(), m_Entries.end(),
-                         [&id](const Entry& entry) { return entry.Id == id; });
+  const auto it = std::ranges::find(m_Entries, id, &Entry::Id);
   return it != m_Entries.end() ? it->Panel.get() : nullptr;
 }
 
+bool ModuleRegistry::SetActive(const ModuleId& id, bool active) {
+  auto* panel = Find(id);
+  if (panel == nullptr) {
+    return false;
+  }
+  SetModuleActive(*panel, active);
+  m_Buttons->SetChecked(id, panel->IsActive());
+  return panel->IsActive() == active;
+}
+
 bool ModuleRegistry::EnableModule(const ModuleId& id) {
-  if (BtnsModules == nullptr) {
-    return false;
-  }
-
-  auto it = std::find_if(m_Entries.begin(), m_Entries.end(),
-                         [&id](const Entry& entry) { return entry.Id == id; });
-  if (it == m_Entries.end()) {
-    return false;
-  }
-  if (!it->Panel->IsActive()) {
-    ActivateModule(*it->Panel);
-  }
-  BtnsModules->SetChecked(id, it->Panel->IsActive());
-
-  return it->Panel->IsActive();
+  return SetActive(id, true);
 }
 
 bool ModuleRegistry::DisableModule(const ModuleId& id) {
-  if (BtnsModules == nullptr) {
-    return false;
-  }
-
-  auto it = std::find_if(m_Entries.begin(), m_Entries.end(),
-                         [&id](const Entry& entry) { return entry.Id == id; });
-  if (it == m_Entries.end()) {
-    return false;
-  }
-  if (it->Panel->IsActive()) {
-    DeactivateModule(*it->Panel);
-  }
-  BtnsModules->SetChecked(id, it->Panel->IsActive());
-
-  return true;
+  return SetActive(id, false);
 }
 
 void ModuleRegistry::AddActivePlugins(GitsAction action, Api api, Configuration& config) const {
   auto& plugins =
       action == GitsAction::CAPTURE ? config.common.recorder.plugins : config.common.player.plugins;
   for (const auto& entry : m_Entries) {
-    if (entry.Panel == nullptr || !entry.Panel->IsActive()) {
+    if (!entry.Panel->IsActive()) {
       continue;
     }
     for (const auto& plugin : ModulePlugins(*entry.Panel, api)) {
@@ -290,25 +257,17 @@ void ModuleRegistry::AddActivePlugins(GitsAction action, Api api, Configuration&
 }
 
 bool ModuleRegistry::RenderModuleButtons() {
-  auto result = false;
-  if (BtnsModules != nullptr) {
-    ImGui::Text("Modules");
-    result = BtnsModules->Render();
-    if (result) {
-      for (auto& entry : m_Entries) {
-        // The click is a request; the panel decides, and the button shows what it decided.
-        const bool wanted = BtnsModules->IsChecked(entry.Id);
-        if (wanted != entry.Panel->IsActive()) {
-          if (wanted) {
-            ActivateModule(*entry.Panel);
-          } else {
-            DeactivateModule(*entry.Panel);
-          }
-          BtnsModules->SetChecked(entry.Id, entry.Panel->IsActive());
-        }
-      }
+  if (m_Buttons == nullptr) {
+    return false;
+  }
+  ImGui::Text("Modules");
+  const bool changed = m_Buttons->Render();
+  if (changed) {
+    // A click is a request; the panel decides, and the button shows what it decided.
+    for (const auto& entry : m_Entries) {
+      SetActive(entry.Id, m_Buttons->IsChecked(entry.Id));
     }
   }
-  return result;
+  return changed;
 }
 } // namespace gits::gui
