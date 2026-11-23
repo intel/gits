@@ -9,6 +9,7 @@
 #include "wrapperUtils.h"
 #include "arguments.h"
 #include "wrapperCreatorsAuto.h"
+#include "legacyPreviewWrappers.h"
 #include "captureManager.h"
 #include "exception.h"
 #include "log.h"
@@ -25,6 +26,11 @@ bool wrapObject(REFIID riid, void** object) {
       it->second(riid, object);
       return true;
     }
+    auto itLegacy = g_legacyPreviewWrapperCreatorsDispatchTable.find(riid);
+    if (itLegacy != g_legacyPreviewWrapperCreatorsDispatchTable.end()) {
+      itLegacy->second(riid, object);
+      return true;
+    }
     LOG_ERROR << "wrapObject failed: no wrapper creator for " << toStr(riid);
     return false;
   }
@@ -37,6 +43,11 @@ bool wrapObjectNoStore(REFIID riid, void** object) {
     auto it = g_wrapperCreatorsNoStoreDispatchTable.find(riid);
     if (it != g_wrapperCreatorsNoStoreDispatchTable.end()) {
       it->second(riid, object);
+      return true;
+    }
+    auto itLegacy = g_legacyPreviewWrapperCreatorsNoStoreDispatchTable.find(riid);
+    if (itLegacy != g_legacyPreviewWrapperCreatorsNoStoreDispatchTable.end()) {
+      itLegacy->second(riid, object);
       return true;
     }
   }

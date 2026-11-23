@@ -23,6 +23,8 @@ set(INTERCEPTOR_SRC
   ${SRC_DIR}/wrappersAuto.h
   ${SRC_DIR}/wrapperCreatorsAuto.h
   ${SRC_DIR}/wrapperCreatorsAuto.cpp
+  ${SRC_DIR}/legacyPreviewWrappers.h
+  ${SRC_DIR}/legacyPreviewWrappers.cpp
   ${SRC_DIR}/wrapperUtils.h
   ${SRC_DIR}/wrapperUtils.cpp
   ${SRC_DIR}/iunknownWrapper.h

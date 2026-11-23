@@ -16,6 +16,13 @@ ${header}
 namespace gits {
 namespace DirectX {
 
+<%
+custom = [
+    'ID3D12DevicePreviewGetLinearAlgebraMatrixConversionDestinationInfo',
+    'ID3D12GraphicsCommandListPreviewSetWorkGraphMaximumGPUInputRecords',
+    'ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrix'
+]
+%>\
 <%def name="run_body(function, interfaceName)">
   auto& manager = PlayerManager::Get();
   %if is_xess_function(function) or is_xell_function(function) or is_xefg_function(function):
@@ -90,10 +97,12 @@ void ${function.name}Runner::Run() {
 %endfor
 %for interface in interfaces:
 %for function in interface.functions:
+%if not interface.name + function.name in custom:
 void ${interface.name}${function.name}Runner::Run() {
   ${run_body(function, interface.name)}\
 }
 
+%endif
 %endfor
 %endfor
 } // namespace DirectX

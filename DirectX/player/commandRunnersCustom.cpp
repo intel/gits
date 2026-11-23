@@ -7,10 +7,15 @@
 // ===================== end_copyright_notice ==============================
 
 #include "commandRunnersCustom.h"
+#include "commandRunnersAuto.h"
 #include "commandsCustom.h"
+#include "legacyPreviewInterfaces.h"
 #include "layerAuto.h"
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
+#include "log.h"
+
+#include <wrl/client.h>
 
 namespace gits {
 namespace DirectX {
@@ -696,6 +701,100 @@ void NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperationRunner::Run() {
   if (manager.ExecuteCommands() && !command.Skip) {
     command.m_Result.Value = NvAPI_D3D12_RaytracingExecuteMultiIndirectClusterOperation(
         command.m_pCommandList.Value, command.m_pParams.Value);
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+#pragma endregion
+
+#pragma region Preview interfaces
+
+// Streams recorded from applications built against Agility SDK 1.717 preview use that SDK's
+// preview IIDs, whose vtable layouts differ from the current ones. Calls go through whichever
+// interface the replayed object implements.
+
+void ID3D12DevicePreviewGetLinearAlgebraMatrixConversionDestinationInfoRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  UpdateInterface(manager, command.m_Object);
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands() && !command.Skip && command.m_Object.Value) {
+    Microsoft::WRL::ComPtr<ID3D12DevicePreview> device;
+    Microsoft::WRL::ComPtr<ID3D12DevicePreviewSdk717> deviceSdk717;
+    if (SUCCEEDED(command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&device)))) {
+      device->GetLinearAlgebraMatrixConversionDestinationInfo(command.m_pDesc.Value);
+    } else if (SUCCEEDED(command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&deviceSdk717)))) {
+      deviceSdk717->GetLinearAlgebraMatrixConversionDestinationInfo(command.m_pDesc.Value);
+    } else {
+      LOG_ERROR << "ID3D12DevicePreview::GetLinearAlgebraMatrixConversionDestinationInfo - O"
+                << command.m_Object.Key << " does not implement a supported preview interface";
+    }
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void ID3D12GraphicsCommandListPreviewSetWorkGraphMaximumGPUInputRecordsRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  UpdateInterface(manager, command.m_Object);
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands() && !command.Skip && command.m_Object.Value) {
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandListPreview> commandList;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandListPreviewSdk717> commandListSdk717;
+    if (SUCCEEDED(command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&commandList)))) {
+      commandList->SetWorkGraphMaximumGPUInputRecords(command.m_MaxRecords.Value,
+                                                      command.m_MaxNodeInputs.Value);
+    } else if (SUCCEEDED(
+                   command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&commandListSdk717)))) {
+      commandListSdk717->SetWorkGraphMaximumGPUInputRecords(command.m_MaxRecords.Value,
+                                                            command.m_MaxNodeInputs.Value);
+    } else {
+      LOG_ERROR << "ID3D12GraphicsCommandListPreview::SetWorkGraphMaximumGPUInputRecords - O"
+                << command.m_Object.Key << " does not implement a supported preview interface";
+    }
+  }
+
+  for (Layer* layer : manager.GetPostLayers()) {
+    layer->Post(command);
+  }
+}
+
+void ID3D12GraphicsCommandListPreviewConvertLinearAlgebraMatrixRunner::Run() {
+  auto& manager = PlayerManager::Get();
+
+  UpdateInterface(manager, command.m_Object);
+
+  for (Layer* layer : manager.GetPreLayers()) {
+    layer->Pre(command);
+  }
+
+  if (manager.ExecuteCommands() && !command.Skip && command.m_Object.Value) {
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandListPreview> commandList;
+    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandListPreviewSdk717> commandListSdk717;
+    if (SUCCEEDED(command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&commandList)))) {
+      commandList->ConvertLinearAlgebraMatrix(command.m_pDesc.Value, command.m_DescCount.Value);
+    } else if (SUCCEEDED(
+                   command.m_Object.Value->QueryInterface(IID_PPV_ARGS(&commandListSdk717)))) {
+      commandListSdk717->ConvertLinearAlgebraMatrix(command.m_pDesc.Value,
+                                                    command.m_DescCount.Value);
+    } else {
+      LOG_ERROR << "ID3D12GraphicsCommandListPreview::ConvertLinearAlgebraMatrix - O"
+                << command.m_Object.Key << " does not implement a supported preview interface";
+    }
   }
 
   for (Layer* layer : manager.GetPostLayers()) {

@@ -12,6 +12,7 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(ALL_SRC
   ${SRC_DIR}/include/directx.h
   ${SRC_DIR}/include/intelExtensions.h
+  ${SRC_DIR}/include/legacyPreviewInterfaces.h
   ${SRC_DIR}/include/commandIdsAuto.h
   ${SRC_DIR}/include/commandsAuto.h
   ${SRC_DIR}/include/commandsCustom.h
