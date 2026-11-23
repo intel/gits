@@ -53,6 +53,7 @@ private:
   void InitRestoreUnmappableResources(bool backBuffer);
   UINT64 GetAlignedSize(UINT64 size);
   bool IsBarrierRestricted(ObjectKey resourceKey);
+  bool IsSamplerFeedback(ResourceState* resourceState);
   ID3D12Resource* CreateAuxiliaryPlacedResource(ObjectKey primaryResourceKey);
   ObjectKey CreateSubcaptureAuxiliaryPlacedResource(ObjectKey primaryResourceKey);
   void EvictPrevResidencyObjects();

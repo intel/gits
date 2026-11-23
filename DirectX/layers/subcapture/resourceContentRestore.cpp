@@ -30,6 +30,9 @@ void ResourceContentRestore::AddCommittedResourceState(ResourceState* resourceSt
   if (resourceState->SampleCount > 1) {
     return;
   }
+  if (IsSamplerFeedback(resourceState)) {
+    return;
+  }
 
   ResourceInfo state{static_cast<ID3D12Resource*>(resourceState->Object), resourceState->Key,
                      ObjectKey{}};
@@ -47,6 +50,9 @@ void ResourceContentRestore::AddPlacedResourceState(ResourceState* resourceState
     return;
   }
   if (resourceState->SampleCount > 1) {
+    return;
+  }
+  if (IsSamplerFeedback(resourceState)) {
     return;
   }
 
@@ -735,6 +741,21 @@ bool ResourceContentRestore::IsBarrierRestricted(ObjectKey resourceKey) {
   ObjectState* resourceObjectState = m_StateService.GetState(resourceKey);
   GITS_ASSERT(resourceObjectState);
   return static_cast<ResourceState*>(resourceObjectState)->BarrierRestricted;
+}
+
+bool ResourceContentRestore::IsSamplerFeedback(ResourceState* resourceState) {
+  DXGI_FORMAT format = static_cast<ID3D12Resource*>(resourceState->Object)->GetDesc().Format;
+  if (format != DXGI_FORMAT_SAMPLER_FEEDBACK_MIN_MIP_OPAQUE &&
+      format != DXGI_FORMAT_SAMPLER_FEEDBACK_MIP_REGION_USED_OPAQUE) {
+    return false;
+  }
+  static bool logged = false;
+  if (!logged) {
+    LOG_WARNING << "Subcapture - content of sampler feedback maps is not restored (opaque "
+                   "format, not copyable)";
+    logged = true;
+  }
+  return true;
 }
 
 ID3D12Resource* ResourceContentRestore::CreateAuxiliaryPlacedResource(
