@@ -41,5 +41,5 @@ A subcapture can also be understood as a trimmed binary stream. You can e.g. use
 
 # Generator
 
-A lot of component specific logic is generated automatically by Python scripts. Each API keeps its generators in its own `codegen` folder, for example `Vulkan/codegen`.
+A lot of component specific logic is generated automatically by Python scripts. Each API keeps its generators in its own `codegen` folder, for example `apis/Vulkan/codegen`.
 

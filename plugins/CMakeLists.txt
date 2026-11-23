@@ -8,8 +8,8 @@
 
 set(PLUGINS_DIR ${CMAKE_SOURCE_DIR}/plugins)
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
-set(DIRECTX_DIR ${CMAKE_SOURCE_DIR}/DirectX)
-set(VULKAN_DIR ${CMAKE_SOURCE_DIR}/Vulkan)
+set(DIRECTX_DIR ${CMAKE_SOURCE_DIR}/apis/DirectX)
+set(VULKAN_DIR ${CMAKE_SOURCE_DIR}/apis/Vulkan)
 
 function(set_auto_generated_property)
   set(options "")

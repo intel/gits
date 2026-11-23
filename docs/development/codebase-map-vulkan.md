@@ -5,9 +5,9 @@ icon: material/file-tree
 
 # Vulkan Backend Codebase Map
 
-This page maps the Vulkan backend under `Vulkan/`, which uses a layer-based design similar to the DirectX 12 backend. It replaced the older VulkanLegacy backend, which has been removed. Everything below uses `namespace gits::vulkan`.
+This page maps the Vulkan backend under `apis/Vulkan/`, which uses a layer-based design similar to the DirectX 12 backend. It replaced the older VulkanLegacy backend, which has been removed. Everything below uses `namespace gits::vulkan`.
 
-As with most of GITS, any file ending in `Auto` is generated from a [mako](https://www.makotemplates.org/) template in `Vulkan/codegen/templates/` — never edit an `Auto` file by hand, edit the template (or the generator script / `*Custom` companion file) and regenerate. Files ending in `Custom` are hand-written companions that fill gaps the generator can't handle generically (unions, opaque/conditional structs, meta-commands with no real Vulkan call behind them, etc.).
+As with most of GITS, any file ending in `Auto` is generated from a [mako](https://www.makotemplates.org/) template in `apis/Vulkan/codegen/templates/` — never edit an `Auto` file by hand, edit the template (or the generator script / `*Custom` companion file) and regenerate. Files ending in `Custom` are hand-written companions that fill gaps the generator can't handle generically (unions, opaque/conditional structs, meta-commands with no real Vulkan call behind them, etc.).
 
 ## Top-level layout
 
@@ -157,7 +157,7 @@ For a stream recorded with OpenGL interop, `SubcaptureLayer` is a participant of
 
 ## Notes
 
-- **Generated files** → any file ending in `Auto`; edit the mako template in `Vulkan/codegen/templates/` (or the generator script) and regenerate, never the `Auto` file itself.
+- **Generated files** → any file ending in `Auto`; edit the mako template in `apis/Vulkan/codegen/templates/` (or the generator script) and regenerate, never the `Auto` file itself.
 - **`command_ids.json`** → assigns permanent numeric IDs to recorded commands; never renumber an existing entry, only append (see the codegen table above).
 - **Conventions and style** → [project guide](project.md)
 - **General repository layout** → [codebase-map.md](codebase-map.md)

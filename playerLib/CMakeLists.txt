@@ -54,7 +54,7 @@ target_link_libraries(gits_player_lib PRIVATE
 
 if(WITH_DIRECTX)
 #!!! TODO: This should come from linking to DirectX_player
-  include_directories(../DirectX/player)
+  include_directories(../apis/DirectX/player)
   target_link_libraries(gits_player_lib
     PRIVATE
     d3d12.lib

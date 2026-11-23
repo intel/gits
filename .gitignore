@@ -76,22 +76,22 @@ recorder/gits_config.txt
 /gits_label.txt
 
 # OpenGL
-OpenGL/**/*Auto.cpp
-OpenGL/**/*Auto.h
-OpenGL/**/*Auto.def
+apis/OpenGL/**/*Auto.cpp
+apis/OpenGL/**/*Auto.h
+apis/OpenGL/**/*Auto.def
 plugins/OpenGL/**/*Auto.cpp
 plugins/OpenGL/**/*Auto.h
 
 #DirectX
-DirectX/**/*Auto.cpp
-DirectX/**/*Auto.h
+apis/DirectX/**/*Auto.cpp
+apis/DirectX/**/*Auto.h
 plugins/DirectX/**/*Auto.cpp
 plugins/DirectX/**/*Auto.h
 
 # Vulkan
-Vulkan/**/*Auto.h
-Vulkan/**/*Auto.cpp
-Vulkan/layer/VkLayer_vulkan_GITS_recorder.json
+apis/Vulkan/**/*Auto.h
+apis/Vulkan/**/*Auto.cpp
+apis/Vulkan/layer/VkLayer_vulkan_GITS_recorder.json
 plugins/Vulkan/**/*Auto.cpp
 plugins/Vulkan/**/*Auto.h
 

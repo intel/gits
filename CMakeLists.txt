@@ -44,7 +44,7 @@ endif()
 # explicit layer, so it doesn't record until a user explicitly enables it.
 option(REGISTER_VULKAN_LAYER "Register the Vulkan GITS recorder layer at install time" ON)
 
-# Experimental, work-in-progress new OpenGL backend (see OpenGL/). Built by
+# Experimental, work-in-progress new OpenGL backend (see apis/OpenGL/). Built by
 # default on Windows x64 and x86-64 Linux, the platforms it can be tested on.
 # ARCH, not CMAKE_SIZEOF_VOID_P, tells a 32-bit Linux build on a 64-bit host.
 if(WIN64 OR (UNIX AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" AND
@@ -233,19 +233,19 @@ set(PLATFORM ${PLTFRM} CACHE INTERNAL "Platform string")
 
 add_subdirectory(common)
 if(WITH_VULKAN)
-  add_subdirectory(Vulkan)
+  add_subdirectory(apis/Vulkan)
 endif()
 if(WITH_OPENGL)
   if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR "${ARCH}" STREQUAL "-m32")
     message(FATAL_ERROR "WITH_OPENGL is currently 64-bit-only.")
   endif()
-  add_subdirectory(OpenGL)
+  add_subdirectory(apis/OpenGL)
 endif()
 add_subdirectory(playerLib)
 add_subdirectory(player)
 add_subdirectory(recorder)
 if(WITH_DIRECTX)
-  add_subdirectory(DIRECTX)
+  add_subdirectory(apis/DirectX)
 endif()
 if(WITH_VULKAN)
   set(BUILD_VULKAN_PLUGINS ON)
