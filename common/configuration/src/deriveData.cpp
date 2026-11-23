@@ -184,14 +184,6 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
   obj.dumpPath = PrepareDumpPath(config.common.recorder.dumpPath.string(),
                                  config.common.recorder.uniqueDumpDirectory);
 
-  if (config.common.recorder.highIntegrity) {
-    LOG_INFO << "High integrity mode";
-    obj.tokenBurst = 1;
-    obj.tokenBurstNum = 1;
-    obj.compression.type = stringTo<CompressionType>("NONE");
-    LOG_WARNING << "High Integrity mode active - disabling compression.";
-  }
-
   // Deprecated option handling
   // Since CCode was removed, only the binary mode leads to recording being enabled
   if (config.common.recorder.recordingMode.has_value()) {

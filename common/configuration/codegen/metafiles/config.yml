@@ -319,16 +319,6 @@ Configuration:
             Default: 1000000
             Arguments: [exitFrame]
             Description: Stop playback after this frame.
-          - Name: endFrameSleep
-            Type: uint32_t
-            Default: 0
-            Description: Sleep this many milliseconds after a swap.
-            Arguments: [endFrameSleep]
-          - Name: benchmark
-            Type: bool
-            Default: false
-            Arguments: [benchmark, b]
-            Description: Enables performance measurement in OpenGL streams on frame base. Results are being stored in benchmark.csv file in CWD or
           - Name: showWindowBorder
             Type: bool
             Default: true
@@ -356,18 +346,6 @@ Configuration:
             Default: ""
             Arguments: [outputDir]
             Description: Specifies directory where all the artifacts will be stored.
-          - Name: traceSelectedFrames
-            Type: BitRange
-            Default: "-"
-            Arguments: [traceSelectedFrames]
-            Description: List of frames for which trace (log) will be generated during playback.
-            LongDescription: |
-              List of frames for which trace (log) will be generated during playback.
-              Specified as a single string without spaces with the following format:
-
-              * pattern = frame_list | frame_list/Repeat-Count
-              * frame_list = element |frame_list, ',', element
-              * element = Frame | Begin-End | Begin-End:Step
           - Name: interactive
             Type: bool
             Default: false
@@ -378,19 +356,6 @@ Configuration:
             Default: ""
             Arguments: [outputTracePath]
             Description: Specifies directory path where gits traces will be stored.
-          - Name: logFncs
-            Type: bool
-            Default: false
-            Arguments: [logFncs]
-            Description: All played tokens are logged to standard output.
-          - Name: loadWholeStreamBeforePlayback
-            Type: bool
-            Default: false
-            Arguments: [loadWholeStreamBeforePlayback]
-            Description:
-              Forces load of entire stream to memory before playback. May cause
-              memory issues and errors related to max value being exceeded. This option
-              is mutually exclusive with tokenBurstLimit option.
           - Name: showWindowsWA
             Type: bool
             Default: false
@@ -404,11 +369,6 @@ Configuration:
               DEPRECATED. GITS does not handle exceptions during playback. This option was used to disable exception handling.
               GITS now behaves as if this option is always enabled.
             Deprecated: true
-          - Name: logLoadedTokens
-            Type: bool
-            Default: false
-            Arguments: [logLoadedTokens]
-            Description: Prints token names after they are loaded.
           - Name: escalatePriority
             Type: bool
             Default: false
@@ -416,13 +376,6 @@ Configuration:
             Description:
               If specified, gitsPlayer will request realtime priority from the
               system.
-          - Name: swapAfterPrepare
-            Type: bool
-            Default: false
-            Arguments: [swapAfterPrepare]
-            Description:
-              If specified, gitsPlayer will issue additional swap after state
-              restoration calls.
           - Name: stopAfterFrames
             Type: BitRange
             Default: "-"
@@ -434,13 +387,6 @@ Configuration:
               * pattern = frame_list | frame_list/Repeat-Count  
               * frame_list = element | frame_list, element
               * element = Frame | Begin-End | Begin-End:Step
-          - Name: nullRun
-            Type: bool
-            Default: false
-            Arguments: [nullRun]
-            Description:
-              No functions are played back. This option is useful only for characterization
-              of GITS player framework performance.
           - Name: renderOffscreen
             Type: bool
             Default: false
@@ -454,13 +400,6 @@ Configuration:
               - in DirectX 12 to swapchains that are not bound to any window (no window is created).
 
               Not supported for other API types. Use --captureFrames or similar option to get rendering output.
-          - Name: forceOrigScreenResolution
-            Type: bool
-            Default: false
-            Arguments: [forceOrigScreenResolution]
-            Description:
-              Forces player to set original screen resolution used during recording.
-              Useful to replay full screen mode.
           - Name: forceInvisibleWindows
             Type: bool
             Default: false
@@ -584,24 +523,6 @@ Configuration:
             Type: std::vector<uint32_t>
             Default: []
             Accessibility: Derived
-          - Name: exitAfterAPICall
-            Type: uint32_t
-            Default: 0
-          - Name: exitSignal
-            Type: uint32_t
-            Default: 12
-            OSVisibility: [X11]
-            Accessibility: Derived
-          - Name: tokenBurst
-            Type: uint32_t
-            Default: 10000
-            ConfigName: tokenBurstLimit
-          - Name: tokenBurstNum
-            Type: uint32_t
-            Default: 5
-          - Name: tokenBurstChunkSize
-            Type: uint64_t
-            Default: 5242880
           - Name: installPath
             Type: std::filesystem::path
             Default: "{install_path}/Recorder"
@@ -627,39 +548,13 @@ Configuration:
                   - is_directx: ZSTD
                   - is_vulkan: ZSTD
                   - is_opengl: ZSTD
-              - Name: level
-                Type: uint32_t
-                Default: 10
-                DefaultCondition:
-                  - is_directx: 3
-                  - is_vulkan: 3
-                  - is_opengl: 3
-              - Name: chunkSize
-                Type: uint32_t
-                Default: 2097152
           - Name: extendedDiagnosticInfo
             Type: bool
             Default: true
             ConfigName: extendedDiagnostic
-          - Name: forceDumpOnError
-            Type: bool
-            Default: true
-          - Name: highIntegrity
-            Type: bool
-            Default: false
-          - Name: nullIO
-            Type: bool
-            Default: false
-          - Name: benchmark
-            Type: bool
-            Default: true
           - Name: closeAppOnStopRecording
             Type: bool
             Default: true
-            OSVisibility: [WINDOWS]
-          - Name: windowsKeyHandling
-            Type: WindowsKeyHandling
-            Default: MessageLoop
             OSVisibility: [WINDOWS]
   - Name: DirectX
     Type: Group
@@ -1606,3 +1501,43 @@ RemovedOptions:
     Reason: The legacy stream player was removed.
   - Path: Common.Player.FaithfulThreading
     Reason: The legacy stream player was removed.
+  - Path: Common.Player.EndFrameSleep
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.Benchmark
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.TraceSelectedFrames
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.LogFncs
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.LoadWholeStreamBeforePlayback
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.LogLoadedTokens
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.SwapAfterPrepare
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.NullRun
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.ForceOrigScreenResolution
+    Reason: The legacy stream player was removed.
+  - Path: Common.Recorder.ExitAfterAPICall
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.TokenBurstLimit
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.TokenBurstNum
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.TokenBurstChunkSize
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.Compression.Level
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.Compression.ChunkSize
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.ForceDumpOnError
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.NullIO
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.Benchmark
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.WindowsKeyHandling
+    Reason: The legacy stream recorder was removed.
+  - Path: Common.Recorder.HighIntegrity
+    Reason: The legacy stream recorder was removed.

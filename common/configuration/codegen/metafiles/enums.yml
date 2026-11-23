@@ -73,10 +73,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: WindowsKeyHandling
-    Values:
-      - Value: MESSAGE_LOOP
-      - Value: ASYNC_KEY_STATE
   - Name: HashType
     Values:
       - Value: MURMUR

@@ -35,8 +35,6 @@ enum TopicId {
   TOPIC_GITS_WORKLOAD_END,
   TOPIC_PROGRAM_START,
   TOPIC_PROGRAM_EXIT,
-  TOPIC_LOOP_BEGIN,
-  TOPIC_LOOP_END,
   TOPIC_SKIP_XESS,
   // A statistics plugin wrote its statistics file, see StatisticsWrittenMessage
   TOPIC_STATISTICS_WRITTEN,
