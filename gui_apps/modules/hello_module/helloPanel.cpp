@@ -75,7 +75,4 @@ bool HelloPanel::IsActive() {
 
 } // namespace gits::gui
 
-GITS_GUI_REGISTER_MODULE("hello",
-                         ::gits::gui::HelloPanel,
-                         ::gits::gui::HELLO_NAME,
-                         ::gits::gui::HELLO_NAME_HINT)
+GITS_GUI_REGISTER_MODULE("hello", ::gits::gui::HelloPanel)

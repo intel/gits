@@ -28,6 +28,9 @@ namespace gits::gui {
 
 namespace {
 
+// What a module DLL exports: see GITS_GUI_REGISTER_MODULE.
+using ModuleEntryPoint = void (*)(const ModuleContext* context, ModuleRegistration* registration);
+
 // Case-insensitive, as PluginService matches plugin names; module ids follow the same rule.
 bool SameName(const std::string& lhs, const std::string& rhs) {
   return std::ranges::equal(lhs, rhs, [](unsigned char a, unsigned char b) {
@@ -117,23 +120,11 @@ ModuleRegistry& ModuleRegistry::GetInstance() {
   return instance;
 }
 
-bool ModuleRegistry::Register(ModuleId id,
-                              Factory factory,
-                              const char* name,
-                              const char* nameHint) {
-  auto& instance = GetInstance();
-  instance.m_Entries.push_back(Entry{id, factory, nullptr});
-  instance.m_EntryMap.emplace(
-      id,
-      ImGuiHelper::ButtonGroupItem{name != nullptr ? name : "", nameHint != nullptr ? nameHint : "",
-                                   ImGuiHelper::ButtonStatus::BUTTON_STATUS_DEFAULT, "", true, true,
-                                   ImGuiHelper::ItemType::CheckableButton});
-  if (instance.BtnsModules != nullptr) {
-    delete instance.BtnsModules;
-  }
-  instance.BtnsModules =
-      new ImGuiHelper::TabGroup<ModuleId>(instance.m_EntryMap, false, true, true);
-  return true;
+void ModuleRegistry::RebuildButtons() {
+  delete BtnsModules;
+  BtnsModules = m_EntryMap.empty()
+                    ? nullptr
+                    : new ImGuiHelper::TabGroup<ModuleId>(m_EntryMap, false, true, true);
 }
 
 // Module DLLs live in Modules/<id>/module.dll next to Studio, or in the GITS installation when
@@ -179,23 +170,34 @@ void ModuleRegistry::LoadModules() {
           LOG_ERROR << "ModuleRegistry: " << path << " has no module id";
           continue;
         }
-        const auto sameId = [&registration](const Entry& entry) {
-          return SameName(entry.Id, registration.Id);
-        };
+        const std::string id = registration.Id;
+        const auto sameId = [&id](const Entry& entry) { return SameName(entry.Id, id); };
         if (std::ranges::any_of(m_Entries, sameId)) {
-          LOG_ERROR << "ModuleRegistry: " << path << " uses the module id " << registration.Id
+          LOG_ERROR << "ModuleRegistry: " << path << " uses the module id " << id
                     << " of another module";
           continue;
         }
-        Register(registration.Id, registration.Create, registration.Name, registration.NameHint);
+        ModulePanel panel(registration.Create());
+        if (panel == nullptr) {
+          LOG_ERROR << "ModuleRegistry: " << path << " did not create a panel";
+          continue;
+        }
+        const char* name = panel->GetName();
+        const char* nameHint = panel->GetNameHint();
+        m_EntryMap.emplace(id, ImGuiHelper::ButtonGroupItem{
+                                   name != nullptr ? name : "", nameHint != nullptr ? nameHint : "",
+                                   ImGuiHelper::ButtonStatus::BUTTON_STATUS_DEFAULT, "", true, true,
+                                   ImGuiHelper::ItemType::CheckableButton});
+        m_Entries.push_back(Entry{id, std::move(panel)});
       } catch (const std::exception& exception) {
-        LOG_ERROR << "ModuleRegistry: Registering " << path << " failed: " << exception.what();
+        LOG_ERROR << "ModuleRegistry: Creating " << path << " failed: " << exception.what();
       }
     }
   } catch (const std::exception& exception) {
     LOG_ERROR << "ModuleRegistry: Loading modules failed: " << exception.what();
   }
 #endif
+  RebuildButtons();
 }
 
 void ModuleRegistry::CreateModules() {
@@ -204,26 +206,8 @@ void ModuleRegistry::CreateModules() {
   }
   m_Panels.clear();
   m_Panels.reserve(m_Entries.size());
-  for (auto it = m_Entries.begin(); it != m_Entries.end();) {
-    if (it->Panel == nullptr) {
-      try {
-        it->Panel = it->Create();
-      } catch (const std::exception& exception) {
-        LOG_ERROR << "ModuleRegistry: Creating " << m_EntryMap.at(it->Id).label
-                  << " failed: " << exception.what();
-      }
-    }
-    if (it->Panel == nullptr) {
-      m_EntryMap.erase(it->Id);
-      it = m_Entries.erase(it);
-      delete BtnsModules;
-      BtnsModules = m_EntryMap.empty()
-                        ? nullptr
-                        : new ImGuiHelper::TabGroup<ModuleId>(m_EntryMap, false, true, true);
-      continue;
-    }
-    m_Panels.push_back(it->Panel.get());
-    ++it;
+  for (const auto& entry : m_Entries) {
+    m_Panels.push_back(entry.Panel.get());
   }
   LOG_INFO << "ModuleRegistry: Created " << m_Panels.size() << " modules";
 }

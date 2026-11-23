@@ -18,10 +18,7 @@
 #include <imgui.h>
 #include <implot.h>
 
-GITS_GUI_REGISTER_MODULE("rtsr",
-                         ::gits::gui::RtsrPanel,
-                         ::gits::rtsr::MODULE_NAME,
-                         ::gits::rtsr::MODULE_NAME_HINT)
+GITS_GUI_REGISTER_MODULE("rtsr", ::gits::gui::RtsrPanel)
 
 namespace gits::gui {
 

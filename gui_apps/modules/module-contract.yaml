@@ -36,7 +36,7 @@ export:
   name: GitsGuiModule
   linkage: C
   signature: "void GitsGuiModule(const ModuleContext* context, ModuleRegistration* registration)"
-  generated_by: "GITS_GUI_REGISTER_MODULE(\"id\", PanelType, name, nameHint), once per module, at global scope"
+  generated_by: "GITS_GUI_REGISTER_MODULE(\"id\", PanelType), once per module, at global scope"
   effect:
     - "Binds the module to Studio (BindModule)."
     - "Returns the module's registration."
@@ -44,14 +44,12 @@ export:
 registration:
   type: ModuleRegistration
   fields:
-    Id: "const char*; the module's id, owned by the DLL; unique among modules, ignoring case; lowercase by convention, like a plugin name"
-    Create: "std::unique_ptr<ModuleBasePanel> (*)(); creates the root panel"
-    Name: "const char*; sidebar label, owned by the DLL"
-    NameHint: "const char*; sidebar tooltip, owned by the DLL"
+    Id: "const char*; the module's id, owned by the DLL; unique among modules, ignoring case; lowercase by convention, like a plugin name; stable when the label changes"
+    Create: "std::unique_ptr<ModuleBasePanel> (*)(); creates the root panel; Studio calls it after checking the id, inside a try block; Studio owns the panel and deletes it through the virtual destructor, so the module's heap frees it"
 
 root_panel:
   base: ModuleBasePanel
-  construction: "Default-constructible. Created once by Studio, destroyed at shutdown."
+  construction: "Default-constructible. Created once by Studio through the registration's factory, destroyed at shutdown."
   required_methods:
     - GetName
     - GetNameHint
@@ -62,7 +60,7 @@ root_panel:
   optional_methods:
     - Plugins
   returns:
-    GetName: "const char*; owned by the module"
+    GetName: "const char*; sidebar label, owned by the module"
     GetNameHint: "const char*; owned by the module"
     Plugins: "const std::vector<std::string>&; a list the module keeps, empty by default"
   constraints:
@@ -105,7 +103,7 @@ lifecycle:
   - "Studio initializes its log, configuration, contexts, EventBus and ImGui context."
   - "Building the content panel calls ModuleRegistry::CreateModules, which loads every Modules/<id>/module.dll."
   - "Studio calls GitsGuiModule; the module binds to Studio and returns its registration."
-  - "Studio registers the module and creates its root panel."
+  - "Studio checks the id, then calls the factory to create the root panel."
   - "If exactly one module is loaded, Studio activates it."
   - "The sidebar button activates and deactivates the module; the selected module is rendered."
   - "At shutdown, Studio destroys the panels."
@@ -126,7 +124,7 @@ rules:
 
 errors:
   skipped_at_load:
-    - "A module whose id is empty or already used by another module: logged, and not added to the sidebar."
+    - "A module whose name is empty or already used by another module: logged, and not added to the sidebar."
   caught_by_studio:
     - "Exceptions from the panel factory: the module is dropped from the sidebar."
     - "Exceptions from Activate: the sidebar button stays unchecked."

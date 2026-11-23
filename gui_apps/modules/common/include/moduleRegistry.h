@@ -27,11 +27,7 @@ using ModuleId = std::string;
 
 class ModuleRegistry {
 public:
-  using Factory = std::unique_ptr<ModuleBasePanel> (*)();
-
   static ModuleRegistry& GetInstance();
-
-  static bool Register(ModuleId id, Factory factory, const char* name, const char* nameHint);
 
   void CreateModules();
   void DestroyModules();
@@ -57,10 +53,14 @@ private:
 
   void LoadModules();
 
+  void RebuildButtons();
+
+  // The panel's virtual destructor lives in the module, so the module's heap frees it.
+  using ModulePanel = std::unique_ptr<ModuleBasePanel>;
+
   struct Entry {
     ModuleId Id;
-    Factory Create;
-    std::unique_ptr<ModuleBasePanel> Panel;
+    ModulePanel Panel;
   };
 
   std::map<ModuleId, ImGuiHelper::ButtonGroupItem> m_EntryMap;
@@ -70,27 +70,21 @@ private:
   bool m_ModulesLoaded{false};
 };
 
-// What a module DLL hands to Studio. The strings live in the DLL, which Studio never unloads.
+// What a module DLL hands to Studio. Its name and hint come from the panel.
 struct ModuleRegistration {
   const char* Id{};
-  ModuleRegistry::Factory Create{};
-  const char* Name{};
-  const char* NameHint{};
+  std::unique_ptr<ModuleBasePanel> (*Create)(){};
 };
-
-using ModuleEntryPoint = void (*)(const ModuleContext* context, ModuleRegistration* registration);
 
 } // namespace gits::gui
 
-// Defines GitsGuiModule, the one function a module DLL exports. Studio calls it right after loading
-// the DLL; it binds the module to Studio and returns what Studio registers.
-#define GITS_GUI_REGISTER_MODULE(id, PanelType, name, nameHint)                                    \
+// Defines GitsGuiModule, the function a module DLL exports. Studio calls it right after loading
+// the DLL; it binds the module to Studio and returns the module's id and a factory for its panel.
+#define GITS_GUI_REGISTER_MODULE(id, PanelType)                                                    \
   extern "C" __declspec(dllexport) void GitsGuiModule(                                             \
       const ::gits::gui::ModuleContext* context, ::gits::gui::ModuleRegistration* registration) {  \
     ::gits::gui::BindModule(*context);                                                             \
-    *registration = {id,                                                                           \
-                     []() -> std::unique_ptr<::gits::gui::ModuleBasePanel> {                       \
+    *registration = {id, []() -> std::unique_ptr<::gits::gui::ModuleBasePanel> {                   \
                        return std::make_unique<PanelType>();                                       \
-                     },                                                                            \
-                     name, nameHint};                                                              \
+                     }};                                                                           \
   }
