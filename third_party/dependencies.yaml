@@ -22,12 +22,6 @@ dependencies:
       os: WINDOWS
       folder_to_extract: null
   GitRepositories:
-    - name: zlib
-      url: https://github.com/madler/zlib.git
-      branch: v1.3.2
-    - name: libpng
-      url: https://github.com/glennrp/libpng.git
-      branch: v1.6.58
     - name: xxhash
       url: https://github.com/Cyan4973/xxHash.git
       branch: v0.8.1
@@ -40,7 +34,7 @@ dependencies:
       commit_id: 9d527dbc81bb76e35ba284fe385ed8a5ddb90cbc
       url: https://github.com/KhronosGroup/OpenGL-Registry.git
       branch: main
-      sparse_checkout: api xml
+      sparse_checkout: xml
     - name: EGL-Registry
       argument: eglregistry
       commit_id: 3d7796b3721d93976b6bfe536aa97bbc4bce8667
@@ -71,10 +65,6 @@ dependencies:
       url: https://github.com/cppfastio/fast_io.git
       branch: old-outdated-master
       commit_id: 788cb9810f0ca881d15fe594b0dd1144901d14d8
-    - name: renderdoc
-      url: https://github.com/baldurk/renderdoc.git
-      branch: v1.21
-      sparse_checkout: renderdoc/api/app
     - name: json
       url: https://github.com/nlohmann/json.git
       branch: v3.11.3

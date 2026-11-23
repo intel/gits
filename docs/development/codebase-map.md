@@ -43,7 +43,7 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | `cmake/` | CMake modules and helpers |
 | `requirements.txt` | Python dependencies for scripts and codegen |
 | `mkdocs.yml` | MkDocs configuration for the documentation in `docs/` |
-| `third_party/` | Vendored dependencies (e.g. imgui, yaml-cpp, lz4, zstd, Detours, Vulkan-Headers, AgilitySDK, DirectStorage, DirectXTex, json, libpng, tbb, xess, and more). Managed via `dependencies.yaml`. |
+| `third_party/` | Vendored dependencies (e.g. imgui, yaml-cpp, lz4, zstd, Detours, Vulkan-Headers, AgilitySDK, DirectStorage, DirectXTex, json, stb, tbb, xess, and more). Managed via `dependencies.yaml`. |
 
 
 ## Build outputs
