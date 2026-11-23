@@ -28,7 +28,6 @@ namespace gits::gui {
 
 namespace {
 
-// What a module DLL exports: see GITS_GUI_REGISTER_MODULE.
 using ModuleEntryPoint = void (*)(const ModuleContext* context, ModuleRegistration* registration);
 
 // Case-insensitive, as PluginService matches plugin names; module ids follow the same rule.
@@ -201,7 +200,6 @@ void ModuleRegistry::CreateModules() {
 
 void ModuleRegistry::DestroyModules() {
   m_Buttons.reset();
-  // Reverse load order, mirroring how members of a panel would go.
   while (!m_Entries.empty()) {
     m_Entries.pop_back();
   }
@@ -263,7 +261,6 @@ bool ModuleRegistry::RenderModuleButtons() {
   ImGui::Text("Modules");
   const bool changed = m_Buttons->Render();
   if (changed) {
-    // A click is a request; the panel decides, and the button shows what it decided.
     for (const auto& entry : m_Entries) {
       SetActive(entry.Id, m_Buttons->IsChecked(entry.Id));
     }

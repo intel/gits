@@ -53,15 +53,10 @@ if(WIN64)
 
   target_link_libraries(rtsr_module
   PUBLIC
-    module_common
     rtsr_module_shared
-    imgui_common
-    gui_common
   PRIVATE
     rtsr_module_toolchain
-    log
     common
-    stream
     # Only the performance view plots, and no public header of this module exposes
     # an ImPlot type, so it stays private to the implementation.
     implot
@@ -84,12 +79,10 @@ if(WIN64)
     >
   )
 
-  add_dependencies(rtsr_module config_codegen generate_font_header)
+  add_dependencies(rtsr_module generate_font_header)
 
+  gui_module(rtsr_module rtsr INSTALL)
   set_target_properties(rtsr_module PROPERTIES FOLDER "${GUI_MODULES_FOLDER}/rtsr")
-
-  gui_module(rtsr_module rtsr)
-  gui_module_install(rtsr_module)
 endif()
 
 # GITS plugins shipped by this module. They are ordinary GITS plugins and install

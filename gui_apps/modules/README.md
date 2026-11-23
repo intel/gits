@@ -12,8 +12,6 @@ The tree contains two modules:
 | RTSR | `rtsr/` | Real-time shader replacement. The production module. |
 | Hello | `hello_module/` | The smallest possible module, as a starting point. The build-tree Studio runs with it, but it is not installed. |
 
-`module-contract.yaml` summarizes the same contract in a structured form.
-
 ## Deployment layout
 
 Each module lives in its own folder under `Modules/`:
@@ -177,37 +175,30 @@ Errors:
 1. Create `gui_apps/modules/<name>/` with the root panel and one `GITS_GUI_REGISTER_MODULE` line,
    whose first argument is the module's id, for example `"mymodule"`.
    `hello_module/` is the template.
-2. Add a `CMakeLists.txt`:
+2. Add a `CMakeLists.txt`. Name the folder after the module's id, as GITS plugin folders are named
+   after the plugin (`Modules/rtsr/`, like `Plugins/DirectX/rtsr/`).
 
    ```cmake
-   add_library(my_module SHARED
-     ${CMAKE_CURRENT_SOURCE_DIR}/myPanel.h
-     ${CMAKE_CURRENT_SOURCE_DIR}/myPanel.cpp
-   )
-   target_link_libraries(my_module
-   PRIVATE
-     module_common
-     gui_common
-     common_interface
-     imgui_common
-     log
-     configuration
-     stream
-   )
-   add_dependencies(my_module config_codegen)
-   set_target_properties(my_module PROPERTIES FOLDER "${GUI_MODULES_FOLDER}")
-   gui_module(my_module mymodule)
-   gui_module_install(my_module)
+   if(WIN64)
+     add_library(my_module SHARED
+       ${CMAKE_CURRENT_SOURCE_DIR}/myPanel.h
+       ${CMAKE_CURRENT_SOURCE_DIR}/myPanel.cpp
+     )
+     gui_module(my_module mymodule INSTALL)
+   endif()
    ```
 
-   - `gui_module(target id)` makes the target a Windows x64 DLL named `module.dll` that belongs
-     in `Modules/<id>/`; pass the module's id. It links `imgui_addons`, the ImGui add-ons that
-     Studio compiles into its executable. Every time the module is built, its `module.dll` is
-     copied into `Modules/<id>/` next to the build-tree Studio.
-   - `gui_module_install(target)` installs `module.dll` and its PDB into `Modules/<id>/`, as part of
-     the `gits_studio` component. Leave it out for a module that is not shipped, as `hello_module`
-     does.
-3. Add the folder to `gui_apps/modules/CMakeLists.txt`, inside the `if(WIN64)` block.
+   `gui_module(target folder [INSTALL])` makes the target a Windows x64 DLL named `module.dll` that
+   belongs in `Modules/<folder>/`; pass the module's id. It links
+   the libraries every module needs (`module_common`, `gui_common`, `log`, `stream` and the
+   others) and the ImGui add-ons that Studio compiles into its executable, depends on
+   `config_codegen`, and sets the IDE folder. Add the module's own libraries with
+   `target_link_libraries`. Every time the module is built, its `module.dll` is copied into
+   `Modules/<folder>/` next to the build-tree Studio. With `INSTALL`, `module.dll` and its PDB are
+   also installed into `Modules/<folder>/`, as part of the `gits_studio` component. Leave
+   `INSTALL` out for a module that is not shipped, as `hello_module` does.
+3. Add `add_subdirectory(<name>)` to `gui_apps/modules/CMakeLists.txt`. Guard the target with
+   `if(WIN64)` inside the module's own folder, as `hello_module` and `rtsr` do.
 
 ## Running and debugging
 

@@ -29,7 +29,6 @@ class ModuleRegistry {
 public:
   static ModuleRegistry& GetInstance();
 
-  // Loads the module DLLs and creates their panels, once.
   void CreateModules();
   void DestroyModules();
 
@@ -45,9 +44,8 @@ public:
 
   void AddActivePlugins(GitsAction action, Api api, Configuration& config) const;
 
-  // Draws the sidebar buttons; true when the user changed a checkbox or the selection.
   bool RenderModuleButtons();
-  // The sidebar buttons, one per module; null while no module is loaded.
+  // Null while no module is loaded.
   ImGuiHelper::TabGroup<ModuleId>* Buttons() const {
     return m_Buttons.get();
   }
@@ -57,11 +55,8 @@ private:
 
   void LoadModules();
   void CreateButtons();
-  // Activates or deactivates the module and shows the result on its button. Returns whether the
-  // module is in the requested state.
   bool SetActive(const ModuleId& id, bool active);
 
-  // The panel's virtual destructor lives in the module, so the module's heap frees it.
   using ModulePanel = std::unique_ptr<ModuleBasePanel>;
 
   struct Entry {
@@ -74,7 +69,7 @@ private:
   bool m_ModulesLoaded{false};
 };
 
-// What a module DLL hands to Studio. Its name and hint come from the panel.
+// What a module DLL hands to Studio; the name and hint come from the panel.
 struct ModuleRegistration {
   const char* Id{};
   std::unique_ptr<ModuleBasePanel> (*Create)(){};
@@ -82,8 +77,7 @@ struct ModuleRegistration {
 
 } // namespace gits::gui
 
-// Defines GitsGuiModule, the function a module DLL exports. Studio calls it right after loading
-// the DLL; it binds the module to Studio and returns the module's id and a factory for its panel.
+// Defines GitsGuiModule, the function a module DLL exports.
 #define GITS_GUI_REGISTER_MODULE(id, PanelType)                                                    \
   extern "C" __declspec(dllexport) void GitsGuiModule(                                             \
       const ::gits::gui::ModuleContext* context, ::gits::gui::ModuleRegistration* registration) {  \
