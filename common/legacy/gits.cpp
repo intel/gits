@@ -30,35 +30,6 @@
 #include <iostream>
 
 namespace gits {
-// Developer builds are of the form: dd.dd.dd.999
-#ifndef VERSION_4
-#define VERSION_4 999
-#else
-#if !defined(VERSION_1) || !defined(VERSION_2) || !defined(VERSION_3)
-#error Inconsistently defined build label
-#endif
-#endif
-
-// Developer versions will build to be compatible with latest stream format
-// (denoted by first three components) and build number of 999
-const int version_num_1 = 2;
-const int version_num_2 = 0;
-const int version_num_3 = 14;
-const int version_num_4 = VERSION_4;
-
-static_assert(VERSION_4 != 0,
-              "Zero on last version component is reserved for compatibility checks.");
-
-// Make sure we don't build GITS with mismatched version numbers
-// Build system should set VERSION_x for 0-3, and if first three
-// components do not match file set version, compile error will
-// occur
-#if defined(VERSION_1) || defined(VERSION_2) || defined(VERSION_3)
-static_assert(version_num_1 == VERSION_1, "Mismatched version numbers.");
-static_assert(version_num_2 == VERSION_2, "Mismatched version numbers.");
-static_assert(version_num_3 == VERSION_3, "Mismatched version numbers.");
-#endif
-
 CGits* CGits::_instance;
 
 /**
@@ -72,17 +43,13 @@ void CGits::Dispose() {
   _instance = nullptr;
 }
 
-CGits::CGits() : CGits(version_num_1, version_num_2, version_num_3, version_num_4) {}
-
 /**
  * @brief Constructor
  *
  * Constructor of CGits class.
- *
- * @param version version data
  */
-CGits::CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3)
-    : _version(v0, v1, v2, v3),
+CGits::CGits()
+    : _version(CurrentVersion()),
       _api3D(ApisIface::TApi::ApiNotSet),
       _apiCompute(ApisIface::TApi::ApiNotSet),
       _currentThreadId(0),
@@ -418,7 +385,7 @@ StreamingContext::~StreamingContext() {}
  * @return Output stream
  */
 std::ostream& operator<<(std::ostream& stream, const CGits& g) {
-  stream << "gitsPlayer version " << g._version;
+  stream << "gitsPlayer version " << GetVersionString();
 #if defined GITS_ARCH_X86
   stream << " x86";
 #elif defined GITS_ARCH_X64
@@ -464,15 +431,16 @@ CBinIStream& operator>>(CBinIStream& stream, CGits& g) {
   CVersion version;
   stream >> version;
 
-  LOG_INFO << "Sequence recorded with: " << version;
-  // check if file was not written with a newer version of GITS software
-  if (g._version < version) {
-    LOG_WARNING << "File is written with newer version: " << version << "!!!";
-  }
-
   // load file data
   std::unique_ptr<CFile> file(new CFile(version));
-  stream >> *file;
+  try {
+    stream >> *file;
+  } catch (...) {
+    // Loading fails e.g. for streams of newer GITS versions, so report the version first.
+    LogRecordingVersion(version, std::nullopt);
+    throw;
+  }
+  LogRecordingVersion(version, file->FindProperty("diag.gits.version"));
   g.RegisterFilePlayer(std::move(file));
 
   return stream;
@@ -750,6 +718,18 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
 
 bool stream_older_than(uint64_t version) {
   return Configurator::IsPlayer() && (CGits::Instance().FilePlayer().Version().version() < version);
+}
+
+void LogRecordingVersion(const CVersion& version,
+                         const std::optional<nlohmann::ordered_json>& recorderVersion) {
+  const std::string recorded = recorderVersion && recorderVersion->is_string()
+                                   ? recorderVersion->get<std::string>()
+                                   : version.ToString();
+  LOG_INFO << "Sequence recorded with: " << recorded;
+  if (CurrentVersion() < version) {
+    LOG_WARNING << "Stream was recorded with newer GITS: " << recorded << "; this player is "
+                << GetVersionString() << ". Playback may fail.";
+  }
 }
 
 TimerSet::TimerSet() : playback(true), restoration(true) {}

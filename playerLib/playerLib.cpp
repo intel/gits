@@ -296,6 +296,9 @@ int Initialize(int argc, char* argv[]) {
 #endif
 
   g_LegacyMode = IsLegacyStream(cfg.common.player.streamPath);
+  if (!g_LegacyMode) {
+    LogStreamRecordingVersion();
+  }
   // create player
   g_Player.reset(new CPlayer());
   LOG_INFO << "Loading...";

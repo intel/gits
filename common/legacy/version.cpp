@@ -16,6 +16,8 @@
 #include "version.h"
 #include "streams.h"
 #include "exception.h"
+#include "gitsVersion.h"
+#include "gitsBuildInfo.h"
 
 #include <iomanip>
 #include <algorithm>
@@ -36,6 +38,7 @@ union Alias64w16 {
 const char magic[] = "GITS_";
 const int format[] = {2, 2, 2, 3};
 const size_t ver_comps = 4;
+const unsigned short first_semver_major = 3;
 void enforce_version(uint64_t ver) {
   Alias64w16 v;
   v.v64 = ver;
@@ -44,7 +47,15 @@ void enforce_version(uint64_t ver) {
       throw std::runtime_error("invalid version value");
     }
   }
+  if (v.v16[3] >= first_semver_major && v.v16[1] != 0) {
+    throw std::runtime_error("invalid version value: third component of SemVer versions must be 0");
+  }
 }
+
+static_assert(GITS_VERSION_MAJOR >= first_semver_major);
+static_assert(GITS_VERSION_PATCH <= GITS_VERSION_PATCH_DEVELOPMENT);
+static_assert((GITS_VERSION_PATCH == GITS_VERSION_PATCH_DEVELOPMENT) == (GITS_BUILD_ID[0] != '\0'),
+              "Only development builds have build metadata.");
 } // namespace
 
 CVersion::CVersion() : _version(0) {}
@@ -59,6 +70,39 @@ CVersion::CVersion(unsigned short v0, unsigned short v1, unsigned short v2, unsi
   v.v16[0] = v3;
   _version = v.v64;
   enforce_version(_version);
+}
+
+bool CVersion::IsLegacy() const {
+  return Major() < first_semver_major || ((_version >> 16) & 0xFFFF) != 0;
+}
+
+unsigned short CVersion::Major() const {
+  return static_cast<unsigned short>(_version >> 48);
+}
+
+unsigned short CVersion::Minor() const {
+  return static_cast<unsigned short>(_version >> 32);
+}
+
+unsigned short CVersion::Patch() const {
+  return static_cast<unsigned short>(_version);
+}
+
+bool CVersion::IsDevelopment() const {
+  return !IsLegacy() && Patch() == GITS_VERSION_PATCH_DEVELOPMENT;
+}
+
+std::string CVersion::ToString() const {
+  std::ostringstream text;
+  if (IsLegacy()) {
+    text << *this;
+  } else {
+    text << Major() << '.' << Minor() << '.' << Patch();
+    if (IsDevelopment()) {
+      text << "-dev";
+    }
+  }
+  return text.str();
 }
 
 bool operator<(const CVersion& lhs, const CVersion& rhs) {
@@ -108,6 +152,26 @@ CBinIStream& operator>>(CBinIStream& input_stream, CVersion& version) {
 
   version = CVersion(v.v64);
   return input_stream;
+}
+
+const CVersion& CurrentVersion() {
+  static const CVersion version(GITS_VERSION_MAJOR, GITS_VERSION_MINOR, 0, GITS_VERSION_PATCH);
+  return version;
+}
+
+const char* GetVersionString() {
+  static const std::string text = [] {
+    std::string version = CurrentVersion().ToString();
+    if (GITS_BUILD_ID[0] != '\0') {
+      version += std::string("+") + GITS_BUILD_ID;
+    }
+    return version;
+  }();
+  return text.c_str();
+}
+
+const char* GetBuildCommit() {
+  return GITS_BUILD_COMMIT;
 }
 
 } // namespace gits

@@ -11,6 +11,7 @@
 #include "configurator.h"
 #include "exception.h"
 #include "log.h"
+#include "version.h"
 #include "yaml-cpp/yaml.h"
 
 #include <bit>
@@ -20,12 +21,7 @@
 namespace gits {
 namespace stream {
 
-#ifndef VERSION_4
-#define VERSION_4 999
-#endif
-
 StreamHeader StreamHeader::m_Instance;
-const unsigned StreamHeader::VERSION[4] = {2, 0, 14, VERSION_4};
 const unsigned StreamHeader::VERSION_API_INFO[4] = {2, 0, 11, 0};
 const unsigned StreamHeader::VERSION_APIS[4] = {2, 0, 14, 0};
 const unsigned StreamHeader::SCHEDULER_VERSION = 1;
@@ -122,15 +118,8 @@ void StreamHeader::ReadHeader(std::istream& stream) {
 }
 
 void StreamHeader::WriteVersion(std::ostream& stream) {
-  const char MAGIC[] = "GITS_";
-  stream.write(MAGIC, strlen(MAGIC));
   std::stringstream s;
-  for (unsigned i = 0; i < 4; ++i) {
-    if (i > 0) {
-      s << '.';
-    }
-    s << std::setfill('0') << std::setw(i == 3 ? 3 : 2) << VERSION[i];
-  }
+  s << CurrentVersion();
   std::string str = s.str();
   stream.write(str.data(), str.size());
 }

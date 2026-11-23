@@ -71,6 +71,10 @@ venv/
 # GITS config
 recorder/gits_config.txt
 
+# Written by Scripts/QuickBuild/gits_version.py
+/gits_cmake_args.txt
+/gits_label.txt
+
 # OpenGLLegacy
 OpenGLLegacy/common/glEnumsAuto.cpp
 OpenGLLegacy/common/glFunctions.cpp

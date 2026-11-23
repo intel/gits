@@ -204,7 +204,6 @@ private:
   const Configuration& _configuration;
 
   CGits();
-  CGits(uint16_t v0, uint16_t v1, uint16_t v2, uint16_t v3);
   ~CGits();
 
 public:
@@ -448,4 +447,9 @@ public:
 };
 
 bool stream_older_than(uint64_t version);
+
+// Logs the GITS version that recorded a stream and warns when it is newer than this player.
+// recorderVersion is the diag.gits.version stream property, which includes build metadata.
+void LogRecordingVersion(const CVersion& version,
+                         const std::optional<nlohmann::ordered_json>& recorderVersion);
 } // namespace gits

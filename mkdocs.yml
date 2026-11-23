@@ -125,6 +125,7 @@ nav:
     - 'development/codebase-map-vulkan.md'
     - 'development/configuration.md'
     - 'development/dependencies.md'
+    - 'development/versioning.md'
     - 'development/documentation.md'
     - Community:
       - 'development/community/how_to_reproducer.md'

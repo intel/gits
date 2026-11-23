@@ -1,0 +1,15 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
+#pragma once
+
+namespace gits {
+inline constexpr unsigned short GITS_VERSION_PATCH = @GITS_VERSION_PATCH_VALUE@;
+inline constexpr char GITS_BUILD_ID[] = "@GITS_BUILD_ID_VALUE@";
+inline constexpr char GITS_BUILD_COMMIT[] = "@GITS_BUILD_COMMIT@";
+} // namespace gits

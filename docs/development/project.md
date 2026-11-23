@@ -9,6 +9,7 @@ icon: material/map-marker-path
 - The main code is written in **C++ 20**.
 - Scripts are written in **Python 3.10**.
 - Code generation is done using **mako-templates**.
+- Versions are `MAJOR.MINOR.PATCH`, see [Versioning](versioning.md).
 
 ## Naming conventions
 

@@ -21,6 +21,7 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/function.h
   ${COMMON_HEADER_DIR}/getopt_.h
   ${COMMON_HEADER_DIR}/gits.h
+  ${COMMON_HEADER_DIR}/gitsVersion.h
   ${COMMON_HEADER_DIR}/id.h
   ${COMMON_HEADER_DIR}/ipcPipe.h
   ${COMMON_HEADER_DIR}/InputListener.h
@@ -114,8 +115,9 @@ set_target_properties(common PROPERTIES FOLDER "common")
 
 add_definitions(-DGITS_COMMON_PROJ)
 
-add_dependencies(common config_codegen)
+add_dependencies(common config_codegen gits_build_info)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
+target_include_directories(common PRIVATE ${GITS_BUILD_INFO_INCLUDE_DIR})
 target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png lua zlib)
 target_link_libraries(common PUBLIC configuration log)
 

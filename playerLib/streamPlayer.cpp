@@ -20,6 +20,7 @@
 #include "timer.h"
 #include "remotePlaybackController.h"
 
+#include <array>
 #include <chrono>
 #include <cstring>
 #include <fstream>
@@ -493,6 +494,13 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
 #endif
         ;
   }
+}
+
+void LogStreamRecordingVersion() {
+  const stream::StreamHeader& header = stream::StreamHeader::Get();
+  const std::array<unsigned, 4> version = header.GetVersion();
+  LogRecordingVersion(CVersion(GITS_MAKE_VERSION4(version[0], version[1], version[2], version[3])),
+                      header.FindProperty("diag.gits.version"));
 }
 
 } // namespace gits

@@ -74,7 +74,6 @@ private:
 private:
   StreamHeader() {}
   static StreamHeader m_Instance;
-  static const unsigned VERSION[4];
   unsigned m_Version[4]{};
   static const unsigned VERSION_API_INFO[4];
   static const unsigned VERSION_APIS[4];

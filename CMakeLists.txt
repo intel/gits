@@ -27,6 +27,7 @@ endif()
 
 find_package(Python3 3.10 REQUIRED COMPONENTS Interpreter)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(gits_version)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Solution folder grouping the GUI applications (launcher, studio).

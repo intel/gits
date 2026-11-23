@@ -9,11 +9,14 @@
 #include "orderingRecorder.h"
 #include "messageBus.h"
 #include "configurator.h"
+#include "version.h"
+#include "log.h"
 
 namespace gits {
 namespace stream {
 
 OrderingRecorder::OrderingRecorder() {
+  LOG_INFO << " GITS Recorder (" << GetVersionString() << ")";
   m_Recorder.reset(new stream::StreamWriter(Configurator::Get().common.recorder.dumpPath,
                                             Configurator::Get().common.recorder.compression.type));
   gits::MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT},

@@ -158,7 +158,7 @@ gits::CRecorder::CRecorder()
   inst.SetSC(&this->_sc);
 
   LOG_INFO << "-----------------------------------------------------";
-  LOG_INFO << " GITS Recorder (" << inst.Version() << ")";
+  LOG_INFO << " GITS Recorder (" << GetVersionString() << ")";
   LOG_INFO << "-----------------------------------------------------";
 
   inst.GetMessageBus().subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER},

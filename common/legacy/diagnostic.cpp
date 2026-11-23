@@ -33,10 +33,16 @@
 namespace gits {
 namespace {
 void gather_generic_diags(nlohmann::ordered_json& properties) {
-  std::stringstream ver;
-  ver << CGits::Instance().Version();
-  properties["diag"]["gits"]["version"] = ver.str();
-  properties["diag"]["gits"]["arch"] = GITS_ARCH_STR;
+  nlohmann::ordered_json& gits = properties["diag"]["gits"];
+  gits["version"] = GetVersionString();
+  // Properties of a subcapture start as a copy of the input stream's, so a build without a commit
+  // must erase the key instead of keeping the original recorder's value.
+  if (GetBuildCommit()[0] != '\0') {
+    gits["commit"] = GetBuildCommit();
+  } else {
+    gits.erase("commit");
+  }
+  gits["arch"] = GITS_ARCH_STR;
 }
 } // namespace
 #ifdef GITS_PLATFORM_WINDOWS

@@ -37,9 +37,7 @@ static void RenderWidget(const ImGuiWidget_Separator&, IHUDPlugin*) {
 } // namespace
 
 ImGuiHUD::ImGuiHUD() {
-  std::ostringstream oss;
-  oss << CGits::Instance().Version();
-  _strVersion = oss.str();
+  _strVersion = GetVersionString();
   _plugins = std::map<int, IHUDPlugin*>();
 }
 
