@@ -83,6 +83,16 @@ Since HTML-comments can have a negative effect on some of the markdown-features 
 python ./Scripts/docs/serve_mkdocs.py
 ```
 
+Alternatively, after configuring a CMake build directory, run the `serveDocs` target:
+
+``` bash
+cmake --build build --target serveDocs
+```
+
+The target enables UTF-8 for Python and its child processes. With Visual Studio generators,
+it also configures MSBuild to decode the target's output as UTF-8, preserving non-ASCII
+characters in PowerShell without changing the console code page.
+
 The documentation can now be viewed in a browser by visiting [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 ### Adding new pages

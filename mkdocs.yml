@@ -85,11 +85,13 @@ nav:
     - Vulkan: 'configuration/VulkanAuto.md'
     - Enums: 'configuration/EnumsAuto.md'
   - Documentation:
+    - 'documentation/terminology.md'
     - 'documentation/recorder.md'
     - 'documentation/player.md'
     - 'documentation/launcher.md'
-    - 'documentation/terminology.md'
+    - 'documentation/studio.md'
     - 'documentation/Plugins.md'
+    - 'documentation/modules.md'
     - 'documentation/interop.md'
     - API:
       - DirectX: 

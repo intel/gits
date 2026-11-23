@@ -380,6 +380,30 @@ install(DIRECTORY docs/ DESTINATION Documentation
   PATTERN "AGENTS.install.md" EXCLUDE
 )
 
+add_custom_target(serveDocs
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1 PYTHONIOENCODING=utf-8
+        "${Python3_EXECUTABLE}" -u "${CMAKE_SOURCE_DIR}/Scripts/docs/serve_mkdocs.py"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Starting documentation server..."
+    USES_TERMINAL
+    VERBATIM
+)
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+  # MSBuild otherwise decodes custom command output using the OEM code page.
+  file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/serveDocs.props" CONTENT [=[
+<Project>
+  <ItemDefinitionGroup>
+    <CustomBuild>
+      <StdOutEncoding>UTF-8</StdOutEncoding>
+      <StdErrEncoding>UTF-8</StdErrEncoding>
+    </CustomBuild>
+  </ItemDefinitionGroup>
+</Project>
+]=])
+  set_property(TARGET serveDocs PROPERTY VS_USER_PROPS
+    "${CMAKE_CURRENT_BINARY_DIR}/serveDocs.props")
+endif()
+
 
 if(WIN32)
   if(WITH_VULKAN)
