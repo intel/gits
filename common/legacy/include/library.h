@@ -50,7 +50,7 @@ public:
     // 1 reserved, formerly OpenCL
     // 2 reserved, formerly VulkanLegacy
     ID_LEVELZERO = 3,
-    ID_OCLOC = 4,
+    // 4 reserved, formerly ocloc
     ID_DirectX = 5,
     ID_VULKAN = 6,
     ID_NUM = 7

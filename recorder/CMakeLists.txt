@@ -29,10 +29,6 @@ if(MSVC)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderL0\n")
   endif()
-  if(WITH_OCLOC)
-    file(APPEND ${recorder_DEF}
-      "  GITSRecorderOcloc\n")
-  endif()
   if(WITH_DIRECTX)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderD3D12\n")
@@ -83,10 +79,6 @@ endif()
 if(WITH_LEVELZERO)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} L0_recorder)
   set(recorderCommonLibs ${recorderCommonLibs} L0_common)
-endif()
-if(WITH_OCLOC)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} ocloc_recorder)
-  set(recorderCommonLibs ${recorderCommonLibs} ocloc_common)
 endif()
 if(WITH_DIRECTX)
   set(recorderIfaceLibs 

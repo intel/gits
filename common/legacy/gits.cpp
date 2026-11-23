@@ -153,6 +153,7 @@ void CGits::CloseZipFileGLPrograms() {
 namespace {
 // Streams of these APIs can't be replayed anymore; they're detected by the API stored in the
 // stream header or, in streams older than GITS_API_INFO, by the token ID range of the API.
+// APIs that are never stored in the stream header use ApiNotSet.
 struct RemovedApi {
   unsigned tokenIdBegin;
   ApisIface::TApi api;
@@ -162,6 +163,7 @@ constexpr unsigned TOKEN_ID_API_RANGE = 0x10000;
 constexpr RemovedApi REMOVED_APIS[] = {
     {CToken::ID_OPENCL, ApisIface::TApi::OpenCL, "OpenCL"},
     {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
+    {CToken::ID_OCLOC, ApisIface::TApi::ApiNotSet, "ocloc"},
 };
 
 [[noreturn]] void ThrowRemovedApi(const RemovedApi& removedApi) {
@@ -713,7 +715,8 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
     ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
     stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
     for (const auto& removedApi : REMOVED_APIS) {
-      if (api3D == removedApi.api || apiCompute == removedApi.api) {
+      if (removedApi.api != ApisIface::TApi::ApiNotSet &&
+          (api3D == removedApi.api || apiCompute == removedApi.api)) {
         ThrowRemovedApi(removedApi);
       }
     }

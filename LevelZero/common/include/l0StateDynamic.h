@@ -15,9 +15,6 @@
 #include "l0Tools.h"
 #include "MemorySniffer.h"
 #include <utility>
-#ifdef WITH_OCLOC
-#include "oclocStateDynamic.h"
-#endif
 
 #include <map>
 #include <vector>
@@ -406,16 +403,8 @@ public:
 struct ProgramInfo {
   std::string moduleFileName;
   std::string buildOptions;
-#ifdef WITH_OCLOC
-  std::shared_ptr<ocloc::COclocState> oclocState = nullptr;
-#endif
 
 public:
-#ifdef WITH_OCLOC
-  ProgramInfo(const char* buildOptions,
-              const std::string filename,
-              std::shared_ptr<ocloc::COclocState>& oclocState);
-#endif
   ProgramInfo(const char* buildOptions, const std::string filename);
 };
 
@@ -543,9 +532,6 @@ private:
   uint32_t cmdListNumber = 0U;
   uint32_t appendKernelNumber = 0U;
   std::string GetExecutionKeyId() const;
-#ifdef WITH_OCLOC
-  nlohmann::ordered_json GetOclocInfo(const std::shared_ptr<ocloc::COclocState>& oclocState);
-#endif
   std::string BuildFileName(const uint64_t& argNumber,
                             bool isBuffer,
                             bool isIndirectMode,

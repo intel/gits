@@ -12,13 +12,6 @@
 #include "l0Arguments.h"
 #include "l0ArgumentsAuto.h"
 
-#ifdef WITH_OCLOC
-#include "tools.h"
-#include "tools_lite.h"
-#include "oclocFunctions.h"
-#include "oclocStateDynamic.h"
-#endif
-
 namespace gits {
 namespace l0 {
 class Cze_module_constants_t : public CArgument {
@@ -155,9 +148,6 @@ private:
   CProgramSource::CSArray _pInputModules;
   CStringArray _pBuildFlags;
   Cze_module_constants_ptr::CSArray _pConstants;
-
-  std::vector<size_t> newInputSizes;
-  std::vector<uint8_t*> newInputModules;
 
 public:
   typedef CL0StructArray<L0Type, Cze_module_program_exp_desc_t> CSArray;

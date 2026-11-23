@@ -29,8 +29,6 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | `OpenGL/` | Work-in-progress new OpenGL implementation. Streams are tagged `API_OPENGL` and replay through the OpenGL path. |
 | `OpenGLLegacy/` | Legacy OpenGL implementation. Streams are tagged `API_OPENGL_LEGACY` and replay through the OpenGLLegacy path. |
 | `LevelZero/` | Intel oneAPI Level Zero implementation. |
-| `ocloc/` | Intel offline shader compiler (OCLOC). |
-
 ## Scripts and documentation
 
 | Directory | Contents |

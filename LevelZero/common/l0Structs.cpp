@@ -10,55 +10,6 @@
 
 namespace gits {
 namespace l0 {
-namespace {
-#ifdef WITH_OCLOC
-std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd, const std::string& filename) {
-  auto bufIt = sd.deprecatedPlayer.find(filename);
-  if (bufIt != sd.deprecatedPlayer.end()) {
-    return &bufIt->second;
-  }
-  const std::string backwardCompatibleSuffix = ".bin";
-  if (StringEndsWith(filename, backwardCompatibleSuffix)) {
-    const auto lengthDifference = filename.length() - backwardCompatibleSuffix.length();
-
-    bufIt = sd.deprecatedPlayer.find(filename.substr(0, lengthDifference));
-    if (bufIt != sd.deprecatedPlayer.end()) {
-      return &bufIt->second;
-    }
-  }
-  return nullptr;
-}
-
-std::vector<uint8_t>* FindOclocInputModule(ocloc::CStateDynamic& sd,
-                                           const size_t& size,
-                                           const uint8_t* moduleData,
-                                           const ze_module_format_t format) {
-  const auto originalHash = ComputeHash(moduleData, size, THashType::XX);
-  for (const auto& oclocState : sd.oclocStates) {
-    for (const auto& originalOclocHash : oclocState.second->originalHashes) {
-      if (originalOclocHash == originalHash) {
-        for (auto i = 0U; i < oclocState.second->outputNames.size(); i++) {
-          if ((format == ZE_MODULE_FORMAT_IL_SPIRV &&
-               StringEndsWith(oclocState.second->outputNames[i], ".spv")) ||
-              (format == ZE_MODULE_FORMAT_NATIVE &&
-               (StringEndsWith(oclocState.second->outputNames[i], ".bin") ||
-                StringEndsWith(oclocState.second->outputNames[i], ".ar")))) {
-            LOG_TRACEV << "Ocloc output's original hash matched: " << originalOclocHash
-                       << ", file name: " << oclocState.second->outputNames[i];
-            return &oclocState.second->outputData[i];
-          }
-        }
-        LOG_WARNING << "Ocloc output's original hash matched: " << originalOclocHash
-                    << " but there is no file that matches given format: "
-                    << ToStringHelper(format);
-        return nullptr;
-      }
-    }
-  }
-  return nullptr;
-}
-#endif
-} // namespace
 
 Cze_module_constants_t::Cze_module_constants_t(const L0Type& value)
     : _numConstants(value.numConstants),
@@ -235,9 +186,7 @@ void Cze_module_desc_t::Write(CBinOStream& stream) const {
   _stype.Write(stream);
   _pNext.Write(stream);
   _format.Write(stream);
-#ifdef WITH_OCLOC
   stream << '"' << _filename << '"';
-#endif
   _inputSize.Write(stream);
   _pInputModule.Write(stream);
   _pBuildFlags.Write(stream);
@@ -248,9 +197,7 @@ void Cze_module_desc_t::Read(CBinIStream& stream) {
   _stype.Read(stream);
   _pNext.Read(stream);
   _format.Read(stream);
-#ifdef WITH_OCLOC
   stream.get_delimited_string(_filename, '"');
-#endif
   _inputSize.Read(stream);
   _pInputModule.Read(stream);
   _pBuildFlags.Read(stream);
@@ -269,19 +216,8 @@ Cze_module_desc_t::L0Type* Cze_module_desc_t::Ptr() {
   _struct.stype = *_stype;
   _struct.pNext = *_pNext;
   _struct.format = *_format;
-  bool oclocHandle = false;
-#ifdef WITH_OCLOC
-  const auto* oclocInputModule = FindOclocInputModule(ocloc::SD(), _filename);
-  if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
-    _struct.inputSize = oclocInputModule->size();
-    _struct.pInputModule = oclocInputModule->data();
-    oclocHandle = true;
-  }
-#endif
-  if (!oclocHandle) {
-    _struct.inputSize = *_inputSize;
-    _struct.pInputModule = *_pInputModule;
-  }
+  _struct.inputSize = *_inputSize;
+  _struct.pInputModule = *_pInputModule;
   _struct.pBuildFlags = *_pBuildFlags;
   _struct.pConstants = /*_pConstants.Ptr()*/ nullptr;
   return &_struct;
@@ -345,20 +281,8 @@ Cze_module_desc_t_V1::L0Type* Cze_module_desc_t_V1::Ptr() {
   _struct.stype = *_stype;
   _struct.pNext = *_pNext;
   _struct.format = *_format;
-  bool oclocHandle = false;
-#ifdef WITH_OCLOC
-  const auto* oclocInputModule =
-      FindOclocInputModule(ocloc::SD(), *_inputSize, *_pInputModule, *_format);
-  if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
-    _struct.inputSize = oclocInputModule->size();
-    _struct.pInputModule = oclocInputModule->data();
-    oclocHandle = true;
-  }
-#endif
-  if (!oclocHandle) {
-    _struct.inputSize = *_inputSize;
-    _struct.pInputModule = *_pInputModule;
-  }
+  _struct.inputSize = *_inputSize;
+  _struct.pInputModule = *_pInputModule;
   _struct.pBuildFlags = *_pBuildFlags;
   _struct.pConstants = *_pConstants;
   if (_struct.pConstants != nullptr && _struct.pConstants->numConstants == 0U) {
@@ -436,37 +360,8 @@ Cze_module_program_exp_desc_t::L0Type* Cze_module_program_exp_desc_t::Ptr() {
   _struct.stype = *_stype;
   _struct.pNext = *_pNext;
   _struct.count = *_count;
-
-  bool oclocHandle = false;
-  newInputSizes.clear();
-  newInputModules.clear();
-  for (size_t i = 0; i < *_count; i++) {
-    const auto& program = _pInputModules.Vector()[i];
-#ifdef WITH_OCLOC
-    const auto* oclocInputModule = FindOclocInputModule(
-        ocloc::SD(), program.data.size(), program.data.data(), ZE_MODULE_FORMAT_IL_SPIRV);
-    if (oclocInputModule != nullptr && !oclocInputModule->empty()) {
-      newInputSizes.push_back(oclocInputModule->size());
-      newInputModules.push_back(const_cast<uint8_t*>(oclocInputModule->data()));
-      oclocHandle = true;
-    } else {
-      newInputSizes.push_back((*_inputSizes)[i]);
-      newInputModules.push_back(
-          const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(program.data.data())));
-    }
-#else
-    newInputSizes.push_back((*_inputSizes)[i]);
-    newInputModules.push_back(const_cast<uint8_t*>(program.data.data()));
-#endif
-  }
-  if (!oclocHandle) {
-    _struct.inputSizes = *_inputSizes;
-    _struct.pInputModules = *_pInputModules;
-  } else {
-    _struct.inputSizes = newInputSizes.data();
-    _struct.pInputModules = const_cast<const uint8_t**>(newInputModules.data());
-  }
-
+  _struct.inputSizes = *_inputSizes;
+  _struct.pInputModules = *_pInputModules;
   _struct.pBuildFlags = *_pBuildFlags;
   _struct.pConstants = *_pConstants;
   return &_struct;

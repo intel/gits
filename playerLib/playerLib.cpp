@@ -25,9 +25,6 @@
 #if defined WITH_LEVELZERO
 #include "l0Library.h"
 #endif
-#if defined WITH_OCLOC
-#include "oclocLibrary.h"
-#endif
 
 #include <memory>
 #include <string>
@@ -264,9 +261,6 @@ int Initialize(int argc, char* argv[]) {
   inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
 #ifdef WITH_LEVELZERO
   inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));
-#endif
-#ifdef WITH_OCLOC
-  inst.Register(std::shared_ptr<CLibrary>(new ocloc::CLibrary));
 #endif
 
   g_LegacyMode = IsLegacyStream(cfg.common.player.streamPath);

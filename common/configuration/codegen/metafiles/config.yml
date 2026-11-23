@@ -72,10 +72,6 @@ Configuration:
             Accessibility: ArgumentOnly
             Arguments: [libGLESv2Path]
             Description: Override for library path containing GLES 2 functions
-          - Name: libOcloc
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: Derived
           - Name: libL0Driver
             Type: std::filesystem::path
             Default: ""
@@ -370,11 +366,6 @@ Configuration:
             Default: libvulkan.so.1
             DefaultsPerPlatform:
               - win32: vulkan-1.dll
-          - Name: libOcloc
-            Type: std::filesystem::path
-            Default: libocloc.so
-            DefaultsPerPlatform:
-              - win32: ocloc64.dll
           - Name: libL0
             Type: std::filesystem::path
             Default: libze_loader.so.1
@@ -785,11 +776,6 @@ Configuration:
             Default: /usr/lib/{arch}-linux-gnu/libvulkan.so.1
             DefaultsPerPlatform:
               - win32: C:\Windows\System32\vulkan-1.dll
-          - Name: libOcloc
-            Type: std::filesystem::path
-            Default: /usr/lib/{arch}-linux-gnu/libocloc.so
-            DefaultsPerPlatform:
-              - win32: C:\Windows\System32\ocloc64.dll
           - Name: libL0
             Type: std::filesystem::path
             Default: /usr/lib/{arch}-linux-gnu/libze_loader.so.1
@@ -2354,3 +2340,7 @@ RemovedOptions:
     Reason: OpenCL support was removed.
   - Path: OpenCL
     Reason: OpenCL support was removed.
+  - Path: Common.Player.LibOcloc
+    Reason: ocloc support was removed.
+  - Path: Common.Recorder.LibOcloc
+    Reason: ocloc support was removed.

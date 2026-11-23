@@ -99,7 +99,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libEGL = config.common.player.libEGL;
     obj.libGLESv1 = config.common.player.libGLESv1;
     obj.libGLESv2 = config.common.player.libGLESv2;
-    obj.libOcloc = config.common.player.libOcloc;
     obj.libL0 = config.common.player.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
     if (config.common.shared.logToConsole.has_value()) {
@@ -116,7 +115,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libEGL = config.common.recorder.libEGL;
     obj.libGLESv1 = config.common.recorder.libGLESv1;
     obj.libGLESv2 = config.common.recorder.libGLESv2;
-    obj.libOcloc = config.common.recorder.libOcloc;
     obj.libL0 = config.common.recorder.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
     if (config.common.shared.logToConsole.has_value()) {

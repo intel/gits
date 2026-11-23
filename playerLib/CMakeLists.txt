@@ -93,10 +93,6 @@ if(WITH_OPENGL)
   target_link_libraries(gits_player_lib PRIVATE OpenGL_player)
 endif()
 
-if(WITH_OCLOC)
-  target_link_libraries(gits_player_lib PRIVATE ocloc_common)
-endif(WITH_OCLOC)
-
 if(MSVC)
   target_link_libraries(gits_player_lib PRIVATE stackwalker)
 endif()

@@ -19,12 +19,6 @@
 #include "l0Arguments.h"
 #include <string>
 
-#ifdef WITH_OCLOC
-#include "oclocFunctions.h"
-#include "oclocStateDynamic.h"
-#include "tools.h"
-#endif
-
 namespace gits {
 namespace l0 {
 CStateDynamic* CStateDynamic::instance;
@@ -378,16 +372,6 @@ CSysDeviceState::CSysDeviceState(zes_driver_handle_t hDriver) : hDriver(hDriver)
 
 CSysDeviceState::CSysDeviceState(zes_device_handle_t hDevice) : hDevice(hDevice) {}
 
-#ifdef WITH_OCLOC
-ProgramInfo::ProgramInfo(const char* buildOptions,
-                         const std::string filename,
-                         std::shared_ptr<ocloc::COclocState>& oclocState)
-    : moduleFileName(std::move(filename)), oclocState(oclocState) {
-  if (buildOptions != nullptr) {
-    this->buildOptions = std::string(buildOptions);
-  }
-}
-#endif
 ProgramInfo::ProgramInfo(const char* buildOptions, const std::string filename)
     : moduleFileName(std::move(filename)) {
   if (buildOptions != nullptr) {
@@ -482,40 +466,13 @@ void CModuleState::FillProgramInfo(std::vector<std::string> filenames) {
         *reinterpret_cast<const ze_module_program_exp_desc_t*>(desc.pNext);
     for (size_t i = 0; i < moduleProgramDesc.count; i++) {
       std::string filename = filenames.size() == moduleProgramDesc.count ? filenames[i] : "";
-#ifdef WITH_OCLOC
-      std::shared_ptr<ocloc::COclocState> oclocState;
-      const uint64_t hash = ComputeHash(moduleProgramDesc.pInputModules[i],
-                                        moduleProgramDesc.inputSizes[i], THashType::XX);
-      if (!ocloc::SD().oclocStates.empty() &&
-          ocloc::SD().oclocStates.find(hash) != ocloc::SD().oclocStates.end()) {
-        oclocState = ocloc::SD().oclocStates.at(hash);
-        programs.emplace_back(
-            moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
-            filename, oclocState);
-      } else {
-        programs.emplace_back(
-            moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
-            filename);
-      }
-#else
       programs.emplace_back(
           moduleProgramDesc.pBuildFlags != nullptr ? moduleProgramDesc.pBuildFlags[i] : nullptr,
           filename);
-#endif
     }
   } else {
     std::string filename = !filenames.empty() ? filenames[0] : "";
-#ifdef WITH_OCLOC
-    std::shared_ptr<ocloc::COclocState> oclocState;
-    const uint64_t hash = ComputeHash(desc.pInputModule, desc.inputSize, THashType::XX);
-    if (!ocloc::SD().oclocStates.empty() &&
-        ocloc::SD().oclocStates.find(hash) != ocloc::SD().oclocStates.end()) {
-      oclocState = ocloc::SD().oclocStates.at(hash);
-    }
-    programs.emplace_back(desc.pBuildFlags, filename, oclocState);
-#else
     programs.emplace_back(desc.pBuildFlags, filename);
-#endif
   }
 }
 
@@ -685,24 +642,12 @@ void LayoutBuilder::UpdateLayout(const CKernelExecutionInfo* kernelInfo,
         Add("build_options", moduleState.programs[0].buildOptions);
       }
       Add("module_file", moduleState.programs[0].moduleFileName);
-#ifdef WITH_OCLOC
-      auto oclocInfo = GetOclocInfo(moduleState.programs[0].oclocState);
-      if (oclocInfo.size() != 0) {
-        Add("ocloc", oclocInfo);
-      }
-#endif
     } else {
       nlohmann::ordered_json modulesInfo = nlohmann::ordered_json::array();
       for (const auto& program : moduleState.programs) {
         nlohmann::ordered_json moduleInfo;
         moduleInfo["module_file"] = program.moduleFileName;
         moduleInfo["build_options"] = program.buildOptions;
-#ifdef WITH_OCLOC
-        auto oclocInfo = GetOclocInfo(program.oclocState);
-        if (oclocInfo.size() != 0) {
-          moduleInfo["ocloc"] = std::move(oclocInfo);
-        }
-#endif
         modulesInfo.push_back(moduleInfo);
       }
       Add("programs", modulesInfo);
@@ -790,30 +735,6 @@ std::string LayoutBuilder::GetExecutionKeyId() const {
   ss << queueSubmitNumber << "_" << cmdListNumber << "_" << appendKernelNumber;
   return ss.str();
 }
-
-#ifdef WITH_OCLOC
-nlohmann::ordered_json LayoutBuilder::GetOclocInfo(
-    const std::shared_ptr<ocloc::COclocState>& oclocState) {
-  nlohmann::ordered_json oclocInfo;
-  if (oclocState.get() != nullptr && !oclocState->args.empty()) {
-    nlohmann::ordered_json children = nlohmann::ordered_json::array();
-    const auto size = oclocState->args.size();
-    for (auto i = 0U; i < size; i++) {
-      children.push_back(oclocState->args[i]);
-      if (Configurator::IsRecorder() && oclocState->args[i] == "-options") {
-        std::string options = oclocState->args[++i];
-        options += " -I \"" + Configurator::Get().common.recorder.dumpPath.string() + "\"";
-        options +=
-            " -I \"" + (Configurator::Get().common.recorder.dumpPath / "gitsFiles").string() + "\"";
-        children.push_back(options);
-      }
-    }
-    oclocInfo["sources"] = oclocState->savedFileNames;
-    oclocInfo["args"] = std::move(children);
-  }
-  return oclocInfo;
-}
-#endif
 
 std::string LayoutBuilder::BuildFileName(const uint64_t& argNumber,
                                          bool isBuffer,

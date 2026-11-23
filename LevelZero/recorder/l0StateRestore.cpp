@@ -20,10 +20,6 @@
 #include "l0RecorderWrapper.h"
 #include "recorder.h"
 #include <cstdint>
-#ifdef WITH_OCLOC
-#include "oclocFunctions.h"
-#include "oclocStateDynamic.h"
-#endif
 
 #include "l0StateDynamic.h"
 #include "l0Tools.h"
@@ -49,55 +45,6 @@ ze_command_list_handle_t GetImmediateCommandList(CScheduler& scheduler,
   }
   return gitsImmediateCommandList;
 }
-#ifdef WITH_OCLOC
-inline void ScheduleOclocInvoke(CScheduler& scheduler, ocloc::COclocState& oclocState) {
-  std::vector<const char*> args;
-  std::transform(oclocState.args.begin(), oclocState.args.end(), std::back_inserter(args),
-                 [](auto& str) { return str.c_str(); });
-  uint32_t outputNum = static_cast<uint32_t>(oclocState.outputData.size());
-  std::vector<uint8_t*> outputData;
-  std::transform(oclocState.outputData.begin(), oclocState.outputData.end(),
-                 std::back_inserter(outputData),
-                 [](std::vector<uint8_t>& vector) { return vector.data(); });
-  uint8_t** outputDataPtr = outputData.data();
-
-  auto outputDataLens = oclocState.outputLens.data();
-  std::vector<char*> outputNames;
-  std::transform(oclocState.outputNames.begin(), oclocState.outputNames.end(),
-                 std::back_inserter(outputNames),
-                 [](std::string& str) { return const_cast<char*>(str.c_str()); });
-  auto outputNamesPtr = outputNames.data();
-  std::vector<const char*> headerNames;
-  std::transform(oclocState.headerNames.begin(), oclocState.headerNames.end(),
-                 std::back_inserter(headerNames), [](std::string& str) { return str.c_str(); });
-  const auto headerNamesPtr = headerNames.data();
-
-  std::vector<const char*> sourceNames;
-  std::transform(oclocState.sourceNames.begin(), oclocState.sourceNames.end(),
-                 std::back_inserter(sourceNames), [](std::string& str) { return str.c_str(); });
-  const auto sourceNamesPtr = sourceNames.data();
-
-  std::vector<const uint8_t*> sourceData;
-  std::transform(oclocState.sourceData.begin(), oclocState.sourceData.end(),
-                 std::back_inserter(sourceData),
-                 [](std::vector<uint8_t>& vector) { return vector.data(); });
-  const auto sourceDataPtr = sourceData.data();
-
-  std::vector<const uint8_t*> headerData;
-  std::transform(oclocState.headerData.begin(), oclocState.headerData.end(),
-                 std::back_inserter(headerData),
-                 [](std::vector<uint8_t>& vector) { return vector.data(); });
-  const auto headerDataPtr = headerData.data();
-
-  scheduler.Register(
-      new ocloc::CoclocInvoke_V1(0, static_cast<unsigned int>(args.size()), args.data(),
-                                 static_cast<uint32_t>(oclocState.sourceData.size()), sourceDataPtr,
-                                 oclocState.sourceLens.data(), sourceNamesPtr,
-                                 static_cast<uint32_t>(oclocState.headerData.size()), headerDataPtr,
-                                 oclocState.headerLens.data(), headerNamesPtr, &outputNum,
-                                 &outputDataPtr, &outputDataLens, &outputNamesPtr));
-}
-#endif
 void ScheduleSplitMemoryCopyFromHostPtr(CScheduler& scheduler,
                                         const void* srcPtr,
                                         const ze_command_list_handle_t& commandList,
@@ -407,14 +354,6 @@ void RestorePointers(CScheduler& scheduler, CStateDynamic& sd) {
 void RestoreModules(CScheduler& scheduler, CStateDynamic& sd) {
   for (auto& state : sd.Map<CModuleState>()) {
     if (!state.second->Restored()) {
-#ifdef WITH_OCLOC
-      for (auto& program : state.second->programs) {
-        auto& oclocState = program.oclocState;
-        if (oclocState && !oclocState->args.empty()) {
-          ScheduleOclocInvoke(scheduler, *oclocState);
-        }
-      }
-#endif
       auto stateInstance = state.first;
       scheduler.Register(new CzeModuleCreate_V1(ZE_RESULT_SUCCESS, state.second->hContext,
                                                 state.second->hDevice, &state.second->desc,
