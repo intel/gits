@@ -6,7 +6,7 @@
 #
 # ===================== end_copyright_notice ==============================
 
-from configuration_element import parse_config_yaml
+from configuration_element import parse_config_yaml, parse_removed_options
 from configuration_enum import parse_enums_yaml
 from template_manager import Step
 
@@ -29,7 +29,9 @@ def generate_configuration(task, template_manager):
 
     configuration, ordered_groups, all_options = parse_config_yaml(
         task.input_config, template_manager.root_directory)
-    context = {'groups': ordered_groups, 'data': configuration, 'all_options': all_options, 'platform': task.platform}
+    removed_options = parse_removed_options(task.input_config, template_manager.root_directory)
+    context = {'groups': ordered_groups, 'data': configuration, 'all_options': all_options,
+               'removed_options': removed_options, 'platform': task.platform}
 
     template_manager.render_task(task, context)
 

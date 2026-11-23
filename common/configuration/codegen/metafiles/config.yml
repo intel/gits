@@ -2905,3 +2905,8 @@ Configuration:
           - Name: dumpLayoutOnly
             Type: bool
             Default: false
+
+# Options that are no longer supported. Older config files may still contain them, so instead of
+# stopping the execution they are skipped with a warning. Path uses the config file names (for
+# example Common.Player.ExitOnError); a group path skips the whole group.
+RemovedOptions: []

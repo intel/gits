@@ -476,3 +476,10 @@ def parse_config_yaml(yaml_filepath: str, root_directory: str) -> ConfigurationG
         f"  > Encountered the following types with empty arguments: {list(set(blank_types))}")
 
     return configuration, dependencies, all_options
+
+
+def parse_removed_options(yaml_filepath: str, root_directory: str) -> list[Tuple[str, str]]:
+    yaml_path = os.path.join(root_directory, yaml_filepath)
+    with open(yaml_path, mode='r') as yaml_file:
+        removed_yaml = yaml.safe_load(yaml_file).get('RemovedOptions') or []
+    return [(entry['Path'], entry['Reason']) for entry in removed_yaml]

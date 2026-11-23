@@ -107,6 +107,18 @@ The following defines a configuration options group:
 | `LongDescription` | A long description, e.g. for the markdown documentation. |
 | `OSVisibility`    | OS(s) that use the group: `WINDOWS`,`X11`.               |
 
+### Removed options
+
+Options and groups that are no longer supported are listed in the top-level `RemovedOptions` list of `config.yml`:
+
+``` yaml
+RemovedOptions:
+  - Path: string            # req.     config file path, e.g. Common.Player.ExitOnError
+    Reason: string          # req.     shown to the user, e.g. why it was removed
+```
+
+Older config files may still contain such entries. Instead of stopping the execution as for any other unrecognized entry, GITS skips them (a group path skips the whole group) and prints a warning with the reason.
+
 ## Generation
 
 The entrypoint for the generation is `common\configuration\codegen\scripts\generate.py`:

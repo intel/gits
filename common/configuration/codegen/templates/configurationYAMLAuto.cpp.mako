@@ -35,6 +35,7 @@
 
 #include <string>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 
 using namespace gits;
@@ -99,6 +100,14 @@ bool compareUint32Strings(const std::string& a, const std::string& b) {
 std::unordered_set<std::string> g_KnownLegacyPaths = {
 % for path in known_legacy_paths:
   "${path}",
+% endfor
+};
+
+// Entries of removed options that are still found in older config files. They are skipped
+// with a warning instead of stopping the execution.
+std::unordered_map<std::string, std::string> g_RemovedOptions = {
+% for path, reason in removed_options:
+  {"${path}", R"(${reason})"},
 % endfor
 };
 
@@ -184,6 +193,11 @@ bool convert<${group.namespace_str}>::decode(const Node& node, ${group.namespace
   for (YAML::const_iterator it=node.begin(); it!=node.end(); ++it) {
     if (it->first.as<std::string>() != "Overrides" && expectedEntries.find(it->first.as<std::string>()) == expectedEntries.end() && 
       g_KnownLegacyPaths.count("${group.namespace_str.replace("Configuration::", '').replace("::", '.')}." + it->first.as<std::string>()) == 0) {
+      const auto removedOption = g_RemovedOptions.find("${group.get_config_path() + '.' if group.get_config_path() else ''}" + it->first.as<std::string>());
+      if (removedOption != g_RemovedOptions.end()) {
+        LOG_WARNING << "Ignoring removed entry: " << removedOption->first << " was found in the config file. " << removedOption->second << " Please update your config file.";
+        continue;
+      }
       LOG_ERROR << "Unrecognized entry: ${group.namespace_str.replace("Configuration::", '').replace("::", '.')}." << it->first.as<std::string>() << " was found in the config file. Execution will be stopped.";
       encounteredUnrecognized = true;
       shouldQuit = true;
