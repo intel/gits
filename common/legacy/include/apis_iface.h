@@ -25,14 +25,10 @@ public:
   enum TApi {
     ApiNotSet = 0,
     OpenGL = 1,
-    Vulkan = 2, // no longer supported, identifies old streams
-    OpenCL = 3, // no longer supported, identifies old streams
-    LevelZero = 4,
+    Vulkan = 2,    // no longer supported, identifies old streams
+    OpenCL = 3,    // no longer supported, identifies old streams
+    LevelZero = 4, // no longer supported, identifies old streams
     DirectX = 5,
-  };
-  enum TApiType {
-    A3D,
-    ACompute
   };
 
   static gits::ApiBool ToApiBool(const TApi& api) {
@@ -54,7 +50,6 @@ public:
 
   class ApiIface {
     TApi _api;
-    TApiType _type;
 
   public:
     ApiIface(TApi api) : _api(api) {
@@ -62,11 +57,6 @@ public:
       case OpenGL:
       case Vulkan:
       case DirectX:
-        _type = A3D;
-        break;
-      case OpenCL:
-      case LevelZero:
-        _type = ACompute;
         break;
       default:
         throw ENotImplemented(EXCEPTION_MESSAGE);
@@ -74,9 +64,6 @@ public:
     }
     TApi Api() const {
       return _api;
-    }
-    TApiType Type() const {
-      return _type;
     }
   };
 
@@ -164,107 +151,21 @@ public:
     virtual void Rec_StateRestoreFinished() const {}
   };
 
-  class ApiCompute : public ApiIface {
-  public:
-    ApiCompute(TApi api) : ApiIface(api) {}
-    virtual bool CfgRec_IsAllMode() const {
-      return true;
-    }
-    virtual bool CfgRec_IsSubcapture() const {
-      return false;
-    }
-    virtual bool CfgRec_IsSingleKernelMode() const {
-      return false;
-    }
-    virtual int CfgRec_SingleKernel() const {
-      return 1;
-    }
-    virtual bool CfgRec_IsKernelsRangeMode() const {
-      return false;
-    }
-    virtual int CfgRec_StartKernel() const {
-      return 1;
-    }
-    virtual int CfgRec_StopKernel() const {
-      return 1;
-    }
-    virtual bool CfgRec_IsStartQueueSubmit() const {
-      return false;
-    }
-    virtual bool CfgRec_IsStopQueueSubmit() const {
-      return false;
-    }
-    virtual unsigned int CfgRec_StartCommandList() const {
-      return 1;
-    }
-    virtual unsigned int CfgRec_StopCommandList() const {
-      return 1;
-    }
-    virtual unsigned int CfgRec_StartCommandQueueSubmit() const {
-      return 1;
-    }
-    virtual unsigned int CfgRec_StopCommandQueueSubmit() const {
-      return 1;
-    }
-    virtual bool CfgRec_IsStopOfSubcapture([[maybe_unused]] const uint32_t cmdListNumber,
-                                           [[maybe_unused]] const uint32_t kernelNumber) const {
-      return false;
-    }
-    virtual bool CfgRec_IsObjectToRecord() {
-      return false;
-    }
-    virtual bool MemorySnifferInstall() const;
-    virtual void MemorySnifferUninstall() const {
-      return;
-    };
-    virtual bool VerifyAllocation([[maybe_unused]] void* address) const {
-      return false;
-    }
-    virtual bool VerifyAllocationShared([[maybe_unused]] void* address) const {
-      return false;
-    }
-    virtual void UpdateConditionMemoryProtection() const {
-      return;
-    }
-    virtual void MemorySnifferProtect(PagedMemoryRegionHandle& handle) const;
-    virtual void MemorySnifferUnProtect(PagedMemoryRegionHandle& handle) const;
-    virtual void EnableMemorySnifferForPointer(void* ptr,
-                                               const size_t& size,
-                                               PagedMemoryRegionHandle& handle) const;
-    virtual bool IsMemorySnifferInstalled() const {
-      return MemorySniffer::Get().IsInstalled();
-    }
-    virtual void PrintMaxLocalMemoryUsage() const;
-    virtual void Play_StateRestoreEnd() const {}
-    virtual void Rec_StateRestoreFinished() const {}
-  };
-
 private:
   std::shared_ptr<Api3d> _3d;
-  std::shared_ptr<ApiCompute> _compute;
 
 public:
   ApisIface() {}
   void UseApi3dIface(std::shared_ptr<Api3d> iface);
-  void UseApiComputeIface(std::shared_ptr<ApiCompute> iface);
 
   bool Has3D() const {
     return (_3d.get() != 0);
-  }
-  bool HasCompute() const {
-    return (_compute.get() != 0);
   }
   const Api3d& Iface3D() const {
     if (_3d.get() == 0) {
       throw EOperationFailed(EXCEPTION_MESSAGE);
     }
     return *_3d;
-  }
-  const ApiCompute& IfaceCompute() const {
-    if (_compute.get() == 0) {
-      throw EOperationFailed(EXCEPTION_MESSAGE);
-    }
-    return *_compute;
   }
 };
 } // namespace gits

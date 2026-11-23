@@ -108,7 +108,6 @@ set(GENERATED_DOCS
   ${GENERATED_DOCS_DIR}/CommonAuto.md
   ${GENERATED_DOCS_DIR}/DirectXAuto.md
   ${GENERATED_DOCS_DIR}/EnumsAuto.md
-  ${GENERATED_DOCS_DIR}/LevelZeroAuto.md
   ${GENERATED_DOCS_DIR}/OpenGLAuto.md
   ${GENERATED_DOCS_DIR}/VulkanAuto.md
 )

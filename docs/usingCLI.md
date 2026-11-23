@@ -22,7 +22,6 @@ The **Recorder** is split into multiple folders one per supported API:
 | API                                | Windows                   | Unix                |
 | ---------------------------------- | ------------------------- | ------------------- |
 | :material-microsoft: DirectX12     | `FilesToCopyDirectX`      | ---                 |
-| :simple-intel: LevelZero           | `FilesToCopyL0`           | `LevelZero`         |
 | :simple-opengl: OpenGL             | `FilesToCopyOGL`          | `OpenGL`            |
 | :simple-opengl: OpenGLLegacy       | `FilesToCopyOGLLegacy`    | `OpenGLLegacy`      |
 | :simple-opengl: OpenGL ES          | `FilesToCopyES`           | `OpenGLLegacy`      |

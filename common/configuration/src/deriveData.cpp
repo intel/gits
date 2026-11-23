@@ -22,22 +22,6 @@
 #include "diagnostic.h"
 #include "log.h"
 
-namespace {
-inline std::vector<std::string> ParseCaptureKernels(const std::string& value) {
-  std::vector<std::string> objectsTable;
-  std::istringstream issL0ObjectsRange(value);
-  std::string strObj;
-  char delim = '/';
-  if (value.find_first_of('/') == std::string::npos) {
-    delim = '\\';
-  }
-  while (std::getline(issL0ObjectsRange, strObj, delim)) {
-    objectsTable.push_back(strObj);
-  }
-  return objectsTable;
-}
-} // namespace
-
 namespace gits {
 template <>
 void DeriveConfigData<Configuration>(Configuration& obj, Configuration& config) {
@@ -45,7 +29,6 @@ void DeriveConfigData<Configuration>(Configuration& obj, Configuration& config) 
   obj.opengl.DeriveData(config);
   obj.vulkan.DeriveData(config);
   obj.directx.DeriveData(config);
-  obj.levelzero.DeriveData(config);
 }
 
 template <>
@@ -76,30 +59,13 @@ void DeriveConfigData<Configuration::DirectX>(Configuration::DirectX& obj, Confi
 };
 
 template <>
-void DeriveConfigData<Configuration::LevelZero>(Configuration::LevelZero& obj,
-                                                Configuration& config) {
-  obj.player.DeriveData(config);
-  obj.recorder.DeriveData(config);
-};
-
-template <>
 void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shared& obj,
                                                      Configuration& config) {
-#if defined GITS_PLATFORM_WINDOWS
-  obj.libL0Driver = std::filesystem::path("ze_intel_gpu64.dll");
-#elif defined GITS_PLATFORM_X11
-  obj.libL0Driver = std::filesystem::path("libze_intel_gpu.so.1");
-#else
-  //#error Invalid platform.
-  obj.libL0Driver = std::filesystem::path("ze_intel_gpu64.dll");
-#endif
-
   if (Configurator::IsPlayer()) {
     obj.libGL = config.common.player.libGL;
     obj.libEGL = config.common.player.libEGL;
     obj.libGLESv1 = config.common.player.libGLESv1;
     obj.libGLESv2 = config.common.player.libGLESv2;
-    obj.libL0 = config.common.player.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
     if (config.common.shared.logToConsole.has_value()) {
       LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the player "
@@ -115,7 +81,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libEGL = config.common.recorder.libEGL;
     obj.libGLESv1 = config.common.recorder.libGLESv1;
     obj.libGLESv2 = config.common.recorder.libGLESv2;
-    obj.libL0 = config.common.recorder.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
     if (config.common.shared.logToConsole.has_value()) {
       LOG_WARNING << "Option Common.Shared.LogToConsole is deprecated, please use the recorder "
@@ -402,126 +367,6 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
                  });
   }
 #endif
-};
-
-template <>
-void DeriveConfigData<Configuration::LevelZero::Player>(Configuration::LevelZero::Player& obj,
-                                                        Configuration& config) {
-  auto parsedCaptureKernels = ParseCaptureKernels(config.levelzero.player.captureKernelsStr);
-  obj.captureCommandQueues = BitRange(parsedCaptureKernels[0]);
-  obj.captureCommandLists = BitRange(parsedCaptureKernels[1]);
-  if (parsedCaptureKernels.size() == 2) {
-    obj.captureKernels = BitRange(true);
-  } else if (parsedCaptureKernels.size() == 3) {
-    obj.captureKernels = BitRange(parsedCaptureKernels[2]);
-  } else {
-    LOG_ERROR << "Incorrect config LevelZero.Player.CaptureKernels";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
-  if (config.levelzero.player.captureInputKernels && config.levelzero.player.captureAfterSubmit) {
-    LOG_ERROR << "CaptureInputKernels and CaptureAfterSubmit options are mutually exclusive.";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
-};
-
-namespace {
-void LoadLevelZeroSubcaptureSettings(Configuration& config, const std::string& kernelInfo) {
-  if (!kernelInfo.empty()) {
-    // WA (trigger for _captureState to be CAP_INITIATED for delaying recorder.Start())
-    config.opengl.recorder.frames.startFrame = UINT_MAX;
-    std::istringstream issL0ObjectsRange(kernelInfo);
-    std::vector<std::string> objectsTable;
-    std::string strObj;
-    while (std::getline(issL0ObjectsRange, strObj, '/')) {
-      objectsTable.push_back(strObj);
-    }
-    if (objectsTable.size() != 3) {
-      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-
-    auto pattern = std::regex("(\\d+)");
-    auto iter = std::sregex_iterator(objectsTable[0].begin(), objectsTable[0].end(), pattern);
-    auto end = std::sregex_iterator();
-    auto size = std::distance(iter, end);
-    auto& startCommandQueueSubmit = config.levelzero.recorder.kernel.startCommandQueueSubmit;
-    auto& stopCommandQueueSubmit = config.levelzero.recorder.kernel.stopCommandQueueSubmit;
-    startCommandQueueSubmit = (unsigned)std::stoul((*iter++)[0], nullptr);
-    if (size == 2U) {
-      stopCommandQueueSubmit = (unsigned)std::stoul((*iter)[0], nullptr);
-    } else if (size == 1U) {
-      stopCommandQueueSubmit = startCommandQueueSubmit;
-    } else {
-      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range command queue submission";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-    if (startCommandQueueSubmit > stopCommandQueueSubmit) {
-      LOG_ERROR << "Incorrect config: LevelZero.Capture.Kernel.Range start command queue "
-                   "submission can't be greater than stop command queue submission";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-
-    iter = std::sregex_iterator(objectsTable[1].begin(), objectsTable[1].end(), pattern);
-    size = std::distance(iter, end);
-    auto& startCommandList = config.levelzero.recorder.kernel.startCommandList;
-    auto& stopCommandList = config.levelzero.recorder.kernel.stopCommandList;
-    startCommandList = (unsigned)std::stoul((*iter++)[0], nullptr);
-    if (size == 2U) {
-      stopCommandList = (unsigned)std::stoul((*iter)[0], nullptr);
-    } else if (size == 1U) {
-      stopCommandList = startCommandList;
-    } else {
-      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range command list";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-
-    iter = std::sregex_iterator(objectsTable[2].begin(), objectsTable[2].end(), pattern);
-    size = std::distance(iter, std::move(end));
-    auto& startKernel = config.levelzero.recorder.kernel.startKernel;
-    auto& stopKernel = config.levelzero.recorder.kernel.stopKernel;
-    startKernel = (unsigned)std::stoul((*iter++)[0], nullptr);
-    if (size == 2U) {
-      stopKernel = (unsigned)std::stoul((*iter)[0], nullptr);
-    } else if (size == 1U) {
-      stopKernel = startKernel;
-    } else {
-      LOG_ERROR << "Incorrect config LevelZero.Capture.Kernel.Range kernel";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-    if (startKernel > stopKernel) {
-      LOG_ERROR << "In config LevelZero.Capture.Kernel.Range start kernel "
-                   "greater then stop kernel is not supported";
-      throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-    }
-
-    config.levelzero.recorder.kernel.singleCapture =
-        (startCommandQueueSubmit == stopCommandQueueSubmit) &&
-        (startCommandList == stopCommandList) && (startKernel == stopKernel);
-  }
-}
-} // namespace
-
-template <>
-void DeriveConfigData<Configuration::LevelZero::Recorder>(Configuration::LevelZero::Recorder& obj,
-                                                          Configuration& config) {
-  if (config.levelzero.recorder.mode == LevelZeroRecorderMode::KERNEL) {
-    LoadLevelZeroSubcaptureSettings(config, config.levelzero.recorder.kernel.kernelRangeStr);
-  }
-  auto parsedCaptureKernels = ParseCaptureKernels(config.levelzero.recorder.dumpKernelsStr);
-  obj.captureCommandQueues = BitRange(parsedCaptureKernels[0]);
-  obj.captureCommandLists = BitRange(parsedCaptureKernels[1]);
-  if (parsedCaptureKernels.size() == 2) {
-    obj.captureKernels = BitRange(true);
-  } else if (parsedCaptureKernels.size() == 3) {
-    obj.captureKernels = BitRange(parsedCaptureKernels[2]);
-  } else {
-    LOG_ERROR << "Incorrect config LevelZero.Recorder.DumpKernels";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
-  if (config.levelzero.recorder.captureAfterSubmit && config.levelzero.recorder.dumpInputKernels) {
-    LOG_ERROR << "DumpAfterSubmit and DumpInputKernels are mutually exclusive.";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
 };
 
 } // namespace gits

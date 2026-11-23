@@ -120,8 +120,6 @@ public:
   void DrawEnd();
   void CmdBufferEnd(gits::CGits::CCounter counter);
   void QueueSubmitEnd();
-  void KernelBegin();
-  void KernelEnd();
   void FrameEnd();
   bool Running() const;
   bool Schedule(CToken* function, bool force = false);

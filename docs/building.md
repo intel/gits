@@ -91,7 +91,6 @@ cmake --install . --config Release --prefix dist
 | `WITH_VULKAN` | `ON` | Build the Vulkan backend. |
 | `WITH_DIRECTX` | `ON` | :material-microsoft-windows: Build the DirectX backend. |
 | `WITH_OPENGL` | `ON` | Windows x64 and x86-64 Linux only. Build the new, experimental OpenGL backend. The [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md) backend is always built. |
-| `WITH_LEVELZERO` | `ON` | Build the LevelZero backend. |
 | `WITH_GUI` | `ON` | :material-microsoft-windows: Build with all GUI components: Launcher & Studio |
 | `SKIP_THIRDPARTY_FETCH` | `OFF` | Skip fetching third-party dependencies. |
 | `OFFLINE_MODE` | `OFF` | Offline Mode: no download of third party libraries, assuming folders are prepopulated. |

@@ -96,11 +96,6 @@ void gits::CRecorder::Dispose() {
 #ifdef GITS_PLATFORM_WINDOWS
   RemoveSignalsHandler();
 #endif
-  if (gits::CGits::Instance().apis.HasCompute() && Configurator::Get().common.recorder.enabled) {
-    const auto& computeIface = gits::CGits::Instance().apis.IfaceCompute();
-    computeIface.MemorySnifferUninstall();
-    computeIface.PrintMaxLocalMemoryUsage();
-  }
   if (Configurator::Get().common.recorder.enabled) {
     CGits::Instance().Dispose();
   }
@@ -238,32 +233,6 @@ gits::CRecorder::CRecorder()
         message << " Start:" << api3dIface.CfgRec_StartDraw()
                 << " Stop:" << api3dIface.CfgRec_StopDraw()
                 << " Frame:" << api3dIface.CfgRec_Frame();
-      }
-    }
-
-    if (inst.apis.HasCompute()) {
-      const auto& apiCompute = inst.apis.IfaceCompute();
-      if (apiCompute.CfgRec_IsAllMode()) {
-        message << " - All";
-      } else if (apiCompute.CfgRec_IsSingleKernelMode()) {
-        message << " - SingleKernel ";
-        if (apiCompute.Api() != gits::ApisIface::TApi::LevelZero) {
-          message << " Number:" << apiCompute.CfgRec_SingleKernel();
-        } else {
-          message << " Number: " << apiCompute.CfgRec_StartCommandQueueSubmit() << "/"
-                  << apiCompute.CfgRec_StartCommandList() << "/" << apiCompute.CfgRec_StartKernel();
-        }
-      } else if (apiCompute.CfgRec_IsKernelsRangeMode()) {
-        message << " - KernelsRange";
-        if (apiCompute.Api() != gits::ApisIface::TApi::LevelZero) {
-          message << " Start:" << apiCompute.CfgRec_StartKernel()
-                  << " Stop:" << apiCompute.CfgRec_StopKernel();
-        } else {
-          message << " Start: " << apiCompute.CfgRec_StartCommandQueueSubmit() << "/"
-                  << apiCompute.CfgRec_StartCommandList() << "/" << apiCompute.CfgRec_StartKernel()
-                  << " Stop: " << apiCompute.CfgRec_StopCommandQueueSubmit() << "/"
-                  << apiCompute.CfgRec_StopCommandList() << "/" << apiCompute.CfgRec_StopKernel();
-        }
       }
     }
   }
@@ -498,15 +467,7 @@ void gits::CRecorder::Start() {
         api3dIface.CfgRec_IsSubEncodersRangeMode() || api3dIface.CfgRec_IsQueueSubmitMode() ||
         api3dIface.CfgRec_IsBlitRangeMode() || api3dIface.CfgRec_IsDispatchRangeMode();
   }
-  bool shouldRestoreComputeState = false;
-  if (inst.apis.HasCompute()) {
-    const auto& apiComputeIface = inst.apis.IfaceCompute();
-    shouldRestoreComputeState =
-        apiComputeIface.CfgRec_IsSingleKernelMode() || apiComputeIface.CfgRec_IsKernelsRangeMode();
-  }
-  const bool stateNeedsRestoring = shouldRestore3DState || shouldRestoreComputeState;
-
-  if (stateNeedsRestoring && !Configurator::IsPlayer()) {
+  if (shouldRestore3DState && !Configurator::IsPlayer()) {
     Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
     for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
       // schedule current library state only if not init frame number
@@ -522,9 +483,6 @@ void gits::CRecorder::Start() {
         if (inst.apis.Has3D()) {
           inst.apis.Iface3D().Rec_StateRestoreFinished();
         }
-        if (inst.apis.HasCompute()) {
-          inst.apis.IfaceCompute().Rec_StateRestoreFinished();
-        }
         state->PostSchedule(Scheduler());
         delete state;
       }
@@ -532,7 +490,6 @@ void gits::CRecorder::Start() {
   }
 
   // First frame is a special case.
-  // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
   if (inst.CurrentFrame() == 1) {
     Scheduler().Register(new CTokenMarker(CToken::ID_PRE_RECORD_END));
     Scheduler().Register(new CTokenMarker(CToken::ID_FRAME_START));
@@ -558,38 +515,6 @@ void gits::CRecorder::Start() {
  * @exception ENotFound Specified behavior class was not found.
  */
 void gits::CRecorder::Stop() {
-  if (_running) {
-    const CGits& inst = CGits::Instance();
-    bool modeCondition3D = false;
-    bool modeConditionCompute = false;
-    if (inst.apis.Has3D()) {
-      const auto& api3dIface = inst.apis.Iface3D();
-      modeCondition3D = api3dIface.CfgRec_IsFramesMode() || api3dIface.CfgRec_IsSingleDrawMode() ||
-                        api3dIface.CfgRec_IsDrawsRangeMode();
-    }
-    if (inst.apis.HasCompute()) {
-      const auto& apiComputeIface = inst.apis.IfaceCompute();
-      modeConditionCompute = apiComputeIface.CfgRec_IsSingleKernelMode() ||
-                             apiComputeIface.CfgRec_IsKernelsRangeMode();
-    }
-
-    if (modeCondition3D || modeConditionCompute) {
-      if (inst.apis.HasCompute()) {
-        inst.apis.IfaceCompute().MemorySnifferUninstall();
-      }
-      for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
-        // FIXME OpenGL crashes here if enabled
-        if ((*it)->Id() == CLibrary::TId::ID_LEVELZERO) {
-          auto state((*it)->StateCreate());
-          if (state) {
-            state->Finish(Scheduler());
-            delete state;
-          }
-        }
-      }
-    }
-  }
-
   _running = false;
   _runningStarted = false;
 }
@@ -749,39 +674,6 @@ void gits::CRecorder::QueueSubmitEnd() {
       Stop();
       Close();
     }
-  }
-}
-
-void gits::CRecorder::KernelBegin() {
-  const CGits& inst = CGits::Instance();
-  if (!inst.apis.HasCompute()) {
-    return;
-  }
-  const auto& apiComputeIface = inst.apis.IfaceCompute();
-  const int kernelCount = inst.CurrentKernelCount();
-  if (((apiComputeIface.CfgRec_IsSingleKernelMode() &&
-        apiComputeIface.CfgRec_SingleKernel() == kernelCount) ||
-       (apiComputeIface.CfgRec_IsKernelsRangeMode() &&
-        apiComputeIface.CfgRec_StartKernel() == kernelCount)) &&
-      kernelCount != 0) {
-    Start();
-  }
-}
-
-void gits::CRecorder::KernelEnd() {
-  const CGits& inst = CGits::Instance();
-  if (!inst.apis.HasCompute()) {
-    return;
-  }
-  const auto& apiComputeIface = inst.apis.IfaceCompute();
-  const int kernelCount = inst.CurrentKernelCount();
-  if (((apiComputeIface.CfgRec_IsSingleKernelMode() &&
-        apiComputeIface.CfgRec_SingleKernel() == kernelCount) ||
-       (apiComputeIface.CfgRec_IsKernelsRangeMode() &&
-        apiComputeIface.CfgRec_StopKernel() == kernelCount)) &&
-      kernelCount != 0) {
-    Stop();
-    Close();
   }
 }
 

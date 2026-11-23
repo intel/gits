@@ -16,7 +16,6 @@ namespace gits {
 typedef Configuration Config;
 
 using TOpenGLRecorderMode = OpenGLRecorderMode;
-using TLevelZeroRecorderMode = LevelZeroRecorderMode;
 
 using TForcedGLProfile = GLProfile;
 using TForcedGLNativeApi = GLNativeApi;

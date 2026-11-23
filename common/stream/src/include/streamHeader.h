@@ -44,7 +44,7 @@ public:
     API_OPENGL_LEGACY = 1,
     API_VULKAN_LEGACY = 2, // no longer supported, identifies old streams
     API_OPENCL = 3,        // no longer supported, identifies old streams
-    API_LEVELZERO = 4,
+    API_LEVELZERO = 4,     // no longer supported, identifies old streams
     API_DIRECTX = 5,
     API_VULKAN = 6,
     API_OPENGL = 7,

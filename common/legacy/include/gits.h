@@ -46,7 +46,6 @@
 #define GITS_TOKEN_COMPRESSION        GITS_MAKE_VERSION3(2, 0, 10)
 #define GITS_API_INFO                 GITS_MAKE_VERSION3(2, 0, 11)
 #define GITS_DX12_ENCODING_FIX        GITS_MAKE_VERSION3(2, 0, 12)
-#define GITS_L0_DRIVER_MAPPING        GITS_MAKE_VERSION3(2, 0, 13)
 
 struct lua_State;
 
@@ -164,14 +163,10 @@ private:
   std::unique_ptr<CFile> _filePlayer;             /**< @brief GITS file connected data */
   std::unique_ptr<StreamCompressor> _compressor;
   ApisIface::TApi _api3D;
-  ApisIface::TApi _apiCompute;
   CRunner _runner;
   FrameTimeSheet _timeSheet;
   int _currentThreadId;
   bool _multithreadedApp;
-  int _kernelCounter;
-  uint32_t _cmdListCounter;
-  uint32_t _cmdQueueExecCounter;
   uint32_t _drawCounter;
   uint32_t _drawInFrameCounter;
   std::atomic<bool> _finished;
@@ -190,9 +185,6 @@ private:
   Task<Image> _imageWriter;
   StreamingContext* _sc;
   TimerSet _timers;
-
-  uint64_t _currentLocalMemoryUsage;
-  uint64_t _maxLocalMemoryUsage;
 
   std::unordered_map<void*, uint64_t> _ptrToOrderedId;
 
@@ -268,27 +260,6 @@ public:
     ++_drawInFrameCounter;
   }
 
-  int CurrentKernelCount() const {
-    return _kernelCounter;
-  }
-  void KernelCountUp() {
-    ++_kernelCounter;
-  }
-
-  uint32_t CurrentCommandListCount() const {
-    return _cmdListCounter;
-  }
-  void CommandListCountUp() {
-    ++_cmdListCounter;
-  }
-
-  uint32_t CurrentCommandQueueExecCount() const {
-    return _cmdQueueExecCounter;
-  }
-  void CommandQueueExecCountUp() {
-    ++_cmdQueueExecCounter;
-  }
-
   uint32_t CurrentFrame() const {
     return _frameNo;
   }
@@ -317,18 +288,6 @@ public:
   ApisIface::TApi GetApi3D() const {
     return _api3D;
   }
-
-  void SetApiCompute(ApisIface::TApi newApi) {
-    _apiCompute = newApi;
-  }
-
-  ApisIface::TApi GetApiCompute() const {
-    return _apiCompute;
-  }
-
-  void AddLocalMemoryUsage(const size_t& size);
-  void SubtractLocalMemoryUsage(const size_t& size);
-  size_t GetMaxLocalMemoryUsage() const;
 
   zipFile OpenZipFileGLPrograms();
   void CloseZipFileGLPrograms();

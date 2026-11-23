@@ -140,7 +140,6 @@ private:
   RegionsPointersToHandles _regionPointersToHandles;
   std::recursive_mutex _regionsMutex;
   bool _originalSegvSignalFlag = false;
-  bool _computeMode = false;
   static bool _isInstalled;
   static MemorySniffer* _instance;
 #ifdef GITS_PLATFORM_WINDOWS
@@ -171,9 +170,6 @@ public:
   };
   bool IsOriginalSegvSignalInitialized() const {
     return _originalSegvSignalFlag;
-  }
-  void SetComputeMode() {
-    _computeMode = true;
   }
   static MemorySniffer& Get();
 };

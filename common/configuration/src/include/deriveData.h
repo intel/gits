@@ -25,10 +25,6 @@ template <>
 void DeriveConfigData<Configuration::DirectX>(Configuration::DirectX& obj, Configuration& config);
 
 template <>
-void DeriveConfigData<Configuration::LevelZero>(Configuration::LevelZero& obj,
-                                                Configuration& config);
-
-template <>
 void DeriveConfigData<Configuration::Common>(Configuration::Common& obj, Configuration& config);
 
 template <>
@@ -58,13 +54,5 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
 template <>
 void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Recorder& obj,
                                                        Configuration& config);
-
-template <>
-void DeriveConfigData<Configuration::LevelZero::Player>(Configuration::LevelZero::Player& obj,
-                                                        Configuration& config);
-
-template <>
-void DeriveConfigData<Configuration::LevelZero::Recorder>(Configuration::LevelZero::Recorder& obj,
-                                                          Configuration& config);
 
 } // namespace gits

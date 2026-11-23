@@ -36,26 +36,10 @@ CBehavior::CBehavior(CRecorder& recorder, bool captureOnKeypress)
       _captureBeginFrame = 1;
       _captureState = (dumpFrameStart == 1) ? CAP_CAPTURING : CAP_INITIATED;
     }
-  } else if (inst.apis.HasCompute()) {
-    // TODO: Make it so that any frame number logic is not necessary in compute-only streams.
-    if (inst.apis.IfaceCompute().CfgRec_IsAllMode()) {
-      // Compute-only full streams.
-      _captureBeginFrame = 1;
-      _captureState = CAP_CAPTURING;
-    } else if (inst.apis.IfaceCompute().CfgRec_IsSingleKernelMode() ||
-               inst.apis.IfaceCompute().CfgRec_IsKernelsRangeMode()) {
-      // Compute-only subcaptures.
-      _captureBeginFrame = static_cast<unsigned>(-1);
-      _captureState = CAP_INITIATED;
-    } else {
-      LOG_ERROR << "Unknown compute recording mode.";
-      throw ENotImplemented(EXCEPTION_MESSAGE);
-    }
   } else {
-    LOG_ERROR << "There are no 3D nor compute APIs.";
+    LOG_ERROR << "There is no 3D API.";
     throw ENotSupported(EXCEPTION_MESSAGE);
   }
-  // Subcaptures of 3D+Compute streams are not supported.
 }
 
 /**

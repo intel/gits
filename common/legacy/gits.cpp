@@ -51,12 +51,8 @@ void CGits::Dispose() {
 CGits::CGits()
     : _version(CurrentVersion()),
       _api3D(ApisIface::TApi::ApiNotSet),
-      _apiCompute(ApisIface::TApi::ApiNotSet),
       _currentThreadId(0),
       _multithreadedApp(false),
-      _kernelCounter(0),
-      _cmdListCounter(0),
-      _cmdQueueExecCounter(0),
       _drawCounter(0),
       _drawInFrameCounter(0),
       _finished(false),
@@ -65,8 +61,6 @@ CGits::CGits()
       _frameNo(1),
       _restoringState(false),
       _sc(nullptr),
-      _currentLocalMemoryUsage(0),
-      _maxLocalMemoryUsage(0),
       _configuration(Configurator::Get()),
       schedulerVersion(SchedulerVersion::VERSION_1_0) {
   _ptrToOrderedId[nullptr] = 0;
@@ -100,21 +94,6 @@ CGits::~CGits() {
   } catch (...) {
     topmost_exception_handler("CGits::~CGits");
   }
-}
-
-void CGits::AddLocalMemoryUsage(const size_t& size) {
-  _currentLocalMemoryUsage += size;
-  if (_currentLocalMemoryUsage > _maxLocalMemoryUsage) {
-    _maxLocalMemoryUsage = _currentLocalMemoryUsage;
-  }
-}
-
-void CGits::SubtractLocalMemoryUsage(const size_t& size) {
-  _currentLocalMemoryUsage -= size;
-}
-
-size_t CGits::GetMaxLocalMemoryUsage() const {
-  return _maxLocalMemoryUsage;
 }
 
 zipFile CGits::OpenZipFileGLPrograms() {
@@ -164,6 +143,7 @@ constexpr RemovedApi REMOVED_APIS[] = {
     {CToken::ID_OPENCL, ApisIface::TApi::OpenCL, "OpenCL"},
     {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
     {CToken::ID_OCLOC, ApisIface::TApi::ApiNotSet, "ocloc"},
+    {CToken::ID_LEVELZERO, ApisIface::TApi::LevelZero, "Level Zero"},
 };
 
 [[noreturn]] void ThrowRemovedApi(const RemovedApi& removedApi) {
@@ -647,13 +627,8 @@ CBinOStream& operator<<(CBinOStream& stream, const CFile& file) {
     CGits::Instance().SetApi3D(api3D);
   }
   stream.WriteToOstream(reinterpret_cast<const char*>(&api3D), sizeof(ApisIface::TApi));
-  // Writting Compute API to stream
-  ApisIface::TApi apiCompute = CGits::Instance().apis.HasCompute()
-                                   ? CGits::Instance().apis.IfaceCompute().Api()
-                                   : ApisIface::TApi::ApiNotSet;
-  if (apiCompute != ApisIface::TApi::ApiNotSet) {
-    CGits::Instance().SetApiCompute(apiCompute);
-  }
+  // The compute API is part of the stream format; no supported API is stored there.
+  const ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
   stream.WriteToOstream(reinterpret_cast<const char*>(&apiCompute), sizeof(ApisIface::TApi));
 
   // Writting scheduler version to stream
@@ -732,12 +707,8 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       Configurator::Instance().LogUnspportedConfigUsage(gits::ApisIface::ToApiBool(api3D));
     }
 
-    if (apiCompute != ApisIface::TApi::ApiNotSet) {
-      CGits::Instance().SetApiCompute(apiCompute);
-    }
-
-    if (api3D == ApisIface::TApi::ApiNotSet && apiCompute == ApisIface::TApi::ApiNotSet) {
-      LOG_ERROR << "No 3D or Compute API was set";
+    if (api3D == ApisIface::TApi::ApiNotSet) {
+      LOG_ERROR << "No API was set";
       LOG_ERROR << "The stream file is most likely malformed or corrupted";
     }
 

@@ -25,10 +25,6 @@ if(MSVC)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderVulkan2\n")
   endif()
-  if(WITH_LEVELZERO)
-    file(APPEND ${recorder_DEF}
-      "  GITSRecorderL0\n")
-  endif()
   if(WITH_DIRECTX)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderD3D12\n")
@@ -75,10 +71,6 @@ set(frameworks ${frameworks} "-framework OpenGL")
 if(WITH_VULKAN)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder)
   set(recorderCommonLibs ${recorderCommonLibs} hud)
-endif()
-if(WITH_LEVELZERO)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} L0_recorder)
-  set(recorderCommonLibs ${recorderCommonLibs} L0_common)
 endif()
 if(WITH_DIRECTX)
   set(recorderIfaceLibs 

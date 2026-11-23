@@ -80,8 +80,6 @@ Api StreamHeaderApiToApi(stream::StreamHeader::Api api) {
     return Api::OPENGL;
   case stream::StreamHeader::Api::API_OPENGL_LEGACY:
     return Api::OPENGL_LEGACY;
-  case stream::StreamHeader::Api::API_LEVELZERO:
-    return Api::LEVELZERO;
   default:
     return Api::UNKNOWN;
   }
@@ -164,17 +162,8 @@ STREAM_META_DATA GetLegacyStreamMetaData(const std::filesystem::path& streamPath
       gits::ApisIface::TApi api3D = gits::ApisIface::TApi::ApiNotSet;
       stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(gits::ApisIface::TApi));
 
-      gits::ApisIface::TApi apiCompute = gits::ApisIface::TApi::ApiNotSet;
-      stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(gits::ApisIface::TApi));
-
-      // Use 3D API if present, otherwise use compute API
       if (api3D != gits::ApisIface::TApi::ApiNotSet) {
         metaData.StreamApi = TApiToApi(api3D);
-        if (apiCompute != gits::ApisIface::TApi::ApiNotSet) {
-          LOG_WARNING << Labels::METADATA_BOTH_APIS_FOUND_WARNING;
-        }
-      } else if (apiCompute != gits::ApisIface::TApi::ApiNotSet) {
-        metaData.StreamApi = TApiToApi(apiCompute);
       } else {
         LOG_WARNING << Labels::METADATA_NO_API_FOUND_WARNING;
         LOG_WARNING << Labels::METADATA_MALFORMED_STREAM_WARNING;

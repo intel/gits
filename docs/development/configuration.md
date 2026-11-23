@@ -130,7 +130,7 @@ generate.py --step <Step>                       # generation step to run
             --outDir <outputFolder>             # output base folder
             --platform <platformString>         # [win32, lnx_32, lnx_64, lnx_arm]
             --installpath <installationpath>    # where gits is installed
-            --compute                           # flag to indicate compute generation
+            --directx | --vulkan | --opengl     # apply the API-specific defaults
 ```
 
 where `Step` can be one of the following:

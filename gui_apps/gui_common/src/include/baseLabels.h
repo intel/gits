@@ -209,8 +209,6 @@ static constexpr const char* API_NAME_GL = "OpenGL";
 static constexpr const char* API_NAME_SHORT_GL = "GL";
 static constexpr const char* API_NAME_VK = "Vulkan";
 static constexpr const char* API_NAME_SHORT_VK = "VK";
-static constexpr const char* API_NAME_L0 = "LevelZero";
-static constexpr const char* API_NAME_SHORT_L0 = "L0";
 
 static constexpr const char* NOT_AVAILABLE = "N/A";
 
@@ -361,10 +359,7 @@ static constexpr const char* EMPTY_RECORDER_DIAGS_MESSAGE =
     "Couldn't get recorder diagnostic information for given trace.";
 static constexpr const char* EMPTY_RECORDER_CONFIG_MESSAGE =
     "Couldn't get recorder config for given trace.";
-static constexpr const char* METADATA_BOTH_APIS_FOUND_WARNING =
-    "Both 3D and Compute APIs found in stream metadata; using 3D API";
-static constexpr const char* METADATA_NO_API_FOUND_WARNING =
-    "No 3D or Compute API meta data could be read";
+static constexpr const char* METADATA_NO_API_FOUND_WARNING = "No API meta data could be read";
 static constexpr const char* METADATA_MALFORMED_STREAM_WARNING =
     "The stream file might be malformed or corrupted";
 
@@ -397,8 +392,6 @@ static const std::string ApiToString(Api api) {
     return API_NAME_GL_LEGACY;
   case Api::VULKAN:
     return API_NAME_VK;
-  case Api::LEVELZERO:
-    return API_NAME_L0;
   default:
     return "";
   }

@@ -436,10 +436,8 @@ bool MemorySniffer::Protect(PagedMemoryRegionHandle handle) {
     return false;
   }
 
-  const auto protectionAccess =
-      _computeMode ? PageMemoryProtection::NONE : PageMemoryProtection::READ_ONLY;
-  bool result =
-      SetPagesProtection(protectionAccess, (void*)region.BeginPage(), region.SizeOfPages());
+  bool result = SetPagesProtection(PageMemoryProtection::READ_ONLY, (void*)region.BeginPage(),
+                                   region.SizeOfPages());
   if (result == true) {
     region._protected = true;
   }
@@ -534,44 +532,15 @@ bool MemorySniffer::WriteCallback(void* addr, bool writeIntention = true) {
     return false;
   }
 
-  auto unveilWholeRegion = false;
-  if (_computeMode) {
-    const auto& computeIFace = gits::CGits::Instance().apis.IfaceCompute();
-    if (computeIFace.VerifyAllocation(addr)) {
-      unveilWholeRegion = true;
-    }
-  }
   if (writeIntention) {
-    if (!unveilWholeRegion) {
-      SetPagesProtection(PageMemoryProtection::READ_WRITE, addr);
-    }
+    SetPagesProtection(PageMemoryProtection::READ_WRITE, addr);
     for (auto& handle : pageRegionHandles) {
       assert(handle);
       assert(*handle);
-      bool result = false;
-      auto& region = **handle;
-      region.TouchPageInternal(pageAddr);
-      if (unveilWholeRegion) {
-        result = SetPagesProtection(PageMemoryProtection::READ_WRITE,
-                                    const_cast<void*>(region.BeginAddress()), region.Size());
-      }
-      if (result) {
-        region._protected = false;
-      }
+      (**handle).TouchPageInternal(pageAddr);
     }
   } else {
-    if (!unveilWholeRegion) {
-      SetPagesProtection(PageMemoryProtection::READ_ONLY, addr);
-    }
-    for (auto& handle : pageRegionHandles) {
-      assert(handle);
-      assert(*handle);
-      auto& region = **handle;
-      if (unveilWholeRegion) {
-        SetPagesProtection(PageMemoryProtection::READ_ONLY,
-                           const_cast<void*>(region.BeginAddress()), region.Size());
-      }
-    }
+    SetPagesProtection(PageMemoryProtection::READ_ONLY, addr);
   }
   return true;
 }
@@ -706,15 +675,7 @@ void CallOriginalSignalHandler(int sig, siginfo_t* si, void* unused) {
 } // namespace
 
 static void MemorySnifferSignalHandler(int sig, siginfo_t* si, void* unused) {
-  if (gits::CGits::Instance().apis.HasCompute()) {
-    const auto& computeIFace = gits::CGits::Instance().apis.IfaceCompute();
-    if (computeIFace.VerifyAllocationShared(si->si_addr)) {
-      // Original signal handler must be called first
-      CallOriginalSignalHandler(sig, si, unused);
-    }
-  } else {
-    CallOriginalSignalHandler(sig, si, unused);
-  }
+  CallOriginalSignalHandler(sig, si, unused);
   if (!MemorySniffer::Get().WriteCallback(si->si_addr)) {
     LOG_WARNING << "MemorySnifferSignalHandler caught an unhandled signal: " << sig
                 << " errno: " << si->si_errno << " at address: " << si->si_addr;

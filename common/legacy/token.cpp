@@ -123,9 +123,6 @@ void CTokenMarker::Run() {
         CGits::Instance().apis.Iface3D().Play_SwapAfterPrepare();
       }
     }
-    if (CGits::Instance().apis.HasCompute()) {
-      CGits::Instance().apis.IfaceCompute().Play_StateRestoreEnd();
-    }
 
     GitsEventMessage::DATA data{};
     data.Id = CToken::TId::ID_INIT_END;

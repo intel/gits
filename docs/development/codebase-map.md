@@ -28,7 +28,6 @@ Each graphics API has its own top-level directory with recorder, player, and API
 | [`Vulkan/`](codebase-map-vulkan.md) | Vulkan implementation (current recording/replay backend). Streams are tagged `API_VULKAN` and replay through the Vulkan path. |
 | `OpenGL/` | Work-in-progress new OpenGL implementation. Streams are tagged `API_OPENGL` and replay through the OpenGL path. |
 | `OpenGLLegacy/` | Legacy OpenGL implementation. Streams are tagged `API_OPENGL_LEGACY` and replay through the OpenGLLegacy path. |
-| `LevelZero/` | Intel oneAPI Level Zero implementation. |
 ## Scripts and documentation
 
 | Directory | Contents |
@@ -40,7 +39,7 @@ Each graphics API has its own top-level directory with recorder, player, and API
 
 | Directory | Contents |
 |-----------|----------|
-| `CMakeLists.txt` | Top-level CMake project; defines options `WITH_VULKAN`, `WITH_LEVELZERO`, `WITH_DIRECTX` (Windows x64), `WITH_GUI`, etc. |
+| `CMakeLists.txt` | Top-level CMake project; defines options `WITH_VULKAN`, `WITH_OPENGL`, `WITH_DIRECTX` (Windows x64), `WITH_GUI`, etc. |
 | `cmake/` | CMake modules and helpers |
 | `requirements.txt` | Python dependencies for scripts and codegen |
 | `mkdocs.yml` | MkDocs configuration for the documentation in `docs/` |

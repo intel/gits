@@ -49,7 +49,7 @@ public:
     ID_OPENGL_LEGACY = 0, /**< @brief identifier of legacy OpenGL library */
     // 1 reserved, formerly OpenCL
     // 2 reserved, formerly VulkanLegacy
-    ID_LEVELZERO = 3,
+    // 3 reserved, formerly Level Zero
     // 4 reserved, formerly ocloc
     ID_DirectX = 5,
     ID_VULKAN = 6,

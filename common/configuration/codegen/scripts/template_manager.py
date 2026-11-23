@@ -75,8 +75,6 @@ class TemplateManager:
              os.path.join('Auto.md'), ('OpenGL', 'simple/opengl')),
             ('documentationConfigAuto.md.mako',
              os.path.join('Auto.md'), ('Vulkan', 'simple/vulkan')),
-            ('documentationConfigAuto.md.mako',
-             os.path.join('Auto.md'), ('LevelZero', 'simple/intel')),
         ]
 
         self.template_directory = os.path.normpath(template_directory)

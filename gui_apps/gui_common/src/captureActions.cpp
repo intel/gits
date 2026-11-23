@@ -154,13 +154,14 @@ std::string GetRecorderDirectoryNameForApi(Api api) {
       {gits::gui::Api::DIRECTX, "FilesToCopyDirectX"},
       {gits::gui::Api::OPENGL, "FilesToCopyOGL"},
       {gits::gui::Api::OPENGL_LEGACY, "FilesToCopyOGLLegacy"},
-      {gits::gui::Api::VULKAN, "FilesToCopyVulkan"},
-      {gits::gui::Api::LEVELZERO, "FilesToCopyL0"}};
+      {gits::gui::Api::VULKAN, "FilesToCopyVulkan"}};
 #else
   const std::map<gits::gui::Api, std::string> recorderDirectoryForApi{
-      {gits::gui::Api::UNKNOWN, ""},      {gits::gui::Api::DIRECTX, ""},
-      {gits::gui::Api::OPENGL, "OpenGL"}, {gits::gui::Api::OPENGL_LEGACY, "OpenGLLegacy"},
-      {gits::gui::Api::VULKAN, "Vulkan"}, {gits::gui::Api::LEVELZERO, "LevelZero"}};
+      {gits::gui::Api::UNKNOWN, ""},
+      {gits::gui::Api::DIRECTX, ""},
+      {gits::gui::Api::OPENGL, "OpenGL"},
+      {gits::gui::Api::OPENGL_LEGACY, "OpenGLLegacy"},
+      {gits::gui::Api::VULKAN, "Vulkan"}};
 #endif
 
   return recorderDirectoryForApi.at(api);
@@ -308,9 +309,11 @@ void LaunchCaptureTarget(const Configuration* configuration) {
 
   context.SetGITSLogText("");
 
-  const std::map<Api, std::string> stringForApi = {
-      {Api::UNKNOWN, "N/A"}, {Api::DIRECTX, "DX"},       {Api::OPENGL, "GL"},
-      {Api::VULKAN, "VK"},   {Api::OPENGL_LEGACY, "GL"}, {Api::LEVELZERO, "L0"}};
+  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"},
+                                                   {Api::DIRECTX, "DX"},
+                                                   {Api::OPENGL, "GL"},
+                                                   {Api::VULKAN, "VK"},
+                                                   {Api::OPENGL_LEGACY, "GL"}};
 
   std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
   if (executablePath.empty()) {

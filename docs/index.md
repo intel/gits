@@ -9,7 +9,6 @@ title: About GITS
 
 - [Vulkan :fontawesome-solid-arrow-up-right-from-square:](https://vulkan.org/)
 - [DirectX12 :fontawesome-solid-arrow-up-right-from-square:](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
-- [Intel oneAPI Level Zero :fontawesome-solid-arrow-up-right-from-square:](https://spec.oneapi.io/level-zero/latest/core/INTRO.html)
 - [OpenGL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opengl/)
 
 **GITS** allows you to record sequences of API calls into binary traces that can be replayed later (we call them '*streams*'). See the [Usage section](#usage) for more info.

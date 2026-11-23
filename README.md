@@ -1,6 +1,6 @@
 # Graphics Intercept and Trace Solution (GITS)
 
-**Graphics Intercept and Trace Solution** is a capture-replay tool for [Vulkan](https://vulkan.org/), [Intel oneAPI Level Zero](https://spec.oneapi.io/level-zero/latest/core/INTRO.html), [OpenGL](https://www.khronos.org/opengl/) and [DirectX12](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics).
+**Graphics Intercept and Trace Solution** is a capture-replay tool for [Vulkan](https://vulkan.org/), [OpenGL](https://www.khronos.org/opengl/) and [DirectX12](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics).
 
 **GITS** allows you to record sequences of API calls into binary traces called **streams** that can be replayed later.
 

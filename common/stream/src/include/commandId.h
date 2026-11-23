@@ -22,8 +22,8 @@ enum class ApiId {
   ID_EGL = 6,
   ID_OPENCL = 7,         // no longer supported, identifies old streams
   ID_VULKAN_LEGACY = 10, // no longer supported, identifies old streams
-  ID_LEVELZERO = 11,
-  ID_OCLOC = 12, // no longer supported, identifies old streams
+  ID_LEVELZERO = 11,     // no longer supported, identifies old streams
+  ID_OCLOC = 12,         // no longer supported, identifies old streams
   ID_DIRECTX = 13,
   ID_VULKAN = 14,
   ID_OPENGL = 15,

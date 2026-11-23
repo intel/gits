@@ -53,8 +53,8 @@ public:
     ID_EGL = 6 * 0x10000,
     ID_OPENCL = 7 * 0x10000,         // no longer supported, identifies old streams
     ID_VULKAN_LEGACY = 10 * 0x10000, // no longer supported, identifies old streams
-    ID_LEVELZERO = 11 * 0x10000,
-    ID_OCLOC = 12 * 0x10000, // no longer supported, identifies old streams
+    ID_LEVELZERO = 11 * 0x10000,     // no longer supported, identifies old streams
+    ID_OCLOC = 12 * 0x10000,         // no longer supported, identifies old streams
     ID_DirectX = 13 * 0x10000,
     ID_VULKAN = 14 * 0x10000,
     ID_OPENGL = 15 * 0x10000,

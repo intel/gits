@@ -10,7 +10,7 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 
 **GITS** supports the following APIs:
 
-- Compute: Level Zero, DirectML
+- Compute: DirectML
 - Render: OpenGL, Vulkan, Direct3D 12
 
 **GITS** recorder is based on the shared library being injected into the process of recorded application.
@@ -20,7 +20,7 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 - Initial assumption for default settings:
   - Application shouldn't crash during the recording.
   - Application is recorded from start to the end.
-- Set `LD_LIBRARY_PATH` environment variable to folder containing **GITS** intercepting library for selected API. For example `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/LevelZero` or `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`.
+- Set `LD_LIBRARY_PATH` environment variable to folder containing **GITS** intercepting library for selected API. For example `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenGL` or `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`.
 - Run application and make sure that it exits gracefully.
 - The captured stream should appear in the `<GITS_DIR_PATH>/dump/` folder. Captured stream folders include PID of the captured process in their names.
 
@@ -29,8 +29,6 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 - Try to run the captured stream to check if it is valid, by running `<GITS_DIR_PATH>/Player/gitsPlayer <CAPTURED_STREAM_FOLDER>`. Stream should run and finish gracefully.
 - Run stream with `--logLevel TRACEVERBOSE` to get log with all called API calls in the output.
 - Run stream with dumping buffers/images/textures/frames. It allows to check if output buffers/images are as expected. Check option description in `gitsPlayer` help for more details (e.g., run `gitsPlayer -hh all`). Examples:
-  - **Open**CL - use `--clCaptureKernels 1-10` to dump buffers and images used by executed kernels from the first to tenth kernel (artifacts are being dumped to `dump` subfolder of the stream folder).
-  - **LevelZero** - use `--l0Capture` options to dump buffers and images used by executed kernels, with selected granularity.
   - **Render APIs** - use `--captureFrames` to dump framebuffer per frame.
 
 ## Troubleshooting

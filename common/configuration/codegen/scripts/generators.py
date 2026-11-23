@@ -50,8 +50,6 @@ def generate_default_configuration(task, template_manager):
     configuration, _, _ = parse_config_yaml(
         task.input_config, template_manager.root_directory)
     conditions = []
-    if task.compute:
-        conditions = ['is_compute']
     if task.directx:
         conditions = ['is_directx']
     if task.vulkan:

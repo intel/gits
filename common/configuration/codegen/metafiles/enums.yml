@@ -81,10 +81,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: LevelZeroRecorderMode
-    Values:
-      - Value: ALL
-      - Value: KERNEL
   - Name: GLProfile
     Values:
       - Value: NO_PROFILE_FORCED

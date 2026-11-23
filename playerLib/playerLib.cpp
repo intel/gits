@@ -22,9 +22,6 @@
 #include "imGuiHUD.h"
 #endif
 #include "openglLibrary.h"
-#if defined WITH_LEVELZERO
-#include "l0Library.h"
-#endif
 
 #include <memory>
 #include <string>
@@ -259,9 +256,6 @@ int Initialize(int argc, char* argv[]) {
   // initialize GITS
   LOG_INFO << "Initializing...";
   inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
-#ifdef WITH_LEVELZERO
-  inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));
-#endif
 
   g_LegacyMode = IsLegacyStream(cfg.common.player.streamPath);
   if (!g_LegacyMode) {
@@ -422,10 +416,6 @@ int Play() {
       LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
       LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
       LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
-    }
-
-    if (gits::CGits::Instance().apis.HasCompute()) {
-      gits::CGits::Instance().apis.IfaceCompute().PrintMaxLocalMemoryUsage();
     }
 
     // Writes performance results to .csv file
