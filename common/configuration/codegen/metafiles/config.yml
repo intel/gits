@@ -37,17 +37,6 @@ Configuration:
               debug logging, disabling logging to console can help you mitigate the performance hit.
               You still need to set up logging to a file if you want to see the output."
             Deprecated: true
-          - Name: useEvents
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: scriptArgsStr
-            Type: std::string
-            Default: ""
-            Accessibility: Derived
-            Description:
-              Lua script arguments. String with lua script arguments may be read
-              by lua script.
           - Name: libGL
             Type: std::filesystem::path
             Default: ""
@@ -364,52 +353,6 @@ Configuration:
             Default: 0
             Description: Sleep this many milliseconds after a swap.
             Arguments: [endFrameSleep]
-          - Name: useEvents
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: eventScript
-            Type: std::filesystem::path
-            Default: ""
-            Arguments: [eventScript]
-            Description: Path to lua event script.
-            LongDescription: |
-              Path to lua event script.
-              Following functions can be provided in script file for event handlers:
-
-              * all GL / WGL / EGL / GLX functions
-              * gitsFrameBegin(nr)
-              * gitsFrameEnd(nr)
-              * gitsLoopBegin(nr)
-              * gitsLoopEnd(nr)
-              * gitsStateRestoreBegin()
-              * gitsStateRestoreEnd()
-              * gitsProgramStart()
-              * gitsProgramExit()
-
-              Following functions exposed by GITS may be used inside lua scripts:
-
-              * string udtToStr(userdata udt) - casts lua userdata to string.
-              * number udtToInt(userdata udt) - casts user data to int.
-              * userdata getUdt(userdata carray, number index) - extracts userdata from carray's index.
-              * number getInt(userdata carray, number index) - extracts int from carray's index.
-              * number getFloat(userdata carray, number index) - extracts float from carray's index.
-              * void setUdt(userdata carray, number index, number value) - sets userdata at array's index.
-              * void setInt(userdata carray, number index, number value) - sets int at array's index.
-              * void setFloat(userdata carray, number index, number value) - sets float at array's index.
-              * userdata nullUdt() - returns null user data \(void*)0\.
-              * number currTime() - returns time in microseconds from the start of the player.
-              * void msgBox(string title, string message, number type) - Windows exclusive functions.Displays a message box with arbitral title, message and typ.
-              * userdata allocBytes(number size) - Allocates memory and returns userdata(pointer to allocated data in C).
-              * void freeBytes(userdata pointer) - Deallocates memory.
-              * string getArgsStr() - returns string with args passed through gitsPlayer option --scriptArgsStr.
-              * string getOutDir() - returns output directory for artifacts defined with gitsPlayer option --outputDir.
-              * gitsGlDebugProc() - returns userdata containing pointer to callback function which is being set by glDebugMessageCallback.
-          - Name: scriptArgsStr
-            Type: std::string
-            Default: ""
-            Arguments: [scriptArgsStr]
-            ConfigName: scriptArgs
           - Name: benchmark
             Type: bool
             Default: false
@@ -712,17 +655,6 @@ Configuration:
           - Name: uniqueDumpDirectory
             Type: bool
             Default: true
-          - Name: useEvents
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: eventScript
-            Type: std::filesystem::path
-            Default: ""
-          - Name: scriptArgsStr
-            Type: std::string
-            Default: ""
-            ConfigName: scriptArgs
           - Name: Compression
             Type: Group
             Options:
@@ -1696,3 +1628,11 @@ RemovedOptions:
     Reason: OpenGLLegacy support was removed.
   - Path: OpenGL.Recorder.MTDriverWA
     Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.EventScript
+    Reason: Lua scripting support was removed.
+  - Path: Common.Player.ScriptArgs
+    Reason: Lua scripting support was removed.
+  - Path: Common.Recorder.EventScript
+    Reason: Lua scripting support was removed.
+  - Path: Common.Recorder.ScriptArgs
+    Reason: Lua scripting support was removed.

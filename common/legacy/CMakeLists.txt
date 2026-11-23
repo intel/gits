@@ -29,7 +29,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/keyEvents.h
   ${COMMON_HEADER_DIR}/key_value.h
   ${COMMON_HEADER_DIR}/library.h
-  ${COMMON_HEADER_DIR}/lua_bindings.h
   ${COMMON_HEADER_DIR}/macros.h
   ${COMMON_HEADER_DIR}/malloc_allocator.h
   ${COMMON_HEADER_DIR}/MemorySniffer.h
@@ -83,7 +82,6 @@ list(APPEND common_SOURCES
   ${COMMON_SOURCE_DIR}/tools.cpp
   ${COMMON_SOURCE_DIR}/version.cpp
   ${COMMON_SOURCE_DIR}/dynamic_linker.cpp
-  ${COMMON_SOURCE_DIR}/lua_bindings.cpp
   ${COMMON_SOURCE_DIR}/InputListener.cpp
   ${COMMON_SOURCE_DIR}/keyEvents.cpp
   ${COMMON_SOURCE_DIR}/texture_converter.cpp
@@ -119,11 +117,11 @@ add_definitions(-DGITS_COMMON_PROJ)
 add_dependencies(common config_codegen gits_build_info)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
 target_include_directories(common PRIVATE ${GITS_BUILD_INFO_INCLUDE_DIR})
-target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png lua zlib)
+target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png zlib)
 target_link_libraries(common PUBLIC configuration log)
 
 if(UNIX)
-  target_link_libraries(common PRIVATE rt dl lua X11)
+  target_link_libraries(common PRIVATE rt dl X11)
 endif()
 
 add_library(common_interface INTERFACE)

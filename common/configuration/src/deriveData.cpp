@@ -12,7 +12,6 @@
 
 #include "configurationLib.h"
 
-#include "lua_bindings.h"
 #include "configUtils.h"
 #include "gits.h"
 #include "tools.h"
@@ -67,8 +66,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     } else {
       obj.logToConsole = config.common.player.logToConsole;
     }
-    obj.useEvents = config.common.player.useEvents;
-    obj.scriptArgsStr = config.common.player.scriptArgsStr;
   } else {
     obj.libGL = config.common.recorder.libGL;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
@@ -79,8 +76,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     } else {
       obj.logToConsole = config.common.recorder.logToConsole;
     }
-    obj.useEvents = config.common.recorder.useEvents;
-    obj.scriptArgsStr = config.common.recorder.scriptArgsStr;
   }
 }
 template <>
@@ -93,15 +88,6 @@ void DeriveConfigData<Configuration::Common::Player>(Configuration::Common::Play
   obj.windowMode = WindowMode::NORMAL;
   if (config.common.player.fullscreen) {
     obj.windowMode = WindowMode::EXCLUSIVE_FULLSCREEN;
-  }
-
-  if (!config.common.player.eventScript.empty()) {
-    auto& scriptPath = config.common.player.eventScript;
-    if (!std::filesystem::exists(scriptPath) || !std::filesystem::is_regular_file(scriptPath)) {
-      throw std::runtime_error("EventScript error: Could not find file: " + scriptPath.string());
-    }
-    gits::lua::CreateAndRegisterEvents(scriptPath.string().c_str());
-    obj.useEvents = true;
   }
 
   if (!config.common.player.forceWindowPosStr.empty()) {
@@ -204,16 +190,6 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
     obj.tokenBurstNum = 1;
     obj.compression.type = stringTo<CompressionType>("NONE");
     LOG_WARNING << "High Integrity mode active - disabling compression.";
-  }
-
-  if (!config.common.recorder.eventScript.empty()) {
-    auto& scriptPath = config.common.recorder.eventScript;
-    if (!std::filesystem::exists(scriptPath) || !std::filesystem::is_regular_file(scriptPath)) {
-      throw std::runtime_error("EventScript error: Could not find file: " + scriptPath.string());
-    }
-    gits::lua::CreateAndRegisterEvents(scriptPath.string().c_str());
-    gits::CGits::Instance().ProcessLuaFunctionsRegistrators();
-    obj.useEvents = true;
   }
 
   // Deprecated option handling

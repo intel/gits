@@ -249,9 +249,6 @@ int Initialize(int argc, char* argv[]) {
   }
 #endif
 
-  if (cfg.common.shared.useEvents) {
-    CGits::Instance().ProcessLuaFunctionsRegistrators();
-  }
   // initialize GITS
   LOG_INFO << "Initializing...";
 

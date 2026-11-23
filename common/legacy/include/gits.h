@@ -45,8 +45,6 @@
 #define GITS_API_INFO                 GITS_MAKE_VERSION3(2, 0, 11)
 #define GITS_DX12_ENCODING_FIX        GITS_MAKE_VERSION3(2, 0, 12)
 
-struct lua_State;
-
 namespace gits {
 class CScheduler;
 class CBinOStream;
@@ -171,8 +169,6 @@ private:
 
   uint32_t _frameNo;
   bool _restoringState;
-  std::vector<std::function<void()>> _luaFunctionsRegistrators;
-  std::shared_ptr<lua_State> _lua;
   Task<Image> _imageWriter;
   StreamingContext* _sc;
   TimerSet _timers;
@@ -201,22 +197,6 @@ public:
     return _instance;
   }
   void Dispose();
-
-  void RegisterLuaFunctionsRegistrator(std::function<void()> f) {
-    _luaFunctionsRegistrators.push_back(f);
-  }
-  void ProcessLuaFunctionsRegistrators() {
-    for (auto& f : _luaFunctionsRegistrators) {
-      f();
-    }
-  }
-
-  void SetLua(std::shared_ptr<lua_State>& L) {
-    _lua = L;
-  }
-  std::shared_ptr<lua_State> GetLua() const {
-    return _lua;
-  }
 
   void Register(std::shared_ptr<CLibrary> library);
   void RegisterFileRecorder(std::unique_ptr<CFile> file);

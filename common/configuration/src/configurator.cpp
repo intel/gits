@@ -17,7 +17,6 @@
 
 #include "configurationAuto.h"
 #include "configurationYAMLAuto.h"
-#include "lua_bindings.h"
 #include "configUtils.h"
 #include "gits.h"
 #include "tools.h"
