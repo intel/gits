@@ -33,8 +33,6 @@
 #include <vector>
 #include <filesystem>
 
-#include <unzip.h>
-#include <zip.h>
 #include "nlohmann/json.hpp"
 
 #define GITS_FILE_COMPAT_64BIT_HASHES                                                              \
@@ -170,13 +168,6 @@ private:
   uint32_t _drawCounter;
   uint32_t _drawInFrameCounter;
   std::atomic<bool> _finished;
-  zipFile _glProgramsZipFile;
-  unzFile _glProgramsUnZipFile;
-  struct ZippedFileInfo {
-    unz_file_pos location;
-    unsigned size;
-  };
-  std::unordered_map<std::string, ZippedFileInfo> _glProgramsLocationsInZipFile;
 
   uint32_t _frameNo;
   bool _restoringState;
@@ -288,13 +279,6 @@ public:
   ApisIface::TApi GetApi3D() const {
     return _api3D;
   }
-
-  zipFile OpenZipFileGLPrograms();
-  void CloseZipFileGLPrograms();
-
-  void OpenUnZipFileGLPrograms();
-  void ReadGlProgramFromUnZipFile(std::string progname, std::string& text);
-  void CloseUnZipFileGLPrograms();
 
   uint64_t GetOrderedIdFromPtr(void* ptr);
 

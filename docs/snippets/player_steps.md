@@ -14,6 +14,5 @@ Here are some of the most commonly used arguments:
 | `--stats`                       | Show stream statistics                                     |
 | `--captureFrames`               | Dump rendered frames to disk                               |
 | `--captureFrames 23,420-450:10` | Dump rendered frames `#23, #420, #430, #440, #450` to disk |
-| `--captureDraws`                | Dump rendered draw calls to disk                           |
 
 The file `gits_config.yml` configures GITS and the playback options.

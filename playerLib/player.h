@@ -53,8 +53,6 @@ public:
   }
   void Play();
   void Key(unsigned code);
-  void GLResourceCleanup();
-  void GLContextsCleanup();
   void StatisticsPrint() const;
   void NotSupportedFunctionsPrint() const;
   int RenameAndRelaunch(const std::string& newPlayerName,

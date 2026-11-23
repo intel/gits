@@ -1,7 +1,7 @@
 # Modern OpenGL Backend
 
-This directory contains the work-in-progress new OpenGL backend. The previous implementation lives
-under `OpenGLLegacy/` and remains operational alongside it.
+This directory contains the work-in-progress new OpenGL backend. It replaced the previous
+implementation, OpenGLLegacy, which has been removed.
 
 
 It follows a layered architecture approach pioneered by the DirectX and new Vulkan backends.

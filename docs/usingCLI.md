@@ -23,12 +23,10 @@ The **Recorder** is split into multiple folders one per supported API:
 | ---------------------------------- | ------------------------- | ------------------- |
 | :material-microsoft: DirectX12     | `FilesToCopyDirectX`      | ---                 |
 | :simple-opengl: OpenGL             | `FilesToCopyOGL`          | `OpenGL`            |
-| :simple-opengl: OpenGLLegacy       | `FilesToCopyOGLLegacy`    | `OpenGLLegacy`      |
-| :simple-opengl: OpenGL ES          | `FilesToCopyES`           | `OpenGLLegacy`      |
 | :simple-vulkan: Vulkan             | `FilesToCopyVulkan`       | `Vulkan`            |
 | :simple-vulkan: Vulkan Layer       | `VulkanLayer`             | `VulkanLayer`       |
 
-OpenGL has two backends; a stream recorded with one backend can not be played back with the other. **OpenGL** is the new, experimental backend and **OpenGLLegacy** is the original one, which also records OpenGL ES applications. See [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md). Streams recorded with the removed VulkanLegacy backend can only be replayed with an older GITS release.
+The **OpenGL** backend is new and experimental. Streams recorded with the removed OpenGLLegacy and VulkanLegacy backends can only be replayed with an older GITS release. OpenGL ES applications were recorded with OpenGLLegacy and can no longer be recorded.
 
 --8<-- "recorder_steps.md"
 

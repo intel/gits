@@ -7,8 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "player.h"
-#include "stateDynamic.h"
-#include "openglTools.h"
 #include "statistics.h"
 #include "function.h"
 #include "gits.h"
@@ -103,18 +101,6 @@ void gits::CPlayer::Play() {
   if (m_Interactive ||
       cfgPlayer.stopAfterFrames[static_cast<size_t>(CGits::Instance().CurrentFrame()) - 1]) {
     m_State = STATE_PAUSED;
-  }
-}
-
-void gits::CPlayer::GLResourceCleanup() {
-  if (Configurator::Get().common.player.cleanResourcesOnExit) {
-    gits::OpenGL::CleanResources();
-  }
-}
-
-void gits::CPlayer::GLContextsCleanup() {
-  if (Configurator::Get().opengl.player.destroyContextsOnExit) {
-    gits::OpenGL::DestroyAllContexts();
   }
 }
 

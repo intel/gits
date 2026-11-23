@@ -165,7 +165,7 @@ void ImGuiHUD::Render() {
 
   if (ImGui::Begin("GITS HUD", nullptr, Settings::HUD_WINDOW_STYLE)) {
     if (_tableRows > 0) {
-      uInt idx = 0;
+      unsigned idx = 0;
       if (cfgHud.fields.applicationInfo) {
         _dataTable[idx][0] = "Application";
         _dataTable[idx][1] = _applicationName + " (" + std::to_string(_applicationPid) + ")";
@@ -244,8 +244,8 @@ ImVec2 ImGuiHUD::ComputeHUDSizeHint(float uiScale) {
       float const lengthCoefficient = 6.8f; // from experiment
       constexpr unsigned margin = 17;       // from experiment
 
-      uInt maxLengths[2]{0, 0};
-      auto collectMax = [this, &maxLengths](uInt idx) {
+      unsigned maxLengths[2]{0, 0};
+      auto collectMax = [this, &maxLengths](unsigned idx) {
         for (auto i = 0u; i < sizeof(maxLengths) / sizeof(maxLengths[0]); ++i) {
           maxLengths[i] = std::max<size_t>(maxLengths[i], _dataTable[idx][i].size());
         }

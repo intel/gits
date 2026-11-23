@@ -21,7 +21,6 @@
 #if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
-#include "openglLibrary.h"
 
 #include <memory>
 #include <string>
@@ -255,7 +254,6 @@ int Initialize(int argc, char* argv[]) {
   }
   // initialize GITS
   LOG_INFO << "Initializing...";
-  inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
 
   g_LegacyMode = IsLegacyStream(cfg.common.player.streamPath);
   if (!g_LegacyMode) {
@@ -399,8 +397,6 @@ int Play() {
     } else {
       PlayStream(cfg.common.player.streamPath);
     }
-    g_Player->GLResourceCleanup();
-    g_Player->GLContextsCleanup();
 
     if (g_LegacyMode) {
       int64_t playbackTime = CGits::Instance().Timers().playback.Get();
@@ -428,9 +424,6 @@ int Play() {
       std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
       CGits::Instance().TimeSheet().OutputTimeData(timeDataFile);
     }
-
-    // Close OpenGL programs zip file
-    CGits::Instance().CloseUnZipFileGLPrograms();
 
 #ifdef GITS_PLATFORM_WINDOWS
     if (cfg.common.player.forceDesktopResolution.enabled) {

@@ -54,24 +54,6 @@ Configuration:
             Accessibility: ArgumentOnly
             Arguments: [libGLPath]
             Description: Override for library path containing GL functions
-          - Name: libEGL
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [libEGLPath]
-            Description: Override for library containing EGL functions
-          - Name: libGLESv1
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [libGLESv1Path]
-            Description: Override for library path containing GLES 1 functions
-          - Name: libGLESv2
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [libGLESv2Path]
-            Description: Override for library path containing GLES 2 functions
           - Name: HUD
             Description: GITS uses ImGui to display a HUD.
             Type: Group
@@ -336,23 +318,6 @@ Configuration:
             DefaultsPerPlatform:
               - win32: OpenGL32.dll
               - lnx_32: libGL.so
-          - Name: libEGL
-            Type: std::filesystem::path
-            Default: libEGL.so.1
-            DefaultsPerPlatform:
-              - win32: libEGL.dll
-          - Name: libGLESv1
-            Type: std::filesystem::path
-            Default: libGLESv1_CM.so.1
-            DefaultsPerPlatform:
-              - win32: libGLESv1_CM.dll
-            ConfigName: libGLES1
-          - Name: libGLESv2
-            Type: std::filesystem::path
-            Default: libGLESv2.so.2
-            DefaultsPerPlatform:
-              - win32: libGLESv2.dll
-            ConfigName: libGLES2
           - Name: libVK
             Type: std::filesystem::path
             Default: libvulkan.so.1
@@ -534,17 +499,6 @@ Configuration:
               DEPRECATED. GITS does not handle exceptions during playback. This option was used to disable exception handling.
               GITS now behaves as if this option is always enabled.
             Deprecated: true
-          - Name: captureScreenshot
-            Type: bool
-            Default: false
-            Arguments: [captureScreenshot]
-            OSVisibility: [WINDOWS]
-            Description:
-              Modifies captureFrames option to capture a WinAPI screenshot instead
-              of  buffer read. Forces vsync.
-            LongDescription:
-              Modifies captureFrames option to capture a WinAPI screenshot
-              instead of buffer read. Forces vsync.
           - Name: logLoadedTokens
             Type: bool
             Default: false
@@ -582,16 +536,6 @@ Configuration:
             Description:
               No functions are played back. This option is useful only for characterization
               of GITS player framework performance.
-          - Name: cleanResourcesOnExit
-            Type: bool
-            Default: false
-            Arguments: [cleanResourcesOnExit]
-            Description: Delete unreleased resources at the end of the stream (with additional API functions calls).
-            LongDescription: |
-              Deletes unreleased resources at the end of the stream (with additional API functions calls).
-
-              - OpenGL: the first 2000 names of the following resources are destroyed: FBOs, RBOs, VAOs, Textures, Buffers, Shaders, Programs, ARBPrograms, DisplayLists, Queries.
-              - Vulkan: all created resources are destroyed.
           - Name: renderOffscreen
             Type: bool
             Default: false
@@ -667,30 +611,6 @@ Configuration:
               - Name: height
                 Type: uint32_t
                 Default: 0
-          - Name: ForceScissorVector
-            Type: std::vector<uint32_t>
-            Default: []
-            Accessibility: ArgumentOnly
-            Arguments: [forceScissor]
-            Description: Forces scissor x,y,width,height
-          - Name: ForceScissor
-            Type: Group
-            Options:
-              - Name: enabled
-                Type: bool
-                Default: false
-              - Name: x
-                Type: uint32_t
-                Default: 0
-              - Name: y
-                Type: uint32_t
-                Default: 0
-              - Name: width
-                Type: uint32_t
-                Default: 0
-              - Name: height
-                Type: uint32_t
-                Default: 0
           - Name: ForceDesktopResolutionStr
             Type: std::string
             Default: ""
@@ -741,23 +661,6 @@ Configuration:
             Default: /usr/lib/{arch}-linux-gnu/libGL.so.1
             DefaultsPerPlatform:
               - win32: C:\Windows\System32\OpenGL32.dll
-          - Name: libEGL
-            Type: std::filesystem::path
-            Default: /usr/lib/{arch}-linux-gnu/libEGL.so.1
-            DefaultsPerPlatform:
-              - win32: C:\Windows\System32\libEGL.dll
-          - Name: libGLESv1
-            Type: std::filesystem::path
-            Default: /usr/lib/{arch}-linux-gnu/libGLESv1_CM.so.1
-            DefaultsPerPlatform:
-              - win32: C:\Windows\System32\libGLESv1_CM.dll
-            ConfigName: libGLES1
-          - Name: libGLESv2
-            Type: std::filesystem::path
-            Default: /usr/lib/{arch}-linux-gnu/libGLESv2.so.2
-            DefaultsPerPlatform:
-              - win32: C:\Windows\System32\libGLESv2.dll
-            ConfigName: libGLES2
           - Name: libVK
             Type: std::filesystem::path
             Default: /usr/lib/{arch}-linux-gnu/libvulkan.so.1
@@ -845,9 +748,6 @@ Configuration:
             Default: true
             ConfigName: extendedDiagnostic
           - Name: forceDumpOnError
-            Type: bool
-            Default: true
-          - Name: zipTextFiles
             Type: bool
             Default: true
           - Name: highIntegrity
@@ -1329,331 +1229,9 @@ Configuration:
   - Name: OpenGL
     Type: Group
     Options:
-      - Name: Shared
-        Type: Group
-        Options:
-          - Name: forceGLVersion
-            Type: std::string
-            Default: ""
-          - Name: forceGLVersionMajor
-            Type: uint32_t
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [forceGLVersionMajor]
-            Description: Forces OpenGL version major number.
-          - Name: forceGLVersionMinor
-            Type: uint32_t
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [forceGLVersionMinor]
-            Description: Forces OpenGL version minor number.
-          - Name: traceGLError
-            Type: bool
-            Default: false
-            Arguments: [traceGLError]
-            Description:
-              If specified, glGetError will be called for each gl call and errors
-              will be logged.
-      - Name: Player
-        Type: Group
-        Options:
-          - Name: forceGLProfile
-            Type: GLProfile
-            Default: NONE
-            Arguments: [forceGLProfile]
-            Description:
-              "Forces OpenGL Profile:  COMPAT, CORE or ES. This option
-              may cause a crash if API used in stream or shaders does not match selected
-              profile."
-          - Name: forceGLNativeAPI
-            Type: GLNativeApi
-            Default: NONE
-            Arguments: [forceGLNativeAPI]
-            Description: "Forces OpenGL native API: EGL, GLX or WGL."
-            LongDescription:
-              "Forces OpenGL native API: EGL, GLX or WGL. Option useful
-              on OS/driver configurations where multiple native APIs are available. For
-              instance some intel drivers support EGL and WGL on Windows. In this case it
-              allows to run for example stream from application using WGL through EGL."
-          - Name: skipQueries
-            Type: bool
-            Default: false
-            Arguments: [skipQueries]
-            Description:
-              "Do not call any Query related functions (glBeginQuery, etc).
-              WARNING: This may corrupt the rendering."
-          - Name: scaleFactor
-            Type: float
-            Default: 1.0
-            Arguments: [scaleFactor]
-            Description:
-              "Rendering will be scaled by specified factor. WARNING: This
-              may produce corrupted rendering in some cases."
-          - Name: captureFramesHashes
-            Type: bool
-            Default: false
-            Arguments: [captureFramesHashes]
-            Description:
-              Modifies captureFrames option to just print image hash instead
-              of frame dumping.
-          - Name: dontForceBackBufferGL
-            Type: bool
-            Default: false
-            Arguments: [dontForceBackBufferGL]
-            Description:
-              "For OpenGL: modifies --captureFrames, --captureReadPixels,
-              --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options to
-              dump currently bound framebuffer"
-            LongDescription: >
-              When OpenGL API is used this option modifies --captureFrames, --captureReadPixels,
-              --captureFinishFrame, --captureFlushFrame, --captureBindFboFrame options by
-              letting player dump currently bound framebuffer (by default these options
-              force player to dump back buffer contents).
-          - Name: captureWholeWindow
-            Type: bool
-            Default: false
-            Arguments: [captureWholeWindow]
-            Description:
-              Causes '--captureFrames' to capture whole current window instead
-              of current viewport.
-          - Name: capture2DTexs
-            Type: BitRange
-            Default: "-"
-            Arguments: [capture2DTexs]
-            Description: List of glTexImage2D API calls, ordered by execution time.
-            LongDescription: |
-              List of glTexImage2D API calls, ordered by execution time, specified as single string without spaces of following format: 
-
-              * texs_list = element | texs_list, element
-              * element = Number | Begin-End | Begin-End:Step 
-
-              Captured textures name format is: tex2D_<texture object>_<texture load number>.png
-          - Name: captureDraws2DTexs
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureDraws2DTexs]
-            Description: List of drawcalls specified as single string without spaces
-            LongDescription: |
-              List of drawcalls specified as single string without spaces of following format: 
-
-              * draw_list = element | draw_list, '','', element
-              * element = Number | Begin-End | Begin-End:Step 
-
-              Captured textures name format is: draw<drawcall number>_unit<unitnumber>_tex<texture load number>.png'
-          - Name: captureDraws
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureDraws]
-            Description: List of draws that will be captured during playback.
-            LongDescription: |
-              List of drawcall numbers that will be captured by gits during playback. 
-              Specified as single string without spaces of following format:
-
-                * pattern = draw_list | draw_list/Repeat-Count  
-                * draw_list = element | draw_list,',', element  
-                * element = Number | Begin-End | Begin-End:Step
-          - Name: captureDrawsPre
-            Type: bool
-            Default: false
-            Arguments: [captureDrawsPre]
-            Description:
-              Causes 'captureDraws' to capture drawbuffer content not only after
-              specified drawcall, but also before it.
-          - Name: captureFinishFrame
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureFinishFrame]
-            Description:
-              Capture framebuffer content on glFinish (the same numbering
-              as captureFrames option).
-          - Name: captureReadPixels
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureReadPixels]
-            Description:
-              Capture framebuffer content on glReadPixels (the same numbering
-              as captureFrames option).
-          - Name: captureFlushFrame
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureFlushFrame]
-            Description:
-              Capture framebuffer content on glFlush (the same numbering as captureFrames
-              option).
-          - Name: captureBindFboFrame
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureBindFboFrame]
-            Description:
-              Capture framebuffer content on glBindFramebuffer (the same numbering
-              as captureFrames option).
-          - Name: keepDraws
-            Type: BitRange
-            Default: all
-            Arguments: [keepDraws]
-            Description: List of drawcall numbers to be executed by gits during playback.
-            LongDescription: |
-              List of drawcall numbers to be executed by gits during playback.
-              Rest of drawcalls won''t be executed. Specified as single string without spaces of following format:
-
-              * pattern = draw_list | draw_list/Repeat-Count  
-              * draw_list = element | draw_list, element
-              * element = Number | Begin-End | Begin-End:Step
-          - Name: keepFrames
-            Type: BitRange
-            Default: all
-            Arguments: [keepFrames]
-            Description: List of frames whose draw calls should be played back.
-            LongDescription:
-              List of frames whose draw calls should be played back. All
-              drawcalls outside specified range will be skipped. Uses the same format as
-              other frame specifications. Defaults to 'all frames'.
-          - Name: minimalConfig
-            Type: bool
-            Default: false
-            Arguments: [minimalConfig]
-            Description:
-              Removes most pixel attributes from EGL and WGL pixel format
-              selection. This allows player to use pixel formats that are slightly different
-              from the ones used in recorder, but still compatible with them.
-            LongDescription:
-              When selecting a pixel format in EGL or WGL, this option causes
-              most pixel format attributes to be removed; only the essential ones are preserved.
-              This allows player to use pixel formats that are slightly different from the
-              ones used in recorder, but still compatible with them. This option is useful
-              when a stream recorded on one platform is being replayed on another platform.
-              Without it, some unimportant attribute mismatch could cause the driver to
-              return no usable pixel formats.
-          - Name: traceGitsInternal
-            Type: bool
-            Default: false
-            Arguments: [traceGitsInternal]
-            Description: Print additional calls generated by Gits internally when `LogLevel=TRACEVERBOSE`.
-            LongDescription:
-              Causes --logLevel TRACEVERBOSE to print additional calls generated
-              by Gits internally.
-          - Name: linkGetProgBinary
-            Type: bool
-            Default: false
-            Arguments: [linkGetProgBinary]
-            Description:
-              After each link program query resulting program binary and store
-              it in files for future use.
-          - Name: linkUseProgBinary
-            Type: bool
-            Default: false
-            Arguments: [linkUseProgBinary]
-            Description: Instead of linking a program source them from binary files.
-          - Name: affectViewport
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-            Description:
-              "Causes certain other options to affect only a viewports specified
-              with 'width,height' dimmensions. This option has influence on following
-              options: forceScissor, forceWindowSize."
-          - Name: affectedViewport
-            Type: std::vector<int>
-            Default: []
-            Arguments: [affectViewport]
-          - Name: traceGLBufferHashes
-            Type: BitRange
-            Default: "-"
-            Arguments: [traceGLBufferHashes]
-            Description:
-              Together with --loglevel TRACEVERBOSE causes additional info
-              to be printed in the form of buffer objects hashes used for specified draw-call
-              execution. inspecting current VAO state - enabled attributes and element array
-              buffer binding
-          - Name: forceNoMSAA
-            Type: bool
-            Default: false
-            Arguments: [forceNoMSAA]
-            Description:
-              Force pixelformat to not use multisampling. Renderbuffers are forced
-              to 0 sampels. Multisampled textures are not supported by this option. If multisampled
-              textures are used, GITS will abort the stream.
-          - Name: destroyContextsOnExit
-            Type: bool
-            Default: false
-            Arguments: [destroyContextsOnExit]
-            Description:
-              Playing additional API calls in the end of the stream to delete
-              all existing contexts.
-          - Name: forceWaylandWindow
-            Type: bool
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [forceWaylandWindow]
-            OSVisibility: [X11]
-            Description: Forces using Wayland windows instead of X11.
       - Name: Recorder
         Type: Group
         Options:
-          - Name: mode
-            Type: OpenGLRecorderMode
-            Default: All
-          - Name: All
-            Type: Group
-            Options:
-              - Name: exitFrame
-                Type: uint32_t
-                Default: 1000000
-              - Name: exitDeleteContext
-                Type: uint32_t
-                Default: 0
-          - Name: Frames
-            Type: Group
-            Options:
-              - Name: startFrame
-                Type: uint32_t
-                Default: 1
-              - Name: stopFrame
-                Type: uint32_t
-                Default: 1000000
-              - Name: startKeysStr
-                Type: std::vector<std::string>
-                Default: []
-                ConfigName: startKeys
-              - Name: startKeys
-                Type: std::vector<uint32_t>
-                Default: []
-                Accessibility: Derived
-              - Name: FrameSeparators
-                Type: Group
-                Options:
-                  - Name: glFinishSep
-                    Type: bool
-                    Default: false
-                    ConfigName: glFinish
-                  - Name: glFlushSep
-                    Type: bool
-                    Default: false
-                    ConfigName: glFlush
-          - Name: OglSingleDraw
-            Type: Group
-            Options:
-              - Name: number
-                Type: uint32_t
-                Default: 1
-          - Name: OglDrawsRange
-            Type: Group
-            Options:
-              - Name: startDraw
-                Type: uint32_t
-                Default: 1
-              - Name: stopDraw
-                Type: uint32_t
-                Default: 100000
-              - Name: frame
-                Type: uint32_t
-                Default: 0
-          - Name: dumpScreenshots
-            Type: BitRange
-            Default: "-"
-          - Name: dumpDrawsFromFrames
-            Type: BitRange
-            Default: "-"
           - Name: suppressExtensions
             Type: std::vector<std::string>
             Default:
@@ -1686,82 +1264,6 @@ Configuration:
               page held before is not recorded if GPU work changed that byte. It suits
               applications that only write such maps, or only read them, when reading the driver
               mapping is slow.
-          - Name: endFrameSleep
-            Type: uint32_t
-            Default: 0
-            Description: Sleep this many milliseconds after a swap.
-          - Name: restoreDefaultFB
-            Type: bool
-            Default: true
-          - Name: doNotRemoveWin
-            Type: bool
-            Default: false
-            ConfigName: doNotRemoveWindow
-          - Name: multiApiProtectBypass
-            Type: bool
-            Default: false
-          - Name: carrayMemCmpType
-            Type: uint32_t
-            Default: 1
-            ConfigName: cArrayMemCmpType
-          - Name: stripIndicesValues
-            Type: uint32_t
-            Default: 4294967295
-            NumericFormat: Hexadecimal
-          - Name: optimizeBufferSize
-            Type: bool
-            Default: true
-          - Name: retryFunctionLoads
-            Type: bool
-            Default: true
-          - Name: detectRecursion
-            Type: bool
-            Default: true
-          - Name: buffersState
-            Type: BuffersState
-            Default: Mixed
-          - Name: texturesState
-            Type: TexturesState
-            Default: Mixed
-          - Name: coherentMapUpdatePerFrame
-            Type: bool
-            Default: true
-          - Name: bufferMapAccessMask
-            Type: uint32_t
-            Default: 4294967283
-            NumericFormat: Hexadecimal
-          - Name: bufferStorageFlagsMask
-            Type: uint32_t
-            Default: 1
-          - Name: coherentMapBehaviorWA
-            Type: bool
-            Default: false
-          - Name: schedulefboEXTAsCoreWA
-            Type: bool
-            Default: false
-            ConfigName: scheduleFboEXTAsCoreWA
-            OSVisibility: [WINDOWS]
-          - Name: useGlGetTexImageAndRestoreBuffersWhenPossibleES
-            Type: bool
-            Default: true
-            OSVisibility: [WINDOWS]
-          - Name: trackTextureBindingWA
-            Type: bool
-            Default: false
-            OSVisibility: [WINDOWS]
-          - Name: forceBuffersStateCaptureAlwaysWA
-            Type: bool
-            Default: false
-            OSVisibility: [WINDOWS]
-          - Name: restoreIndexedTexturesWA
-            Type: bool
-            Default: false
-            OSVisibility: [WINDOWS]
-          - Name: mtDriverWA
-            Type: bool
-            Default: true
-            ConfigName: mTDriverWA
-            OSVisibility: [WINDOWS]
   - Name: Vulkan
     Type: Group
     Options:
@@ -2114,3 +1616,83 @@ RemovedOptions:
     Reason: Level Zero support was removed.
   - Path: LevelZero
     Reason: Level Zero support was removed.
+  - Path: Common.Player.LibEGL
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.LibGLES1
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.LibGLES2
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.CaptureScreenshot
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.CleanResourcesOnExit
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Player.ForceScissor
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Recorder.LibEGL
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Recorder.LibGLES1
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Recorder.LibGLES2
+    Reason: OpenGLLegacy support was removed.
+  - Path: Common.Recorder.ZipTextFiles
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Shared
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Player
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.Mode
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.All
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.Frames
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.OglSingleDraw
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.OglDrawsRange
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.DumpScreenshots
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.DumpDrawsFromFrames
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.EndFrameSleep
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.RestoreDefaultFB
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.DoNotRemoveWindow
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.MultiApiProtectBypass
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.CArrayMemCmpType
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.StripIndicesValues
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.OptimizeBufferSize
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.RetryFunctionLoads
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.DetectRecursion
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.BuffersState
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.TexturesState
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.CoherentMapUpdatePerFrame
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.BufferMapAccessMask
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.BufferStorageFlagsMask
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.CoherentMapBehaviorWA
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.ScheduleFboEXTAsCoreWA
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.UseGlGetTexImageAndRestoreBuffersWhenPossibleES
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.TrackTextureBindingWA
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.ForceBuffersStateCaptureAlwaysWA
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.RestoreIndexedTexturesWA
+    Reason: OpenGLLegacy support was removed.
+  - Path: OpenGL.Recorder.MTDriverWA
+    Reason: OpenGLLegacy support was removed.

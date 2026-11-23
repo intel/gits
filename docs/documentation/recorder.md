@@ -14,8 +14,6 @@ GITS recorder consists of:
 
 Details regarding the configuration options can be found in the documentation's [configuration section](../configuration/how_to.md).
 
-For information about the [OpenGL legacy](OpenGL/OpenGLLegacy.md) backend, please see the documentation.
-
 To record an application that shares memory and semaphores between OpenGL and Vulkan, see [OpenGL and Vulkan interop](interop.md).
 
 # Example usage

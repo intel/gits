@@ -40,18 +40,6 @@ void DeriveConfigData<Configuration::Common::Recorder>(Configuration::Common::Re
                                                        Configuration& config);
 
 template <>
-void DeriveConfigData<Configuration::OpenGL::Shared>(Configuration::OpenGL::Shared& obj,
-                                                     Configuration& config);
-
-template <>
-void DeriveConfigData<Configuration::OpenGL::Player>(Configuration::OpenGL::Player& obj,
-                                                     Configuration& config);
-
-template <>
-void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Recorder& obj,
-                                                       Configuration& config);
-
-template <>
 void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Recorder& obj,
                                                        Configuration& config);
 

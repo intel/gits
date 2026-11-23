@@ -196,8 +196,3 @@ function clear_box(x, y, width, height)
 end
 ```
 
-# Included scripts {#sec:includedLuaScripts}
-
-GITS comes with a set of scripts for common use cases. They are installed in
-the `LuaScripts` directory, grouped by API.
-

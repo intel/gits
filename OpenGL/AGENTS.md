@@ -4,9 +4,9 @@
 
 ## Naming
 
-This backend lives under `OpenGL/`; the previous implementation lives under `OpenGLLegacy/`. Refer
-to the previous implementation as `OpenGLLegacy` in code comments, log messages, and architecture
-names.
+This backend lives under `OpenGL/`; the previous implementation, which has been removed, lived under
+`OpenGLLegacy/`. Refer to the previous implementation as `OpenGLLegacy` in code comments, log
+messages, and architecture names.
 
 ## Stream compatibility
 

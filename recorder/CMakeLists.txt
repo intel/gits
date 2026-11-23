@@ -15,8 +15,7 @@ if(MSVC)
   file(WRITE ${recorder_DEF}
     "LIBRARY gitsRecorder.dll\n"
     "EXPORTS\n"
-    "  Configure\n"
-    "  GITSRecorderOpenGLLegacy\n")
+    "  Configure\n")
   if(WITH_OPENGL)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderOpenGL\n")
@@ -50,7 +49,6 @@ add_definitions(-DGITS_RECORDER_EXPORTS)
 
 set(recorderIfaceLibs )
 set(recorderCommonLibs configuration)
-set(frameworks )
 
 set(libPrefix )
 
@@ -58,15 +56,12 @@ if(UNIX)
   set(recorderIfaceLibs ${recorderIfaceLibs} -Wl,-whole-archive)
 endif()
 
-set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGLLegacy_recorder)
 if(WITH_OPENGL)
   # hud is needed here (not just transitively via `common`) because recorderUtils.cpp
   # includes imGuiHUD.h directly, and only a target's own link libraries contribute their
   # PUBLIC include directories to it - a PRIVATE dependency of `common` does not.
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenGL_recorder hud)
 endif()
-set(recorderCommonLibs ${recorderCommonLibs} OpenGLLegacy_common)
-set(frameworks ${frameworks} "-framework OpenGL")
 
 if(WITH_VULKAN)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder)
@@ -126,12 +121,7 @@ if(MSVC)
 endif()
 if(UNIX)
   install(CODE "execute_process(COMMAND bash -c \"
-    cd \${CMAKE_INSTALL_PREFIX}/Recorder/${OpenGLLegacy_INSTALL_SUBDIR}/
-    ln -sf libGitsGLCapture.so libEGL.so.1
-    ln -sf libGitsGLCapture.so libGLESv1_CM.so.1
-    ln -sf libGitsGLCapture.so libGLESv2.so.2
-    ln -sf libGitsGLCapture.so libGL.so.1
-    cd ../${Vulkan_INSTALL_SUBDIR}/
+    cd \${CMAKE_INSTALL_PREFIX}/Recorder/${Vulkan_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
   \")")
 endif()

@@ -56,7 +56,6 @@ target_link_libraries(gits_player_lib PRIVATE
   common
   stream
   windowing
-  OpenGLLegacy_common
 )
 
 if(WITH_DIRECTX)

@@ -15,12 +15,6 @@
 namespace gits {
 typedef Configuration Config;
 
-using TOpenGLRecorderMode = OpenGLRecorderMode;
-
-using TForcedGLProfile = GLProfile;
-using TForcedGLNativeApi = GLNativeApi;
-using TBuffersState = BuffersState;
-using TTexturesState = TexturesState;
 using TWindowsKeyHandling = WindowsKeyHandling;
 using THashType = HashType;
 using WindowMode = WindowMode;

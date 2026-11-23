@@ -78,8 +78,6 @@ Api StreamHeaderApiToApi(stream::StreamHeader::Api api) {
     return Api::VULKAN;
   case stream::StreamHeader::Api::API_OPENGL:
     return Api::OPENGL;
-  case stream::StreamHeader::Api::API_OPENGL_LEGACY:
-    return Api::OPENGL_LEGACY;
   default:
     return Api::UNKNOWN;
   }

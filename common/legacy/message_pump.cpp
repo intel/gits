@@ -272,8 +272,7 @@ void MessagePump::process_messages() {
   while (true) {
     XEvent event;
     if (gits::CGits::Instance().apis.Has3D() &&
-        gits::CGits::Instance().apis.Iface3D().Api() == gits::ApisIface::OpenGL &&
-        !gits::Configurator::Get().opengl.player.forceWaylandWindow && disp &&
+        gits::CGits::Instance().apis.Iface3D().Api() == gits::ApisIface::OpenGL && disp &&
         XCheckIfEvent((Display*)disp, &event, accept_event, nullptr)) {
       //process events, only KeyPress is requested at window creation time
       if (event.type == KeyPress) {

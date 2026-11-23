@@ -35,7 +35,6 @@ enum class Api {
   DIRECTX,
   VULKAN,
   OPENGL,
-  OPENGL_LEGACY,
   COUNT
 };
 
@@ -43,8 +42,6 @@ static Api TApiToApi(gits::ApisIface::TApi api) {
   switch (api) {
   case ApisIface::TApi::ApiNotSet:
     return Api::UNKNOWN;
-  case ApisIface::TApi::OpenGL:
-    return Api::OPENGL_LEGACY;
   case ApisIface::TApi::DirectX:
     return Api::DIRECTX;
   default:

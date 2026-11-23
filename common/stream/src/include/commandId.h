@@ -15,15 +15,15 @@ namespace stream {
 
 enum class ApiId {
   ID_COMMON = 0,
-  ID_OPENGL_LEGACY = 1,
-  ID_GL_HELPER_TOKENS = 2,
-  ID_WGL = 3,
-  ID_GLX = 5,
-  ID_EGL = 6,
-  ID_OPENCL = 7,         // no longer supported, identifies old streams
-  ID_VULKAN_LEGACY = 10, // no longer supported, identifies old streams
-  ID_LEVELZERO = 11,     // no longer supported, identifies old streams
-  ID_OCLOC = 12,         // no longer supported, identifies old streams
+  ID_OPENGL_LEGACY = 1,    // no longer supported, identifies old streams
+  ID_GL_HELPER_TOKENS = 2, // no longer supported, identifies old streams
+  ID_WGL = 3,              // no longer supported, identifies old streams
+  ID_GLX = 5,              // no longer supported, identifies old streams
+  ID_EGL = 6,              // no longer supported, identifies old streams
+  ID_OPENCL = 7,           // no longer supported, identifies old streams
+  ID_VULKAN_LEGACY = 10,   // no longer supported, identifies old streams
+  ID_LEVELZERO = 11,       // no longer supported, identifies old streams
+  ID_OCLOC = 12,           // no longer supported, identifies old streams
   ID_DIRECTX = 13,
   ID_VULKAN = 14,
   ID_OPENGL = 15,

@@ -362,8 +362,6 @@ std::string GetRecorderDirectoryNameForApi(Api api) {
     return "FilesToCopyDirectX";
   case Api::OPENGL:
     return "FilesToCopyOGL";
-  case Api::OPENGL_LEGACY:
-    return "FilesToCopyOGLLegacy";
   case Api::VULKAN:
     return "FilesToCopyVulkan";
   default:
@@ -373,8 +371,6 @@ std::string GetRecorderDirectoryNameForApi(Api api) {
   switch (api) {
   case Api::OPENGL:
     return "OpenGL";
-  case Api::OPENGL_LEGACY:
-    return "OpenGLLegacy";
   case Api::VULKAN:
     return "Vulkan";
   default:

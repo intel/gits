@@ -75,22 +75,6 @@ recorder/gits_config.txt
 /gits_cmake_args.txt
 /gits_label.txt
 
-# OpenGLLegacy
-OpenGLLegacy/common/glEnumsAuto.cpp
-OpenGLLegacy/common/glFunctions.cpp
-OpenGLLegacy/common/include/glDrivers.h
-OpenGLLegacy/common/include/glEnumsAuto.h
-OpenGLLegacy/common/include/glFunctions.h
-OpenGLLegacy/common/include/glIDs.h
-OpenGLLegacy/common/include/glIDswitch.h
-OpenGLLegacy/recorder/include/openglRecorderWrapperAuto.h
-OpenGLLegacy/recorder/include/openglRecorderWrapperIfaceAuto.h
-OpenGLLegacy/recorder/openglRecorderWrapperAuto.cpp
-/OpenGLLegacy/GLIPlugin/gitsPluginPrePostAuto.cpp
-/OpenGLLegacy/GLIPlugin/GLIPlugin32.def
-/OpenGLLegacy/GLIPlugin/GLIPlugin64.def
-/OpenGLLegacy/GLIPlugin/include/gitsPluginPrePostAuto.h
-
 # OpenGL
 OpenGL/**/*Auto.cpp
 OpenGL/**/*Auto.h

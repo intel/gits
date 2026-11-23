@@ -56,8 +56,6 @@ CGits::CGits()
       _drawCounter(0),
       _drawInFrameCounter(0),
       _finished(false),
-      _glProgramsZipFile(nullptr),
-      _glProgramsUnZipFile(nullptr),
       _frameNo(1),
       _restoringState(false),
       _sc(nullptr),
@@ -78,9 +76,6 @@ CGits::~CGits() {
     _compressor.reset();
 
     // Only create signature when recording, player can opt in through option.
-    if (Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled) {
-      CloseZipFileGLPrograms();
-    }
     if ((Configurator::IsRecorder() && Configurator::Get().common.recorder.enabled)
 #ifdef GITS_PLATFORM_WINDOWS
         || (Configurator::IsPlayer() && Configurator::Get().common.player.subcapture.enabled)
@@ -94,39 +89,6 @@ CGits::~CGits() {
   } catch (...) {
     topmost_exception_handler("CGits::~CGits");
   }
-}
-
-zipFile CGits::OpenZipFileGLPrograms() {
-  if (_glProgramsZipFile != nullptr) {
-    return _glProgramsZipFile;
-  }
-
-  std::filesystem::path path = Configurator::Get().common.recorder.dumpPath / "gitsPrograms.zip";
-  auto zipName = path.string();
-
-  _glProgramsZipFile = zipOpen(zipName.c_str(), APPEND_STATUS_ADDINZIP);
-  if (_glProgramsZipFile == nullptr) {
-    _glProgramsZipFile = zipOpen(zipName.c_str(), APPEND_STATUS_CREATE);
-  }
-  if (_glProgramsZipFile == nullptr) {
-    CheckMinimumAvailableDiskSize();
-    throw std::runtime_error("couldn't create zip archive: " + zipName);
-  }
-
-  return _glProgramsZipFile;
-}
-
-void CGits::CloseZipFileGLPrograms() {
-  if (_glProgramsZipFile == nullptr) {
-    return;
-  }
-  int r = zipClose(_glProgramsZipFile, nullptr);
-
-  if (r != ZIP_OK) {
-    CheckMinimumAvailableDiskSize();
-    throw std::runtime_error("failed closing zip archive");
-  }
-  _glProgramsZipFile = nullptr;
 }
 
 namespace {
@@ -144,6 +106,11 @@ constexpr RemovedApi REMOVED_APIS[] = {
     {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
     {CToken::ID_OCLOC, ApisIface::TApi::ApiNotSet, "ocloc"},
     {CToken::ID_LEVELZERO, ApisIface::TApi::LevelZero, "Level Zero"},
+    {CToken::ID_OPENGL_LEGACY, ApisIface::TApi::OpenGL, "OpenGLLegacy"},
+    {CToken::ID_GL_HELPER_TOKENS, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
+    {CToken::ID_WGL, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
+    {CToken::ID_GLX, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
+    {CToken::ID_EGL, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
 };
 
 [[noreturn]] void ThrowRemovedApi(const RemovedApi& removedApi) {
@@ -154,12 +121,6 @@ constexpr RemovedApi REMOVED_APIS[] = {
   throw ENotSupported(EXCEPTION_MESSAGE);
 }
 
-void EraseFromFirstNullChar(std::string& str) {
-  auto nullCharPos = str.find('\0');
-  if (nullCharPos != std::string::npos) {
-    str.erase(nullCharPos);
-  }
-}
 CToken* CTokenCreate(CId id) {
   switch (*id) {
   case CToken::ID_INIT_START:
@@ -188,69 +149,6 @@ CToken* CTokenCreate(CId id) {
   }
 }
 } // namespace
-void CGits::OpenUnZipFileGLPrograms() {
-  if (_glProgramsUnZipFile != nullptr) {
-    return;
-  }
-
-  //Open zip file
-  std::filesystem::path arch_path =
-      Configurator::Get().common.player.streamDir / "gitsPrograms.zip";
-  _glProgramsUnZipFile = unzOpen(arch_path.string().c_str());
-  if (_glProgramsUnZipFile == nullptr) {
-    throw std::runtime_error("failed to open zip archive");
-  }
-
-  //Scan zip file and create map file_name->location
-  ZippedFileInfo fileInfo;
-  unz_file_info unzInfo;
-  std::string fileName;
-  fileName.reserve(100);
-  int stat;
-  stat = unzGoToFirstFile(_glProgramsUnZipFile);
-  while (stat == UNZ_OK) {
-    unzGetFilePos(_glProgramsUnZipFile, &fileInfo.location);
-    fileName.clear();
-    fileName.resize(100, '\0');
-    unzGetCurrentFileInfo(_glProgramsUnZipFile, &unzInfo, &fileName[0], (uLong)fileName.size(),
-                          nullptr, 0, nullptr, 0);
-    fileInfo.size = unzInfo.uncompressed_size;
-    EraseFromFirstNullChar(fileName);
-    _glProgramsLocationsInZipFile[fileName] = fileInfo;
-    stat = unzGoToNextFile(_glProgramsUnZipFile);
-  }
-}
-
-void CGits::ReadGlProgramFromUnZipFile(std::string progname, std::string& text) {
-  //Get files params form a map
-  EraseFromFirstNullChar(progname);
-  auto iter = _glProgramsLocationsInZipFile.find(progname);
-  if (iter == _glProgramsLocationsInZipFile.end()) {
-    throw std::runtime_error("failed, shader file not found in a zip file");
-  }
-  unz_file_pos location = iter->second.location;
-  unsigned size = iter->second.size;
-
-  //Read files
-  unzGoToFilePos(_glProgramsUnZipFile, &location);
-  int stat = unzOpenCurrentFile(_glProgramsUnZipFile);
-  if (stat != UNZ_OK) {
-    throw std::runtime_error("failed to open zip archive file for writing");
-  }
-  text.resize(size);
-  stat = unzReadCurrentFile(_glProgramsUnZipFile, &text[0], (unsigned)text.size());
-  if (stat == UNZ_ERRNO) {
-    throw std::runtime_error("failed reading shader file");
-  }
-}
-
-void CGits::CloseUnZipFileGLPrograms() {
-  if (_glProgramsUnZipFile == nullptr) {
-    return;
-  }
-  unzClose(_glProgramsUnZipFile);
-  _glProgramsUnZipFile = nullptr;
-}
 
 //This method maps passed pointers to ordered unsigned integers.
 //Those values are being written to the stream instead of pointer and allows to optimize playback unmapping operations.
@@ -700,9 +598,6 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       CGits::Instance().SetApi3D(api3D);
       if (api3D == ApisIface::TApi::DirectX) {
         CGits::Instance().Library(gits::CLibrary::TId::ID_DirectX).RegisterEvents();
-      }
-      if (api3D == ApisIface::TApi::OpenGL) {
-        CGits::Instance().Library(gits::CLibrary::TId::ID_OPENGL_LEGACY).RegisterEvents();
       }
       Configurator::Instance().LogUnspportedConfigUsage(gits::ApisIface::ToApiBool(api3D));
     }

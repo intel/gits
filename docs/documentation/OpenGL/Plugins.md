@@ -3,7 +3,7 @@ icon: simple/opengl
 title: Plugins
 ---
 
-OpenGL plugins extend capture and replay for the new **OpenGL** backend. [OpenGL Legacy](OpenGLLegacy.md) does not load plugins. Built plugins install under `Plugins/OpenGL/`. For shared concepts (`config.yml`, environment overrides, interceptor-only runs), see [Plugins](../Plugins.md).
+OpenGL plugins extend capture and replay for the new **OpenGL** backend. Built plugins install under `Plugins/OpenGL/`. For shared concepts (`config.yml`, environment overrides, interceptor-only runs), see [Plugins](../Plugins.md).
 
 # Usage
 

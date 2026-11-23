@@ -83,10 +83,7 @@ public:
   }
 
   virtual uint64_t Size() const {
-    if (CGits::Instance().GetApi3D() == ApisIface::ApisIface::OpenGL) {
-      throw std::runtime_error(std::string("Size() not implemented for argument wrapper ") +
-                               Name() + " used in OpenGL API.");
-    } else if (CGits::Instance().GetApi3D() == ApisIface::ApisIface::Vulkan) {
+    if (CGits::Instance().GetApi3D() == ApisIface::ApisIface::Vulkan) {
       throw std::runtime_error(std::string("Size() not implemented for argument wrapper ") +
                                Name() + " used in Vulkan API.");
     }
@@ -125,45 +122,6 @@ public:
   virtual const char* Buffer() const = 0;
   virtual size_t Length() const = 0;
   virtual uint64_t Size() const override;
-};
-
-class CArgumentFileText : public CArgument {
-protected:
-  std::string _fileName;
-  std::string _text;
-
-  void init(const char* fileName, const char* text, unsigned length);
-  void LoadTextFromFile();
-
-public:
-  CArgumentFileText() {}
-  CArgumentFileText(const std::string& fileName, const std::string& text);
-  CArgumentFileText(const char* fileName, const char* text, unsigned length);
-  virtual const char* Name() const override {
-    return _fileName.c_str();
-  }
-  virtual void Write(CBinOStream& stream) const override;
-  virtual void Read(CBinIStream& stream) override;
-
-  const std::string& FileName() const {
-    return _fileName;
-  }
-  const std::string& Text() const {
-    return _text;
-  }
-
-  std::string& operator*() {
-    return _text;
-  }
-  const std::string& operator*() const {
-    return _text;
-  }
-
-  // Serialized as: filename length+bytes and text length+bytes
-  virtual uint64_t Size() const override {
-    // Two 32-bit length headers plus raw bytes
-    return sizeof(uint32_t) + _fileName.size() + sizeof(uint32_t) + _text.size();
-  }
 };
 
 class CBinaryResource : public CArgument {

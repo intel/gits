@@ -61,14 +61,6 @@ Enums:
       - Value: CCODE
         Labels: [CCode]
     Description: DEPRECATED because CCode was removed. Used by the deprecated option Common.Recorder.RecordingMode.
-  - Name: OpenGLRecorderMode
-    Values:
-      - Value: ALL
-      - Value: FRAMES
-      - Value: SINGLE_DRAW
-        Labels: [OglSingleDraw]
-      - Value: DRAWS_RANGE
-        Labels: [OglDrawsRange]
   - Name: OpenGLPersistentMapWriteTracking
     Values:
       - Value: WRITE_WATCH
@@ -81,38 +73,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: GLProfile
-    Values:
-      - Value: NO_PROFILE_FORCED
-        ConfigValue: NONE
-        Labels: [NONE]
-      - Value: COMPAT
-        Labels: [COMPAT]
-      - Value: CORE
-        Labels: [CORE]
-      - Value: ES
-        Labels: [ES]
-  - Name: GLNativeApi
-    Values:
-      - Value: NO_NTV_API_FORCED
-        ConfigValue: NONE
-        Labels: [NONE]
-      - Value: EGL
-        Labels: [EGL]
-      - Value: GLX
-        Labels: [GLX]
-      - Value: WGL
-        Labels: [WGL]
-  - Name: BuffersState
-    Values:
-      - Value: CAPTURE_ALWAYS
-      - Value: RESTORE
-      - Value: MIXED
-  - Name: TexturesState
-    Values:
-      - Value: CAPTURE_ALWAYS
-      - Value: RESTORE
-      - Value: MIXED
   - Name: WindowsKeyHandling
     Values:
       - Value: MESSAGE_LOOP

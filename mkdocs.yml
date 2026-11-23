@@ -107,7 +107,6 @@ nav:
         - 'documentation/Vulkan/ResourceDumping.md'
       - OpenGL:
         - 'documentation/OpenGL/Plugins.md'
-        - 'documentation/OpenGL/OpenGLLegacy.md'
     - 'documentation/lua_scripts.md'        
   - Development:
     - 'development/project.md'

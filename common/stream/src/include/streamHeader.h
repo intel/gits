@@ -41,7 +41,7 @@ public:
   // keep them unchanged.
   enum class Api : unsigned {
     API_NOT_SET = 0,
-    API_OPENGL_LEGACY = 1,
+    API_OPENGL_LEGACY = 1, // no longer supported, identifies old streams
     API_VULKAN_LEGACY = 2, // no longer supported, identifies old streams
     API_OPENCL = 3,        // no longer supported, identifies old streams
     API_LEVELZERO = 4,     // no longer supported, identifies old streams

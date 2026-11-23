@@ -17,10 +17,10 @@
 #include "scheduler.h"
 #include "gits.h"
 #include "function.h"
-#include "../OpenGLLegacy/common/include/openglArguments.h"
 
 #include "yaml-cpp/yaml.h"
 #include <filesystem>
+#include <fstream>
 #include <array>
 #include <iomanip>
 #include <iostream>

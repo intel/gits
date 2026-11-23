@@ -24,7 +24,7 @@ public:
   // Values are stored in stream headers; keep them unchanged.
   enum TApi {
     ApiNotSet = 0,
-    OpenGL = 1,
+    OpenGL = 1,    // no longer supported, identifies old streams
     Vulkan = 2,    // no longer supported, identifies old streams
     OpenCL = 3,    // no longer supported, identifies old streams
     LevelZero = 4, // no longer supported, identifies old streams
