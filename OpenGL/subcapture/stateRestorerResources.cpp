@@ -139,8 +139,8 @@ TextureLevel QueryLevel(GLenum imageTarget, GLint level) {
   return info;
 }
 
-// Stops the subcapture when a compressed image cannot be read exactly, since writing it from
-// another read could change its blocks.
+// Stops the subcapture when a compressed image cannot be read exactly and no upload of it is kept,
+// since writing it from another read could change its blocks.
 void FailCompressedRead(GLuint texture, GLint level, const char* step, GLenum error) {
   std::ostringstream message;
   message << "Subcapture: " << step << " to read level " << level << " of compressed texture "
@@ -149,7 +149,8 @@ void FailCompressedRead(GLuint texture, GLint level, const char* step, GLenum er
     message << " The replay system ran out of GPU memory; record the subcapture on a system with "
                "more GPU memory.";
   } else {
-    message << " Its compressed blocks cannot be read exactly on this system.";
+    message << " Its compressed blocks cannot be read exactly on this system, and no upload of it "
+               "is kept.";
   }
   GITS_ASSERT(false, message.str());
 }
@@ -215,9 +216,10 @@ bool Copyable(GLenum format) {
 // Compressed images read with glGetCompressedTexImage can differ from the uploaded data. Their
 // blocks copied into the texels of an uncompressed texture of the same size read back exactly.
 // The copy covers the whole image, so it can end inside the last blocks, as for levels smaller
-// than a block. Images in formats glCopyImageSubData cannot copy are read directly. A failed
-// allocation or copy stops the subcapture. Returns the number of GL errors raised before the
-// copy, which the copy's own errors must be told apart from.
+// than a block. Images in formats glCopyImageSubData cannot copy are read directly. GL can reject
+// the allocation or copy, then the image is the `kept` upload, which holds its blocks exactly, or
+// the subcapture stops without one. Returns the number of GL errors raised before the copy, which
+// the copy's own errors must be told apart from.
 int ReadCompressedImage(GLenum target,
                         GLuint texture,
                         GLenum imageTarget,
@@ -225,7 +227,8 @@ int ReadCompressedImage(GLenum target,
                         const TextureLevel& info,
                         std::vector<uint8_t>& data,
                         bool copy,
-                        bool handles) {
+                        bool handles,
+                        const std::vector<uint8_t>* kept) {
   GLint blockWidth = 0;
   GLint blockHeight = 0;
   if (copy && Copyable(static_cast<GLenum>(info.InternalFormat))) {
@@ -268,7 +271,9 @@ int ReadCompressedImage(GLenum target,
     GL_FN(glTexParameteri)(target, GL_TEXTURE_BASE_LEVEL, level);
     GL_FN(glTexParameteri)(target, GL_TEXTURE_MAX_LEVEL, level);
   }
-  for (GLsizei first = 0; first < layers; first += maxLayers) {
+  const char* failedStep = nullptr;
+  GLenum error = GL_NO_ERROR;
+  for (GLsizei first = 0; first < layers && failedStep == nullptr; first += maxLayers) {
     const GLsizei count = std::min(maxLayers, layers - first);
     GLuint uncompressed = 0;
     GL_FN(glGenTextures)(1, &uncompressed);
@@ -278,33 +283,43 @@ int ReadCompressedImage(GLenum target,
     GL_FN(glTexParameteri)(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     GL_FN(glTexStorage3D)
     (GL_TEXTURE_2D_ARRAY, 1, wide ? GL_RGBA32UI : GL_RG32UI, columns, rows, count);
-    if (const GLenum error = GL_FN(glGetError)(); error != GL_NO_ERROR) {
-      FailCompressedRead(texture, level, "allocating a texture", error);
-    }
-    const auto copyBlocks = [&](GLsizei copyWidth, GLsizei copyHeight) {
-      GL_FN(glCopyImageSubData)
-      (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
-       copyWidth, copyHeight, count);
-      return GL_FN(glGetError)();
-    };
-    // The region can end inside the last blocks at the image edge or be rounded up to whole
-    // blocks; both copy the same blocks, so the rounded one is copied when the first is rejected.
-    GLenum error = copyBlocks(width, height);
-    if (error == GL_INVALID_VALUE && (width % blockWidth != 0 || height % blockHeight != 0)) {
-      error = copyBlocks(columns * blockWidth, rows * blockHeight);
-    }
+    error = GL_FN(glGetError)();
     if (error != GL_NO_ERROR) {
-      FailCompressedRead(texture, level, "copying the blocks", error);
+      failedStep = "allocating a texture";
+    } else {
+      const auto copyBlocks = [&](GLsizei copyWidth, GLsizei copyHeight) {
+        GL_FN(glCopyImageSubData)
+        (texture, target, level, 0, 0, face + first, uncompressed, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+         copyWidth, copyHeight, count);
+        return GL_FN(glGetError)();
+      };
+      // The region can end inside the last blocks at the image edge or be rounded up to whole
+      // blocks; both copy the same blocks, so the rounded one is copied when the first is
+      // rejected.
+      error = copyBlocks(width, height);
+      if (error == GL_INVALID_VALUE && (width % blockWidth != 0 || height % blockHeight != 0)) {
+        error = copyBlocks(columns * blockWidth, rows * blockHeight);
+      }
+      if (error != GL_NO_ERROR) {
+        failedStep = "copying the blocks";
+      } else {
+        GL_FN(glGetTexImage)
+        (GL_TEXTURE_2D_ARRAY, 0, wide ? GL_RGBA_INTEGER : GL_RG_INTEGER, GL_UNSIGNED_INT,
+         data.data() + first * layerSize);
+      }
     }
-    GL_FN(glGetTexImage)
-    (GL_TEXTURE_2D_ARRAY, 0, wide ? GL_RGBA_INTEGER : GL_RG_INTEGER, GL_UNSIGNED_INT,
-     data.data() + first * layerSize);
     GL_FN(glDeleteTextures)(1, &uncompressed);
   }
   GL_FN(glBindTexture)(GL_TEXTURE_2D_ARRAY, bound);
   if (!handles) {
     GL_FN(glTexParameteri)(target, GL_TEXTURE_BASE_LEVEL, baseLevel);
     GL_FN(glTexParameteri)(target, GL_TEXTURE_MAX_LEVEL, maxLevel);
+  }
+  if (failedStep != nullptr) {
+    if (kept == nullptr) {
+      FailCompressedRead(texture, level, failedStep, error);
+    }
+    data = *kept;
   }
   return errors;
 }
@@ -1049,12 +1064,13 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
       if (info.Compressed) {
         data.resize(static_cast<size_t>(std::max(info.CompressedSize, 0)));
         const CompressedImage* kept =
-            mixedFormats && object != nullptr
-                ? m_State.FindCompressedImage(object->Owner, name, imageTarget, level)
-                : nullptr;
-        if (kept != nullptr && kept->InternalFormat == static_cast<GLenum>(info.InternalFormat) &&
+            object != nullptr ? m_State.FindCompressedImage(object->Owner, name, imageTarget, level)
+                              : nullptr;
+        const bool keptMatches =
+            kept != nullptr && kept->InternalFormat == static_cast<GLenum>(info.InternalFormat) &&
             kept->Width == info.Width && kept->Height == std::max(info.Height, 1) &&
-            kept->Depth == std::max(info.Depth, 1) && kept->Data.size() == data.size()) {
+            kept->Depth == std::max(info.Depth, 1) && kept->Data.size() == data.size();
+        if (mixedFormats && keptMatches) {
           data = kept->Data;
         } else {
           if (mixedFormats) {
@@ -1068,8 +1084,9 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
                             (m_Version.AtLeast(3, 0) && HasExtension("GL_ARB_copy_image") &&
                              HasExtension("GL_ARB_texture_storage") &&
                              HasExtension("GL_ARB_internalformat_query2"));
-          m_RaisedErrors += ReadCompressedImage(target, name, imageTarget, level, info, data, copy,
-                                                m_State.HandleCreated(key));
+          m_RaisedErrors +=
+              ReadCompressedImage(target, name, imageTarget, level, info, data, copy,
+                                  m_State.HandleCreated(key), keptMatches ? &kept->Data : nullptr);
         }
       } else {
         pixelFormat = ReadbackFormat(imageTarget, level, m_Version.Compatibility);

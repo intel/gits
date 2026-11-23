@@ -432,6 +432,10 @@ private:
   void KeepBoundCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
   template <typename CommandT>
   void KeepTextureCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
+  // A compressed sub-image of the bound texture that covers its whole image replaces that image,
+  // so it is kept like an upload of the image. Any other forgets the image.
+  template <typename CommandT>
+  void KeepBoundCompressedSubImage(const CommandT& command);
   // Whether a texture command on `threadId` executes before the range. A `listable` command,
   // one GL compiles into a display list, does not execute while a list compiles in GL_COMPILE
   // mode, and marks the list as one that can change texture images. A command GL executes at

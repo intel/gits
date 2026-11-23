@@ -625,6 +625,42 @@ void StateTrackingLayer::KeepTextureCompressedImage(const CommandT& command,
                       command.m_imageSize.Value, command.m_bits);
 }
 
+template <typename CommandT>
+void StateTrackingLayer::KeepBoundCompressedSubImage(const CommandT& command) {
+  const GLenum imageTarget = command.m_target.Value;
+  const GLint level = command.m_level.Value;
+  GLsizei height = 1;
+  GLsizei depth = 1;
+  bool whole = command.m_xoffset.Value == 0;
+  if constexpr (requires { command.m_yoffset; }) {
+    whole = whole && command.m_yoffset.Value == 0;
+    height = command.m_height.Value;
+  }
+  if constexpr (requires { command.m_zoffset; }) {
+    whole = whole && command.m_zoffset.Value == 0;
+    depth = command.m_depth.Value;
+  }
+  if (whole && BoundTexture(imageTarget) != 0) {
+    GLint levelWidth = 0;
+    GLint levelHeight = 0;
+    GLint levelDepth = 0;
+    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_WIDTH, &levelWidth);
+    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_HEIGHT, &levelHeight);
+    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_DEPTH, &levelDepth);
+    whole = levelWidth == command.m_width.Value && std::max(levelHeight, 1) == height &&
+            std::max(levelDepth, 1) == depth;
+  } else {
+    whole = false;
+  }
+  if (!whole) {
+    ForgetBoundCompressedImage(command);
+    return;
+  }
+  KeepCompressedImage(command.m_ThreadId, 0, imageTarget, level,
+                      {command.m_format.Value, command.m_width.Value, height, depth},
+                      command.m_imageSize.Value, command.m_data);
+}
+
 bool StateTrackingLayer::Compatibility(uint32_t threadId) {
   const GITSKey context = m_State.CurrentShareGroup(threadId).second;
   const auto known = m_Compatibility.find(context);
@@ -813,27 +849,27 @@ void StateTrackingLayer::ForgetUnitCompressedImage(const CommandT& command) {
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage1DCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage1DARBCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage2DCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage2DARBCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage3DCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glCompressedTexSubImage3DARBCommand& command) {
-  ForgetBoundCompressedImage(command);
+  KeepBoundCompressedSubImage(command);
 }
 
 void StateTrackingLayer::Post(glTexSubImage1DCommand& command) {
