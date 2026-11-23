@@ -16,12 +16,12 @@ Binary **GITS** streams are collections of files produced by **GITS** recorder. 
 
 # Recorder
 
-Recorder operates, by creating a `token` for each recorder function in the thread that invoked that API function. `Token` represents all the information necessary to play back function it represents. Recorder then passes each newly created `token` to a separate thread which is used to persist data to hdd.
+Recorder operates by encoding each intercepted API call as a command in the thread that invoked that API function. A command holds all the information necessary to play back the call it represents. Recorder then passes the encoded commands to separate threads that compress them and persist them to disk.
 Normally all IO is done in separate threads of execution to minimize impact on the recorded application.
 
 # Player
 
-The player's main task is to read in the recorded binary stream and play it back on the current machine. It sets a rendering surface, initializes the API and plays back the commands that have been tokenized.
+The player's main task is to read in the recorded binary stream and play it back on the current machine. It sets a rendering surface, initializes the API and plays back the recorded commands.
 
 ## CCode
 
@@ -41,5 +41,5 @@ A subcapture can also be understood as a trimmed binary stream. You can e.g. use
 
 # Generator
 
-A lot of component specific logic is generated automatically by Python scripts. Generator files have their respective APIs indicated in their names, with the exception of few OpenGL files (for legacy reasons).
+A lot of component specific logic is generated automatically by Python scripts. Each API keeps its generators in its own `codegen` folder, for example `Vulkan/codegen`.
 

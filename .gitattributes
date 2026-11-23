@@ -16,7 +16,6 @@
 *.ipp		text
   # installer settings
 *.iss		text
-*.lua		text
 *.mak		text
 *.md		text
 *.pl		text

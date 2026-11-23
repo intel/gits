@@ -26,7 +26,7 @@ The **Recorder** is split into multiple folders one per supported API:
 | :simple-vulkan: Vulkan             | `FilesToCopyVulkan`       | `Vulkan`            |
 | :simple-vulkan: Vulkan Layer       | `VulkanLayer`             | `VulkanLayer`       |
 
-The **OpenGL** backend is new and experimental. Streams recorded with the removed OpenGLLegacy and VulkanLegacy backends can only be replayed with an older GITS release. OpenGL ES applications were recorded with OpenGLLegacy and can no longer be recorded.
+The **OpenGL** backend is new and experimental. Streams recorded with the removed OpenGLLegacy, VulkanLegacy, OpenCL and Level Zero backends can only be replayed with an older GITS release. OpenGL ES applications were recorded with OpenGLLegacy and can no longer be recorded.
 
 --8<-- "recorder_steps.md"
 
