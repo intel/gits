@@ -432,8 +432,10 @@ private:
   void KeepBoundCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
   template <typename CommandT>
   void KeepTextureCompressedImage(const CommandT& command, GLsizei height, GLsizei depth);
-  // A compressed sub-image of the bound texture that covers its whole image replaces that image,
-  // so it is kept like an upload of the image. Any other forgets the image.
+  // A compressed sub-image of the bound texture that covers a whole image kept for it replaces
+  // that image, so it is kept in its place. Images are kept only from glCompressedTexImage*,
+  // which defines mutable storage that no texture view shares. Any other sub-image forgets the
+  // image.
   template <typename CommandT>
   void KeepBoundCompressedSubImage(const CommandT& command);
   // Whether a texture command on `threadId` executes before the range. A `listable` command,

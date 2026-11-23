@@ -1084,9 +1084,12 @@ void StateRestorer::RestoreTexture(GITSKey key, GLuint name, GLenum target) {
                             (m_Version.AtLeast(3, 0) && HasExtension("GL_ARB_copy_image") &&
                              HasExtension("GL_ARB_texture_storage") &&
                              HasExtension("GL_ARB_internalformat_query2"));
+          // Views can share immutable storage, and writes through one leave the uploads kept for
+          // the others stale, so only the upload of a mutable texture is its image.
+          const bool keptExact = keptMatches && immutable == GL_FALSE;
           m_RaisedErrors +=
               ReadCompressedImage(target, name, imageTarget, level, info, data, copy,
-                                  m_State.HandleCreated(key), keptMatches ? &kept->Data : nullptr);
+                                  m_State.HandleCreated(key), keptExact ? &kept->Data : nullptr);
         }
       } else {
         pixelFormat = ReadbackFormat(imageTarget, level, m_Version.Compatibility);

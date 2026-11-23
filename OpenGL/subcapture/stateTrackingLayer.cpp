@@ -640,19 +640,14 @@ void StateTrackingLayer::KeepBoundCompressedSubImage(const CommandT& command) {
     whole = whole && command.m_zoffset.Value == 0;
     depth = command.m_depth.Value;
   }
-  if (whole && BoundTexture(imageTarget) != 0) {
-    GLint levelWidth = 0;
-    GLint levelHeight = 0;
-    GLint levelDepth = 0;
-    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_WIDTH, &levelWidth);
-    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_HEIGHT, &levelHeight);
-    GL_FN(glGetTexLevelParameteriv)(imageTarget, level, GL_TEXTURE_DEPTH, &levelDepth);
-    whole = levelWidth == command.m_width.Value && std::max(levelHeight, 1) == height &&
-            std::max(levelDepth, 1) == depth;
-  } else {
-    whole = false;
-  }
-  if (!whole) {
+  const GLuint texture = BoundTexture(imageTarget);
+  const CompressedImage* kept =
+      whole && texture != 0
+          ? m_State.FindCompressedImage(m_State.CurrentShareGroup(command.m_ThreadId).first,
+                                        texture, imageTarget, level)
+          : nullptr;
+  if (kept == nullptr || kept->InternalFormat != command.m_format.Value ||
+      kept->Width != command.m_width.Value || kept->Height != height || kept->Depth != depth) {
     ForgetBoundCompressedImage(command);
     return;
   }
