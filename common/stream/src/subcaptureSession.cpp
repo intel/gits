@@ -41,10 +41,6 @@ const char* ApiName(StreamHeader::Api api) {
     return "vulkan";
   case StreamHeader::Api::API_DIRECTX:
     return "directx";
-  case StreamHeader::Api::API_OPENCL:
-    return "opencl";
-  case StreamHeader::Api::API_LEVELZERO:
-    return "levelzero";
   default:
     return "unknown";
   }

@@ -117,10 +117,6 @@ Enums:
         Description: Vulkan
       - Value: OGL
         Description: OpenGL
-      - Value: L0
-        Description: Level Zero
-      - Value: OCL
-        Description: OpenCL
       - Value: NOT_SET
         Description: Not set
   - Name: VulkanCaptureReplayAddressForm

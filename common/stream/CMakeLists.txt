@@ -37,6 +37,7 @@ set(STREAM_SRC_HEADERS
   ${STREAM_HEADER_DIR}/externalHandleService.h
   ${STREAM_HEADER_DIR}/subcaptureSession.h
   ${STREAM_HEADER_DIR}/restoredContents.h
+  ${STREAM_HEADER_DIR}/removedApis.h
   ${TBB_DEPENDENT_HEADERS}
 )
 set(STREAM_SRC_SOURCES
@@ -48,6 +49,7 @@ set(STREAM_SRC_SOURCES
   ${STREAM_SOURCE_DIR}/diskSpaceCheck.cpp
   ${STREAM_SOURCE_DIR}/externalHandleService.cpp
   ${STREAM_SOURCE_DIR}/subcaptureSession.cpp
+  ${STREAM_SOURCE_DIR}/removedApis.cpp
   ${TBB_DEPENDENT_SOURCES}
 )
 

@@ -73,6 +73,13 @@ uint32_t StreamHeader::ApiBit(Api api) {
 }
 
 void StreamHeader::ReadHeader(std::istream& stream) {
+  m_Version[0] = m_Version[1] = m_Version[2] = m_Version[3] = 0;
+  m_SchedulerVersion = 0;
+  m_CompressionType = {};
+  m_ChunkSize = 0;
+  m_Properties = nlohmann::ordered_json();
+  m_Api = Api::API_NOT_SET;
+
   ReadVersion(stream);
 
   unsigned skippedCallCount{};
@@ -263,16 +270,10 @@ bool StreamHeader::HasMultipleApis() const {
 
 ApiBool StreamHeader::GetApiBool() const {
   switch (m_Api) {
-  case Api::API_OPENGL_LEGACY:
   case Api::API_OPENGL:
     return ApiBool::OGL;
-  case Api::API_VULKAN_LEGACY:
   case Api::API_VULKAN:
     return ApiBool::VK;
-  case Api::API_OPENCL:
-    return ApiBool::OCL;
-  case Api::API_LEVELZERO:
-    return ApiBool::L0;
   case Api::API_DIRECTX:
     return ApiBool::DX;
   default:

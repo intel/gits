@@ -25,9 +25,6 @@
 #include <optional>
 #include <ostream>
 
-// Version of the legacy stream format that added the APIs to the stream header.
-#define GITS_API_INFO GITS_MAKE_VERSION3(2, 0, 11)
-
 namespace gits {
 class ImGuiHUD;
 

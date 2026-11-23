@@ -19,12 +19,10 @@
 #include "gitsBuildInfo.h"
 
 #include <iomanip>
-#include <algorithm>
-#include <vector>
 #include <iterator>
 #include <ostream>
-#include <istream>
 #include <sstream>
+#include <string>
 #include <cmath>
 
 namespace gits {
@@ -121,37 +119,6 @@ std::ostream& operator<<(std::ostream& output_stream, const CVersion& version) {
   }
 
   return output_stream;
-}
-
-std::istream& operator>>(std::istream& input_stream, CVersion& version) {
-  char magic_r[sizeof(magic) - 1]; //magic contains null terminator
-  if (!input_stream.read(magic_r, sizeof(magic_r)) ||
-      !std::equal(magic_r, magic_r + sizeof(magic_r), magic)) {
-    throw std::runtime_error("unrecognized version format");
-  }
-
-  Alias64w16 v;
-  for (size_t i = 0; i < ver_comps; i++) {
-    std::vector<char> chunk(format[i] + 1);
-    if (!input_stream.read(&chunk[0], format[i])) {
-      throw std::runtime_error("unrecognized version format");
-    }
-
-    std::stringstream stream(&chunk[0]);
-    uint16_t value;
-    stream >> value;
-    v.v16[ver_comps - i - 1] = value;
-
-    if (i != ver_comps - 1) {
-      char dot;
-      if (!input_stream.read(&dot, 1) || dot != '.') {
-        throw std::runtime_error("unrecognized version format");
-      }
-    }
-  }
-
-  version = CVersion(v.v64);
-  return input_stream;
 }
 
 const CVersion& CurrentVersion() {

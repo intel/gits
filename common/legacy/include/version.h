@@ -64,8 +64,6 @@ private:
 bool operator<(const CVersion& lhs, const CVersion& rhs);
 // Writes the GITS_dd.dd.dd.ddd label stored in streams; use ToString() for display.
 std::ostream& operator<<(std::ostream& stream, const CVersion& version);
-std::istream& operator>>(std::istream& stream, CVersion& version);
-
 // Version of this GITS build.
 const CVersion& CurrentVersion();
 // Full SemVer version of this GITS build, with build metadata for development builds, e.g.

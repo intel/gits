@@ -11,8 +11,6 @@
 #include <filesystem>
 #include <string>
 
-#include "apis_iface.h"
-
 namespace gits::gui {
 
 namespace filesystem_names {
@@ -38,17 +36,6 @@ enum class Api {
   OPENGL,
   COUNT
 };
-
-static Api TApiToApi(gits::ApisIface::TApi api) {
-  switch (api) {
-  case ApisIface::TApi::ApiNotSet:
-    return Api::UNKNOWN;
-  case ApisIface::TApi::DirectX:
-    return Api::DIRECTX;
-  default:
-    return Api::UNKNOWN;
-  };
-}
 
 enum class GitsAction {
   CAPTURE = 0,

@@ -10,7 +10,6 @@ set(COMMON_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(COMMON_HEADER_DIR ${COMMON_SOURCE_DIR}/include)
 
 list(APPEND common_SOURCES
-  ${COMMON_HEADER_DIR}/apis_iface.h
   ${COMMON_HEADER_DIR}/bit_range.h
   ${COMMON_HEADER_DIR}/configUtils.h
   ${COMMON_HEADER_DIR}/diagnostic.h

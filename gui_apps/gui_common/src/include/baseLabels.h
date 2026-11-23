@@ -357,9 +357,6 @@ static constexpr const char* EMPTY_RECORDER_DIAGS_MESSAGE =
     "Couldn't get recorder diagnostic information for given trace.";
 static constexpr const char* EMPTY_RECORDER_CONFIG_MESSAGE =
     "Couldn't get recorder config for given trace.";
-static constexpr const char* METADATA_NO_API_FOUND_WARNING = "No API meta data could be read";
-static constexpr const char* METADATA_MALFORMED_STREAM_WARNING =
-    "The stream file might be malformed or corrupted";
 
 static constexpr const char* CCODE_GENERATION_BUTTON = "Generate CCode";
 static constexpr const char* CCODE_GENERATION_BUTTON_HINT = "Generate CCode for the current stream";

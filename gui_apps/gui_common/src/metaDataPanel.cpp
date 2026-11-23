@@ -127,7 +127,9 @@ void MetaDataPanel::UpdateContent() {
   const auto& MetaData = context.ConfigurationForAction(GitsAction::PLAYBACK).MetaData;
   std::string yamlText = "";
   std::string yamlNodeText = "";
-  if (m_ActiveSubPanel == SubPanel::Diags) {
+  if (!MetaData.UnsupportedStreamError.empty()) {
+    yamlText = MetaData.UnsupportedStreamError;
+  } else if (m_ActiveSubPanel == SubPanel::Diags) {
     if (MetaData.RecorderDiags.empty()) {
       yamlText = Labels::EMPTY_RECORDER_DIAGS_MESSAGE;
     } else {
