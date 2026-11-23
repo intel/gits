@@ -24,7 +24,6 @@ static constexpr const char* GITS_PLAYER_WIN = "gitsPlayer.exe";
 static constexpr const char* GITS_PLAYER_LINUX = "gitsPlayer";
 static constexpr const char* GITS_RECORDER_WIN = "gitsRecorder.dll";
 static constexpr const char* GITS_RECORDER_LINUX = "libGitsRecorder.so";
-static constexpr const char* GITS_STREAM = "stream.gits2";
 } // namespace filesystem_names
 
 namespace yaml_constants {

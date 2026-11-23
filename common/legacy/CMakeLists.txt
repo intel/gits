@@ -41,6 +41,7 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/resource_manager.h
   ${COMMON_HEADER_DIR}/runner.h
   ${COMMON_HEADER_DIR}/scheduler.h
+  ${COMMON_HEADER_DIR}/streamFile.h
   ${COMMON_HEADER_DIR}/streams.h
   ${COMMON_HEADER_DIR}/texture_converter.h
   ${COMMON_HEADER_DIR}/timer.h

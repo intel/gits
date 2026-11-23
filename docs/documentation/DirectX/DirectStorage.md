@@ -18,7 +18,7 @@ graph TB
         GAME_RES["data00.pak<br/>data01.pak<br/>..."]
     end
     subgraph GITS_STREAM_DIR["📁 GITS Stream"]
-        GITS_STREAM["stream.gits2"]
+        GITS_STREAM["stream.gits"]
         GITS_DSTORAGE_BIN["DirectStorageResources.bin"]
     end
     GITS_RECORDER_LIB["📦 gitsRecorder.dll"]

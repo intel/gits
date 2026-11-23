@@ -35,27 +35,27 @@ Point the player at your original trace. Enable sub-capture and **execution seri
 Example **1-frame source trace** (target frame 1):
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1 --Common.Player.ExitFrame 1 C:\path\to\1frame_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1 --Common.Player.ExitFrame 1 C:\path\to\1frame_trace.gits
 ```
 
 Example **3-frame source trace** (serialize executions for frames 1–2, exit after frame 2):
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1-2 --Common.Player.ExitFrame 2 C:\path\to\3frame_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.ExecutionSerialization --Common.Player.Subcapture.Frames 1-2 --Common.Player.ExitFrame 2 C:\path\to\3frame_trace.gits
 ```
 
-The serialized `*.gits2` is created under the dump directory implied by `Common.Player.SubcapturePath` in `gits_config.yml` (same convention as other sub-captures).
+The serialized `*.gits` is created under the dump directory implied by `Common.Player.SubcapturePath` in `gits_config.yml` (same convention as other sub-captures).
 
 ## Command list sub-capture
 
-Command list sub-capture applies only to **serialized-execution** streams. Build a serialized `*.gits2` as in [Serialized sub-capture](#serialized-sub-capture) first. Then follow the steps below: generate a tracefile from that serialized stream, count `Execute #` lines to pick `CommandListExecutions`, and run the player **twice per execution index** (analysis, then sub-capture).
+Command list sub-capture applies only to **serialized-execution** streams. Build a serialized `*.gits` as in [Serialized sub-capture](#serialized-sub-capture) first. Then follow the steps below: generate a tracefile from that serialized stream, count `Execute #` lines to pick `CommandListExecutions`, and run the player **twice per execution index** (analysis, then sub-capture).
 
 ### 1. Generate the trace / dump stream from the serialized trace
 
 Play the **serialized** trace with tracing enabled:
 
 ``` bash
-gitsPlayer.exe --Common.Shared.Trace.Enabled C:\path\to\serialized_trace.gits2
+gitsPlayer.exe --Common.Shared.Trace.Enabled C:\path\to\serialized_trace.gits
 ```
 
 This produces a trace file whose name ends with `tracefile.txt`, plus related dump stream artifacts, for the next subsection.
@@ -91,7 +91,7 @@ Use the **serialized** trace from [Serialized sub-capture](#serialized-sub-captu
 Example for **1-frame serialized trace** (`--Common.Player.Subcapture.Frames 1`, `--Common.Player.ExitFrame 1`):
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 1 --Common.Player.Subcapture.DirectX.CommandListExecutions 7-11 --Common.Player.ExitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 1 --Common.Player.Subcapture.DirectX.CommandListExecutions 7-11 --Common.Player.ExitFrame 1 --showWindowBorder --showFrameNumberInTitle C:\path\to\serialized_trace.gits
 ```
 
 
@@ -109,7 +109,7 @@ gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 -
 gitsPlayer.exe ... --Common.Player.Subcapture.DirectX.CommandListExecutions 50 --Common.Player.ExitFrame 1 ...  # sub-capture
 ```
 
-Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
+Each pair emits a separate `*.gits` under `Common.Player.SubcapturePath`.
 
 ## Command list split (Draw call sub-capture)
 
@@ -117,11 +117,11 @@ Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
 
 ### Behavior
 
-- **Input:** A `*.gits2` that already uses serialized executions (one command list per `ExecuteCommandLists`), from [Serialized sub-capture](#serialized-sub-capture).
+- **Input:** A `*.gits` that already uses serialized executions (one command list per `ExecuteCommandLists`), from [Serialized sub-capture](#serialized-sub-capture).
 - **Configuration:** `Common.Player.Subcapture.DirectX.CommandListSplit` in `gits_config.yml`, or `--Common.Player.Subcapture.DirectX.CommandListSplit` on the command line, with `Common.Player.Subcapture.Enabled` set to `true`.
 - **Mutual exclusion:** In a split pass, do **not** enable `ExecutionSerialization` or `CommandListExecutions`. The player runs in a dedicated **split** mode and **does not execute** the GPU workload.
 - **Split points:** Values are **stream command keys**. Use a trace of the **serialized** stream to pick keys of commands you want to isolate (for example `ID3D12GraphicsCommandList::DrawIndexedInstanced`). Syntax: a single key (`42`), an inclusive range (`10-20`), comma-separated tokens (`10-20,50,60-70`), or `all` to split at every GPU work command. Intervals must not overlap, and a split interval must not span more than one serialized execution.
-- **Output:** A new `*.gits2` under `Common.Player.SubcapturePath`, using a directory whose name ends with `split`.
+- **Output:** A new `*.gits` under `Common.Player.SubcapturePath`, using a directory whose name ends with `split`.
 
 ### Workflow: draw-level sub-capture via split, then [Command list sub-capture](#command-list-sub-capture)
 
@@ -129,11 +129,11 @@ Each pair emits a separate `*.gits2` under `Common.Player.SubcapturePath`.
 2. Trace that serialized file (`--Common.Shared.Trace.Enabled`) and note the **command keys** on the draw or dispatch lines you want as separate executions.
 3. Play the **serialized** file once with sub-capture enabled and `CommandListSplit` set to those keys (or ranges).
 4. Trace the **split** output and count **`Execute #`** for your target frame, as in [Command list sub-capture](#command-list-sub-capture).
-5. **Clear** `CommandListSplit`. On the **split** `*.gits2`, run the normal two-pass-per-index `CommandListExecutions` sub-capture from [Command list sub-capture](#command-list-sub-capture), using the new execution indices from step 4.
+5. **Clear** `CommandListSplit`. On the **split** `*.gits`, run the normal two-pass-per-index `CommandListExecutions` sub-capture from [Command list sub-capture](#command-list-sub-capture), using the new execution indices from step 4.
 
 Example split pass (adjust keys and paths):
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.CommandListSplit 100-105,200 C:\path\to\serialized_trace.gits2
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.DirectX.CommandListSplit 100-105,200 C:\path\to\serialized_trace.gits
 ```
 

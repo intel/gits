@@ -19,11 +19,11 @@ The Portability Layer can be used to help with resource placement compatibility.
    - `resourcePlacementData.dat` can be generated on capture or playback:
      - Capture: Set `DirectX.Recorder.Portability.ResourcePlacementStorage` to `true`
      - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'`
-   - `resourcePlacementData.dat` will be written next to `stream.gits2`
+   - `resourcePlacementData.dat` will be written next to `stream.gits`
 
 2. Playback stream on **Platform B** (💻)
 
-   - Copy `resourcePlacementData.dat` next to `stream.gits2`
+   - Copy `resourcePlacementData.dat` next to `stream.gits`
    - Enable Portability Layer in `gits_config.yml` by setting `DirectX.Player.Portability.ResourcePlacement` to `'use'`
 
 ### **(Experimental)** To playback a stream on **Platform B** (💻) without accessing **Platform A** (🖥️):
@@ -31,7 +31,7 @@ The Portability Layer can be used to help with resource placement compatibility.
 1. Generate `resourcePlacementData.dat` on **Platform B** (🖥️)
 
    - Playback: Set `DirectX.Player.Portability.ResourcePlacement` to `'store'` and `Common.Player.Execute` to `false`
-   - `resourcePlacementData.dat` will be written next to `stream.gits2`
+   - `resourcePlacementData.dat` will be written next to `stream.gits`
 
 2. Playback stream on **Platform B** (💻)
 

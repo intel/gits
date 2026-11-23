@@ -12,6 +12,7 @@
 #include "configurator.h"
 #include "exception.h"
 #include "diskSpaceCheck.h"
+#include "streamFile.h"
 
 namespace gits {
 namespace stream {
@@ -23,7 +24,7 @@ StreamWriter::StreamWriter(const std::filesystem::path& streamDir,
   std::filesystem::create_directories(streamDir);
   CheckAvailableDiskSpace(streamDir, "stream output");
   m_Stream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
-  m_Stream.open(streamDir / "stream.gits2", std::ios::out | std::ios::binary);
+  m_Stream.open(streamDir / STREAM_FILE_NAME, std::ios::out | std::ios::binary);
 
   for (unsigned i = 0; i < NUMBER_OF_COMPRESSION_THREADS; ++i) {
     m_CompressionThreads[i] = std::thread{&StreamWriter::Compress, this, i};

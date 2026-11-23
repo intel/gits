@@ -16,6 +16,7 @@
 #include "mainWindow.h"
 #include "baseEventBus.h"
 #include "contextHelper.h"
+#include "streamFile.h"
 
 namespace gits::gui {
 
@@ -171,7 +172,7 @@ void ContentPanel::CaptureActionCallback(const Event& e) {
 
     const auto& streamDirectory = capture_actions::GetStreamDirectoryFromLog(content);
     if (streamDirectory.has_value()) {
-      auto streamPath = streamDirectory.value() / filesystem_names::GITS_STREAM;
+      auto streamPath = StreamFileInDirectory(streamDirectory.value());
       baseContext.SetPath(streamPath, Path::INPUT_STREAM, GitsAction::PLAYBACK);
       baseContext.SetPath(std::move(streamPath), Path::INPUT_STREAM, GitsAction::SUBCAPTURE);
     }

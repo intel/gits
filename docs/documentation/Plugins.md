@@ -79,14 +79,14 @@ Example for **HelloPlugin** during DirectX playback:
 ```cmd
 set GITS_PLUGIN_HELLOPLUGIN_PRINTFRAMES=false
 set GITS_PLUGIN_HELLOPLUGIN_PRINTGPUSUBMISSIONS=false
-gitsPlayer --Common.Player.Plugins="[HelloPlugin]" path\to\stream.gits2
+gitsPlayer --Common.Player.Plugins="[HelloPlugin]" path\to\stream.gits
 ```
 
 Example for **HelloPlugin** during Vulkan playback:
 
 ```cmd
 set GITS_PLUGIN_HELLOPLUGIN_PRINTQUEUESUBMITS=false
-gitsPlayer --Common.Player.Plugins="[HelloPlugin]" path\to\stream.gits2
+gitsPlayer --Common.Player.Plugins="[HelloPlugin]" path\to\stream.gits
 ```
 
 When an override is applied, `gitsPlayer` logs the environment variable name and value at INFO level.

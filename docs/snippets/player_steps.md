@@ -1,7 +1,7 @@
 To playback a binary stream you can run `gitsPlayer` with the arguments as needed, e.g.
 
 ```batch
-gitsPlayer BasicSample_7016_24_06_13_16_57_00.297.gits2
+gitsPlayer BasicSample_7016_24_06_13_16_57_00.297.gits
 ```
 
 Use player's --help option to see basic usage info, or --hh all to list all available options.

@@ -20,6 +20,7 @@
 #include "tools.h"
 #include "log.h"
 #include "gits.h"
+#include "streamFile.h"
 
 #include <string>
 #include <filesystem>
@@ -110,8 +111,7 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
         if (std::filesystem::is_directory(dirEntry)) {
           continue;
         }
-        auto entryPathStr = dirEntry.path().string();
-        if (EndsWith(entryPathStr, ".gits2") || EndsWith(entryPathStr, ".gits2.gz")) {
+        if (gits::IsStreamFile(dirEntry.path())) {
           matching_paths.push_back(dirEntry.path());
         }
       }

@@ -24,6 +24,7 @@
 #include "state.h"
 #include "library.h"
 #include "scheduler.h"
+#include "streamFile.h"
 #include "streams.h"
 #include "tools.h"
 #include "exception.h"
@@ -452,7 +453,6 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 #else
   auto& outputpath = rec.dumpPath;
 #endif
-  auto filePath = (outputpath / "stream").string();
 #if defined GITS_PLATFORM_WINDOWS
   if ((Configurator::IsRecorder() && rec.enabled) ||
       (Configurator::IsPlayer() && cmm.player.subcapture.enabled)) {
@@ -460,7 +460,7 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
   if (Configurator::IsRecorder() && rec.enabled) {
 #endif
     // create file
-    std::string filename = filePath + ".gits2";
+    std::string filename = (outputpath / STREAM_FILE_NAME).string();
 
     _sc.oBinStream.reset(new CBinOStream(filename));
 

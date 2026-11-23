@@ -9,6 +9,7 @@
 #include "metaDataActions.h"
 #include "streams.h"
 #include "gits.h"
+#include "streamFile.h"
 #include "baseCommon.h"
 #include "baseLabels.h"
 
@@ -22,7 +23,7 @@ std::optional<std::filesystem::path> normalizeStreamPath(std::filesystem::path s
   }
 
   if (std::filesystem::exists(streamPath) && std::filesystem::is_directory(streamPath)) {
-    streamPath = streamPath / gits::gui::filesystem_names::GITS_STREAM;
+    streamPath = gits::StreamFileInDirectory(streamPath);
   }
 
   if (!std::filesystem::exists(streamPath)) {

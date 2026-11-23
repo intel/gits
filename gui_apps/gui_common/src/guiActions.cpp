@@ -29,6 +29,7 @@
 #include "baseCommon.h"
 #include "configOptions.h"
 #include "fileActions.h"
+#include "streamFile.h"
 
 namespace {
 using namespace gits::gui;
@@ -375,7 +376,8 @@ void ShowFileDialog(FileDialogKey key, const std::filesystem::path& path) {
     ext = ".yml";
     break;
   case Path::INPUT_STREAM:
-    ext = ".gits2";
+    ext = std::string("GITS streams{") + STREAM_FILE_EXTENSION + "," + GITS2_STREAM_FILE_EXTENSION +
+          "}";
     break;
   case Path::GITS_LOG:
     ext = ".txt";

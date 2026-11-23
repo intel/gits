@@ -6,6 +6,8 @@ title: Player
 
 The GITS player binary allows to playback a GITS stream passed via command line. It contains the default configuration values and only needs to be passed the stream as a commandline argument. 
 
+Streams recorded with GITS 3 and later are named `stream.gits`. The player also plays `.gits2` streams recorded with GITS 2.x. You can pass either the stream file or the folder that contains it; a folder must contain exactly one stream file.
+
 There are multiple ways how the GITS player can be configured:
 
 - via command line argument,

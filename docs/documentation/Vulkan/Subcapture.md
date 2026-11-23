@@ -6,7 +6,7 @@ title: Sub-capture
 # Sub-capture (Vulkan)
 
 Sub-capture is used to trim a stream down to a small frame range, producing a
-new, self-contained `*.gits2` stream that reproduces the same rendering as the
+new, self-contained `*.gits` stream that reproduces the same rendering as the
 original over that range.
 
 This page covers the **new Vulkan backend**. It uses the same player-side
@@ -64,15 +64,15 @@ As on DirectX, sub-capture always takes two passes:
    No output stream is produced in this pass.
 
 2. **Recording pass** — running the player again (with the same options and the
-   analysis file now present) produces the trimmed `*.gits2`. With `Optimize` on it
+   analysis file now present) produces the trimmed `*.gits`. With `Optimize` on it
    restores **only the objects the analysis marked as needed**, which keeps the
    sub-capture small.
 
 Example (analysis, then recording):
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits2   # analysis pass
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits2   # recording pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits   # analysis pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 C:\path\to\full_trace.gits   # recording pass
 ```
 
 !!! note
@@ -86,8 +86,8 @@ larger sub-capture. The analysis pass then only notes the first swapchain image 
 acquires, without the per-command and ray tracing analysis.
 
 ``` bash
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits2   # analysis pass
-gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits2   # recording pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits   # analysis pass
+gitsPlayer.exe --Common.Player.Subcapture.Enabled --Common.Player.Subcapture.Frames 3-6 --Common.Player.Subcapture.Optimize.Value=0 C:\path\to\full_trace.gits   # recording pass
 ```
 
 ## Ray tracing and opacity micromaps

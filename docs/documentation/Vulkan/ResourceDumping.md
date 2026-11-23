@@ -32,7 +32,7 @@ keys may keep their `O` prefix, and keys of state restore calls of sub-captured 
 3. Replay the stream with the dump enabled, for example:
 
 ```
-gitsPlayer.exe --Vulkan.Player.ResourcesDump.Enabled --Vulkan.Player.ResourcesDump.CommandKeys=13641,13643 --Vulkan.Player.ResourcesDump.ResourceKeys=O22,O7 path\to\stream.gits2
+gitsPlayer.exe --Vulkan.Player.ResourcesDump.Enabled --Vulkan.Player.ResourcesDump.CommandKeys=13641,13643 --Vulkan.Player.ResourcesDump.ResourceKeys=O22,O7 path\to\stream.gits
 ```
 
 Resources are dumped to `stream_dir/resources` or to `OutputDir`.
@@ -111,7 +111,7 @@ part ends.
 Render targets are dumped to `stream_dir/render_targets` or to `OutputDir`, for example:
 
 ```
-gitsPlayer.exe --Vulkan.Player.RenderTargetsDump.Enabled --Vulkan.Player.RenderTargetsDump.Frames=1-2 --Vulkan.Player.RenderTargetsDump.RenderPasses=1-10 path\to\stream.gits2
+gitsPlayer.exe --Vulkan.Player.RenderTargetsDump.Enabled --Vulkan.Player.RenderTargetsDump.Frames=1-2 --Vulkan.Player.RenderTargetsDump.RenderPasses=1-10 path\to\stream.gits
 ```
 
 ### Render targets
