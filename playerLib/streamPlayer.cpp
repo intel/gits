@@ -14,6 +14,7 @@
 #include "streamReader.h"
 #include "streamLegacyReader.h"
 #include "streamHeader.h"
+#include "streamCompressor.h"
 #include "commandFactory.h"
 #include "commandId.h"
 #include "commandRunner.h"
@@ -444,6 +445,8 @@ private:
   stream::ApiId m_ApiId{};
 };
 
+namespace {
+
 bool IsLegacyStream(const std::filesystem::path& streamPath) {
   std::ifstream stream(streamPath, std::ios::in | std::ios::binary);
   stream::StreamHeader& header = stream::StreamHeader::Get();
@@ -462,31 +465,8 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
     stream::ApiId apiId = apiExtractor.GetApi();
     return apiId != stream::ApiId::ID_DIRECTX;
   } else {
-    // Streams from APIs with a new-architecture (per-command CommandFactory) player path must
-    // be excluded here, or they get misrouted into the legacy CFile/CBinIStream player.Load()
-    // path, which reinterprets the Api field using the unrelated ApisIface::TApi enum and
-    // throws ENotImplemented from ApisIface::ToApiBool() on the mismatched value.
-    //
-    // The API_OPENGL term is only correct to exclude when this binary was actually built with
-    // an OpenGLCommandFactory to route to - see the identical "WITH_OPENGL" guard around
-    // PlayStream()'s own OpenGLCommandFactory registration above. WITH_OPENGL is a normal,
-    // independently togglable CMake option (see the root CMakeLists.txt) - a build with
-    // WITH_OPENGL=OFF compiles out that factory entirely. Without this guard, such a binary
-    // would still take THIS function's "not legacy" branch for an OpenGL stream, route it into
-    // PlayStream()'s modern StreamReader path anyway, and have StreamReader::DecodeBlock()
-    // silently skip every unrecognized OpenGL command ID (no factory claims them) - completing
-    // "successfully" having replayed zero GL calls, rather than the loud ENotImplemented failure
-    // this same exclusion already produces today for a DIRECTX/VULKAN stream handed to a player
-    // binary missing that backend (see this method's own review fix - reported as a real,
-    // reachable gap specific to OpenGL's own opt-out-capable build option, not fixed here for
-    // DIRECTX/VULKAN's pattern-identical WITH_DIRECTX/WITH_VULKAN options, which are outside
-    // this fix's OpenGL-backend scope).
-    //
-    // Deliberately just `defined WITH_OPENGL`, with no additional platform/architecture term:
-    // the root CMakeLists.txt owns platform/architecture gating (WITH_OPENGL is 64-bit-only and
-    // defaults ON on Windows x64 and x86-64 Linux). Keep this C++-level guard checking only the
-    // one thing it actually cares about - whether the OpenGLCommandFactory this branch routes to
-    // was compiled in.
+    // A build with WITH_OPENGL=OFF has no OpenGLCommandFactory, so OpenGL streams have to be
+    // rejected here instead of being replayed without any OpenGL commands.
     return header.GetApi() != stream::StreamHeader::Api::API_DIRECTX &&
            header.GetApi() != stream::StreamHeader::Api::API_VULKAN
 #if defined WITH_OPENGL
@@ -494,6 +474,172 @@ bool IsLegacyStream(const std::filesystem::path& streamPath) {
 #endif
         ;
   }
+}
+
+const char* RemovedApiName(stream::StreamHeader::Api api) {
+  switch (api) {
+  case stream::StreamHeader::Api::API_OPENGL_LEGACY:
+    return "OpenGLLegacy";
+  case stream::StreamHeader::Api::API_VULKAN_LEGACY:
+    return "VulkanLegacy";
+  case stream::StreamHeader::Api::API_OPENCL:
+    return "OpenCL";
+  case stream::StreamHeader::Api::API_LEVELZERO:
+    return "Level Zero";
+  default:
+    return nullptr;
+  }
+}
+
+const char* RemovedApiName(stream::ApiId apiId) {
+  switch (apiId) {
+  case stream::ApiId::ID_OPENGL_LEGACY:
+  case stream::ApiId::ID_GL_HELPER_TOKENS:
+  case stream::ApiId::ID_WGL:
+  case stream::ApiId::ID_GLX:
+  case stream::ApiId::ID_EGL:
+    return "OpenGLLegacy";
+  case stream::ApiId::ID_OPENCL:
+    return "OpenCL";
+  case stream::ApiId::ID_VULKAN_LEGACY:
+    return "VulkanLegacy";
+  case stream::ApiId::ID_LEVELZERO:
+    return "Level Zero";
+  case stream::ApiId::ID_OCLOC:
+    return "ocloc";
+  default:
+    return nullptr;
+  }
+}
+
+constexpr uint64_t MakeVersion(uint64_t major, uint64_t minor, uint64_t patch) {
+  return major << 48 | minor << 32 | patch << 16;
+}
+
+// Versions of the legacy CFile stream format.
+constexpr uint64_t VERSION_TOKEN_COMPRESSION = MakeVersion(2, 0, 10);
+constexpr uint64_t VERSION_API_INFO = MakeVersion(2, 0, 11);
+
+// Reads the token data at the beginning of a legacy CFile stream, decompressing its first chunk.
+std::vector<char> ReadLegacyTokenData(std::istream& stream, uint64_t version) {
+  constexpr uint64_t MAX_DATA_SIZE = 1024 * 1024 * 1024;
+  std::vector<char> data;
+  if (version >= VERSION_TOKEN_COMPRESSION) {
+    CompressionType compressionType{};
+    uint64_t chunkSize{};
+    stream.read(reinterpret_cast<char*>(&compressionType), sizeof(compressionType));
+    stream.read(reinterpret_cast<char*>(&chunkSize), sizeof(chunkSize));
+    if (compressionType != CompressionType::NONE) {
+      uint64_t size{};
+      uint8_t writeType{};
+      uint64_t compressedSize{};
+      stream.read(reinterpret_cast<char*>(&size), sizeof(size));
+      stream.read(reinterpret_cast<char*>(&writeType), sizeof(writeType));
+      stream.read(reinterpret_cast<char*>(&compressedSize), sizeof(compressedSize));
+      constexpr uint8_t WRITE_TYPE_PACKAGE = 1;
+      if (!stream || writeType != WRITE_TYPE_PACKAGE || size > MAX_DATA_SIZE ||
+          compressedSize > MAX_DATA_SIZE) {
+        return {};
+      }
+      std::vector<char> compressedData(compressedSize);
+      stream.read(compressedData.data(), compressedSize);
+      std::unique_ptr<stream::StreamDecompressor> decompressor;
+      if (compressionType == CompressionType::LZ4) {
+        decompressor = std::make_unique<stream::LZ4StreamDecompressor>();
+      } else {
+        decompressor = std::make_unique<stream::ZSTDStreamDecompressor>();
+      }
+      data.resize(size);
+      const uint64_t decompressedSize = decompressor->Decompress(compressedData.data(), data.data(),
+                                                                 stream.gcount(), data.size());
+      data.resize(decompressedSize <= size ? decompressedSize : 0);
+      return data;
+    }
+  }
+  data.resize(4096);
+  stream.read(data.data(), data.size());
+  data.resize(stream.gcount());
+  return data;
+}
+
+// Returns the API of the first token in the data that doesn't belong to the GITS common tokens,
+// or ID_COMMON if there is none.
+stream::ApiId FindFirstApiToken(const std::vector<char>& data) {
+  size_t offset = 0;
+  while (offset + sizeof(uint8_t) + sizeof(uint16_t) <= data.size()) {
+    const auto apiId = static_cast<uint8_t>(data[offset]);
+    uint16_t tokenId{};
+    std::memcpy(&tokenId, data.data() + offset + sizeof(apiId), sizeof(tokenId));
+    offset += sizeof(apiId) + sizeof(tokenId);
+    if (apiId != static_cast<uint8_t>(stream::ApiId::ID_COMMON)) {
+      return static_cast<stream::ApiId>(apiId);
+    }
+    // Common tokens are markers without data, except for these, which have 8 bytes of data.
+    constexpr uint16_t ID_PLAYER_RECORDER_SYNC = 7;
+    constexpr uint16_t ID_SCREEN_RESOLUTION = 9;
+    if (tokenId == ID_PLAYER_RECORDER_SYNC || tokenId == ID_SCREEN_RESOLUTION ||
+        tokenId == static_cast<uint16_t>(stream::CommonCommandId::ID_MARKER_UINT64)) {
+      offset += sizeof(uint64_t);
+    }
+  }
+  return stream::ApiId::ID_COMMON;
+}
+
+// Returns the name of the removed backend a legacy CFile stream was recorded with.
+const char* FindRemovedApi(const std::filesystem::path& streamPath) {
+  const stream::StreamHeader& header = stream::StreamHeader::Get();
+  if (const char* name = RemovedApiName(header.GetApi())) {
+    return name;
+  }
+
+  const auto versionArray = header.GetVersion();
+  const uint64_t version = MakeVersion(versionArray[0], versionArray[1], versionArray[2]);
+  std::ifstream stream(streamPath, std::ios::in | std::ios::binary);
+  constexpr unsigned VERSION_SIZE = 17;
+  stream.ignore(VERSION_SIZE);
+  unsigned skippedCallCount{};
+  stream.read(reinterpret_cast<char*>(&skippedCallCount), sizeof(skippedCallCount));
+  stream.ignore(static_cast<std::streamsize>(skippedCallCount) * 2 * sizeof(unsigned));
+  unsigned propertiesSize{};
+  stream.read(reinterpret_cast<char*>(&propertiesSize), sizeof(propertiesSize));
+  stream.ignore(propertiesSize);
+  if (version >= VERSION_API_INFO) {
+    unsigned api3D{};
+    unsigned apiCompute{};
+    unsigned schedulerVersion{};
+    stream.read(reinterpret_cast<char*>(&api3D), sizeof(api3D));
+    stream.read(reinterpret_cast<char*>(&apiCompute), sizeof(apiCompute));
+    stream.read(reinterpret_cast<char*>(&schedulerVersion), sizeof(schedulerVersion));
+    if (const char* name = RemovedApiName(static_cast<stream::StreamHeader::Api>(apiCompute))) {
+      return name;
+    }
+  }
+  if (!stream) {
+    return nullptr;
+  }
+  return RemovedApiName(FindFirstApiToken(ReadLegacyTokenData(stream, version)));
+}
+
+} // namespace
+
+bool IsSupportedStream(const std::filesystem::path& streamPath) {
+  if (!IsLegacyStream(streamPath)) {
+    return true;
+  }
+
+  if (stream::StreamHeader::Get().GetApi() == stream::StreamHeader::Api::API_OPENGL) {
+    LOG_ERROR << "The stream was recorded with OpenGL, which isn't supported by this GITS build.";
+  } else if (const char* removedApi = FindRemovedApi(streamPath)) {
+    LOG_ERROR << "The stream was recorded with " << removedApi
+              << ", which is no longer supported by GITS. Replay it with an older GITS release "
+                 "that supports "
+              << removedApi << ".";
+  } else {
+    LOG_ERROR << "The stream format is no longer supported by GITS. Streams recorded with "
+                 "OpenGLLegacy, VulkanLegacy, OpenCL, Level Zero or ocloc can only be replayed "
+                 "with an older GITS release.";
+  }
+  return false;
 }
 
 void LogStreamRecordingVersion() {

@@ -13,10 +13,7 @@
 #include "argumentParser.h"
 #include "streamPlayer.h"
 #include "gits.h"
-#include "player.h"
 #include "streamHeader.h"
-#include "sequentialExecutor.h"
-#include "recorder.h"
 #include "playerUtils.h"
 #if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
@@ -35,38 +32,12 @@
 
 namespace gits {
 
-// Gits player message loop
-//    - play gits, when state is RUNNING
-//    - stop processing messages if state is FINISHED
-//    - pass any keypresses to player handles
-class GitsMessagePump : public MessagePump {
-public:
-  GitsMessagePump(CPlayer& player) : MessagePump(), m_Player(player) {}
-
-protected:
-  void idle() {
-    if (m_Player.State() == CPlayer::STATE_RUNNING) {
-      m_Player.Play();
-    }
-    if (m_Player.State() == CPlayer::STATE_FINISHED) {
-      stop();
-    }
-  }
-  void key_down(int key) {
-    m_Player.Key(key);
-  }
-
-private:
-  CPlayer& m_Player;
-};
-
-void CheckSystemMemoryCompatibility(bool legacyMode) {
+void CheckSystemMemoryCompatibility() {
 #ifdef GITS_PLATFORM_WINDOWS
   // Read the total physical memory recorded during capture from stream metadata.
   // This value comes from WMI Win32_ComputerSystem and is stored as a string.
   std::string property("diag.os_specific.Win32_ComputerSystem.TotalPhysicalMemory");
-  auto capturedMemoryOpt = legacyMode ? CGits::Instance().FilePlayer().FindProperty(property)
-                                      : stream::StreamHeader::Get().FindProperty(property);
+  auto capturedMemoryOpt = stream::StreamHeader::Get().FindProperty(property);
   if (!capturedMemoryOpt) {
     LOG_TRACE << "Stream metadata does not contain capture machine memory info.";
     return;
@@ -108,12 +79,10 @@ void CheckSystemMemoryCompatibility(bool legacyMode) {
 #endif
 }
 
-bool g_LegacyMode{};
 bool g_InitializedForPlay{};
 std::set<std::string> g_ArgsFilterTags;
 std::string g_ApplicationName;
 std::optional<nlohmann::ordered_json> g_GpuPreferenceExports;
-std::unique_ptr<CPlayer> g_Player;
 
 bool ArgsFilterTagsFunc(const args::Base& item) {
   if (g_ArgsFilterTags.size() <= 0) {
@@ -252,34 +221,19 @@ int Initialize(int argc, char* argv[]) {
   // initialize GITS
   LOG_INFO << "Initializing...";
 
-  g_LegacyMode = IsLegacyStream(cfg.common.player.streamPath);
-  if (!g_LegacyMode) {
-    LogStreamRecordingVersion();
-  }
-  // create player
-  g_Player.reset(new CPlayer());
   LOG_INFO << "Loading...";
-
-  if (g_LegacyMode) {
-    // load function calls from a file
-    try {
-      g_Player->Load(cfg.common.player.streamPath);
-    } catch (const ENotSupported&) {
-      // The reason was already logged where the exception was thrown.
-      g_Player.reset();
-      CGits::Instance().Dispose();
-      return EXIT_FAILURE;
-    }
+  if (!IsSupportedStream(cfg.common.player.streamPath)) {
+    CGits::Instance().Dispose();
+    return EXIT_FAILURE;
   }
+  LogStreamRecordingVersion();
 
   // Compare capture vs replay machine RAM and warn if replay has less.
-  CheckSystemMemoryCompatibility(g_LegacyMode);
+  CheckSystemMemoryCompatibility();
 
   if (cfg.common.player.executableNameOverride.enabled) {
     if (!cfg.common.player.executableNameOverride.customName.empty()) {
       g_ApplicationName = cfg.common.player.executableNameOverride.customName;
-    } else if (g_LegacyMode) {
-      g_ApplicationName = CGits::Instance().FilePlayer().GetApplicationName();
     } else {
       g_ApplicationName = stream::StreamHeader::Get().GetApplicationName();
     }
@@ -289,9 +243,7 @@ int Initialize(int argc, char* argv[]) {
   }
 
   const char* gpuPreferenceExports = "diag.app.gpu_preference_exports";
-  g_GpuPreferenceExports = g_LegacyMode
-                               ? CGits::Instance().FilePlayer().FindProperty(gpuPreferenceExports)
-                               : stream::StreamHeader::Get().FindProperty(gpuPreferenceExports);
+  g_GpuPreferenceExports = stream::StreamHeader::Get().FindProperty(gpuPreferenceExports);
 
   g_InitializedForPlay = true;
   return EXIT_SUCCESS;
@@ -299,7 +251,6 @@ int Initialize(int argc, char* argv[]) {
 
 int Play() {
   auto cleanup = []() {
-    g_Player.reset();
     CGits::Instance().Dispose();
     g_InitializedForPlay = false;
   };
@@ -312,7 +263,6 @@ int Play() {
 
   try {
     const auto& cfg = Configurator::Get();
-    CGits& inst = CGits::Instance();
 
 #if defined GITS_PLATFORM_WINDOWS
     int previousDesktopWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -328,43 +278,10 @@ int Play() {
     }
 #endif
 
-#if defined WITH_DIRECTX
-    if (cfg.common.player.subcapture.enabled && g_LegacyMode) {
-      CGits::Instance().FileRecorder().SetProperty(
-          "diag.original_app.name", CGits::Instance().FilePlayer().GetApplicationName());
-    }
-#endif
-
-    if (g_LegacyMode) {
-      inst.ResourceManagerInit(cfg.common.player.streamDir);
-    }
     if (cfg.common.player.diags) {
-      if (g_LegacyMode) {
-        std::cout << CGits::Instance().FilePlayer().ReadProperties();
-      } else {
-        std::cout << stream::StreamHeader::Get().GetPropertiesDump();
-      }
+      std::cout << stream::StreamHeader::Get().GetPropertiesDump();
       cleanup();
       return EXIT_SUCCESS;
-    }
-
-    if (cfg.common.player.stats && g_LegacyMode) {
-      // print statistics
-      g_Player->StatisticsPrint();
-      cleanup();
-      return EXIT_SUCCESS;
-    }
-
-    // register tokens executor
-    if (cfg.common.player.faithfulThreading) {
-      g_Player->Register(std::make_unique<CSequentialExecutor>());
-    } else {
-      g_Player->Register(std::make_unique<CAction>());
-    }
-
-    // print not supported functions if exist
-    if (g_LegacyMode) {
-      g_Player->NotSupportedFunctionsPrint();
     }
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -384,43 +301,7 @@ int Play() {
     CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_START},
                                               std::make_shared<ProgramMessage>());
 
-    // process events - enter message loop
-    GitsMessagePump pump(*g_Player);
-
-    int64_t tillInitTime = CGits::Instance().Timers().program.Get();
-    CGits::Instance().Timers().init.Restart();
-    if (g_LegacyMode) {
-      pump.process_messages();
-    } else {
-      PlayStream(cfg.common.player.streamPath);
-    }
-
-    if (g_LegacyMode) {
-      int64_t playbackTime = CGits::Instance().Timers().playback.Get();
-      int64_t initTime = CGits::Instance().Timers().init.Get();
-      int64_t restorationTime = CGits::Instance().Timers().restoration.Get();
-      int64_t loadingTime = CGits::Instance().Timers().loading.Get();
-      int64_t programTime = CGits::Instance().Timers().program.Get();
-
-      LOG_INFO << "";
-      LOG_INFO << "Startup time: " << tillInitTime / 1e6 << "ms";
-      LOG_INFO << "Initialized in: " << initTime / 1e6 << "ms";
-      LOG_INFO << "State restored in: " << restorationTime / 1e6 << "ms";
-      LOG_INFO << "Stalled loading: " << loadingTime / 1e6 << "ms";
-      LOG_INFO << "Played back in: " << playbackTime / 1e6 << "ms";
-      LOG_INFO << "Total runtime: " << programTime / 1e6 << "ms";
-    }
-
-    // Writes performance results to .csv file
-    if (g_LegacyMode && cfg.common.player.benchmark) {
-      std::filesystem::path outBench = cfg.common.player.outputDir.empty()
-                                           ? cfg.common.player.applicationPath
-                                           : cfg.common.player.outputDir;
-      std::filesystem::create_directories(outBench);
-      outBench /= "benchmark.csv";
-      std::ofstream timeDataFile(outBench, std::ios::binary | std::ios::out);
-      CGits::Instance().TimeSheet().OutputTimeData(timeDataFile);
-    }
+    PlayStream(cfg.common.player.streamPath);
 
 #ifdef GITS_PLATFORM_WINDOWS
     if (cfg.common.player.forceDesktopResolution.enabled) {
@@ -449,12 +330,6 @@ int Play() {
   CGits::Instance().GetMessageBus().publish({PUBLISHER_PLAYER, TOPIC_PROGRAM_EXIT},
                                             std::make_shared<ProgramMessage>());
 
-#if defined GITS_PLATFORM_WINDOWS
-  if (g_LegacyMode && Configurator::Get().common.player.subcapture.enabled &&
-      CRecorder::Instance().IsMarkedForDeletion()) {
-    CRecorder::Instance().Close();
-  }
-#endif
   cleanup();
   return returnValue;
 }

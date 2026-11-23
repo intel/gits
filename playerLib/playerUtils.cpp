@@ -144,21 +144,6 @@ bool ConfigurePlayer(const std::filesystem::path& playerPath, ArgumentParser& ar
   Configurator::Instance().DeriveData();
   Configurator::PrepareSubcapturePath();
 
-#if defined(GITS_PLATFORM_WINDOWS) && (defined(WITH_DIRECTX) || defined(WITH_VULKAN))
-  if ((Configurator::Get().common.mode == GITSMode::MODE_PLAYER) &&
-      (Configurator::Get().common.player.subcapture.enabled)) {
-    // create file data and register it in GITS
-    gits::CGits& inst = gits::CGits::Instance();
-    std::unique_ptr<gits::CFile> file(new gits::CFile(inst.Version()));
-
-    file->SetDiagnosticInfo(configPath);
-
-    file->SetConfig();
-
-    inst.RegisterFileRecorder(std::move(file));
-  }
-#endif
-
   return true;
 }
 

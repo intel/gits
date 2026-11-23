@@ -92,35 +92,6 @@ CGits::~CGits() {
 }
 
 namespace {
-// Streams of these APIs can't be replayed anymore; they're detected by the API stored in the
-// stream header or, in streams older than GITS_API_INFO, by the token ID range of the API.
-// APIs that are never stored in the stream header use ApiNotSet.
-struct RemovedApi {
-  unsigned tokenIdBegin;
-  ApisIface::TApi api;
-  const char* name;
-};
-constexpr unsigned TOKEN_ID_API_RANGE = 0x10000;
-constexpr RemovedApi REMOVED_APIS[] = {
-    {CToken::ID_OPENCL, ApisIface::TApi::OpenCL, "OpenCL"},
-    {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
-    {CToken::ID_OCLOC, ApisIface::TApi::ApiNotSet, "ocloc"},
-    {CToken::ID_LEVELZERO, ApisIface::TApi::LevelZero, "Level Zero"},
-    {CToken::ID_OPENGL_LEGACY, ApisIface::TApi::OpenGL, "OpenGLLegacy"},
-    {CToken::ID_GL_HELPER_TOKENS, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
-    {CToken::ID_WGL, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
-    {CToken::ID_GLX, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
-    {CToken::ID_EGL, ApisIface::TApi::ApiNotSet, "OpenGLLegacy"},
-};
-
-[[noreturn]] void ThrowRemovedApi(const RemovedApi& removedApi) {
-  LOG_ERROR << "The stream was recorded with " << removedApi.name
-            << ", which is no longer supported by GITS. Replay it with an older GITS release "
-               "that supports "
-            << removedApi.name << ".";
-  throw ENotSupported(EXCEPTION_MESSAGE);
-}
-
 CToken* CTokenCreate(CId id) {
   switch (*id) {
   case CToken::ID_INIT_START:
@@ -227,12 +198,6 @@ CToken* CGits::TokenCreate(CId id) {
     token = lib->FunctionCreate(*id);
     if (token != nullptr) {
       return token;
-    }
-  }
-
-  for (const auto& removedApi : REMOVED_APIS) {
-    if (*id >= removedApi.tokenIdBegin && *id < removedApi.tokenIdBegin + TOKEN_ID_API_RANGE) {
-      ThrowRemovedApi(removedApi);
     }
   }
 
@@ -587,12 +552,6 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
     stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(ApisIface::TApi));
     ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
     stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
-    for (const auto& removedApi : REMOVED_APIS) {
-      if (removedApi.api != ApisIface::TApi::ApiNotSet &&
-          (api3D == removedApi.api || apiCompute == removedApi.api)) {
-        ThrowRemovedApi(removedApi);
-      }
-    }
 
     if (api3D != ApisIface::TApi::ApiNotSet) {
       CGits::Instance().SetApi3D(api3D);

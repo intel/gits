@@ -11,7 +11,6 @@ Here are some of the most commonly used arguments:
 | Argument                        | Windows                                                    |
 | ------------------------------- | ---------------------------------------------------------- |
 | `--help`                        | Basic usage info                                           |
-| `--stats`                       | Show stream statistics                                     |
 | `--captureFrames`               | Dump rendered frames to disk                               |
 | `--captureFrames 23,420-450:10` | Dump rendered frames `#23, #420, #430, #440, #450` to disk |
 

@@ -28,12 +28,6 @@ list(APPEND player_lib_SOURCES
   ${SRC_DIR}/playerLib.cpp
   ${SRC_DIR}/streamPlayer.h
   ${SRC_DIR}/streamPlayer.cpp
-  ${SRC_DIR}/player.h
-  ${SRC_DIR}/player.cpp
-  ${SRC_DIR}/statistics.h
-  ${SRC_DIR}/statistics.cpp
-  ${SRC_DIR}/sequentialExecutor.h
-  ${SRC_DIR}/sequentialExecutor.cpp
   ${SRC_DIR}/exceptionHandler.h
   ${SRC_DIR}/playerUtils.h
   ${SRC_DIR}/playerUtils.cpp

@@ -264,14 +264,6 @@ Configuration:
             Type: std::filesystem::path
             Default: ""
             Accessibility: Derived
-          - Name: stats
-            Type: bool
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [stats, s]
-            Description:
-              GITS will not play specified file but instead will create some
-              statistics about it.
           - Name: diags
             Type: bool
             Default: ""
@@ -322,27 +314,6 @@ Configuration:
           - Name: subcapturePath
             Type: std::filesystem::path
             Default: "{install_path}\\dump\\%f%_%r%"
-          - Name: tokenBurst
-            Type: uint32_t
-            Default: 10000
-            Arguments: [tokenBurstLimit]
-            Description:
-              Specifies number of tokens to be loaded from stream file in one
-              burst. Burst is a group of tokens that have to be all loaded before execution
-              of first token in a burst will start. This option is mutually exclusive with
-              loadWholeStreamBeforePlayback option.
-            ConfigName: tokenBurstLimit
-          - Name: tokenBurstNum
-            Type: uint32_t
-            Default: 5
-            Arguments: [tokenBurstNum]
-            Description:
-              Specifies maximum number of 'bursts' loaded, waiting for execution,
-              at any one time by player
-          - Name: tokenBurstChunkSize
-            Type: uint64_t
-            Default: 5242880
-            Description: "Default size: 5 MB"
           - Name: exitFrame
             Type: uint32_t
             Default: 1000000
@@ -412,15 +383,6 @@ Configuration:
             Default: false
             Arguments: [logFncs]
             Description: All played tokens are logged to standard output.
-          - Name: faithfulThreading
-            Type: bool
-            Default: false
-            Arguments: [faithfulThreading]
-            Description:
-              GITS, by default, plays the stream in single thread, synthesizing
-              necessary GL context switches. This option causes GITS to use as many threads
-              as original application for playback. This also makes it impossible to create
-              a subcapture from the stream.
           - Name: loadWholeStreamBeforePlayback
             Type: bool
             Default: false
@@ -1636,3 +1598,11 @@ RemovedOptions:
     Reason: Lua scripting support was removed.
   - Path: Common.Recorder.ScriptArgs
     Reason: Lua scripting support was removed.
+  - Path: Common.Player.TokenBurstLimit
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.TokenBurstNum
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.TokenBurstChunkSize
+    Reason: The legacy stream player was removed.
+  - Path: Common.Player.FaithfulThreading
+    Reason: The legacy stream player was removed.

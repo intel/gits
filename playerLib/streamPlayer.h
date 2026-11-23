@@ -12,8 +12,9 @@
 
 namespace gits {
 
-bool IsLegacyStream(const std::filesystem::path& streamPath);
-// Logs the GITS version from the stream header read by IsLegacyStream().
+// Logs an error and returns false for streams that can't be replayed.
+bool IsSupportedStream(const std::filesystem::path& streamPath);
+// Logs the GITS version from the stream header read by IsSupportedStream().
 void LogStreamRecordingVersion();
 void PlayStream(const std::filesystem::path& streamPath);
 
