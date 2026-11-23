@@ -30,15 +30,37 @@ public:
   virtual const char* GetName() const = 0;
   virtual const char* GetNameHint() const = 0;
 
-  virtual bool Activate() = 0;
-  virtual bool Deactivate() = 0;
-  virtual bool IsActive() = 0;
+  bool Activate() {
+    if (!m_Active) {
+      m_Active = OnActivate();
+    }
+    return m_Active;
+  }
+  void Deactivate() {
+    if (m_Active) {
+      m_Active = false; // inactive even if stopping throws
+      OnDeactivate();
+    }
+  }
+  bool IsActive() const {
+    return m_Active;
+  }
 
   // GITS plugins are optional for a module, hence the empty default.
   virtual const std::vector<std::string>& Plugins(Api /*api*/) const {
     static const std::vector<std::string> none;
     return none;
   }
+
+protected:
+  // Start and stop the module's work. OnActivate() returns false when the module cannot start.
+  virtual bool OnActivate() {
+    return true;
+  }
+  virtual void OnDeactivate() {}
+
+private:
+  bool m_Active{false};
 };
 
 } // namespace gits::gui

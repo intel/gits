@@ -23,12 +23,11 @@ public:
   const char* GetName() const override;
   const char* GetNameHint() const override;
 
-  bool Activate() override;
-  bool Deactivate() override;
-  bool IsActive() override;
+protected:
+  bool OnActivate() override;
+  void OnDeactivate() override;
 
 private:
-  bool m_Active{false};
   int m_ThemeChanges{0};
 };
 

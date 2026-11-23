@@ -44,7 +44,7 @@ HelloPanel::HelloPanel() {
 
 void HelloPanel::Render() {
   ImGui::TextUnformatted("Hello from a Studio module DLL.");
-  ImGui::Text("Active: %s", m_Active ? "yes" : "no");
+  ImGui::Text("Active: %s", IsActive() ? "yes" : "no");
   ImGui::Text("Studio action: %s", ActionName(BaseContext::GetBaseInstance().SelectedAction));
   ImGui::Text("Theme changes received from Studio: %d", m_ThemeChanges);
 }
@@ -57,20 +57,13 @@ const char* HelloPanel::GetNameHint() const {
   return HELLO_NAME_HINT;
 }
 
-bool HelloPanel::Activate() {
-  m_Active = true;
+bool HelloPanel::OnActivate() {
   LOG_INFO << "Hello module activated";
   return true;
 }
 
-bool HelloPanel::Deactivate() {
-  m_Active = false;
+void HelloPanel::OnDeactivate() {
   LOG_INFO << "Hello module deactivated";
-  return true;
-}
-
-bool HelloPanel::IsActive() {
-  return m_Active;
 }
 
 } // namespace gits::gui

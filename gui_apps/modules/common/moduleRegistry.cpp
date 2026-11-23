@@ -38,13 +38,12 @@ bool SameName(const std::string& lhs, const std::string& rhs) {
   });
 }
 
-bool ActivateModule(ModuleBasePanel& module) {
+void ActivateModule(ModuleBasePanel& module) {
   try {
-    return module.Activate();
+    module.Activate();
   } catch (const std::exception& exception) {
     LOG_ERROR << "ModuleRegistry: Activating " << module.GetName()
               << " failed: " << exception.what();
-    return false;
   }
 }
 
@@ -246,10 +245,12 @@ bool ModuleRegistry::EnableModule(const ModuleId& id) {
   if (it == m_Entries.end()) {
     return false;
   }
-  auto enabled = ActivateModule(*it->Panel);
-  BtnsModules->SetChecked(id, enabled);
+  if (!it->Panel->IsActive()) {
+    ActivateModule(*it->Panel);
+  }
+  BtnsModules->SetChecked(id, it->Panel->IsActive());
 
-  return enabled;
+  return it->Panel->IsActive();
 }
 
 bool ModuleRegistry::DisableModule(const ModuleId& id) {
@@ -262,8 +263,10 @@ bool ModuleRegistry::DisableModule(const ModuleId& id) {
   if (it == m_Entries.end()) {
     return false;
   }
-  DeactivateModule(*it->Panel);
-  BtnsModules->SetChecked(id, false);
+  if (it->Panel->IsActive()) {
+    DeactivateModule(*it->Panel);
+  }
+  BtnsModules->SetChecked(id, it->Panel->IsActive());
 
   return true;
 }
@@ -293,13 +296,15 @@ bool ModuleRegistry::RenderModuleButtons() {
     result = BtnsModules->Render();
     if (result) {
       for (auto& entry : m_Entries) {
-        auto isChecked = BtnsModules->IsChecked(entry.Id);
-        if (isChecked != entry.Panel->IsActive()) {
-          if (isChecked) {
-            BtnsModules->SetChecked(entry.Id, ActivateModule(*entry.Panel));
+        // The click is a request; the panel decides, and the button shows what it decided.
+        const bool wanted = BtnsModules->IsChecked(entry.Id);
+        if (wanted != entry.Panel->IsActive()) {
+          if (wanted) {
+            ActivateModule(*entry.Panel);
           } else {
             DeactivateModule(*entry.Panel);
           }
+          BtnsModules->SetChecked(entry.Id, entry.Panel->IsActive());
         }
       }
     }

@@ -111,18 +111,17 @@ const std::vector<std::string>& RtsrPanel::Plugins(Api api) const {
   return ModuleBasePanel::Plugins(api);
 }
 
-bool RtsrPanel::Activate() {
+bool RtsrPanel::OnActivate() {
   m_Notice.clear();
-  m_Enabled = m_Module.Start();
-  if (!m_Enabled) {
+  if (!m_Module.Start()) {
     LOG_ERROR << LB::PORTS_TAKEN;
     m_Notice = LB::PORTS_TAKEN;
+    return false;
   }
-  return m_Enabled;
+  return true;
 }
 
-bool RtsrPanel::Deactivate() {
-  const bool wasEnabled = m_Enabled;
+void RtsrPanel::OnDeactivate() {
   m_Module.Stop();
 
   // Disabling the module discards what it harvested; a run merely ending does
@@ -131,13 +130,6 @@ bool RtsrPanel::Deactivate() {
   m_ShaderPanel.ClearSession();
   m_PerformancePanel.ClearSession();
   m_SessionAction.reset();
-
-  m_Enabled = false;
-  return wasEnabled;
-}
-
-bool RtsrPanel::IsActive() {
-  return m_Enabled;
 }
 
 void RtsrPanel::Render() {
@@ -145,7 +137,7 @@ void RtsrPanel::Render() {
     ImGui::TextUnformatted(m_Notice.c_str());
   }
 
-  if (!m_Enabled) {
+  if (!IsActive()) {
     ImGui::TextUnformatted(LB::DISABLED_HINT);
     return;
   }

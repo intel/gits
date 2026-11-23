@@ -40,11 +40,11 @@ public:
   const char* GetName() const override;
   const char* GetNameHint() const override;
 
-  bool Activate() override;
-  bool Deactivate() override;
-  bool IsActive() override;
-
   const std::vector<std::string>& Plugins(Api api) const override;
+
+protected:
+  bool OnActivate() override;
+  void OnDeactivate() override;
 
 private:
   void OnRtsrEvent(const RtsrEvent& event);
@@ -52,7 +52,6 @@ private:
   // to be told when the style changes.
   void OnThemeChanged();
 
-  bool m_Enabled{false};
   // Why enabling the module failed. Outlives the checkbox turning itself back
   // off, which is the only way the user gets to read it.
   std::string m_Notice;

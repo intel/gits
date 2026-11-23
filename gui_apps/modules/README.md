@@ -82,8 +82,10 @@ A module's UI is a single root panel deriving from `ModuleBasePanel`
 - `GetName()`: the sidebar label.
 - `GetNameHint()`: the sidebar tooltip.
 - `Render()`: draws the module's UI with ImGui.
-- `Activate()`, `Deactivate()` and `IsActive()`: start and stop the module's work. Studio calls
-  them when the user checks or unchecks the module's sidebar button.
+- `OnActivate()` and `OnDeactivate()`, optional hooks: start and stop the module's work.
+  `OnActivate()` returns `false` when the module cannot start. Studio calls the base class's
+  `Activate()` and `Deactivate()` when the user checks or unchecks the module's sidebar button;
+  they call the hooks.
 - `Plugins(Api)`, optional: names of GITS plugins Studio adds to every run it launches while the
   module is active.
 
@@ -92,8 +94,12 @@ A module's UI is a single root panel deriving from `ModuleBasePanel`
 `static const std::vector<std::string>`. A `std::string` or `std::vector` returned by value
 would be freed by Studio (see [Memory](#memory)).
 
+The base class owns the active state. `IsActive()` is true from a successful `OnActivate()` until
+`Deactivate()`; the module keeps no flag of its own, and the sidebar button shows `IsActive()`.
+Activating an active module or deactivating an inactive one does nothing.
+
 Studio creates the panel once and destroys it at shutdown. The destructor must stop whatever
-`Activate()` started.
+`OnActivate()` started.
 
 ## What a module shares with Studio
 
@@ -150,9 +156,9 @@ Threads:
   Stop threads, servers and sockets in `Deactivate()` and in the destructor.
 
 Errors:
-- Studio catches exceptions thrown from the panel's constructor, `Activate()`, `Deactivate()` and
+- Studio catches exceptions thrown from the panel's constructor, `OnActivate()`, `OnDeactivate()` and
   `Plugins()`, and logs them. A panel that cannot be created is dropped from the sidebar; a failed
-  `Activate()` leaves the button unchecked. `Render()` is not guarded, like any Studio panel.
+  `OnActivate()` leaves the button unchecked. `Render()` is not guarded, like any Studio panel.
 
 ## Loading and shutdown
 

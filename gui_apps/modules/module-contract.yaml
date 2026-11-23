@@ -54,18 +54,23 @@ root_panel:
     - GetName
     - GetNameHint
     - Render
-    - Activate
-    - Deactivate
-    - IsActive
   optional_methods:
+    - OnActivate
+    - OnDeactivate
     - Plugins
+  base_class_provides:
+    - "Non-virtual Activate(), Deactivate() and IsActive(). The base class owns the active state: active exactly when the last OnActivate returned true and Deactivate has not run since."
+    - "Activate on an active module and Deactivate on an inactive one do nothing."
   returns:
     GetName: "const char*; sidebar label, owned by the module"
     GetNameHint: "const char*; owned by the module"
+    OnActivate: "bool, protected, default true; false (or an exception) leaves the module inactive"
+    OnDeactivate: "void, protected; stops everything OnActivate started"
     Plugins: "const std::vector<std::string>&; a list the module keeps, empty by default"
   constraints:
     - "One module per DLL."
-    - "The destructor stops everything Activate started."
+    - "The destructor stops everything OnActivate started."
+    - "A module keeps no active flag of its own; it asks IsActive()."
 
 module_context:
   type: ModuleContext
@@ -127,7 +132,7 @@ errors:
     - "A module whose name is empty or already used by another module: logged, and not added to the sidebar."
   caught_by_studio:
     - "Exceptions from the panel factory: the module is dropped from the sidebar."
-    - "Exceptions from Activate: the sidebar button stays unchecked."
+    - "Exceptions from OnActivate: the sidebar button stays unchecked."
     - "Exceptions from Deactivate and Plugins: logged."
   not_guarded:
     - Render
