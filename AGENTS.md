@@ -4,7 +4,7 @@ This file helps AI assistants work effectively in the **GITS** (Graphics Interce
 
 ## What is GITS?
 
-GITS is a capture-replay tool for Vulkan, OpenCL, Intel oneAPI Level Zero, OpenGL, and DirectX 12. It records API call sequences into binary **streams** and replays them via **gitsPlayer**. The codebase is C++ (core), Python (scripts and code generation), and CMake (build). Development focuses on enabling applications for Intel GPU driver validation.
+GITS is a capture-replay tool for Vulkan, Intel oneAPI Level Zero, OpenGL, and DirectX 12. It records API call sequences into binary **streams** and replays them via **gitsPlayer**. The codebase is C++ (core), Python (scripts and code generation), and CMake (build). Development focuses on enabling applications for Intel GPU driver validation.
 
 ## Where to Find Things
 
@@ -23,7 +23,7 @@ In-repo documentation under `docs/` is the source of truth when external links a
 
 1. **Do not edit generated files.** Files with the suffix `Auto` are generated (e.g. from mako templates or codegen). Change the sources or generators and regenerate instead. Files with the suffix `Custom` are manually written companion/override files to the `Auto` files.
 2. **Follow project conventions.** Use [docs/development/project.md](docs/development/project.md): C++ style (Pascal case, `m_`/`g_` prefixes, 100-column line width, `.clang-format`/`.clang-tidy`), camelCase for folders/files (Python: snake_case), and API folders keep original API spelling/capitalization.
-3. **One folder per API.** API-specific implementation lives under `DirectX/`, `Vulkan/`, `OpenCL/`, `LevelZero/`. Shared code is in `common/`; plugins in `plugins/`.
+3. **One folder per API.** API-specific implementation lives under `DirectX/`, `Vulkan/`, `OpenGL/`, `LevelZero/`. Shared code is in `common/`; plugins in `plugins/`.
 4. **Chat and planning context should not bleed into code.** Don't add unnecessary references to conversations or planning documents, and don't adopt their terminology when standard GITS terminology exists. Code and comments should stand on their own.
 5. **When writing a commit message, follow these rules:**
    - Separate subject from body with a blank line

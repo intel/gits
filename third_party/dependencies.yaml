@@ -41,10 +41,6 @@ dependencies:
       url: https://github.com/JochenKalmbach/StackWalker.git
       commit_id: 045413aca44b094cf42cc85f8e62e986fe943697
       os: WINDOWS
-    - name: OpenCL-Headers
-      argument: clheaders
-      url: https://github.com/KhronosGroup/OpenCL-Headers.git
-      branch: v2022.09.30
     - name: OpenGL-Registry
       argument: glregistry
       commit_id: 9d527dbc81bb76e35ba284fe385ed8a5ddb90cbc

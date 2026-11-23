@@ -52,7 +52,7 @@ static void detach() __attribute__((destructor(101)));
 bool forceExit;
 
 void ExitHotKeyPressed() {
-  //If only OCL was loaded then close gits now because frame will be less then 2
+  //If only a compute API was loaded then close gits now because frame will be less then 2
   //If not then close method will be called at OGL EndFramePost method.
   if (gits::CGits::Instance().CurrentFrame() < 2) {
     gits::CRecorder::Instance().MarkForDeletion();
@@ -486,7 +486,6 @@ void gits::CRecorder::Register(std::unique_ptr<CBehavior> behavior) {
 void gits::CRecorder::Start() {
   CGits& inst = CGits::Instance();
 
-  // If you are looking for OpenCL state restoration, it is implemented in OpenCL wrapper, in clEnqueueNDRangeKernel.
   // If we started capture on frame other than the first one or recording mode is 'SingleDraw', state restoration is needed.
   bool shouldRestore3DState = false;
   if (inst.apis.Has3D()) {
@@ -580,7 +579,7 @@ void gits::CRecorder::Stop() {
       }
       for (auto it = inst.LibraryBegin(); it != inst.LibraryEnd(); ++it) {
         // FIXME OpenGL crashes here if enabled
-        if ((*it)->Id() == CLibrary::TId::ID_OPENCL || (*it)->Id() == CLibrary::TId::ID_LEVELZERO) {
+        if ((*it)->Id() == CLibrary::TId::ID_LEVELZERO) {
           auto state((*it)->StateCreate());
           if (state) {
             state->Finish(Scheduler());

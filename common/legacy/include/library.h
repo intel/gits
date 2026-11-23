@@ -47,7 +47,7 @@ public:
   typedef std::function<CState*()> state_creator_t;
   enum TId {
     ID_OPENGL_LEGACY = 0, /**< @brief identifier of legacy OpenGL library */
-    ID_OPENCL = 1,        /**< @brief identifier of OpenCL library */
+    // 1 reserved, formerly OpenCL
     // 2 reserved, formerly VulkanLegacy
     ID_LEVELZERO = 3,
     ID_OCLOC = 4,

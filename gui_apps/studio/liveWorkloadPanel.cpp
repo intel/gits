@@ -30,8 +30,9 @@ namespace {
 using namespace gits::gui;
 
 const std::vector<std::pair<const char*, Api>> apiMappings = {
-    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},   {Labels::API_NAME_SHORT_GL, Api::OPENGL},
-    {Labels::API_NAME_SHORT_VK, Api::VULKAN},    {Labels::API_NAME_SHORT_CL, Api::OPENCL},
+    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},
+    {Labels::API_NAME_SHORT_GL, Api::OPENGL},
+    {Labels::API_NAME_SHORT_VK, Api::VULKAN},
     {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
 };
 

@@ -26,7 +26,6 @@ The **Recorder** is split into multiple folders one per supported API:
 | :simple-opengl: OpenGL             | `FilesToCopyOGL`          | `OpenGL`            |
 | :simple-opengl: OpenGLLegacy       | `FilesToCopyOGLLegacy`    | `OpenGLLegacy`      |
 | :simple-opengl: OpenGL ES          | `FilesToCopyES`           | `OpenGLLegacy`      |
-| :simple-opengl: OpenCL             | `FilesToCopyOCL`          | `OpenCL`            |
 | :simple-vulkan: Vulkan             | `FilesToCopyVulkan`       | `Vulkan`            |
 | :simple-vulkan: Vulkan Layer       | `VulkanLayer`             | `VulkanLayer`       |
 

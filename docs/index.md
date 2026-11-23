@@ -9,7 +9,6 @@ title: About GITS
 
 - [Vulkan :fontawesome-solid-arrow-up-right-from-square:](https://vulkan.org/)
 - [DirectX12 :fontawesome-solid-arrow-up-right-from-square:](https://learn.microsoft.com/en-us/windows/win32/direct3d12/direct3d-12-graphics)
-- [OpenCL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opencl/)
 - [Intel oneAPI Level Zero :fontawesome-solid-arrow-up-right-from-square:](https://spec.oneapi.io/level-zero/latest/core/INTRO.html)
 - [OpenGL :fontawesome-solid-arrow-up-right-from-square:](https://www.khronos.org/opengl/)
 

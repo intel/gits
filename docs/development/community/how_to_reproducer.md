@@ -10,7 +10,7 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 
 **GITS** supports the following APIs:
 
-- Compute: OpenCL, Level Zero, DirectML
+- Compute: Level Zero, DirectML
 - Render: OpenGL, Vulkan, Direct3D 12
 
 **GITS** recorder is based on the shared library being injected into the process of recorded application.
@@ -20,7 +20,7 @@ This short guide explains only how to prepare a **GITS** stream based reproducer
 - Initial assumption for default settings:
   - Application shouldn't crash during the recording.
   - Application is recorded from start to the end.
-- Set `LD_LIBRARY_PATH` environment variable to folder containing **GITS** intercepting library for selected API. For example `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/OpenCL` or `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`.
+- Set `LD_LIBRARY_PATH` environment variable to folder containing **GITS** intercepting library for selected API. For example `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/LevelZero` or `export LD_LIBRARY_PATH=<GITS_DIR_PATH>/Recorder/Vulkan`.
 - Run application and make sure that it exits gracefully.
 - The captured stream should appear in the `<GITS_DIR_PATH>/dump/` folder. Captured stream folders include PID of the captured process in their names.
 

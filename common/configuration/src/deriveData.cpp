@@ -45,7 +45,6 @@ void DeriveConfigData<Configuration>(Configuration& obj, Configuration& config) 
   obj.opengl.DeriveData(config);
   obj.vulkan.DeriveData(config);
   obj.directx.DeriveData(config);
-  obj.opencl.DeriveData(config);
   obj.levelzero.DeriveData(config);
 }
 
@@ -77,12 +76,6 @@ void DeriveConfigData<Configuration::DirectX>(Configuration::DirectX& obj, Confi
 };
 
 template <>
-void DeriveConfigData<Configuration::OpenCL>(Configuration::OpenCL& obj, Configuration& config) {
-  obj.player.DeriveData(config);
-  obj.recorder.DeriveData(config);
-};
-
-template <>
 void DeriveConfigData<Configuration::LevelZero>(Configuration::LevelZero& obj,
                                                 Configuration& config) {
   obj.player.DeriveData(config);
@@ -106,7 +99,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libEGL = config.common.player.libEGL;
     obj.libGLESv1 = config.common.player.libGLESv1;
     obj.libGLESv2 = config.common.player.libGLESv2;
-    obj.libClPath = config.common.player.libClPath;
     obj.libOcloc = config.common.player.libOcloc;
     obj.libL0 = config.common.player.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
@@ -124,7 +116,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libEGL = config.common.recorder.libEGL;
     obj.libGLESv1 = config.common.recorder.libGLESv1;
     obj.libGLESv2 = config.common.recorder.libGLESv2;
-    obj.libClPath = config.common.recorder.libClPath;
     obj.libOcloc = config.common.recorder.libOcloc;
     obj.libL0 = config.common.recorder.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
@@ -414,26 +405,6 @@ void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Re
   }
 #endif
 };
-
-template <>
-void DeriveConfigData<Configuration::OpenCL::Recorder>(Configuration::OpenCL::Recorder& obj,
-                                                       Configuration& config) {
-  if (config.opencl.recorder.mode == OpenCLRecorderMode::SINGLE_KERNEL) {
-    // WA
-    config.opengl.recorder.frames.startFrame = UINT_MAX;
-    obj.oclKernelsRange.startKernel = UINT_MAX;
-    obj.oclKernelsRange.stopKernel = UINT_MAX;
-  } else if (config.opencl.recorder.mode == OpenCLRecorderMode::KERNELS_RANGE) {
-    config.opengl.recorder.frames.startFrame = UINT_MAX;
-    obj.oclSingleKernel.number = UINT_MAX;
-  }
-  if (config.opencl.recorder.mode != OpenCLRecorderMode::ALL &&
-      (config.common.recorder.removeGLSharing || config.common.recorder.removeDXSharing)) {
-    LOG_ERROR << "Unsharing is not supported in subcapture mode. If you need a subcapture from "
-                 "sharing stream, create unshared stream first, then do a subcapture of that.";
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
-}
 
 template <>
 void DeriveConfigData<Configuration::LevelZero::Player>(Configuration::LevelZero::Player& obj,

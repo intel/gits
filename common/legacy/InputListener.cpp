@@ -100,7 +100,7 @@ CInputListener::~CInputListener() {
   if (_threadHandle != NULL) {
     PostThreadMessage(GetThreadId(_threadHandle), WM_QUIT, 0, 0);
     if (GetThreadId(_threadHandle) != GetCurrentThreadId()) {
-      // The thread ids will be same when InputKeyListener calls ExitHotKeyPressed which in turn calls recorder.Close() for OCL
+      // The thread ids will be same when InputKeyListener calls ExitHotKeyPressed which in turn calls recorder.Close() for compute APIs
       WaitForSingleObject(_threadHandle, INFINITE);
     }
     CloseHandle(_threadHandle);

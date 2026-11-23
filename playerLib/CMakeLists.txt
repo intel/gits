@@ -82,10 +82,6 @@ if(WITH_LEVELZERO)
   target_link_libraries(gits_player_lib PRIVATE L0_common)
 endif()
 
-if(WITH_OPENCL)
-  target_link_libraries(gits_player_lib PRIVATE OpenCL_common)
-endif()
-
 if(WITH_VULKAN)
   target_link_libraries(gits_player_lib PRIVATE
     Vulkan_player

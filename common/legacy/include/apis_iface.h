@@ -26,7 +26,7 @@ public:
     ApiNotSet = 0,
     OpenGL = 1,
     Vulkan = 2, // no longer supported, identifies old streams
-    OpenCL = 3,
+    OpenCL = 3, // no longer supported, identifies old streams
     LevelZero = 4,
     DirectX = 5,
   };

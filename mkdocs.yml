@@ -80,7 +80,6 @@ nav:
     - Common: 'configuration/CommonAuto.md'
     - DirectX: 'configuration/DirectXAuto.md'
     - Level Zero: 'configuration/LevelZeroAuto.md'
-    - OpenCL: 'configuration/OpenCLAuto.md'
     - OpenGL: 'configuration/OpenGLAuto.md'
     - Vulkan: 'configuration/VulkanAuto.md'
     - Enums: 'configuration/EnumsAuto.md'
@@ -113,9 +112,6 @@ nav:
         - 'documentation/LevelZero/metagenerator.md'
         - 'documentation/LevelZero/options_features.md'
         - 'documentation/LevelZero/subcaptures.md'
-      - OpenCL:
-          - 'documentation/OpenCL/Generator.md'
-          - 'documentation/OpenCL/cl_gits_indirect_access_pointers_locations.md'
       - OpenGL:
         - 'documentation/OpenGL/Plugins.md'
         - 'documentation/OpenGL/OpenGLLegacy.md'

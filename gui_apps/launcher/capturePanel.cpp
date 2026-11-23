@@ -33,15 +33,15 @@ using namespace gits::gui;
 
 #ifdef _WIN32
 const std::vector<std::pair<const char*, Api>> apiMappings = {
-    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},   {Labels::API_NAME_SHORT_GL, Api::OPENGL},
-    {Labels::API_NAME_SHORT_VK, Api::VULKAN},    {Labels::API_NAME_SHORT_CL, Api::OPENCL},
+    {Labels::API_NAME_SHORT_DX, Api::DIRECTX},
+    {Labels::API_NAME_SHORT_GL, Api::OPENGL},
+    {Labels::API_NAME_SHORT_VK, Api::VULKAN},
     {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
 };
 #else
 const std::vector<std::pair<const char*, Api>> apiMappings = {
     {Labels::API_NAME_SHORT_GL, Api::OPENGL},
     {Labels::API_NAME_SHORT_VK, Api::VULKAN},
-    {Labels::API_NAME_SHORT_CL, Api::OPENCL},
     {Labels::API_NAME_SHORT_L0, Api::LEVELZERO},
 };
 #endif
@@ -280,9 +280,11 @@ void CapturePanel::CaptureStream() {
 
   context.SetGITSLogText("");
 
-  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"}, {Api::DIRECTX, "DX"},
-                                                   {Api::OPENGL, "GL"},   {Api::VULKAN, "VK"},
-                                                   {Api::OPENCL, "CL"},   {Api::LEVELZERO, "L0"}};
+  const std::map<Api, std::string> stringForApi = {{Api::UNKNOWN, "N/A"},
+                                                   {Api::DIRECTX, "DX"},
+                                                   {Api::OPENGL, "GL"},
+                                                   {Api::VULKAN, "VK"},
+                                                   {Api::LEVELZERO, "L0"}};
 
   std::filesystem::path executablePath = context.GetPathSafe(Path::CAPTURE_TARGET);
   if (executablePath.empty()) {

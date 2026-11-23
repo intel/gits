@@ -80,8 +80,6 @@ Api StreamHeaderApiToApi(stream::StreamHeader::Api api) {
     return Api::OPENGL;
   case stream::StreamHeader::Api::API_OPENGL_LEGACY:
     return Api::OPENGL_LEGACY;
-  case stream::StreamHeader::Api::API_OPENCL:
-    return Api::OPENCL;
   case stream::StreamHeader::Api::API_LEVELZERO:
     return Api::LEVELZERO;
   default:

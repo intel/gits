@@ -81,13 +81,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: OpenCLRecorderMode
-    Values:
-      - Value: ALL
-      - Value: SINGLE_KERNEL
-        Labels: [OclSingleKernel]
-      - Value: KERNELS_RANGE
-        Labels: [OclKernelsRange]
   - Name: LevelZeroRecorderMode
     Values:
       - Value: ALL

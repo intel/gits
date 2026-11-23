@@ -4,9 +4,9 @@ title: Lua scripts
 ---
 # Introduction
 
-Both recorder and player have capability of instrumentation of GL and CL
+Both recorder and player have capability of instrumentation of GL
 functions via external script. If the script defines an OpenGL (and EGL,
-WGL, GLX) or OpenCL function, GITS will call that function, instead of the one
+WGL, GLX) function, GITS will call that function, instead of the one
 provided by the driver. It is then script's responsibility to forward it
 to the driver (if it chooses to do so). This can be done to modify the
 stream in a specific way. For example to cause all `glDrawElements`
@@ -54,9 +54,7 @@ functions that will be called at specific times during stream playback.
 
 Apart from these, GITS has capability to call any API via structures:
 
-- `drv` for OpenGL,
-
-- `drvCl` for OpenCL.
+- `drv` for OpenGL.
 
 # Utility functions
 
@@ -159,39 +157,6 @@ opaque Lua userdata.
   `<begin>` of size `<size>`. Overcomes Lua limitation on 64-bit
   Integers operations.
 
-- `drvCl.statusToStr(status)`  
-  Converts `cl_int` return code to string.
-
-## OpenCL callbacks
-
-Some OpenCL calls allow to pass a callback function which will be
-called asynchronously by the driver when certain event occurs.
-
-Due to the way Lua bridge works, you can't pass Lua functions as
-`pfn_notify` parameter directly. However, GITS provides a few
-functions to support passing Lua functions as callbacks:
-
-- `drvCl.getEventCallbackPtr()`
-
-- `drvCl.getMemObjCallbackPtr()`
-
-- `drvCl.getProgramCallbackPtr()`
-
-- `drvCl.getContextCallbackPtr()`
-
-- `drvCl.getSVMFreeCallbackPtr()`
-
-  These functions return UDT pointers to C callback function with
-  appropriate signature. They should be passed as `pfn_notify`.
-
-- `drvCl.setCallbackData(function, user_data)`  
-  Returns UDT which should be passed as `user_data` parameter. It
-  contains references to Lua `function` that should be called and UDT
-  that will be passed to Lua callback as `user_data` .
-
-  Example usage is shown in `callbackExample.lua` script bundled with
-  GITS.
-
 # Example
 
 ``` lua
@@ -233,54 +198,6 @@ end
 
 # Included scripts {#sec:includedLuaScripts}
 
-GITS comes with a set of scripts for common use cases.
+GITS comes with a set of scripts for common use cases. They are installed in
+the `LuaScripts` directory, grouped by API.
 
-## OpenCL
-
-- `clconstants.lua`  
-  Contains Lua definitions of OpenCL constants supported by GITS.
-  Usage: `import "clconstants"`.
-
-- `aubCapture.lua`  
-  Executes specified batch scripts before and after
-  `clEnqueueNDRangeKernel` call.
-
-- `buildLog.lua`  
-  Prints build log after `clBuildProgram`.
-
-- `callbackExample.lua`  
-  Example script demonstrating callback usage.
-
-- `forceDeviceType.lua`  
-  Forces requested or reported device type.
-
-- `forceNDRangeWorkSize.lua`  
-  Forces work size for `clEnqueueNDRangeKernel` calls.
-
-- `forcePlatformVendor.lua`  
-  Forces platform vendor in `clGetPlatformInfo`.
-
-- `forceReportedGlobalMemSize.lua`  
-  Forces global memory size and max allocation size for all devices.
-
-- `forceReportedWorkGroupSize.lua`  
-  Forces work group size for all devices.
-
-- `injectBuildOptions.lua`  
-  --scriptArgsStr: build options to inject  
-  Injects options to `clBuildProgram` and `clCompileProgram` calls.
-
-- `nullNDRange.lua`  
-  Avoids sending `clEnqueueNDRangeKernel` to the driver. Useful when
-  trying to capture kernel execution that hangs.
-
-- `performanceGITS.lua`  
-  Dumps performance data to CSV file in backwards-compatible format.
-
-- `dumpPerformanceData.lua`  
-  More sophisticated script to dump performance data. It does not
-  inject blocking calls.
-
-- `printReturnCodes.lua`  
-  Prints statuses from OpenCL functions which return them through
-  `errcode_ret` parameter.

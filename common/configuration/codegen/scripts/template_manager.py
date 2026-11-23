@@ -74,8 +74,6 @@ class TemplateManager:
             ('documentationConfigAuto.md.mako',
              os.path.join('Auto.md'), ('OpenGL', 'simple/opengl')),
             ('documentationConfigAuto.md.mako',
-             os.path.join('Auto.md'), ('OpenCL', 'simple/opengl')),
-            ('documentationConfigAuto.md.mako',
              os.path.join('Auto.md'), ('Vulkan', 'simple/vulkan')),
             ('documentationConfigAuto.md.mako',
              os.path.join('Auto.md'), ('LevelZero', 'simple/intel')),

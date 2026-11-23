@@ -72,12 +72,6 @@ Configuration:
             Accessibility: ArgumentOnly
             Arguments: [libGLESv2Path]
             Description: Override for library path containing GLES 2 functions
-          - Name: libClPath
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [libOCLPath]
-            Description: Use a custom path to the OpenCL shared library.
           - Name: libOcloc
             Type: std::filesystem::path
             Default: ""
@@ -371,13 +365,6 @@ Configuration:
             DefaultsPerPlatform:
               - win32: libGLESv2.dll
             ConfigName: libGLES2
-          - Name: libClPath
-            Type: std::filesystem::path
-            Default: libOpenCL.so.1
-            DefaultsPerPlatform:
-              - win32: OpenCL.dll
-              - lnx_32: libOpenCL.so
-            ConfigName: libCL
           - Name: libVK
             Type: std::filesystem::path
             Default: libvulkan.so.1
@@ -793,13 +780,6 @@ Configuration:
             DefaultsPerPlatform:
               - win32: C:\Windows\System32\libGLESv2.dll
             ConfigName: libGLES2
-          - Name: libClPath
-            Type: std::filesystem::path
-            Default: /usr/lib/{arch}-linux-gnu/libOpenCL.so.1
-            DefaultsPerPlatform:
-              - lnx_32: /usr/lib/{arch}-linux-gnu/libOpenCL.so
-              - win32: C:\Windows\System32\OpenCL.dll
-            ConfigName: libCL
           - Name: libVK
             Type: std::filesystem::path
             Default: /usr/lib/{arch}-linux-gnu/libvulkan.so.1
@@ -908,12 +888,6 @@ Configuration:
             Type: bool
             Default: false
           - Name: nullIO
-            Type: bool
-            Default: false
-          - Name: removeDXSharing
-            Type: bool
-            Default: false
-          - Name: removeGLSharing
             Type: bool
             Default: false
           - Name: benchmark
@@ -2031,129 +2005,6 @@ Configuration:
             Type: bool
             Default: true
             OSVisibility: [WINDOWS]
-  - Name: OpenCL
-    Type: Group
-    Options:
-      - Name: Player
-        Type: Group
-        Options:
-          - Name: captureImages
-            Type: bool
-            Default: false
-            Arguments: [clCaptureImages]
-            Description:
-              Capture OpenCL images after each clEnqueueReadImage call. Assume
-              they all are 2D RGBA8 images.
-          - Name: removeSourceLengths
-            Type: bool
-            Default: false
-            Arguments: [clRemoveSourceLengths]
-            Description:
-              Removes source lengths. Makes driver assume strings are null-terminated
-              in clCreateProgramWithSource
-          - Name: captureReads
-            Type: bool
-            Default: false
-            Arguments: [clCaptureReads]
-            Description:
-              Enables dumping of CL memory objects to directory specified in
-              --outputDir (implicitly to 'dump' in stream directory). Option may be used
-              with  --clOmitReadOnlyObjects)
-            LongDescription:
-              Enables dumping of CL memory objects to directory specified
-              in --outputDir (implicitly to 'dump' in stream directory). Option may be
-              used with --clOmitReadOnlyObjects
-          - Name: captureKernels
-            Type: BitRange
-            Default: "-"
-            Arguments: [clCaptureKernels]
-            Description:
-              Injects clEnqueueRead*() after specified occurence of NDRange call
-              for each used buffer to allow contents verification.
-            LongDescription: |
-              Injects clEnqueueRead*() after specified occurence of NDRange call for each used buffer to allow contents verification. 
-              Number of NDRange calls must be specified as a single string without spaces of following format:        
-
-              * num1-num2 ex. 1-7 - will dump buffers used in the range of calls
-              * num1,num2,num3 ex. 2,5,7 - will dump buffers used in specified occurence of NRange calls
-              Approaches may be combined ex. 2-5,14,17 Buffers will be stored in directory specified in --outputDir (implicitly to 'dump' in stream directory). 
-              Option may be used with --clOmitReadOnlyObjects
-          - Name: omitReadOnlyObjects
-            Type: bool
-            Default: false
-            Arguments: [clOmitReadOnlyObjects]
-            Description:
-              Omits dumping for objects created with CL_MEM_READ_ONLY. Takes
-              effect  only when --clCaptureReads or --clCaptureKernels is used.
-          - Name: dumpLayoutOnly
-            Type: bool
-            Default: false
-            Arguments: [clDumpLayoutOnly]
-            Description:
-              Omits dumping injected buffers and images. Only layout.json file  with
-              structure of expected dumps. Takes effect only when --clCaptureKernels is
-              used.
-          - Name: injectBufferResetAfterCreate
-            Type: bool
-            Default: false
-            Arguments: [clInjectBufferResetAfterCreate]
-            Description:
-              Nullifies Buffer, Image, USM and SVM memory regions immediately
-              after their  creation to produce deterministic results when verifying buffers.
-          - Name: disableNullIndirectPointersInBuffer
-            Type: bool
-            Default: false
-          - Name: noOpenCL
-            Type: bool
-            Default: false
-            Arguments: [noOpenCL]
-            Description:
-              Do not initialize OpenCL subsystem. This will cause GITS to crash
-              in case OpenCL is actually used by the stream.
-          - Name: aubSignaturesCL
-            Type: bool
-            Default: false
-            Arguments: [aubSignaturesCL]
-            Description:
-              Append signatures at the end of each mem object. Currently has
-              to be used with --clInjectBufferResetAfterCreate.
-      - Name: Recorder
-        Type: Group
-        Options:
-          - Name: mode
-            Type: OpenCLRecorderMode
-            Default: All
-          - Name: OclSingleKernel
-            Type: Group
-            Options:
-              - Name: number
-                Type: uint32_t
-                Default: 1
-          - Name: OclKernelsRange
-            Type: Group
-            Options:
-              - Name: startKernel
-                Type: uint32_t
-                Default: 1
-              - Name: stopKernel
-                Type: uint32_t
-                Default: 10
-            ConfigName: oclKernelsRange
-          - Name: dumpKernels
-            Type: BitRange
-            Default: "-"
-          - Name: dumpImages
-            Type: bool
-            Default: false
-          - Name: omitReadOnlyObjects
-            Type: bool
-            Default: false
-          - Name: bufferResetAfterCreate
-            Type: bool
-            Default: false
-          - Name: nullIndirectPointersInBuffer
-            Type: bool
-            Default: true
   - Name: LevelZero
     InstanceName: levelzero
     Type: Group
@@ -2493,3 +2344,13 @@ RemovedOptions:
     Reason: VulkanLegacy support was removed.
   - Path: Vulkan.Recorder.UsePresentSrcLayoutTransitionAsAFrameBoundary
     Reason: VulkanLegacy support was removed.
+  - Path: Common.Player.LibCL
+    Reason: OpenCL support was removed.
+  - Path: Common.Recorder.LibCL
+    Reason: OpenCL support was removed.
+  - Path: Common.Recorder.RemoveDXSharing
+    Reason: OpenCL support was removed.
+  - Path: Common.Recorder.RemoveGLSharing
+    Reason: OpenCL support was removed.
+  - Path: OpenCL
+    Reason: OpenCL support was removed.

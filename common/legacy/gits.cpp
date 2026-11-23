@@ -160,6 +160,7 @@ struct RemovedApi {
 };
 constexpr unsigned TOKEN_ID_API_RANGE = 0x10000;
 constexpr RemovedApi REMOVED_APIS[] = {
+    {CToken::ID_OPENCL, ApisIface::TApi::OpenCL, "OpenCL"},
     {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
 };
 

@@ -366,8 +366,6 @@ std::string GetRecorderDirectoryNameForApi(Api api) {
     return "FilesToCopyOGLLegacy";
   case Api::VULKAN:
     return "FilesToCopyVulkan";
-  case Api::OPENCL:
-    return "FilesToCopyOCL";
   case Api::LEVELZERO:
     return "FilesToCopyL0";
   default:
@@ -381,8 +379,6 @@ std::string GetRecorderDirectoryNameForApi(Api api) {
     return "OpenGLLegacy";
   case Api::VULKAN:
     return "Vulkan";
-  case Api::OPENCL:
-    return "OpenCL";
   case Api::LEVELZERO:
     return "LevelZero";
   default:

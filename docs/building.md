@@ -90,7 +90,6 @@ cmake --install . --config Release --prefix dist
 | `REGISTER_VULKAN_LAYER` | `ON` | :material-microsoft-windows: When `ON`, the install step registers the Vulkan GITS recorder layer (`Recorder\VulkanLayer\VkLayer_vulkan_GITS_recorder.json`) with the OS. |
 | `WITH_VULKAN` | `ON` | Build the Vulkan backend. |
 | `WITH_DIRECTX` | `ON` | :material-microsoft-windows: Build the DirectX backend. |
-| `WITH_OPENCL` | `ON` | Build the OpenCL backend. |
 | `WITH_OPENGL` | `ON` | Windows x64 and x86-64 Linux only. Build the new, experimental OpenGL backend. The [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md) backend is always built. |
 | `WITH_LEVELZERO` | `ON` | Build the LevelZero backend. |
 | `WITH_OCLOC` | `ON` | Build the Ocloc backend. |

@@ -107,11 +107,6 @@ set_source_files_properties(
 )
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-if(WITH_OPENCL)
-  add_definitions(-DZE_ENABLE_OCL_INTEROP)
-  include_directories(../OpenCL/common/include ${CMAKE_BINARY_DIR}/OpenCL)
-endif()
-
 add_library(L0_common
   common/l0Drivers.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/l0DriversInit.cpp

@@ -22,9 +22,6 @@
 #include "imGuiHUD.h"
 #endif
 #include "openglLibrary.h"
-#ifdef WITH_OPENCL
-#include "openclLibrary.h"
-#endif
 #if defined WITH_LEVELZERO
 #include "l0Library.h"
 #endif
@@ -264,11 +261,6 @@ int Initialize(int argc, char* argv[]) {
   }
   // initialize GITS
   LOG_INFO << "Initializing...";
-#if WITH_OPENCL
-  if (!cfg.opencl.player.noOpenCL) {
-    inst.Register(std::shared_ptr<CLibrary>(new OpenCL::CLibrary));
-  }
-#endif
   inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
 #ifdef WITH_LEVELZERO
   inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));

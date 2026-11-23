@@ -21,10 +21,6 @@ if(MSVC)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderOpenGL\n")
   endif()
-  if(WITH_OPENCL)
-    file(APPEND ${recorder_DEF}
-      "  GITSRecorderOpenCL\n")
-  endif()
   if(WITH_VULKAN)
     file(APPEND ${recorder_DEF}
       "  GITSRecorderVulkan2\n")
@@ -83,11 +79,6 @@ set(frameworks ${frameworks} "-framework OpenGL")
 if(WITH_VULKAN)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder)
   set(recorderCommonLibs ${recorderCommonLibs} hud)
-endif()
-if(WITH_OPENCL)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenCL_recorder)
-  set(recorderCommonLibs ${recorderCommonLibs} OpenCL_common)
-  set(frameworks ${frameworks} "-framework OpenCL")
 endif()
 if(WITH_LEVELZERO)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} L0_recorder)
@@ -152,11 +143,6 @@ endif()
 if(UNIX)
   install(CODE "execute_process(COMMAND bash -c \"
     cd \${CMAKE_INSTALL_PREFIX}/Recorder/${OpenGLLegacy_INSTALL_SUBDIR}/
-    ln -sf libGitsGLCapture.so libEGL.so.1
-    ln -sf libGitsGLCapture.so libGLESv1_CM.so.1
-    ln -sf libGitsGLCapture.so libGLESv2.so.2
-    ln -sf libGitsGLCapture.so libGL.so.1
-    cd ../${OpenCL_INSTALL_SUBDIR}/
     ln -sf libGitsGLCapture.so libEGL.so.1
     ln -sf libGitsGLCapture.so libGLESv1_CM.so.1
     ln -sf libGitsGLCapture.so libGLESv2.so.2

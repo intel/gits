@@ -89,17 +89,11 @@ set_target_properties(OpenGLLegacy_interceptor PROPERTIES FOLDER OpenGLLegacy)
 
 if(MSVC)
   install(FILES $<TARGET_PDB_FILE:OpenGLLegacy_interceptor> DESTINATION Recorder/${OpenGLLegacy_INSTALL_SUBDIR} OPTIONAL)
-  install(FILES $<TARGET_PDB_FILE:OpenGLLegacy_interceptor> DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR} OPTIONAL)
 endif()
 
 install(TARGETS OpenGLLegacy_interceptor
   RUNTIME DESTINATION Recorder/${OpenGLLegacy_INSTALL_SUBDIR}
   LIBRARY DESTINATION Recorder/${OpenGLLegacy_INSTALL_SUBDIR})
-if(WITH_OPENCL)
-  install(TARGETS OpenGLLegacy_interceptor
-    RUNTIME DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR}
-    LIBRARY DESTINATION Recorder/${OpenCL_INSTALL_SUBDIR})
-endif()
 if(WIN32)
   if(MSVC)
     install(FILES $<TARGET_PDB_FILE:OpenGLLegacy_interceptor> RENAME libEGL.pdb DESTINATION Recorder/${OpenGLES_INSTALL_SUBDIR} OPTIONAL)

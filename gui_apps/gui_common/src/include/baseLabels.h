@@ -209,8 +209,6 @@ static constexpr const char* API_NAME_GL = "OpenGL";
 static constexpr const char* API_NAME_SHORT_GL = "GL";
 static constexpr const char* API_NAME_VK = "Vulkan";
 static constexpr const char* API_NAME_SHORT_VK = "VK";
-static constexpr const char* API_NAME_CL = "OpenCL";
-static constexpr const char* API_NAME_SHORT_CL = "CL";
 static constexpr const char* API_NAME_L0 = "LevelZero";
 static constexpr const char* API_NAME_SHORT_L0 = "L0";
 
@@ -399,8 +397,6 @@ static const std::string ApiToString(Api api) {
     return API_NAME_GL_LEGACY;
   case Api::VULKAN:
     return API_NAME_VK;
-  case Api::OPENCL:
-    return API_NAME_CL;
   case Api::LEVELZERO:
     return API_NAME_L0;
   default:
