@@ -14,6 +14,7 @@
 #include "keyEvents.h"
 #include "platform.h"
 #include "gits.h"
+#include "exception.h"
 
 #if defined GITS_PLATFORM_WINDOWS
 

@@ -20,6 +20,7 @@
 #include "launcherLabels.h"
 #include "baseEventBus.h"
 #include "baseCommon.h"
+#include "configurator.h"
 #include "guiActions.h"
 #include <format>
 

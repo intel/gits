@@ -26,7 +26,6 @@
 #define GITS_MAKE_SEMVER(major, minor, patch) GITS_MAKE_VERSION4(major, minor, 0, patch)
 
 namespace gits {
-class CBinIStream;
 /**
    * @brief Class responsible for handling project version operations
    *
@@ -65,7 +64,7 @@ private:
 bool operator<(const CVersion& lhs, const CVersion& rhs);
 // Writes the GITS_dd.dd.dd.ddd label stored in streams; use ToString() for display.
 std::ostream& operator<<(std::ostream& stream, const CVersion& version);
-CBinIStream& operator>>(CBinIStream& stream, CVersion& version);
+std::istream& operator>>(std::istream& stream, CVersion& version);
 
 // Version of this GITS build.
 const CVersion& CurrentVersion();

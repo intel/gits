@@ -122,7 +122,7 @@ void initialize() {
   }
   s_initialized = true;
 
-  g_gitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderD3D12", false);
+  g_gitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderD3D12");
 
   initializeDispatchTable();
 

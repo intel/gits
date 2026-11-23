@@ -28,6 +28,7 @@
 #include "baseLabels.h"
 #include "baseCommon.h"
 #include "configOptions.h"
+#include "configurator.h"
 #include "fileActions.h"
 #include "streamFile.h"
 

@@ -8,7 +8,7 @@
 
 #include "platform.h"
 #include "tools_lite.h"
-#include "recorder.h"
+#include "messageBus.h"
 #include "log.h"
 
 #ifdef GITS_PLATFORM_WINDOWS
@@ -29,9 +29,6 @@ char exitProcessHead[12];
 FARPROC exitProcessAddr;
 
 void STDCALL GitsExitProcess(UINT uExitCode) {
-  if (gits::CRecorder::InstancePtr()) {
-    gits::CRecorder::Instance().Close();
-  }
   gits::MessageBus::get().publish({gits::PUBLISHER_RECORDER, gits::TOPIC_PROGRAM_EXIT},
                                   std::make_shared<gits::ProgramMessage>());
   LOG_INFO << "Recording done";
@@ -57,9 +54,6 @@ void InstrumentTerminateProcess();
 
 void STDCALL GitsTerminateProcess(_In_ HANDLE hProcess, _In_ UINT uExitCode) {
   if (GetProcessId(hProcess) == GetCurrentProcessId()) {
-    if (gits::CRecorder::InstancePtr()) {
-      gits::CRecorder::Instance().Close();
-    }
     gits::MessageBus::get().publish({gits::PUBLISHER_RECORDER, gits::TOPIC_PROGRAM_EXIT},
                                     std::make_shared<gits::ProgramMessage>());
     LOG_INFO << "Recording done by TerminateProcess() ";

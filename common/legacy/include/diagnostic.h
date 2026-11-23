@@ -11,6 +11,8 @@
 #include "gits.h"
 #include "pragmas.h"
 
+#include "nlohmann/json.hpp"
+
 namespace gits {
 void gather_diagnostic_info(nlohmann::ordered_json& node);
 }

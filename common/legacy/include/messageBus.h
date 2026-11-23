@@ -10,16 +10,13 @@
 
 #include "tools_lite.h"
 #include "log.h"
-// Used in GitsEventMessage
-#include "token.h"
 
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <functional>
-#include <memory>
-#include <mutex>
-
 namespace gits {
 enum PublisherId {
   PUBLISHER_PLAYER = 0,
@@ -36,8 +33,6 @@ enum TopicId {
   TOPIC_CLOSE_PLAYER, // Stops playback at the current token
   TOPIC_GITS_WORKLOAD_BEGIN,
   TOPIC_GITS_WORKLOAD_END,
-  // This topic is a part of playback, GitsEventMessage contains the id of the token associated with the message
-  TOPIC_GITS_EVENT,
   TOPIC_PROGRAM_START,
   TOPIC_PROGRAM_EXIT,
   TOPIC_LOOP_BEGIN,
@@ -197,45 +192,6 @@ private:
   void* context_;
   std::string label_;
   unsigned value_;
-};
-
-class GitsEventMessage : public Message {
-public:
-  struct FRAME_START_DATA {
-    uint32_t FrameNumber;
-  };
-
-  struct FRAME_END_DATA {
-    uint32_t FrameNumber;
-  };
-
-  struct INIT_START_DATA {};
-
-  struct INIT_END_DATA {};
-
-  struct MARKER_UINT64_DATA {
-    uint64_t Value;
-  };
-
-  struct DATA {
-    CToken::TId Id;
-    union {
-      INIT_START_DATA InitStartData;
-      INIT_END_DATA InitEndData;
-      FRAME_START_DATA FrameStartData;
-      FRAME_END_DATA FrameEndData;
-      MARKER_UINT64_DATA MarkerUint64Data;
-    };
-  };
-
-  GitsEventMessage(const DATA& data) : Data_(data) {}
-
-  const DATA& getData() const {
-    return Data_;
-  }
-
-private:
-  const DATA Data_;
 };
 
 class PlaybackEndMessage : public Message {

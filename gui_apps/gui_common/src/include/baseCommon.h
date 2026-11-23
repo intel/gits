@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <string>
 
 #include "apis_iface.h"

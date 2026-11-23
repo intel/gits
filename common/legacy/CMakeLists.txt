@@ -11,95 +11,38 @@ set(COMMON_HEADER_DIR ${COMMON_SOURCE_DIR}/include)
 
 list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/apis_iface.h
-  ${COMMON_HEADER_DIR}/argument.h
   ${COMMON_HEADER_DIR}/bit_range.h
-  ${COMMON_HEADER_DIR}/buffer.h
   ${COMMON_HEADER_DIR}/configUtils.h
   ${COMMON_HEADER_DIR}/diagnostic.h
   ${COMMON_HEADER_DIR}/dynamic_linker.h
   ${COMMON_HEADER_DIR}/exception.h
-  ${COMMON_HEADER_DIR}/function.h
-  ${COMMON_HEADER_DIR}/getopt_.h
   ${COMMON_HEADER_DIR}/gits.h
   ${COMMON_HEADER_DIR}/gitsVersion.h
-  ${COMMON_HEADER_DIR}/id.h
   ${COMMON_HEADER_DIR}/ipcPipe.h
-  ${COMMON_HEADER_DIR}/InputListener.h
   ${COMMON_HEADER_DIR}/istdhash.h
   ${COMMON_HEADER_DIR}/keyEvents.h
-  ${COMMON_HEADER_DIR}/key_value.h
-  ${COMMON_HEADER_DIR}/library.h
-  ${COMMON_HEADER_DIR}/macros.h
-  ${COMMON_HEADER_DIR}/malloc_allocator.h
-  ${COMMON_HEADER_DIR}/MemorySniffer.h
-  ${COMMON_HEADER_DIR}/message_pump.h
   ${COMMON_HEADER_DIR}/messageBus.h
-  ${COMMON_HEADER_DIR}/performance.h
   ${COMMON_HEADER_DIR}/platform.h
   ${COMMON_HEADER_DIR}/pragmas.h
-  ${COMMON_HEADER_DIR}/resource_manager.h
-  ${COMMON_HEADER_DIR}/runner.h
-  ${COMMON_HEADER_DIR}/scheduler.h
   ${COMMON_HEADER_DIR}/streamFile.h
-  ${COMMON_HEADER_DIR}/streams.h
-  ${COMMON_HEADER_DIR}/texture_converter.h
   ${COMMON_HEADER_DIR}/timer.h
-  ${COMMON_HEADER_DIR}/token.h
   ${COMMON_HEADER_DIR}/tools_lite.h
   ${COMMON_HEADER_DIR}/tools.h
   ${COMMON_HEADER_DIR}/version.h
-  ${COMMON_HEADER_DIR}/intervalSet.h
-  ${COMMON_HEADER_DIR}/controlHandler.h
-  ${COMMON_HEADER_DIR}/recorderBehaviors.h
-  ${COMMON_HEADER_DIR}/recorder.h
-  ${COMMON_HEADER_DIR}/state.h
-  ${COMMON_HEADER_DIR}/vectorMapper.h
 
-  ${COMMON_SOURCE_DIR}/apis_iface.cpp
-  ${COMMON_SOURCE_DIR}/argument.cpp
   ${COMMON_SOURCE_DIR}/bit_range.cpp
-  ${COMMON_SOURCE_DIR}/buffer.cpp
   ${COMMON_SOURCE_DIR}/configUtils.cpp
   ${COMMON_SOURCE_DIR}/diagnostic.cpp
   ${COMMON_SOURCE_DIR}/exception.cpp
-  ${COMMON_SOURCE_DIR}/function.cpp
   ${COMMON_SOURCE_DIR}/gits.cpp
-  ${COMMON_SOURCE_DIR}/getopt.cpp
-  ${COMMON_SOURCE_DIR}/id.cpp
   ${COMMON_SOURCE_DIR}/ipcPipe.cpp
-  ${COMMON_SOURCE_DIR}/library.cpp
-  ${COMMON_SOURCE_DIR}/MemorySniffer.cpp
-  ${COMMON_SOURCE_DIR}/message_pump.cpp
   ${COMMON_SOURCE_DIR}/messageBus.cpp
-  ${COMMON_SOURCE_DIR}/performance.cpp
-  ${COMMON_SOURCE_DIR}/resource_manager.cpp
-  ${COMMON_SOURCE_DIR}/runner.cpp
-  ${COMMON_SOURCE_DIR}/scheduler.cpp
-  ${COMMON_SOURCE_DIR}/streams.cpp
   ${COMMON_SOURCE_DIR}/timer.cpp
-  ${COMMON_SOURCE_DIR}/token.cpp
   ${COMMON_SOURCE_DIR}/tools_lite.cpp
   ${COMMON_SOURCE_DIR}/tools.cpp
   ${COMMON_SOURCE_DIR}/version.cpp
   ${COMMON_SOURCE_DIR}/dynamic_linker.cpp
-  ${COMMON_SOURCE_DIR}/InputListener.cpp
   ${COMMON_SOURCE_DIR}/keyEvents.cpp
-  ${COMMON_SOURCE_DIR}/texture_converter.cpp
-  ${COMMON_SOURCE_DIR}/controlHandler.cpp
-  ${COMMON_SOURCE_DIR}/recorderBehaviors.cpp
-  ${COMMON_SOURCE_DIR}/recorder.cpp
-  ${COMMON_SOURCE_DIR}/state.cpp
-)
-source_group("recorder" FILES
-  ${COMMON_HEADER_DIR}/controlHandler.h
-  ${COMMON_HEADER_DIR}/recorderBehaviors.h
-  ${COMMON_HEADER_DIR}/recorder.h
-  ${COMMON_HEADER_DIR}/state.cpp
-
-  ${COMMON_SOURCE_DIR}/controlHandler.cpp
-  ${COMMON_SOURCE_DIR}/recorderBehaviors.cpp
-  ${COMMON_SOURCE_DIR}/recorder.cpp
-  ${COMMON_SOURCE_DIR}/state.cpp
 )
 
 if(WIN32)
@@ -117,7 +60,7 @@ add_definitions(-DGITS_COMMON_PROJ)
 add_dependencies(common config_codegen gits_build_info)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
 target_include_directories(common PRIVATE ${GITS_BUILD_INFO_INCLUDE_DIR})
-target_link_libraries(common PRIVATE xxhash murmurhash lz4 libzstd_static hud gits_recorder_interface png zlib)
+target_link_libraries(common PRIVATE xxhash murmurhash hud gits_recorder_interface)
 target_link_libraries(common PUBLIC configuration log)
 
 if(UNIX)

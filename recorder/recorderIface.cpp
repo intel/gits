@@ -19,10 +19,10 @@
 
 #include <fstream>
 
-gits::Configuration* STDCALL Configure(const char* cfgDir, bool legacyMode) {
+gits::Configuration* STDCALL Configure(const char* cfgDir) {
   try {
-    if (!gits::ConfigureRecorder(
-            std::filesystem::path(cfgDir) / gits::Configurator::ConfigFileName(), legacyMode)) {
+    if (!gits::ConfigureRecorder(std::filesystem::path(cfgDir) /
+                                 gits::Configurator::ConfigFileName())) {
       return nullptr;
     }
     return &gits::Configurator::GetMutable();

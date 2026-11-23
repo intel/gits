@@ -50,7 +50,7 @@ std::unique_ptr<VulkanLibHandler> g_VulkanLibHandler; // Ensures Vulkan library 
 void Initialize() {
   static std::once_flag initFlag;
   std::call_once(initFlag, []() {
-    g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2", false);
+    g_GitsLoader = std::make_unique<gits::CGitsLoader>("GITSRecorderVulkan2");
     g_RecorderWrapper = reinterpret_cast<gits::vulkan::IRecorderWrapper*>(g_GitsLoader->GetRecorderWrapperPtr());
     auto& cfg = g_GitsLoader->GetConfiguration();
     g_VulkanLibHandler = std::make_unique<VulkanLibHandler>(cfg.common.recorder.libVK.string().c_str());

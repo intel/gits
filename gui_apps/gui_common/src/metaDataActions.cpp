@@ -7,13 +7,14 @@
 // ===================== end_copyright_notice ==============================
 
 #include "metaDataActions.h"
-#include "streams.h"
 #include "gits.h"
 #include "streamFile.h"
 #include "baseCommon.h"
 #include "baseLabels.h"
 
 #include <plog/Log.h>
+
+#include <fstream>
 
 namespace {
 std::optional<std::filesystem::path> normalizeStreamPath(std::filesystem::path streamPath) {
@@ -91,7 +92,11 @@ STREAM_META_DATA GetLegacyStreamMetaData(const std::filesystem::path& streamPath
   STREAM_META_DATA metaData;
 
   try {
-    gits::CBinIStream stream(streamPath);
+    std::ifstream stream(streamPath, std::ios::binary);
+    if (!stream.is_open()) {
+      LOG_ERROR << "Couldn't open stream file for reading metadata. Stream path: " << streamPath;
+      return STREAM_META_DATA();
+    }
     gits::CVersion version;
     stream >> version;
     metaData.IsValid = true;
@@ -100,22 +105,22 @@ STREAM_META_DATA GetLegacyStreamMetaData(const std::filesystem::path& streamPath
 
     // We don't make use of this but we read it in order to get to the recorder diagnostics
     uint32_t skipNum = 0U;
-    stream.ReadHelper(reinterpret_cast<char*>(&skipNum), sizeof(skipNum));
+    stream.read(reinterpret_cast<char*>(&skipNum), sizeof(skipNum));
     if (skipNum <= UINT32_MAX) {
       for (uint32_t i = 0; i < skipNum; i++) {
         uint32_t id = 0U;
-        stream.ReadHelper(reinterpret_cast<char*>(&id), sizeof(id));
+        stream.read(reinterpret_cast<char*>(&id), sizeof(id));
 
         uint32_t num = 0U;
-        stream.ReadHelper(reinterpret_cast<char*>(&num), sizeof(num));
+        stream.read(reinterpret_cast<char*>(&num), sizeof(num));
       }
     }
 
     uint32_t propsLength = 0;
-    stream.ReadHelper(reinterpret_cast<char*>(&propsLength), sizeof(propsLength));
+    stream.read(reinterpret_cast<char*>(&propsLength), sizeof(propsLength));
     if (propsLength <= UINT32_MAX) {
       std::string props(propsLength, '\0');
-      stream.ReadHelper(&props[0], propsLength);
+      stream.read(&props[0], propsLength);
       bool result = false;
       if (props.find("<?xml version") != std::string::npos) {
         metaData.LegacyRecorderDiags = std::move(props);
@@ -158,7 +163,7 @@ STREAM_META_DATA GetLegacyStreamMetaData(const std::filesystem::path& streamPath
 
     if (version.version() >= GITS_API_INFO) {
       gits::ApisIface::TApi api3D = gits::ApisIface::TApi::ApiNotSet;
-      stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(gits::ApisIface::TApi));
+      stream.read(reinterpret_cast<char*>(&api3D), sizeof(gits::ApisIface::TApi));
 
       if (api3D != gits::ApisIface::TApi::ApiNotSet) {
         metaData.StreamApi = TApiToApi(api3D);

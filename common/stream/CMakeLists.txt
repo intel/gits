@@ -57,6 +57,8 @@ target_link_libraries(stream PRIVATE
   log
   configuration
   yamlcpp
+  lz4
+  libzstd_static
   ${TBB_DEPENDENT_LIBRARIES}
 )
 

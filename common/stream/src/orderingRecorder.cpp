@@ -11,6 +11,7 @@
 #include "configurator.h"
 #include "version.h"
 #include "log.h"
+#include "exception.h"
 
 namespace gits {
 namespace stream {

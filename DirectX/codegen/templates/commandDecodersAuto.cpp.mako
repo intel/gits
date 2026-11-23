@@ -11,8 +11,6 @@ ${header}
 #include "commandsAuto.h"
 #include "argumentDecoders.h"
 
-#include "streams.h"
-
 namespace gits {
 namespace DirectX {
 

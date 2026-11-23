@@ -10,6 +10,7 @@
 #include "pluginUtils.h"
 #include "to_string/toStr.h"
 #include "log.h"
+#include "exception.h"
 
 #include <filesystem>
 #include <cassert>

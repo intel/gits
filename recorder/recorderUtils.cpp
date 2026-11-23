@@ -43,7 +43,7 @@ BOOL CALLBACK CloseWindows(HWND hwnd, LPARAM lParam) {
 }
 #endif
 
-bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode) {
+bool ConfigureRecorder(const std::filesystem::path& configPath) {
   static bool configured = false;
   if (configured) {
     return true;
@@ -83,25 +83,11 @@ bool ConfigureRecorder(const std::filesystem::path& configPath, bool legacyMode)
 
   Configurator::Instance().DeriveData();
 
-  if (legacyMode) {
-    // create file data and register it in GITS
-    gits::CGits& inst = gits::CGits::Instance();
-    std::unique_ptr<gits::CFile> file(new gits::CFile(inst.Version()));
-
-    file->SetDiagnosticInfo(configPath);
-
-    file->SetConfig();
-
-    inst.RegisterFileRecorder(std::move(file));
-  }
-
 #ifdef GITS_PLATFORM_WINDOWS
-  if (!legacyMode) {
-    if (Configurator::Get().common.recorder.closeAppOnStopRecording) {
-      MessageBus::get().subscribe(
-          {PUBLISHER_RECORDER, TOPIC_END},
-          [](Topic t, const MessagePtr& m) { EnumWindows(CloseWindows, GetCurrentProcessId()); });
-    }
+  if (Configurator::Get().common.recorder.closeAppOnStopRecording) {
+    MessageBus::get().subscribe({PUBLISHER_RECORDER, TOPIC_END}, [](Topic t, const MessagePtr& m) {
+      EnumWindows(CloseWindows, GetCurrentProcessId());
+    });
   }
 #endif
 

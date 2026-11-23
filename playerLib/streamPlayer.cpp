@@ -516,11 +516,11 @@ constexpr uint64_t MakeVersion(uint64_t major, uint64_t minor, uint64_t patch) {
   return major << 48 | minor << 32 | patch << 16;
 }
 
-// Versions of the legacy CFile stream format.
+// Versions of the legacy stream format.
 constexpr uint64_t VERSION_TOKEN_COMPRESSION = MakeVersion(2, 0, 10);
 constexpr uint64_t VERSION_API_INFO = MakeVersion(2, 0, 11);
 
-// Reads the token data at the beginning of a legacy CFile stream, decompressing its first chunk.
+// Reads the token data at the beginning of a legacy stream, decompressing its first chunk.
 std::vector<char> ReadLegacyTokenData(std::istream& stream, uint64_t version) {
   constexpr uint64_t MAX_DATA_SIZE = 1024 * 1024 * 1024;
   std::vector<char> data;
@@ -585,7 +585,7 @@ stream::ApiId FindFirstApiToken(const std::vector<char>& data) {
   return stream::ApiId::ID_COMMON;
 }
 
-// Returns the name of the removed backend a legacy CFile stream was recorded with.
+// Returns the name of the removed backend a legacy stream was recorded with.
 const char* FindRemovedApi(const std::filesystem::path& streamPath) {
   const stream::StreamHeader& header = stream::StreamHeader::Get();
   if (const char* name = RemovedApiName(header.GetApi())) {

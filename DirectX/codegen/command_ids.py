@@ -49,7 +49,7 @@ import os
 #
 # command_ids contains the list of unique command ids that are auto generated per API
 
-ID_META_BEGIN = 13 * 0x10000 # gits::CToken::ID_DirectX
+ID_META_BEGIN = 13 * 0x10000 # gits::stream::ApiId::ID_DIRECTX
 ID_COMMON_BEGIN = ID_META_BEGIN + 0x500
 ID_DXGI_BEGIN = ID_COMMON_BEGIN + 0x500
 ID_DXGI_DEBUG_BEGIN = ID_DXGI_BEGIN + 0x500

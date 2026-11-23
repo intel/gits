@@ -12,7 +12,6 @@ ${header}
 #include "layerAuto.h"
 #include "playerManager.h"
 #include "interfaceArgumentUpdaters.h"
-#include "streams.h"
 
 namespace gits {
 namespace DirectX {

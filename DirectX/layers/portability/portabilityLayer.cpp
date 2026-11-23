@@ -13,6 +13,7 @@
 #include "configurationLib.h"
 #include "messageBus.h"
 #include "keyUtils.h"
+#include "exception.h"
 #include <wrl/client.h>
 
 namespace gits {

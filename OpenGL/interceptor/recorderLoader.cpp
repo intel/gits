@@ -41,7 +41,7 @@ std::once_flag g_InitializationFlag;
 
 void InitializeRecorder() {
   try {
-    g_State.Loader = std::make_unique<CGitsLoader>("GITSRecorderOpenGL", false);
+    g_State.Loader = std::make_unique<CGitsLoader>("GITSRecorderOpenGL");
     g_State.Recorder = static_cast<IRecorder*>(g_State.Loader->GetRecorderWrapperPtr());
     if (g_State.Recorder == nullptr) {
       FatalRecorderError("recorder initialization", "Factory returned null");

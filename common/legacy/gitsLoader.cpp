@@ -42,7 +42,7 @@ const char* TBB_LIB_NAME = "libgits_tbb.so";
 
 namespace gits {
 
-CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode) {
+CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName) {
   const char* envConfigPath = getenv("GITS_CONFIG_DIR");
   std::filesystem::path libPath = dl::this_library_path();
   std::filesystem::path configPath = libPath.parent_path();
@@ -120,7 +120,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName, bool legacyMode
   }
 
   // call the function
-  config_ = configureFunc(configPath.string().c_str(), legacyMode);
+  config_ = configureFunc(configPath.string().c_str());
   if (!config_) {
     LOG_ERROR << "Parsing configuration file: " << configPath << " failed!!!";
     throw EOperationFailed(EXCEPTION_MESSAGE);

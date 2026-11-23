@@ -10,6 +10,8 @@
 #include "keyUtils.h"
 #include "log.h"
 #include "messageBus.h"
+#include "configurator.h"
+#include "exception.h"
 
 #include <fstream>
 

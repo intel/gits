@@ -23,6 +23,7 @@
 #endif
 
 #include "baseContext.h"
+#include "configurator.h"
 #include "fileActions.h"
 #include <yaml-cpp/yaml.h>
 #include "baseEventBus.h"
