@@ -107,7 +107,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libGLESv1 = config.common.player.libGLESv1;
     obj.libGLESv2 = config.common.player.libGLESv2;
     obj.libClPath = config.common.player.libClPath;
-    obj.libVK = config.common.player.libVK;
     obj.libOcloc = config.common.player.libOcloc;
     obj.libL0 = config.common.player.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
@@ -126,7 +125,6 @@ void DeriveConfigData<Configuration::Common::Shared>(Configuration::Common::Shar
     obj.libGLESv1 = config.common.recorder.libGLESv1;
     obj.libGLESv2 = config.common.recorder.libGLESv2;
     obj.libClPath = config.common.recorder.libClPath;
-    obj.libVK = config.common.recorder.libVK;
     obj.libOcloc = config.common.recorder.libOcloc;
     obj.libL0 = config.common.recorder.libL0;
     // We derive the value of the Common.Shared.LogToConsole only if the deprecated option wasn't used
@@ -394,57 +392,6 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
   }
 };
 
-template <>
-void DeriveConfigData<Configuration::Vulkan::Player>(Configuration::Vulkan::Player& obj,
-                                                     Configuration& config) {
-  if (!config.vulkan.player.captureVulkanRenderPasses.empty() ||
-      !config.vulkan.player.captureVulkanRenderPassesResources.empty() ||
-      config.vulkan.player.oneVulkanDrawPerCommandBuffer ||
-      config.vulkan.player.oneVulkanRenderPassPerCommandBuffer ||
-      !config.vulkan.player.captureVulkanDraws.empty() ||
-      !config.vulkan.player.captureVulkanResources.empty()) {
-    obj.execCmdBuffsBeforeQueueSubmit = true;
-  }
-
-  if (!config.vulkan.player.captureVulkanDraws.empty() ||
-      !config.vulkan.player.captureVulkanResources.empty()) {
-    obj.oneVulkanDrawPerCommandBuffer = true;
-  }
-
-  if (!config.vulkan.player.captureVulkanRenderPasses.empty() ||
-      !config.vulkan.player.captureVulkanRenderPassesResources.empty()) {
-    obj.oneVulkanRenderPassPerCommandBuffer = true;
-  }
-
-  if (config.vulkan.player.disableShaderGroupHandlesPatching) {
-    obj.patchShaderGroupHandles = false;
-  }
-
-  if (!config.vulkan.player.renderDocCaptureFrames.empty()) {
-    obj.renderDoc.mode = VkRenderDocCaptureMode::FRAMES;
-    obj.renderDoc.captureRange = config.vulkan.player.renderDocCaptureFrames;
-  }
-  if (!config.vulkan.player.renderDocCaptureVKSubmits.empty()) {
-    obj.renderDoc.mode = VkRenderDocCaptureMode::QUEUE_SUBMIT;
-    obj.renderDoc.captureRange = config.vulkan.player.renderDocCaptureVKSubmits;
-  }
-}
-
-namespace {
-void SetRangeSpecial(Configuration& config,
-                     const std::string& val,
-                     const gits::VulkanObjectMode& mode,
-                     size_t expectedVecSize) {
-  config.vulkan.recorder.objRange.rangeSpecial.SetFromString(val);
-  if (config.vulkan.recorder.objRange.rangeSpecial.objVector.size() == expectedVecSize) {
-    config.vulkan.recorder.objRange.rangeSpecial.objMode = mode;
-  } else {
-    LOG_ERROR << "Incorrect range for mode: " << mode;
-    throw std::runtime_error(EXCEPTION_MESSAGE);
-  }
-}
-} // namespace
-
 namespace {
 #ifdef GITS_PLATFORM_WINDOWS
 std::vector<std::string> renderDocCompatibilitySuppressedExtensions = {
@@ -455,78 +402,6 @@ std::vector<std::string> renderDocCompatibilitySuppressedExtensions = {
 template <>
 void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Recorder& obj,
                                                        Configuration& config) {
-  if (config.vulkan.recorder.mode == VulkanRecorderMode::ALL) {
-    obj.frames.startFrame = 1;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.objRange.rangeSpecial.range = BitRange(false);
-    obj.objRange.rangeSpecial.objMode = VulkanObjectMode::MODE_VK_NONE;
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::FRAMES) {
-    obj.all.exitFrame = UINT_MAX;
-    obj.objRange.rangeSpecial.range = BitRange(false);
-    obj.objRange.rangeSpecial.objMode = VulkanObjectMode::MODE_VK_NONE;
-    if (!config.vulkan.recorder.frames.startKeysStr.empty()) {
-      obj.frames.startKeys = gits::parseKeys(config.vulkan.recorder.frames.startKeysStr);
-    }
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::QUEUE_SUBMIT) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.queueSubmit.queueSubmitStr,
-                    VulkanObjectMode::MODE_VK_QUEUE_SUBMIT, 0);
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::COMMAND_BUFFERS_RANGE) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.commandBuffersRange.commandBuffersRangeStr,
-                    VulkanObjectMode::MODE_VK_COMMAND_BUFFER, 2);
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::RENDER_PASS_RANGE) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.renderPassRange.renderPassRangeStr,
-                    VulkanObjectMode::MODE_VK_RENDER_PASS, 3);
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::DRAWS_RANGE) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.drawsRange.drawsRangeStr,
-                    VulkanObjectMode::MODE_VK_DRAW, 4);
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::DISPATCH_RANGE) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.dispatchRange.dispatchRangeStr,
-                    VulkanObjectMode::MODE_VK_DISPATCH, 3);
-  } else if (config.vulkan.recorder.mode == VulkanRecorderMode::BLIT_RANGE) {
-    obj.frames.startFrame = UINT_MAX;
-    obj.frames.stopFrame = UINT_MAX;
-    obj.all.exitFrame = UINT_MAX;
-    SetRangeSpecial(config, config.vulkan.recorder.blitRange.blitRangeStr,
-                    VulkanObjectMode::MODE_VK_BLIT, 3);
-  }
-
-  switch (config.vulkan.recorder.memoryTrackingMode) {
-  case MemoryTrackingMode::SHADOW_AND_ACCESS_DETECTION:
-    obj.shadowMemory = true;
-    obj.memoryAccessDetection = true;
-    break;
-#ifdef GITS_PLATFORM_WINDOWS
-  case MemoryTrackingMode::EXTERNAL:
-    obj.useExternalMemoryExtension = true;
-    break;
-  case MemoryTrackingMode::WRITE_WATCH:
-    obj.writeWatchDetection = true;
-    obj.shadowMemory = true;
-    break;
-#endif
-  case MemoryTrackingMode::FULL_MEMORY_DUMP:
-    // everything is already set to false by default.
-    break;
-  default:
-    LOG_ERROR << "Unknown memory tracking mode, this is a GITS logic issue.";
-    throw std::logic_error(EXCEPTION_MESSAGE);
-  }
-
 #ifdef GITS_PLATFORM_WINDOWS
   if (Configurator::IsRecorder() && config.vulkan.recorder.renderDocCompatibility) {
     auto& rdocSuppressExtensions = renderDocCompatibilitySuppressedExtensions;

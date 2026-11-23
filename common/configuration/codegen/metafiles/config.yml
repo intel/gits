@@ -78,12 +78,6 @@ Configuration:
             Accessibility: ArgumentOnly
             Arguments: [libOCLPath]
             Description: Use a custom path to the OpenCL shared library.
-          - Name: libVK
-            Type: std::filesystem::path
-            Default: ""
-            Accessibility: ArgumentOnly
-            Arguments: [libVKPath]
-            Description: Override for Vulkan Loader library path.
           - Name: libOcloc
             Type: std::filesystem::path
             Default: ""
@@ -440,11 +434,6 @@ Configuration:
             Default: 0
             Description: Sleep this many milliseconds after a swap.
             Arguments: [endFrameSleep]
-          - Name: exitOnError
-            Type: bool
-            Default: false
-            Arguments: [exitOnError]
-            Description: Stop playback when API function call returns error value.
           - Name: useEvents
             Type: bool
             Default: ""
@@ -1867,11 +1856,6 @@ Configuration:
               Disable layers requested by the recorded stream during replay.
               Option accepts list of comma (,) separated names of layers.
             LegacyPaths: ["Vulkan.Shared.SuppressLayers"]
-          - Name: exitOnVkQueueSubmitFail
-            Type: bool
-            Default: false
-            Arguments: [exitOnVkQueueSubmitFail]
-            Description: Stop playback when vkQueueSubmit returns error value.
           - Name: skipTraceRays
             Type: bool
             Default: false
@@ -1970,165 +1954,11 @@ Configuration:
                   updates Shader Group Handles, potentially improving cross-platform compatibility of
                   streams. When patching is disabled, stream replay depends on a driver's support for
                   per ray tracing pipeline capture/replay features.
-          - Name: captureVulkanSubmits
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureVulkanSubmits]
-            Description:
-              List of Vulkan queue submits, whose render passes will be captured
-              by gits during playback.
-            LongDescription: |
-              List of Vulkan queue submits, whose render passes will be captured by gits during playback. 
-              Render targets from all render passes will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
-              Specified as single string without spaces of following format:  
-
-              * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
-              * cmdBuff_list = element | cmdBuff_list, ',', element
-              * element = Frame | Begin-End | Begin-End:Step
-          - Name: captureVulkanSubmitsResources
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureVulkanSubmitsResources]
-            Description:
-              List of Vulkan queue submits, whose storage buffers, storage images,
-              destination buffers and destination textures will be captured by gits during
-              playback.
-            LongDescription: |
-              List of Vulkan queue submits, whose storage buffers, storage images, destination buffers and destination textures will be captured by gits during playback.
-              Resources will be dumped per command buffer after submission, so each command buffer is executed in a separate queue submit. 
-              Specified as single string without spaces of following format:
-
-              * pattern = cmdBuff_list | cmdBuff_list/Repeat-Count
-              * cmdBuff_list = element | cmdBuff_list, ',', element
-              * element = Frame | Begin-End | Begin-End:Step
-          - Name: captureVulkanSubmitsGroupType
-            Type: CaptureGroupType
-            Default: CmdBuffer
-            Arguments: [captureVulkanSubmitsGroupType]
-            Description: "Set Group Type for captureVulkanSubmits: CmdBuffer, RenderPass"
-            LongDescription: |
-              Set Group Type for captureVulkanSubmits:
-
-              * CmdBuffer - default; creating list of textures from renderpasses and dumping (each texture aredumped only once)
-              * RenderPass - dumping textures per each renderpass (if renderpasses use the same images for some render targets then each image may be dumped several times)
-          - Name: captureVulkanRenderPasses
-            Type: VulkanObjectRange
-            Default: ""
-            Arguments: [captureVulkanRenderPasses]
-            Description:
-              "List of Vulkan render passes, whose attachments will be captured
-              during playback. The format consists of a hierarchy of numbers:
-              #queue_submit/#command_buffer_batch/#command_buffer/#render_pass_range.
-              Each number can be a single number, a list and/or a range: 1-3,4,6-10:2 ==>
-              1,2,3,4,6,8,10."
-            LongDescription: |
-              List of Vulkan render passes, whose attachments will be captured during playback. 
-              The format consists of a hierarchy of numbers: 
-              > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range
-              which can be adapted. 
-              User may omit elements, starting from the rightmost (e.g. omit  renderpass number and use the  queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit  everything except the queue submit number). 
-              Additionally the rightmost number may be replaced with an elemspec (creating a  number/number/number/elemspec form or even a form consisting of just a single  elemspec specifying queues).
-              Example elemspecs:
-
-              * '1/2/3/4' specifies queue submit number 1, command\buffer batch number 2, commandbuffer number 3, render pass number 4
-              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
-              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-          - Name: captureVulkanRenderPassesResources
-            Type: VulkanObjectRange
-            Default: ""
-            Arguments: [captureVulkanRenderPassesResources]
-            Description: List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-            LongDescription: |
-              List of Vulkan render passes, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-              The format consists of a hierarchy of numbers:
-               queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_range which can be adapted. 
-              User may omit elements, starting from the rightmost (e.g. omit renderpass number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number form or even omit everything except the queue submit number). 
-              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-              Example elemspecs:
-
-              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4
-              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec)
-              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-          - Name: captureVulkanDraws
-            Type: VulkanObjectRange
-            Default: ""
-            Arguments: [captureVulkanDraws]
-            Description:
-              List of Vulkan draws, whose render pass attachments will be captured
-              during playback.
-            LongDescription: |
-              List of Vulkan draws, whose render pass attachments will be captured during playback.
-              The format consists of a hierarchy of numbers:
-              > queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number/draws_range 
-              which can be adapted. 
-              User may omit elements, starting from the rightmost (e.g. omit draw number and use the queue_submit_number/command_buffer_batch_number/command_buffer_number/render_pass_number form or even omit everything except the queue submit number). 
-              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-              Example elemspecs:
-
-              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
-              * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
-              * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-          - Name: captureVulkanResources
-            Type: VulkanObjectRange
-            Default: ""
-            Arguments: [captureVulkanResources]
-            Description:
-              List of Vulkan draws, blits, dispatches, whose storage buffers,
-              storage images, destination buffers and destination textures be captured during
-              playback.
-            LongDescription: |
-              List of Vulkan draws, blits, dispatches, whose storage buffers, storage images, destination buffers and destination textures be captured during playback.
-              The format consists of a hierarchy of numbers:queue_submit_number/command_buffer_batch_number/command_buffer_number which can be adapted. 
-              User may omit elements, starting from the rightmost (e.g. omit command buffer number and use the queue_submit_number/command_buffer_batch_number form or even omit everything except the queue submit number). 
-              Additionally the rightmost number may be replaced with an elemspec (creating a number/number/number/elemspec form or even a form consisting of just a single elemspec specifying queues).
-              Example elemspecs:
-
-              * '1/2/3/4' specifies queue submit number 1, command buffer batch number 2, commandbuffer number 3, render pass number 4,
-               * '3,5-10' specifies queue submit number 3 and queue submits from 5 to 10 (it's actually a normal elemspec),
-               * '7/2/1-20,30,40-50:2' specifies queue submit number 7, command buffer batch 2, command buffers from 1 to 20, command buffer 30 and even numbered command buffers between 40 and 50 (all ranges are inclusive).
-          - Name: captureVulkanResourcesFilter
-            Type: BitRange
-            Default: "-"
-            Arguments: [captureVulkanResourcesFilter]
-            Description:
-              List of Vulkan resource IDs to capture during playback.
-            LongDescription: |
-              List of Vulkan resource IDs to capture during playback.
-              Specified as single string without spaces of following format:
-
-              * pattern = id_list | id_list/Repeat-Count
-              * id_list = element | id_list, ',', element
-              * element = ID | Begin-End | Begin-End:Step
-          - Name: skipNonDeterministicImages
-            Type: bool
-            Default: false
-            Arguments: [skipNonDeterministicImages]
-            Description: Skip images with potential corruptions. Use only with --captureVulkanSubmits.
-          - Name: ignoreVKCrossPlatformIncompatibilitiesWA
-            Type: bool
-            Default: false
-            Arguments: [ignoreVKCrossPlatformIncompatibilitiesWA]
-            Description:
-              Forces stream to continue playback even if platform's properties
-              are not compatible with recorded parameters.
-          - Name: ignoreMissingQueuesWA
-            Type: bool
-            Default: false
-            Arguments: [ignoreMissingQueuesWA]
-            Description:
-              Forces stream to continue playback even if a platform doesn't support all the queues that are requested during device creation.
           - Name: waitAfterQueueSubmitWA
             Type: bool
             Default: false
             Arguments: [waitAfterQueueSubmitWA]
             Description: Vulkan specific option. This WA calls vkQueueWaitIdle after vkQueueSubmit.
-          - Name: traceVKShaderHashes
-            Type: bool
-            Default: false
-            Arguments: [traceVKShaderHashes]
-            Description:
-              Prints information about shader hashes in gits output (log).  To
-              match with drawing commands, use this option together with --logLevel TRACE.
           - Name: maxAllowedVkSwapchainRewinds
             Type: uint32_t
             Default: 100
@@ -2136,162 +1966,6 @@ Configuration:
             Description:
               Vulkan specific option. Changes the number of maximum allowed Vulkan
               swapchain rewinds (defaults to 100).
-          - Name: overrideVKPipelineCache
-            Type: std::filesystem::path
-            Default: ""
-            Arguments: [overrideVKPipelineCache]
-            Description:
-              Overrides all pipeline cache uses with a single, global pipeline
-              cache object. Initial and final data is loaded from and stored in a specified
-              file.
-          - Name: oneVulkanDrawPerCommandBuffer
-            Type: bool
-            Default: false
-            Arguments: [oneVulkanDrawPerCommandBuffer]
-            Description:
-              Force to split command buffers. Each draw will  be executed in
-              separate command buffer. It affects performance.
-          - Name: oneVulkanRenderPassPerCommandBuffer
-            Type: bool
-            Default: false
-            Arguments: [oneVulkanRenderPassPerCommandBuffer]
-            Description:
-              Force to split command buffers. Each render pass will  be executed
-              in separate command buffer. It affects performance.
-          - Name: vulkanForcedPhysicalDeviceIndex
-            Type: uint32_t
-            Default: 0
-            Arguments: [useVKPhysicalDeviceIndex]
-            Description:
-              Forces selected physical device index to be used for logical device
-              creation.
-            ConfigName: forcedPhysicalDeviceIndex
-          - Name: vulkanForcedPhysicalDeviceName
-            Type: std::string
-            Default: ""
-            Arguments: [useVKPhysicalDeviceName]
-            Description:
-              Forces physical device with a given name to be used for logical
-              device creation.
-            ConfigName: forcedPhysicalDeviceName
-          - Name: vulkanForcedPhysicalDeviceType
-            Type: DeviceType
-            Default: any
-            Arguments: [useVKPhysicalDeviceType]
-            Description:
-              Forces integrated or discrete physical device to be used for logical
-              device creation.
-            ConfigName: forcedPhysicalDeviceType
-          - Name: printStateRestoreLogsVk
-            Type: bool
-            Default: false
-            Arguments: [printStateRestoreLogsVk]
-            Description: Log state restore phases and their duration in Vulkan workloads.
-          - Name: printMemUsageVk
-            Type: bool
-            Default: false
-            Arguments: [printMemUsageVk]
-            Description:
-              Log memory usage in Vulkan workloads (on vkAllocateMemory, vkFreeMemory,
-              vkMapMemory  API calls.
-          - Name: forceMultithreadedPipelineCompilation
-            Type: bool
-            Default: false
-            Arguments: [forceMultithreadedPipelineCompilation]
-            Description:
-              DEPRECATED Forces pipeline objects to be created concurrently on multiple
-              threads.
-            Deprecated: true
-          - Name: execCmdBuffsBeforeQueueSubmit
-            Type: bool
-            Default: false
-            Arguments: [execCmdBuffsBeforeQueueSubmit]
-            Description:
-              Executing commandBuffers operation just before QueueSubmit, instead
-              of doing that in the same way as app/benchmark/game.
-          - Name: patchShaderGroupHandles
-            Type: bool
-            Default: true
-          - Name: disableShaderGroupHandlesPatching
-            Type: bool
-            Default: false
-            Accessibility: ArgumentOnly
-            Arguments: [disableShaderGroupHandlesPatching]
-            Deprecated: true
-            Description:
-              DEPRECATED Vulkan specific option. Forces shader group handles patching in
-              Shader Binding Tables  to be disabled during playback.
-            LongDescription:
-              DEPRECATED Vulkan specific option. Forces shader group handles patching
-              in Shader Binding Tables to be  disabled during playback. The patching mechanism
-              injects a compute shader before ray  tracing commands which updates shader
-              group handles, potentially improving cross-platform  compatiblity of streams.
-              When patching is disabled, a stream replay uses capture/replay  features,
-              if they were enabled during recording (depending on a config option), or just  replays
-              the stream as is.
-          - Name: renderDocCaptureFrames
-            Type: BitRange
-            Default: "-"
-            Accessibility: ArgumentOnly
-            Arguments: [renderDocCaptureFrames]
-            Description: Range of frames that will be captured by RenderDoc during playback.
-            LongDescription: |
-              Range of frames that will be captured by RenderDoc during playback.
-              Specified as string of following format:
-
-              * --renderDocCaptureFrames frameNumber
-              * --renderDocCaptureFrames beginFrame-endFrame
-              Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureVKSubmits'
-          - Name: renderDocCaptureVKSubmits
-            Type: BitRange
-            Default: "-"
-            Accessibility: ArgumentOnly
-            Arguments: [renderDocCaptureVKSubmits]
-            Description:
-              Range of queue submits that will be captured by RenderDoc during
-              playback.
-            LongDescription: |
-              Range of queue submits that will be captured by RenderDoc during playback. 
-              Specified as string of following format:
-
-                * --renderDocCaptureVKSubmits queueSubmit
-                * --renderDocCaptureVKSubmits beginQueueSubmit-endQueueSubmit
-              Captures will be saved in the stream folder. Option cannot be combined with option 'renderDocCaptureFrames'.
-          - Name: RenderDoc
-            Type: Group
-            Options:
-              - Name: mode
-                Type: VkRenderDocCaptureMode
-                Default: None
-              - Name: captureRange
-                Type: BitRange
-                Default: "-"
-                ConfigName: range
-              - Name: dllPath
-                Type: std::filesystem::path
-                Default: ""
-                Accessibility: ArgumentOnly
-                Arguments: [renderDocDllPath]
-                Description:
-                  By default, RenderDoc is found automatically, and this option
-                  is not necessary. However, if RenderDoc cannot be found, use this option
-                  to specify renderdoc.dll path.
-              - Name: continuousCapture
-                Type: bool
-                Default: false
-                Arguments: [renderDocContinuousCapture]
-                Description:
-                  Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
-                  Range of frames or queue submits specified by those options will be dumped
-                  into one file instead of separate files.
-              - Name: enableUI
-                Type: bool
-                Default: false
-                Arguments: [renderDocEnableUI]
-                Description:
-                  Option must be combined with 'renderDocCaptureFrames' or 'renderDocCaptureVKSubmits'.
-                  Opens RenderDoc with recorded captures. Captures are not saved by default
-                  but can be saved via RenderDoc UI.
           - Name: ResourcesDump
             Type: Group
             Options:
@@ -2353,219 +2027,10 @@ Configuration:
               Disable layers during instance and/or logical device creation while recording.
               Option accepts list of comma (,) separated names of layers.
             LegacyPaths: ["Vulkan.Shared.SuppressLayers"]
-          - Name: mode
-            Type: VulkanRecorderMode
-            Default: All
-          - Name: All
-            Type: Group
-            Options:
-              - Name: exitFrame
-                Type: uint32_t
-                Default: 1000000
-          - Name: Frames
-            Type: Group
-            Options:
-              - Name: startFrame
-                Type: uint32_t
-                Default: 1
-              - Name: stopFrame
-                Type: uint32_t
-                Default: 1000000
-              - Name: startKeysStr
-                Type: std::vector<std::string>
-                Default: []
-                ConfigName: StartKeys
-              - Name: startKeys
-                Type: std::vector<uint32_t>
-                Default: []
-                Accessibility: Derived
-          - Name: QueueSubmit
-            Type: Group
-            Options:
-              - Name: queueSubmitStr
-                Type: std::string
-                Default: 1
-                ConfigName: Number
-          - Name: CommandBuffersRange
-            Type: Group
-            Options:
-              - Name: commandBuffersRangeStr
-                Type: std::string
-                Default: 1/0/0
-                ConfigName: Range
-          - Name: RenderPassRange
-            Type: Group
-            Options:
-              - Name: renderPassRangeStr
-                Type: std::string
-                Default: 1/0/0/0
-                ConfigName: Range
-          - Name: DrawsRange
-            Type: Group
-            Options:
-              - Name: drawsRangeStr
-                Type: std::string
-                Default: 1/0/0/0/0
-                ConfigName: Range
-          - Name: DispatchRange
-            Type: Group
-            Options:
-              - Name: dispatchRangeStr
-                Type: std::string
-                Default: 1/0/0/0
-                ConfigName: Range
-          - Name: BlitRange
-            Type: Group
-            Options:
-              - Name: blitRangeStr
-                Type: std::string
-                Default: 1/0/0/0
-                ConfigName: Range
-          - Name: ObjRange
-            Type: Group
-            Accessibility: Derived
-            Options:
-              - Name: rangeSpecial
-                Type: VulkanObjectRange
-                Default: ""
-                Accessibility: Derived
-          - Name: dumpScreenshots
-            Type: BitRange
-            Default: "-"
-          - Name: dumpSubmits
-            Type: BitRange
-            Default: "-"
-          - Name: memorySegmentSize
-            Type: uint32_t
-            Default: 512
-          - Name: shadowMemory
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: memoryAccessDetection
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: writeWatchDetection
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: memoryTrackingMode
-            Type: MemoryTrackingMode
-            Default: FullMemoryDump
-            DefaultsPerPlatform:
-              - win32: External
-          - Name: memoryUpdateState
-            Type: MemoryUpdateState
-            Default: AllMapped
-            DefaultsPerPlatform:
-              - win32: OnlyUsed
-          - Name: forceUniversalRecording
-            Type: bool
-            Default: false
-          - Name: delayFenceChecksCount
-            Type: uint32_t
-            Default: 0
-          - Name: shortenFenceWaitTime
-            Type: uint32_t
-            Default: 0
-          - Name: addImageUsageFlags
-            Type: uint32_t
-            Default: 2
-            NumericFormat: Hexadecimal
-          - Name: addBufferUsageFlags
-            Type: uint32_t
-            Default: 1
-            NumericFormat: Hexadecimal
-          - Name: scheduleCommandBuffersBeforeQueueSubmit
-            Type: bool
-            Default: false
-            ConfigName: scheduleCommandBuffersBeforeQueueSubmitWA
-          - Name: minimalStateRestore
-            Type: bool
-            Default: true
-          - Name: reusableStateRestoreResourcesCount
-            Type: uint32_t
-            Default: 3
-          - Name: reusableStateRestoreBufferSize
-            Type: uint32_t
-            Default: 80
-          - Name: IncreaseImageMemorySizeRequirement
-            Type: MemorySizeRequirementOverride
-            Default: ""
-            Accessibility: Derived
-          - Name: IncreaseImageMemorySizeRequirementGrp
-            Type: Group
-            Default: ""
-            Options:
-              - Name: fixedAmount
-                Type: uint32_t
-                Default: 0
-              - Name: percent
-                Type: uint32_t
-                Default: 0
-            ConfigName: IncreaseImageMemorySizeRequirement
-          - Name: IncreaseAccelerationStructureMemorySizeRequirement
-            Type: Group
-            Accessibility: Derived
-            Options:
-              - Name: accelerationStructureSize
-                Type: MemorySizeRequirementOverride
-                Default: ""
-              - Name: buildScratchSize
-                Type: MemorySizeRequirementOverride
-                Default: ""
-              - Name: updateScratchSize
-                Type: MemorySizeRequirementOverride
-                Default: ""
-          - Name: MemoryOffsetAlignmentOverride
-            Type: Group
-            Options:
-              - Name: images
-                Type: uint32_t
-                Default: 0
-              - Name: buffers
-                Type: uint32_t
-                Default: 0
-              - Name: descriptors
-                Type: uint32_t
-                Default: 0
-          - Name: CrossPlatformStateRestoration
-            Type: Group
-            Options:
-              - Name: images
-                Type: bool
-                Default: true
-              - Name: buffers
-                Type: BufferStateRestoration
-                Default: WithNonHostVisibleMemoryOnly
-          - Name: memoryRestoration
-            Type: MemoryStateRestoration
-            Default: HostVisible
-          - Name: restoreMultisampleImagesWA
-            Type: bool
-            Default: false
-          - Name: useCaptureReplayFeaturesForBuffersAndAccelerationStructures
-            Type: bool
-            Default: true
-          - Name: useCaptureReplayFeaturesForRayTracingPipelines
-            Type: bool
-            Default: true
-          - Name: useExternalMemoryExtension
-            Type: bool
-            Default: ""
-            Accessibility: Derived
-          - Name: usePresentSrcLayoutTransitionAsAFrameBoundary
-            Type: bool
-            Default: false
-            OSVisibility: [WINDOWS]
           - Name: renderDocCompatibility
             Type: bool
             Default: true
             OSVisibility: [WINDOWS]
-          - Name: indexedVerticesSizeCalculationMethod
-            Type: VulkanIndexedVerticesSizeCalculationMethod
-            Default: CountOrMaxvertex
   - Name: OpenCL
     Type: Group
     Options:
@@ -2909,4 +2374,122 @@ Configuration:
 # Options that are no longer supported. Older config files may still contain them, so instead of
 # stopping the execution they are skipped with a warning. Path uses the config file names (for
 # example Common.Player.ExitOnError); a group path skips the whole group.
-RemovedOptions: []
+RemovedOptions:
+  - Path: Common.Player.ExitOnError
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanDraws
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanRenderPasses
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanRenderPassesResources
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanResources
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanResourcesFilter
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanSubmits
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanSubmitsGroupType
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.CaptureVulkanSubmitsResources
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ExecCmdBuffsBeforeQueueSubmit
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ExitOnVkQueueSubmitFail
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ForceMultithreadedPipelineCompilation
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ForceVKDeviceMemoryLockableWA
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ForcedPhysicalDeviceIndex
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ForcedPhysicalDeviceName
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.ForcedPhysicalDeviceType
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.IgnoreMissingQueuesWA
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.IgnoreVKCrossPlatformIncompatibilitiesWA
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.OneVulkanDrawPerCommandBuffer
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.OneVulkanRenderPassPerCommandBuffer
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.OverrideVKPipelineCache
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.PatchShaderGroupHandles
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.PrintMemUsageVk
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.PrintStateRestoreLogsVk
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.RenderDoc
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.SkipNonDeterministicImages
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Player.TraceVKShaderHashes
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.AddBufferUsageFlags
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.AddImageUsageFlags
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.All
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.BlitRange
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.CommandBuffersRange
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.CrossPlatformStateRestoration
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.DelayFenceChecksCount
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.DispatchRange
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.DrawsRange
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.DumpScreenshots
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.DumpSubmits
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.ForceUniversalRecording
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.Frames
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.IncreaseImageMemorySizeRequirement
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.IndexedVerticesSizeCalculationMethod
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MemoryOffsetAlignmentOverride
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MemoryRestoration
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MemorySegmentSize
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MemoryTrackingMode
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MemoryUpdateState
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.MinimalStateRestore
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.Mode
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.QueueSubmit
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.RenderPassRange
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.RestoreMultisampleImagesWA
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.ReusableStateRestoreBufferSize
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.ReusableStateRestoreResourcesCount
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.ScheduleCommandBuffersBeforeQueueSubmitWA
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.ShortenFenceWaitTime
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.UseCaptureReplayFeaturesForBuffersAndAccelerationStructures
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.UseCaptureReplayFeaturesForRayTracingPipelines
+    Reason: VulkanLegacy support was removed.
+  - Path: Vulkan.Recorder.UsePresentSrcLayoutTransitionAsAFrameBoundary
+    Reason: VulkanLegacy support was removed.

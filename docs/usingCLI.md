@@ -29,10 +29,8 @@ The **Recorder** is split into multiple folders one per supported API:
 | :simple-opengl: OpenCL             | `FilesToCopyOCL`          | `OpenCL`            |
 | :simple-vulkan: Vulkan             | `FilesToCopyVulkan`       | `Vulkan`            |
 | :simple-vulkan: Vulkan Layer       | `VulkanLayer`             | `VulkanLayer`       |
-| :simple-vulkan: VulkanLegacy       | `FilesToCopyVulkanLegacy` | `VulkanLegacy`      |
-| :simple-vulkan: VulkanLegacy Layer | `VulkanLayerLegacy`       | `VulkanLayerLegacy` |
 
-OpenGL and Vulkan each have two backends; a stream recorded with one backend can not be played back with the other. **OpenGL** is the new, experimental backend and **OpenGLLegacy** is the original one, which also records OpenGL ES applications. See [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md) and [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md).
+OpenGL has two backends; a stream recorded with one backend can not be played back with the other. **OpenGL** is the new, experimental backend and **OpenGLLegacy** is the original one, which also records OpenGL ES applications. See [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md). Streams recorded with the removed VulkanLegacy backend can only be replayed with an older GITS release.
 
 --8<-- "recorder_steps.md"
 
@@ -40,8 +38,8 @@ For information on how to adjust parameters please see the [configuration sectio
 
 ## Per-OS notes
 
-- **Windows**: both Vulkan layers are registered automatically at install time. Refer to the [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md) section on how to change this.
-- **Linux**: point the loader at the layer you want, for example Vulkan:
+- **Windows**: the Vulkan layer is registered automatically at install time (see the `REGISTER_VULKAN_LAYER` [CMake option](building.md#optional-cmake-options)).
+- **Linux**: point the loader at the layer:
 
   ``` bash
   export VK_LAYER_PATH=<install>/Recorder/VulkanLayer

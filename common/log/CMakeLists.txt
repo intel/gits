@@ -36,4 +36,3 @@ PRIVATE
 add_dependencies(log config_codegen)
 
 set_target_properties(log PROPERTIES FOLDER "common")
-

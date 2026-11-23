@@ -8,10 +8,7 @@ REM
 REM ===================== end_copyright_notice ==============================
 
 REM Registers the Vulkan GITS recorder layer manifest (VkLayer_vulkan_GITS_recorder.json,
-REM layer VK_LAYER_INTEL_vulkan_GITS_recorder). This is the counterpart of
-REM install_vulkanlegacy_layer.bat, which registers the VulkanLegacy layer. Both
-REM layers may be registered side by side (they are explicit layers); enable only
-REM one to record for a given application.
+REM layer VK_LAYER_INTEL_vulkan_GITS_recorder).
 
 set registry_path=HKEY_LOCAL_MACHINE\SOFTWARE\Khronos\Vulkan\ExplicitLayers
 set registry_path_32=HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Khronos\Vulkan\ExplicitLayers

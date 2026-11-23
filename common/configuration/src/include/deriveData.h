@@ -59,10 +59,6 @@ void DeriveConfigData<Configuration::OpenGL::Recorder>(Configuration::OpenGL::Re
                                                        Configuration& config);
 
 template <>
-void DeriveConfigData<Configuration::Vulkan::Player>(Configuration::Vulkan::Player& obj,
-                                                     Configuration& config);
-
-template <>
 void DeriveConfigData<Configuration::Vulkan::Recorder>(Configuration::Vulkan::Recorder& obj,
                                                        Configuration& config);
 

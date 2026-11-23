@@ -5,9 +5,8 @@ title: Lua scripts
 # Introduction
 
 Both recorder and player have capability of instrumentation of GL and CL
-functions (and limited instrumentation of Vulkan functions) via external
-script. If the script defines an OpenGL (and EGL, WGL, GLX) or OpenCL,
-or Vulkan function, GITS will call that function, instead of the one
+functions via external script. If the script defines an OpenGL (and EGL,
+WGL, GLX) or OpenCL function, GITS will call that function, instead of the one
 provided by the driver. It is then script's responsibility to forward it
 to the driver (if it chooses to do so). This can be done to modify the
 stream in a specific way. For example to cause all `glDrawElements`
@@ -57,12 +56,7 @@ Apart from these, GITS has capability to call any API via structures:
 
 - `drv` for OpenGL,
 
-- `drvCl` for OpenCL,
-
-- `drvVk` for Vulkan.
-  
-  !!! note
-      Vulkan API does not support structures (structure members cannot be used or modified inside scripts).
+- `drvCl` for OpenCL.
 
 # Utility functions
 
@@ -290,13 +284,3 @@ GITS comes with a set of scripts for common use cases.
 - `printReturnCodes.lua`  
   Prints statuses from OpenCL functions which return them through
   `errcode_ret` parameter.
-
-## Vulkan
-
-- `vulkanKeepDraws.lua`  
-  Performs draw calls filtering (executes only those drawing functions
-  that are in a specified range).
-
-- `vulkanLogNumDraws.lua`  
-  Counts and displays draw calls order numbers (useful for
-  `vulkanKeepDraws.lua` script).

@@ -17,7 +17,6 @@ add_subdirectory(codegen)
 
 set(CPP_FILES
   ${CPP_SRC}/configurator.cpp
-  ${CPP_SRC}/customTypes.cpp
   ${CPP_SRC}/customTypesYAML.cpp
   ${CPP_SRC}/deriveData.cpp
   ${CPP_SRC}/helper.cpp
@@ -29,7 +28,6 @@ set(HEADER_FILES
   ${HEADER_SRC}/argumentValidators.h
   ${HEADER_SRC}/configurationLib.h
   ${HEADER_SRC}/configurator.h
-  ${HEADER_SRC}/customTypes.h
   ${HEADER_SRC}/customTypesYAML.h
   ${HEADER_SRC}/deriveData.h
   ${HEADER_SRC}/helper.h
@@ -76,4 +74,3 @@ target_include_directories(configuration
   PRIVATE
   ${PRIVATE_INCLUDE_DIRS}
 )
-

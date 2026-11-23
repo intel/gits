@@ -37,15 +37,17 @@ public:
   void WriteCapturedFrames(std::ofstream& stream, uint64_t capturedFrames);
   CompressionType GetCompressionType() const;
 
+  // Values are stored in streams and mirrored in Scripts/Utility/gits_subcapture/stream_info.py;
+  // keep them unchanged.
   enum class Api : unsigned {
-    API_NOT_SET,
-    API_OPENGL_LEGACY,
-    API_VULKAN_LEGACY,
-    API_OPENCL,
-    API_LEVELZERO,
-    API_DIRECTX,
-    API_VULKAN,
-    API_OPENGL,
+    API_NOT_SET = 0,
+    API_OPENGL_LEGACY = 1,
+    API_VULKAN_LEGACY = 2, // no longer supported, identifies old streams
+    API_OPENCL = 3,
+    API_LEVELZERO = 4,
+    API_DIRECTX = 5,
+    API_VULKAN = 6,
+    API_OPENGL = 7,
   };
   // The API of the first command of the stream.
   Api GetApi() const;

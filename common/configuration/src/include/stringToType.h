@@ -17,7 +17,7 @@
 #include <cstdlib>
 
 #include "enumsAuto.h"
-#include "customTypes.h"
+#include "bit_range.h"
 
 namespace {
 std::vector<std::string> splitString(const std::string& str, char delimiter) {
@@ -90,42 +90,11 @@ inline std::istream& operator>>(std::istream& in, std::vector<uint32_t>& sequenc
   return in;
 }
 
-inline std::istream& operator>>(std::istream& in, gits::MemorySizeRequirementOverride& data) {
-  std::string str;
-  std::getline(in, str);
-
-  data = {0, 0};
-
-  if (str.empty()) {
-    return in;
-  }
-
-  std::vector<std::string> parts = splitString(str, ',');
-  if (parts.size() != 2) {
-    throw std::runtime_error("Invalid MemorySizeRequirementOverride string");
-  }
-
-  data.fixedAmount = gits::stringTo<uint32_t>(parts[0]);
-  data.percent = gits::stringTo<uint32_t>(parts[1]);
-
-  return in;
-}
-
 inline std::istream& operator>>(std::istream& lhs, BitRange& rhs) {
   std::string str;
   lhs >> str;
   rhs = BitRange(str);
   return lhs;
-}
-
-inline std::istream& operator>>(std::istream& in, gits::VulkanObjectRange& data) {
-  std::string input;
-  if (std::getline(in, input)) {
-    data.SetFromString(input);
-  } else {
-    in.setstate(std::ios::failbit);
-  }
-  return in;
 }
 
 inline std::istream& operator>>(std::istream& in, std::vector<gits::ApiBool>& rhs) {

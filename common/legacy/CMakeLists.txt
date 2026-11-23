@@ -137,4 +137,3 @@ add_executable(common_message_bus_test
 )
 target_link_libraries(common_message_bus_test PRIVATE common)
 set_target_properties(common_message_bus_test PROPERTIES FOLDER "common")
-

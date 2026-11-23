@@ -774,37 +774,3 @@ uint64_t gits::ZSTDStreamCompressor::Decompress(const std::vector<char>& compres
 uint64_t gits::ZSTDStreamCompressor::MaxCompressedSize(const uint64_t dataSize) {
   return static_cast<uint64_t>(ZSTD_compressBound(dataSize));
 }
-
-#if defined(GITS_PLATFORM_WINDOWS)
-std::string gits::GetRenderDocDllPath() {
-  std::string dllpath = "";
-  HKEY hKey = HKEY_LOCAL_MACHINE;
-  LPCSTR subKey = "SOFTWARE\\Khronos\\Vulkan\\ImplicitLayers";
-  LSTATUS status;
-  HKEY hkResult;
-  status = RegOpenKeyEx(hKey, subKey, 0, KEY_READ, &hkResult);
-  DWORD valueCount;
-  DWORD maxValueNameLen;
-  status = RegQueryInfoKey(hkResult, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
-                           &valueCount, &maxValueNameLen, nullptr, nullptr, nullptr);
-  maxValueNameLen++;
-  auto nameBuffer = std::make_unique<char[]>(maxValueNameLen);
-  DWORD valueNameLen;
-  for (DWORD i = 0; i < valueCount; i++) {
-    valueNameLen = maxValueNameLen;
-    status = RegEnumValue(hkResult, i, nameBuffer.get(), &valueNameLen, nullptr, nullptr, nullptr,
-                          nullptr);
-    std::string name = std::string(nameBuffer.get());
-    if (name.substr(name.find_last_of('\\') + 1) == "renderdoc.json") {
-      dllpath = name.replace(name.find_last_of('.') + 1, 4, "dll");
-      break;
-    }
-  }
-  RegCloseKey(hkResult);
-  if (dllpath == "") {
-    throw std::runtime_error("Cannot find renderdoc.dll. Use 'renderDocDllPath' option to specify "
-                             "renderdoc.dll location.");
-  }
-  return dllpath;
-}
-#endif

@@ -98,30 +98,6 @@ OpenGL/**/*Auto.def
 plugins/OpenGL/**/*Auto.cpp
 plugins/OpenGL/**/*Auto.h
 
-# VulkanLegacy
-VulkanLegacy/common/include/vulkanArgumentsAuto.h
-VulkanLegacy/common/include/vulkanDriversAuto.inl
-VulkanLegacy/common/include/vulkanFunctions.h
-VulkanLegacy/common/include/vulkanHeader.h
-VulkanLegacy/common/include/vulkanIDs.h
-VulkanLegacy/common/include/vulkanIDswitch.h
-VulkanLegacy/common/include/vulkanLogAuto.inl
-VulkanLegacy/common/include/vulkanLuaEnums.h
-VulkanLegacy/common/include/vulkanStructStorageAuto.h
-VulkanLegacy/common/include/vulkanTracerAuto.h
-VulkanLegacy/common/vulkanArgumentsAuto.cpp
-VulkanLegacy/common/vulkanLogAuto.cpp
-VulkanLegacy/common/vulkanFunctions.cpp
-VulkanLegacy/common/vulkanStructStorageAuto.cpp
-VulkanLegacy/common/vulkanTracerAuto.cpp
-VulkanLegacy/layer/VkLayer_vulkan_GITS_recorder_legacy.json
-VulkanLegacy/layer/vkLayer.def
-VulkanLegacy/interceptor/vkPlugin.def
-VulkanLegacy/interceptor/vulkanPrePostAuto.cpp
-VulkanLegacy/recorder/include/vulkanRecorderWrapperAuto.h
-VulkanLegacy/recorder/include/vulkanRecorderWrapperIfaceAuto.h
-VulkanLegacy/recorder/vulkanRecorderWrapperAuto.cpp
-
 #DirectX
 DirectX/**/*Auto.cpp
 DirectX/**/*Auto.h

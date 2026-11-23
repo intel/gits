@@ -10,6 +10,10 @@ by an application into a stream and replays them with `gitsPlayer`. Common
 features such as [frame sub-capture](Subcapture.md), [resource dumping](ResourceDumping.md), and
 screenshots are supported.
 
+!!! note "VulkanLegacy streams"
+    The older VulkanLegacy backend has been removed. `gitsPlayer` stops with an error on streams
+    recorded with it; replay them with an older GITS release that supports VulkanLegacy.
+
 # Recording a stream
 
 ## Method 1: Vulkan layer (recommended, Windows and Linux)

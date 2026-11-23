@@ -89,7 +89,6 @@ endif()
 if(WITH_VULKAN)
   target_link_libraries(gits_player_lib PRIVATE
     Vulkan_player
-    VulkanLegacy_common
     hud
   )
 endif()

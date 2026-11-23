@@ -7,7 +7,6 @@
 // ===================== end_copyright_notice ==============================
 
 #include "stringFromType.h"
-#include "customTypes.h"
 
 #include <filesystem>
 #include <sstream>
@@ -74,17 +73,6 @@ std::string stringFrom<BitRange>(const BitRange& value) {
 }
 
 template <>
-std::string stringFrom(const VulkanObjectRange& value) {
-  if (value.empty()) {
-    return std::string();
-  }
-  std::ostringstream oss;
-  oss << stringFrom<std::vector<uint32_t>>(value.objVector) << "/"
-      << stringFrom<BitRange>(value.range);
-  return oss.str();
-}
-
-template <>
 std::string stringFrom(const std::vector<ApiBool>& value) {
   std::ostringstream oss;
   for (size_t i = 0; i < value.size(); ++i) {
@@ -127,17 +115,6 @@ std::string stringFrom<std::uint64_t>(const std::uint64_t& value) {
   oss << value;
   return oss.str();
 }
-template <>
-std::string stringFrom<MemorySizeRequirementOverride>(const MemorySizeRequirementOverride& value) {
-  std::ostringstream oss;
-  if (value.fixedAmount == 0 && value.percent == 0) {
-    return std::string();
-  }
-
-  oss << value.fixedAmount << "," << value.percent;
-  return oss.str();
-}
-
 template <>
 std::string stringFrom<bool>(const bool& value) {
   return value ? "true" : "false";

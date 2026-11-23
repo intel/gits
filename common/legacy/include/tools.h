@@ -584,10 +584,6 @@ private:
       {6, 3},  {7, 5},  {8, 7},  {9, 9},  {10, 11}}; // 1 - fastest, 10 - slowest
 };
 
-#if defined(GITS_PLATFORM_WINDOWS)
-std::string GetRenderDocDllPath();
-#endif
-
 class SharedLibrary {
   dl::SharedObject handle = nullptr;
 

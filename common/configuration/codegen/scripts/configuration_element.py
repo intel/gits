@@ -138,7 +138,7 @@ class ConfigurationOption(ConfigurationEntry):
     ARGS_SUFFIX_HIDE_OPTION = '!'
     ARGS_TAG_PREFIX_ACCESS_LEVEL = 'accLvl'
 
-    VALUETYPES_NEED_QUOTES = ['std::string', 'std::filesystem::path', 'BitRange', 'VulkanObjectRange']
+    VALUETYPES_NEED_QUOTES = ['std::string', 'std::filesystem::path', 'BitRange']
     STRING_TYPES = ['std::string', 'std::filesystem::path']
 
 

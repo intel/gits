@@ -21,10 +21,6 @@
 #if defined(WITH_DIRECTX) || defined(WITH_VULKAN)
 #include "imGuiHUD.h"
 #endif
-#ifdef WITH_VULKAN
-#include "vulkanLibrary.h"
-#include "vulkanRenderDocUtil.h"
-#endif
 #include "openglLibrary.h"
 #ifdef WITH_OPENCL
 #include "openclLibrary.h"
@@ -261,17 +257,6 @@ int Initialize(int argc, char* argv[]) {
       LOG_WARNING << "Priority escalation failed";
     }
   }
-
-#ifdef WITH_VULKAN
-  if (cfg.vulkan.player.renderDoc.mode != TVkRenderDocCaptureMode::NONE) {
-    if (!cfg.vulkan.player.renderDoc.dllPath.empty()) {
-      Vulkan::RenderDocUtil::dllpath = cfg.vulkan.player.renderDoc.dllPath.string();
-    } else {
-      Vulkan::RenderDocUtil::dllpath = GetRenderDocDllPath();
-    }
-    Vulkan::RenderDocUtil::GetInstance();
-  }
-#endif
 #endif
 
   if (cfg.common.shared.useEvents) {
@@ -285,9 +270,6 @@ int Initialize(int argc, char* argv[]) {
   }
 #endif
   inst.Register(std::shared_ptr<CLibrary>(new OpenGL::CLibrary));
-#ifdef WITH_VULKAN
-  inst.Register(std::shared_ptr<CLibrary>(new Vulkan::CLibrary));
-#endif
 #ifdef WITH_LEVELZERO
   inst.Register(std::shared_ptr<CLibrary>(new l0::CLibrary));
 #endif
@@ -305,7 +287,14 @@ int Initialize(int argc, char* argv[]) {
 
   if (g_LegacyMode) {
     // load function calls from a file
-    g_Player->Load(cfg.common.player.streamPath);
+    try {
+      g_Player->Load(cfg.common.player.streamPath);
+    } catch (const ENotSupported&) {
+      // The reason was already logged where the exception was thrown.
+      g_Player.reset();
+      CGits::Instance().Dispose();
+      return EXIT_FAILURE;
+    }
   }
 
   // Compare capture vs replay machine RAM and warn if replay has less.

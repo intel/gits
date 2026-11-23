@@ -81,16 +81,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: VulkanRecorderMode
-    Values:
-      - Value: ALL
-      - Value: FRAMES
-      - Value: QUEUE_SUBMIT
-      - Value: COMMAND_BUFFERS_RANGE
-      - Value: RENDER_PASS_RANGE
-      - Value: DRAWS_RANGE
-      - Value: DISPATCH_RANGE
-      - Value: BLIT_RANGE
   - Name: OpenCLRecorderMode
     Values:
       - Value: ALL
@@ -134,53 +124,10 @@ Enums:
       - Value: CAPTURE_ALWAYS
       - Value: RESTORE
       - Value: MIXED
-  - Name: MemoryUpdateState
-    Values:
-      - Value: ALL_MAPPED
-      - Value: ONLY_USED
-      - Value: USING_TAGS
-  - Name: MemoryTrackingMode
-    Values:
-#ifdef GITS_PLATFORM_WINDOWS
-      - Value: EXTERNAL
-      - Value: WRITE_WATCH
-#endif
-      - Value: SHADOW_AND_ACCESS_DETECTION
-        Labels: [ShadowMemory]
-      - Value: FULL_MEMORY_DUMP
-        Labels: [FullMemoryDump]
-  - Name: MemoryStateRestoration
-    Values:
-      - Value: NONE
-      - Value: HOST_VISIBLE
-  - Name: BufferStateRestoration
-    Values:
-      - Value: NONE
-      - Value: WITH_NON_HOST_VISIBLE_MEMORY_ONLY
-      - Value: ALL
   - Name: WindowsKeyHandling
     Values:
       - Value: MESSAGE_LOOP
       - Value: ASYNC_KEY_STATE
-  - Name: CaptureGroupType
-    Values:
-      - Value: PER_COMMAND_BUFFER
-        Labels: [CmdBuffer]
-      - Value: PER_RENDER_PASS
-        Labels: [RenderPass]
-  - Name: DeviceType
-    Values:
-      - Value: ANY
-        Labels: [any]
-      - Value: INTEGRATED
-        Labels: [integrated]
-      - Value: DISCRETE
-        Labels: [discrete]
-  - Name: VkRenderDocCaptureMode
-    Values:
-      - Value: NONE
-      - Value: FRAMES
-      - Value: QUEUE_SUBMIT
   - Name: HashType
     Values:
       - Value: MURMUR
@@ -196,15 +143,6 @@ Enums:
         Labels: [LZ4]
       - Value: ZSTD
         Labels: [ZSTD]
-  - Name: VulkanObjectMode
-    Values:
-      - Value: MODE_VK_NONE
-      - Value: MODE_VK_QUEUE_SUBMIT
-      - Value: MODE_VK_COMMAND_BUFFER
-      - Value: MODE_VK_RENDER_PASS
-      - Value: MODE_VK_DRAW
-      - Value: MODE_VK_DISPATCH
-      - Value: MODE_VK_BLIT
   - Name: WindowMode
     Values:
       - Value: NORMAL
@@ -247,10 +185,6 @@ Enums:
         Description: OpenCL
       - Value: NOT_SET
         Description: Not set
-  - Name: VulkanIndexedVerticesSizeCalculationMethod
-    Values:
-      - Value: COUNT_ONLY
-      - Value: COUNT_OR_MAXVERTEX
   - Name: VulkanCaptureReplayAddressForm
     Values:
       - Value: AUTO

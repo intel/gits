@@ -216,7 +216,6 @@ static constexpr const char* API_NAME_SHORT_L0 = "L0";
 
 static constexpr const char* NOT_AVAILABLE = "N/A";
 
-static constexpr const char* API_NAME_VK_LEGACY = "Vulkan (legacy)";
 static constexpr const char* API_NAME_GL_LEGACY = "OpenGL (legacy)";
 
 static const auto& API_BUTTONS() {
@@ -400,8 +399,6 @@ static const std::string ApiToString(Api api) {
     return API_NAME_GL_LEGACY;
   case Api::VULKAN:
     return API_NAME_VK;
-  case Api::VULKAN_LEGACY:
-    return API_NAME_VK_LEGACY;
   case Api::OPENCL:
     return API_NAME_CL;
   case Api::LEVELZERO:

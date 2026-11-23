@@ -87,8 +87,8 @@ cmake --install . --config Release --prefix dist
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `REGISTER_VULKAN_LAYER` | `ON` | :material-microsoft-windows: When `ON`, the install step registers the new Vulkan GITS recorder layer (`Recorder\VulkanLayer\VkLayer_vulkan_GITS_recorder.json`) with the OS alongside the [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md) layer. Set to `OFF` to register the VulkanLegacy layer only. |
-| `WITH_VULKAN` | `ON` | Build the Vulkan backend, new and legacy. |
+| `REGISTER_VULKAN_LAYER` | `ON` | :material-microsoft-windows: When `ON`, the install step registers the Vulkan GITS recorder layer (`Recorder\VulkanLayer\VkLayer_vulkan_GITS_recorder.json`) with the OS. |
+| `WITH_VULKAN` | `ON` | Build the Vulkan backend. |
 | `WITH_DIRECTX` | `ON` | :material-microsoft-windows: Build the DirectX backend. |
 | `WITH_OPENCL` | `ON` | Build the OpenCL backend. |
 | `WITH_OPENGL` | `ON` | Windows x64 and x86-64 Linux only. Build the new, experimental OpenGL backend. The [OpenGL legacy](documentation/OpenGL/OpenGLLegacy.md) backend is always built. |
@@ -97,10 +97,5 @@ cmake --install . --config Release --prefix dist
 | `WITH_GUI` | `ON` | :material-microsoft-windows: Build with all GUI components: Launcher & Studio |
 | `SKIP_THIRDPARTY_FETCH` | `OFF` | Skip fetching third-party dependencies. |
 | `OFFLINE_MODE` | `OFF` | Offline Mode: no download of third party libraries, assuming folders are prepopulated. |
-
-!!! example ":material-microsoft-windows: Register only the [Vulkan legacy](documentation/Vulkan/VulkanLegacy.md) layer"
-	``` bash
-	cmake -A x64 -DREGISTER_VULKAN_LAYER=OFF ..\
-	```
 
 Find how to use GITS with the [GITS Launcher](usingLauncher.md) or via [cli](usingCLI.md).

@@ -21,13 +21,14 @@
 namespace gits {
 class ApisIface {
 public:
+  // Values are stored in stream headers; keep them unchanged.
   enum TApi {
-    ApiNotSet,
-    OpenGL,
-    Vulkan,
-    OpenCL,
-    LevelZero,
-    DirectX,
+    ApiNotSet = 0,
+    OpenGL = 1,
+    Vulkan = 2, // no longer supported, identifies old streams
+    OpenCL = 3,
+    LevelZero = 4,
+    DirectX = 5,
   };
   enum TApiType {
     A3D,

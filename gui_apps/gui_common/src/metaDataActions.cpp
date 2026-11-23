@@ -76,8 +76,6 @@ Api StreamHeaderApiToApi(stream::StreamHeader::Api api) {
     return Api::DIRECTX;
   case stream::StreamHeader::Api::API_VULKAN:
     return Api::VULKAN;
-  case stream::StreamHeader::Api::API_VULKAN_LEGACY:
-    return Api::VULKAN_LEGACY;
   case stream::StreamHeader::Api::API_OPENGL:
     return Api::OPENGL;
   case stream::StreamHeader::Api::API_OPENGL_LEGACY:

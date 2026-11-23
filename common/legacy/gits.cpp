@@ -151,6 +151,26 @@ void CGits::CloseZipFileGLPrograms() {
 }
 
 namespace {
+// Streams of these APIs can't be replayed anymore; they're detected by the API stored in the
+// stream header or, in streams older than GITS_API_INFO, by the token ID range of the API.
+struct RemovedApi {
+  unsigned tokenIdBegin;
+  ApisIface::TApi api;
+  const char* name;
+};
+constexpr unsigned TOKEN_ID_API_RANGE = 0x10000;
+constexpr RemovedApi REMOVED_APIS[] = {
+    {CToken::ID_VULKAN_LEGACY, ApisIface::TApi::Vulkan, "VulkanLegacy"},
+};
+
+[[noreturn]] void ThrowRemovedApi(const RemovedApi& removedApi) {
+  LOG_ERROR << "The stream was recorded with " << removedApi.name
+            << ", which is no longer supported by GITS. Replay it with an older GITS release "
+               "that supports "
+            << removedApi.name << ".";
+  throw ENotSupported(EXCEPTION_MESSAGE);
+}
+
 void EraseFromFirstNullChar(std::string& str) {
   auto nullCharPos = str.find('\0');
   if (nullCharPos != std::string::npos) {
@@ -326,6 +346,12 @@ CToken* CGits::TokenCreate(CId id) {
     token = lib->FunctionCreate(*id);
     if (token != nullptr) {
       return token;
+    }
+  }
+
+  for (const auto& removedApi : REMOVED_APIS) {
+    if (*id >= removedApi.tokenIdBegin && *id < removedApi.tokenIdBegin + TOKEN_ID_API_RANGE) {
+      ThrowRemovedApi(removedApi);
     }
   }
 
@@ -683,13 +709,18 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
   if (file.Version().version() >= GITS_API_INFO) {
     ApisIface::TApi api3D = ApisIface::TApi::ApiNotSet;
     stream.ReadHelper(reinterpret_cast<char*>(&api3D), sizeof(ApisIface::TApi));
+    ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
+    stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
+    for (const auto& removedApi : REMOVED_APIS) {
+      if (api3D == removedApi.api || apiCompute == removedApi.api) {
+        ThrowRemovedApi(removedApi);
+      }
+    }
+
     if (api3D != ApisIface::TApi::ApiNotSet) {
       CGits::Instance().SetApi3D(api3D);
       if (api3D == ApisIface::TApi::DirectX) {
         CGits::Instance().Library(gits::CLibrary::TId::ID_DirectX).RegisterEvents();
-      }
-      if (api3D == ApisIface::TApi::Vulkan) {
-        CGits::Instance().Library(gits::CLibrary::TId::ID_VULKAN_LEGACY).RegisterEvents();
       }
       if (api3D == ApisIface::TApi::OpenGL) {
         CGits::Instance().Library(gits::CLibrary::TId::ID_OPENGL_LEGACY).RegisterEvents();
@@ -697,8 +728,6 @@ CBinIStream& operator>>(CBinIStream& stream, CFile& file) {
       Configurator::Instance().LogUnspportedConfigUsage(gits::ApisIface::ToApiBool(api3D));
     }
 
-    ApisIface::TApi apiCompute = ApisIface::TApi::ApiNotSet;
-    stream.ReadHelper(reinterpret_cast<char*>(&apiCompute), sizeof(ApisIface::TApi));
     if (apiCompute != ApisIface::TApi::ApiNotSet) {
       CGits::Instance().SetApiCompute(apiCompute);
     }

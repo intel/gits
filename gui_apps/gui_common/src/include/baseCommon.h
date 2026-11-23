@@ -34,7 +34,6 @@ enum class Api {
   UNKNOWN = 0,
   DIRECTX,
   VULKAN,
-  VULKAN_LEGACY,
   OPENGL,
   OPENGL_LEGACY,
   OPENCL,
@@ -48,8 +47,6 @@ static Api TApiToApi(gits::ApisIface::TApi api) {
     return Api::UNKNOWN;
   case ApisIface::TApi::OpenGL:
     return Api::OPENGL_LEGACY;
-  case ApisIface::TApi::Vulkan:
-    return Api::VULKAN_LEGACY;
   case ApisIface::TApi::OpenCL:
     return Api::OPENCL;
   case ApisIface::TApi::LevelZero:

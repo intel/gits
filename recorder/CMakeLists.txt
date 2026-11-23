@@ -27,8 +27,7 @@ if(MSVC)
   endif()
   if(WITH_VULKAN)
     file(APPEND ${recorder_DEF}
-      "  GITSRecorderVulkan\n
-         GITSRecorderVulkan2\n")
+      "  GITSRecorderVulkan2\n")
   endif()
   if(WITH_LEVELZERO)
     file(APPEND ${recorder_DEF}
@@ -82,8 +81,8 @@ set(recorderCommonLibs ${recorderCommonLibs} OpenGLLegacy_common)
 set(frameworks ${frameworks} "-framework OpenGL")
 
 if(WITH_VULKAN)
-  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} VulkanLegacy_recorder Vulkan_recorder)
-  set(recorderCommonLibs ${recorderCommonLibs} VulkanLegacy_common hud)
+  set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} Vulkan_recorder)
+  set(recorderCommonLibs ${recorderCommonLibs} hud)
 endif()
 if(WITH_OPENCL)
   set(recorderIfaceLibs ${recorderIfaceLibs} ${libPrefix} OpenCL_recorder)
@@ -162,8 +161,6 @@ if(UNIX)
     ln -sf libGitsGLCapture.so libGLESv1_CM.so.1
     ln -sf libGitsGLCapture.so libGLESv2.so.2
     ln -sf libGitsGLCapture.so libGL.so.1
-    cd ../${VulkanLegacy_INSTALL_SUBDIR}/
-    ln -sf libVulkan.so libvulkan.so.1
     cd ../${Vulkan_INSTALL_SUBDIR}/
     ln -sf libVulkan.so libvulkan.so.1
   \")")
