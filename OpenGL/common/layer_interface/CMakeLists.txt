@@ -58,7 +58,7 @@ target_link_libraries(OpenGL_layer_interface PUBLIC
   log
 )
 target_link_libraries(OpenGL_layer_interface PRIVATE
-  # Ensures "platform.h" resolves to the GITS header, not MurmurHash's Platform.h on Windows.
+  # Provides the GITS "platform.h".
   common_interface
 )
 

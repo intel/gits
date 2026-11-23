@@ -22,12 +22,6 @@ dependencies:
       os: WINDOWS
       folder_to_extract: null
   GitRepositories:
-    - name: lua
-      url: https://github.com/lua/lua.git
-      branch: v5.4.6
-    - name: MurmurHash
-      url: https://github.com/aappleby/smhasher.git
-      commit_id: 61a0530f28277f2e850bfc39600ce61d02b518de
     - name: zlib
       url: https://github.com/madler/zlib.git
       branch: v1.3.2

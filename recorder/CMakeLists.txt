@@ -45,8 +45,6 @@ target_include_directories(gits_recorder PRIVATE ${RECORDER_HEADER_DIR})
 add_library(gits_recorder_interface INTERFACE)
 target_include_directories(gits_recorder_interface INTERFACE ${RECORDER_HEADER_DIR})
 
-add_definitions(-DGITS_RECORDER_EXPORTS)
-
 set(recorderIfaceLibs )
 set(recorderCommonLibs configuration)
 
@@ -94,7 +92,7 @@ target_link_libraries(gits_recorder PRIVATE ${recorderIfaceLibs} ${recorderCommo
 if(UNIX)
   target_link_libraries(gits_recorder PRIVATE pthread rt xcb X11-xcb X11 GL wayland-client wayland-egl)
 elseif(MSVC)
-  target_link_libraries(gits_recorder PRIVATE stackwalker OpenGL32)
+  target_link_libraries(gits_recorder PRIVATE OpenGL32)
 endif()
 
 if(WIN32)

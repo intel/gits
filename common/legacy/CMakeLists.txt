@@ -54,12 +54,10 @@ endif()
 add_library(common ${common_SOURCES})
 set_target_properties(common PROPERTIES FOLDER "common")
 
-add_definitions(-DGITS_COMMON_PROJ)
-
 add_dependencies(common config_codegen gits_build_info)
 target_include_directories(common PUBLIC ${COMMON_HEADER_DIR})
 target_include_directories(common PRIVATE ${GITS_BUILD_INFO_INCLUDE_DIR})
-target_link_libraries(common PRIVATE xxhash murmurhash hud gits_recorder_interface)
+target_link_libraries(common PRIVATE xxhash hud gits_recorder_interface)
 target_link_libraries(common PUBLIC configuration log)
 
 if(UNIX)
