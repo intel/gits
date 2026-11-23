@@ -16,6 +16,8 @@
 #include "gits.h"
 #include "exception.h"
 
+#include <map>
+
 #if defined GITS_PLATFORM_WINDOWS
 
 #include <windows.h>
@@ -47,7 +49,8 @@
 
 #endif
 
-void gits::InitKeyMap(std::map<std::string, unsigned>& keyMap) {
+namespace {
+void InitKeyMap(std::map<std::string, unsigned>& keyMap) {
 
 #if defined GITS_PLATFORM_WINDOWS
   keyMap["backspace"] = VK_BACK;
@@ -198,28 +201,10 @@ void gits::InitKeyMap(std::map<std::string, unsigned>& keyMap) {
   keyMap["?"] = VK_SLASH;
 
 #else
-  throw ENotImplemented(EXCEPTION_MESSAGE);
+  throw gits::ENotImplemented(EXCEPTION_MESSAGE);
 #endif
 }
-
-bool gits::IsKeyPressed(unsigned key) {
-#if defined GITS_PLATFORM_WINDOWS
-  return (GetAsyncKeyState(key) & 0x8000) != 0;
-#else
-  throw ENotImplemented(EXCEPTION_MESSAGE);
-#endif
-}
-bool gits::AreAllKeysPressed(std::vector<unsigned> keys) {
-  for (auto key : keys) {
-    if (!IsKeyPressed(key)) {
-      return false;
-    }
-  }
-  if (keys.size() > 0) {
-    return true;
-  }
-  return false;
-}
+} // namespace
 
 uint32_t gits::GetKeyVal(const std::string& str) {
   static std::map<std::string, unsigned> keyMap;

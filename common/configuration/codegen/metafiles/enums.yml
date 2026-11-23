@@ -73,13 +73,6 @@ Enums:
         Description: Copy each page from the driver mapping on its first read or write
       - Value: ON_READ
         Description: Copy each page from the driver mapping on its first read only
-  - Name: HashType
-    Values:
-      - Value: MURMUR
-      - Value: XX
-      - Value: INCREMENTAL_NUMBER
-      - Value: CRC32ISH
-      - Value: XXCRC32
   - Name: CompressionType
     Type: uint8_t
     Values:

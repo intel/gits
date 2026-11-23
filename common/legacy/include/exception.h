@@ -43,11 +43,6 @@ public:
   ~CExceptionMessageInfo() {}
 };
 #define EXCEPTION_MESSAGE CExceptionMessageInfo(__FUNCTION__, __FILE__, __LINE__)
-/*workaround to quit compiler warning - C4702:unreachable code*/
-#define UNREACHABLE_CODE_WA                                                                        \
-  unsigned char result;                                                                            \
-  memset(&result, 1, sizeof(result));                                                              \
-  if (result == 1)
 
 namespace gits {
 struct DemanglingResult {
@@ -56,26 +51,16 @@ struct DemanglingResult {
 };
 DemanglingResult TryToDemangle(const std::string mangledName);
 
-std::string staticExceptionInfo(const char* func, const char* file, int line);
-
 /**
   * @brief Base class for exceptions hierarchy.
   *
   * Class is a base for exceptions thrown by the GITS.
   */
 class Exception : public std::exception {
-public:
-  typedef void (*FCallback)(void* userData);
-
-private:
-  static FCallback _callback;
-  static void* _userData;
-  static bool _inCallback;
   const std::string _msg;
   mutable std::string _buffer;
 
 public:
-  static void Callback(FCallback callback, void* userData);
   Exception() throw();
   Exception(std::string message) throw();
 
@@ -90,16 +75,6 @@ public:
 class EOperationFailed : public Exception {
 public:
   EOperationFailed(const std::string& msg) : Exception(msg) {}
-};
-
-/**
-  * @brief Object not found exception.
-  *
-  * Object not found exception.
-  */
-class ENotFound : public EOperationFailed {
-public:
-  ENotFound(const std::string& msg) : EOperationFailed(msg) {}
 };
 
 /**

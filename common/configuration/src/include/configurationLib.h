@@ -15,7 +15,6 @@
 namespace gits {
 typedef Configuration Config;
 
-using THashType = HashType;
 using WindowMode = WindowMode;
 
 } // namespace gits

@@ -19,6 +19,5 @@ SharedObject open_library(const char* name);
 void close_library(SharedObject lib);
 void* load_symbol(SharedObject lib, const char* name);
 const char* last_error();
-SharedObject symbol_library(const void* symbol);
 std::string this_library_path();
 } // namespace dl

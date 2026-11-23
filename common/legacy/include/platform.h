@@ -25,7 +25,6 @@ architectues:
   * GITS_ARCH_A64
 
 platform x architecture:
-  * GITS_PLATFORM_WINDOWS_X86
   * GITS_PLATFORM_WINDOWS_X64
 
 *******************************************************************************/
@@ -53,37 +52,16 @@ platform x architecture:
 #define GITS_PLATFORM_LINUX
 #endif
 
-#if defined GITS_PLATFORM_WINDOWS && defined GITS_ARCH_X86
-#define GITS_PLATFORM_WINDOWS_X86
-#endif
 #if defined GITS_PLATFORM_WINDOWS && defined GITS_ARCH_X64
 #define GITS_PLATFORM_WINDOWS_X64
 #endif
 
-#define GITS_PLATFORM_BIT_WINDOWS 1u
-#define GITS_PLATFORM_BIT_X11     2u
-#define GITS_PLATFORM_BIT_ALL     ~0u
-
-#define VENDOR_ID_NVIDIA 0x10DE
-#define VENDOR_ID_INTEL  0x8086
-
-//#define GITS_PLATFORM_BIT_LINUX        GITS_PLATFORM_BIT_X11
-//#define GITS_PLATFORM_BIT_UNIX         GITS_PLATFORM_BIT_LINUX
-
 #if defined GITS_PLATFORM_WINDOWS
-#define GITS_PLATFORM_BIT_CURRENT GITS_PLATFORM_BIT_WINDOWS
-#define STDCALL                   __stdcall
-#define NOINLINE                  __declspec(noinline)
-#define NORETURN                  __declspec(noreturn)
+#define STDCALL __stdcall
 #define VISIBLE
-#define WEAK
 #elif defined GITS_PLATFORM_X11
-#define GITS_PLATFORM_BIT_CURRENT GITS_PLATFORM_BIT_X11
 #define STDCALL
-#define NOINLINE __attribute__((noinline))
-#define NORETURN __attribute__((noreturn))
-#define VISIBLE  __attribute__((visibility("default")))
-#define WEAK     __attribute__((weak))
+#define VISIBLE __attribute__((visibility("default")))
 #else
 #error "Unknown platform"
 #endif

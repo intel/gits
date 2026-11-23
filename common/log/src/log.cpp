@@ -69,12 +69,7 @@ public:
 
   static util::nstring format(const Record& record) {
     util::nostringstream ss;
-    if (record.getInstanceId() == GITS_LOG_INSTANCE_ID_RAW) {
-      // RAW trace logging: Do not add prefix or endl
-      ss << record.getMessage();
-    } else {
-      ss << LogPrefix(record.getSeverity()) << record.getMessage() << std::endl;
-    }
+    ss << LogPrefix(record.getSeverity()) << record.getMessage() << std::endl;
     return ss.str();
   }
 };
@@ -91,7 +86,6 @@ static plog::DynamicAppender dynamicAppender;
 void SetMaxSeverity(gits::LogLevel lvl) {
   auto severity = GetSeverity(lvl);
   plog::get()->setMaxSeverity(severity);
-  plog::get<GITS_LOG_INSTANCE_ID_RAW>()->setMaxSeverity(severity);
 }
 
 plog::Severity GetSeverity(gits::LogLevel lvl) {
@@ -124,15 +118,11 @@ void Initialize(gits::LogLevel lvl) {
   static plog::DebugOutputAppender<plog::MessageOnlyFormatter> debugAppender;
   plog::get()->addAppender(&debugAppender);
 #endif
-
-  // Instance used for RAW trace formatting
-  plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, plog::get());
 }
 
 void Initialize(gits::LogLevel lvl, plog::IAppender* appender) {
   auto severity = GetSeverity(lvl);
   plog::init(severity, appender);
-  plog::init<GITS_LOG_INSTANCE_ID_RAW>(severity, appender);
 }
 
 void AddConsoleAppender() {
@@ -155,10 +145,6 @@ void AddFileAppender(const std::filesystem::path& logFilePath) {
   fileAppender = std::make_unique<plog::RollingFileAppender<plog::GitsFormatter>>(logFile.c_str());
 
   plog::get()->addAppender(fileAppender.get());
-}
-
-bool ShouldLog(gits::LogLevel lvl) {
-  return plog::get()->checkSeverity(GetSeverity(lvl));
 }
 } // namespace log
 } // namespace gits

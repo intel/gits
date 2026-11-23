@@ -18,7 +18,7 @@
 #include "tools_lite.h"
 #include "log.h"
 #include "exception.h"
-#include "pragmas.h"
+#include "platform.h"
 #include "dynamic_linker.h"
 
 #include <set>
@@ -54,15 +54,8 @@
 #include "configurationLib.h"
 
 namespace gits {
-uint32_t HwCrc32ishHash(const void* data, size_t size, uint32_t hash);
-uint64_t ComputeHash(const void* data,
-                     size_t size,
-                     THashType type,
-                     bool hashPartially,
-                     uint32_t partialHashCutoff,
-                     uint32_t partialHashChunks,
-                     uint32_t partialHashRatio);
-uint64_t ComputeHash(const void* data, size_t size, THashType type);
+// Returns XXH32 of the data in the low 32 bits and the data size in the high 32 bits.
+uint64_t ComputeHash(const void* data, size_t size);
 
 std::string CommandOutput(const std::string& command, bool isRecorder);
 

@@ -12,7 +12,6 @@
  * @brief Definition of GITS Loader to be used in proxy DLLs.
  */
 
-#include "pragmas.h"
 #include "platform.h"
 #include <cstdarg>
 #include <iostream>
@@ -79,10 +78,10 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName) {
   }
 
   auto* pathStr = installationPath.c_str();
-  gitsPath_ = std::filesystem::path(pathStr + pos_f, pathStr + pos_l + 1);
+  const std::filesystem::path gitsPath(pathStr + pos_f, pathStr + pos_l + 1);
 
   // load GITS Recorder DLL
-  auto recorderPath = gitsPath_ / RECORDER_LIB_NAME;
+  auto recorderPath = gitsPath / RECORDER_LIB_NAME;
   if (!std::filesystem::exists(recorderPath)) {
     std::cerr << "GITS library not found ('" << recorderPath << "')!!!";
 #ifdef GITS_PLATFORM_WINDOWS
@@ -92,7 +91,7 @@ CGitsLoader::CGitsLoader(const char* recorderWrapperFactoryName) {
     throw std::runtime_error("Failed to find required library");
   }
 
-  auto tbbPath = gitsPath_ / TBB_LIB_NAME;
+  auto tbbPath = gitsPath / TBB_LIB_NAME;
   if (std::filesystem::exists(tbbPath)) {
     tbbLib_ = dl::open_library(tbbPath.string().c_str());
     if (tbbLib_ == nullptr) {
@@ -147,10 +146,6 @@ CGitsLoader::~CGitsLoader() {
   dl::close_library(tbbLib_);
 }
 
-std::filesystem::path CGitsLoader::GetGitsPath() const {
-  return gitsPath_;
-}
-
 Configuration& CGitsLoader::GetConfiguration() {
   if (config_) {
     return *config_;
@@ -160,14 +155,6 @@ Configuration& CGitsLoader::GetConfiguration() {
 
 void* CGitsLoader::GetRecorderWrapperPtr() const {
   return recorderWrapper_;
-}
-
-void CGitsLoader::ProcessTerminationDetected() {
-  config_ = nullptr;
-  dl::close_library(recorderLib_);
-  recorderLib_ = nullptr;
-  dl::close_library(tbbLib_);
-  tbbLib_ = nullptr;
 }
 
 } // namespace gits

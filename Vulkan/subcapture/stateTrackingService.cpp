@@ -1189,7 +1189,7 @@ bool StateTrackingService::FindQueueAndPool(uint64_t deviceKey,
 uint64_t StateTrackingService::StoreAsBuildInputContent(std::vector<uint8_t> bytes) {
   // Widen the 32-bit XX hash with the size, then verify on collision so a genuine clash
   // never aliases two different byte ranges (which would upload the wrong geometry).
-  uint64_t key = gits::ComputeHash(bytes.data(), bytes.size(), gits::THashType::XX);
+  uint64_t key = gits::ComputeHash(bytes.data(), bytes.size());
   key ^= static_cast<uint64_t>(bytes.size()) * 0x9E3779B97F4A7C15ull;
   if (key == 0) {
     key = 0x9E3779B97F4A7C15ull; // reserve 0 to mean "no content"

@@ -15,28 +15,22 @@
 #pragma once
 
 #include "tools.h"
-#include "pragmas.h"
 #include "dynamic_linker.h"
 #include "configurationLib.h"
 
 namespace gits {
-std::filesystem::path GetConfigPathForLoader();
 class CGitsLoader : public gits::noncopyable {
 public:
   explicit CGitsLoader(const char* recorderWrapperFactoryName);
   ~CGitsLoader();
 
-  std::filesystem::path GetGitsPath() const;
   Configuration& GetConfiguration();
   void* GetRecorderWrapperPtr() const;
-
-  void ProcessTerminationDetected();
 
 private:
   Configuration* config_{};
   dl::SharedObject tbbLib_{};
   dl::SharedObject recorderLib_{};
-  std::filesystem::path gitsPath_;
   void* recorderWrapper_{};
 };
 

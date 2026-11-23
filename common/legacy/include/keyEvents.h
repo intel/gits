@@ -13,15 +13,8 @@
 
 #pragma once
 #include <string>
-#include <map>
-#include <vector>
 #include <cstdint>
 
-typedef unsigned int uint;
-
 namespace gits {
-void InitKeyMap(std::map<std::string, unsigned>& keyMap);
-bool IsKeyPressed(unsigned key);
-bool AreAllKeysPressed(std::vector<unsigned> keys);
 uint32_t GetKeyVal(const std::string& str);
 } // namespace gits

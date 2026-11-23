@@ -6,12 +6,10 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "exception.h"
 #include "platform.h"
 #ifdef GITS_PLATFORM_WINDOWS
 #include "tools_windows.h"
 #include <windows.h>
-#include <psapi.h>
 #include <vector>
 #include <string>
 #else
@@ -61,30 +59,6 @@ const char* last_error() {
   return err_str.c_str();
 }
 
-SharedObject symbol_library(const void* symbol) {
-  DWORD size = 0;
-
-  HANDLE process = GetCurrentProcess();
-  EnumProcessModules(process, 0, 0, &size);
-
-  std::vector<HMODULE> modules(size / sizeof(HMODULE));
-  EnumProcessModules(process, &modules[0], size, &size);
-
-  void* targetModule = 0;
-  for (auto module : modules) {
-    MODULEINFO info;
-    GetModuleInformation(process, module, &info, sizeof(MODULEINFO));
-    void* beginOfModule = info.lpBaseOfDll;
-    void* endOfModule = (char*)info.lpBaseOfDll + info.SizeOfImage;
-
-    if (symbol >= beginOfModule && symbol < endOfModule) {
-      targetModule = beginOfModule;
-      break;
-    }
-  }
-  return (SharedObject)targetModule;
-}
-
 std::string this_library_path() {
   HMODULE module = 0;
   BOOL result = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
@@ -116,20 +90,6 @@ void* load_symbol(SharedObject lib, const char* name) {
 
 const char* last_error() {
   return dlerror();
-}
-
-SharedObject symbol_library(const void* symbol) {
-  Dl_info info;
-  if ((dladdr(symbol, &info) == 0) || (info.dli_fname == nullptr) || (info.dli_fname[0] == 0)) {
-    return nullptr;
-  }
-
-  void* lib = dlopen(info.dli_fname, RTLD_LOCAL | RTLD_NOW);
-  if (lib == nullptr) {
-    throw gits::EOperationFailed(EXCEPTION_MESSAGE);
-  }
-  dlclose(lib);
-  return (SharedObject)lib;
 }
 
 std::string this_library_path() {

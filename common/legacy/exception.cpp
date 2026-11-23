@@ -21,7 +21,6 @@
 #include <map>
 #include <vector>
 #include <cstdio>
-#include <thread>
 #if defined GITS_PLATFORM_UNIX
 #include <cxxabi.h>
 #include <cstdlib>
@@ -52,46 +51,9 @@ gits::DemanglingResult gits::TryToDemangle(const std::string mangledName) {
   return retVal;
 }
 
-gits::Exception::FCallback gits::Exception::_callback = nullptr;
-void* gits::Exception::_userData = nullptr;
-bool gits::Exception::_inCallback = false;
+gits::Exception::Exception() throw() {}
 
-namespace {
-std::thread::id g_mainThreadId = std::this_thread::get_id();
-} // namespace
-
-void gits::Exception::Callback(FCallback callback, void* userData) {
-  _callback = callback;
-  _userData = userData;
-}
-
-gits::Exception::Exception() throw() {
-  if (_callback && !_inCallback && std::this_thread::get_id() == g_mainThreadId) {
-    _inCallback = true;
-    try {
-      LOG_ERROR << "Exception: " << what();
-      LOG_ERROR << "Running user GITS exception callback";
-    } catch (...) {
-      topmost_exception_handler("Exception::Exception() throw()");
-    }
-    (*_callback)(_userData);
-    _inCallback = false;
-  }
-}
-
-gits::Exception::Exception(std::string message) throw() : _msg(std::move(message)) {
-  if (_callback && !_inCallback && std::this_thread::get_id() == g_mainThreadId) {
-    _inCallback = true;
-    try {
-      LOG_ERROR << "Exception: " << what();
-      LOG_ERROR << "Running user GITS exception callback";
-    } catch (...) {
-      topmost_exception_handler("Exception::Exception(std::string message) throw()");
-    }
-    (*_callback)(_userData);
-    _inCallback = false;
-  }
-}
+gits::Exception::Exception(std::string message) throw() : _msg(std::move(message)) {}
 
 /**
 * @brief Method returns a string describing current exception.

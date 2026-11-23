@@ -23,7 +23,6 @@ list(APPEND common_SOURCES
   ${COMMON_HEADER_DIR}/keyEvents.h
   ${COMMON_HEADER_DIR}/messageBus.h
   ${COMMON_HEADER_DIR}/platform.h
-  ${COMMON_HEADER_DIR}/pragmas.h
   ${COMMON_HEADER_DIR}/streamFile.h
   ${COMMON_HEADER_DIR}/timer.h
   ${COMMON_HEADER_DIR}/tools_lite.h

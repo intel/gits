@@ -9,7 +9,6 @@
 #pragma once
 
 #include "gits.h"
-#include "pragmas.h"
 
 #include "nlohmann/json.hpp"
 

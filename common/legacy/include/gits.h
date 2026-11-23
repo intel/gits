@@ -18,7 +18,6 @@
 #include "version.h"
 #include "timer.h"
 #include "tools.h"
-#include "pragmas.h"
 #include "messageBus.h"
 
 #include <cstdint>

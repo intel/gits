@@ -10,7 +10,6 @@
 #include "platform.h"
 #include "gits.h"
 #include "tools.h"
-#include "pragmas.h"
 
 #include <string>
 #include <sstream>

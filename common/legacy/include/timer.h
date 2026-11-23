@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "pragmas.h"
-
 #include <cstdint>
 #include <chrono>
 

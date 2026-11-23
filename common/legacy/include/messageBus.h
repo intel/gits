@@ -192,19 +192,9 @@ private:
   unsigned value_;
 };
 
-class PlaybackEndMessage : public Message {
-public:
-  PlaybackEndMessage() {}
-};
-
 class ProgramMessage : public Message {
 public:
   ProgramMessage() {}
-};
-
-class LoopMessage : public Message {
-public:
-  LoopMessage() {}
 };
 
 struct StatisticsSummary {
