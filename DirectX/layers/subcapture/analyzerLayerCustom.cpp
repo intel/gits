@@ -65,7 +65,6 @@ void AnalyzerLayer::Post(IDXGISwapChainPresentCommand& c) {
     return;
   }
   m_AnalyzerService.Present(c.Key, c.m_Object.Key);
-  m_CommandListService.Present();
 }
 
 void AnalyzerLayer::Post(IDXGISwapChain1Present1Command& c) {
@@ -77,7 +76,6 @@ void AnalyzerLayer::Post(IDXGISwapChain1Present1Command& c) {
     return;
   }
   m_AnalyzerService.Present(c.Key, c.m_Object.Key);
-  m_CommandListService.Present();
 }
 
 void AnalyzerLayer::Post(ID3D12CommandQueueExecuteCommandListsCommand& c) {

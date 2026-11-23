@@ -67,7 +67,6 @@ public:
   void CopyDescriptors(ID3D12DeviceCopyDescriptorsCommand& c);
   void GetRaytracingAccelerationStructurePrebuildInfo(
       ID3D12Device5GetRaytracingAccelerationStructurePrebuildInfoCommand& c);
-  void Present();
 
   template <typename CommandListCommand>
   void Command(CommandListCommand& c);
@@ -159,7 +158,6 @@ private:
   bool m_CommandListSubcapture{};
   bool m_Optimize{};
   bool m_DispatchRays{};
-  bool m_FirstFrame{true};
 
   struct CommandListInfo {
     ObjectKey computeRootSignature{};

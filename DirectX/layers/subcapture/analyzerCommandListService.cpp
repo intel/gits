@@ -394,10 +394,6 @@ void AnalyzerCommandListService::GetRaytracingAccelerationStructurePrebuildInfo(
   m_PrebuildInfoKeysByInputs[c.m_pDesc] = c.Key;
 }
 
-void AnalyzerCommandListService::Present() {
-  m_FirstFrame = false;
-}
-
 void AnalyzerCommandListService::SetBindlessDescriptors(ObjectKey rootSignatureKey,
                                                         ObjectKey descriptorHeapKey,
                                                         D3D12_DESCRIPTOR_HEAP_TYPE heapType,
