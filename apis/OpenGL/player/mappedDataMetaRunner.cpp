@@ -13,7 +13,7 @@
 #include "layerAuto.h"
 #include "log.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "threadContextService.h"
 
@@ -47,10 +47,10 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
   // update never perturbs a binding point a later replayed command might depend on - see
   // Decision 6's Consequences. Save/restore whatever was previously bound there.
   GLint previousBinding = 0;
-  auto realGetIntegerv = player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
+  auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
   realGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &previousBinding);
 
-  auto realBindBuffer = player::g_DispatchTable.glBindBuffer.load(std::memory_order_acquire);
+  auto realBindBuffer = g_DispatchTable.glBindBuffer.load(std::memory_order_acquire);
   realBindBuffer(GL_COPY_WRITE_BUFFER, buffer);
 
   // Synchronization and invalidation follow the application's map: an unsynchronized map that
@@ -60,8 +60,7 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
   constexpr GLbitfield replayed =
       GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
   const GLbitfield access = GL_MAP_WRITE_BIT | (command.m_Access.Value & replayed);
-  auto realMapBufferRange =
-      player::g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
+  auto realMapBufferRange = g_DispatchTable.glMapBufferRange.load(std::memory_order_acquire);
   void* pointer =
       realMapBufferRange(GL_COPY_WRITE_BUFFER, static_cast<GLintptr>(command.m_Offset.Value),
                          static_cast<GLsizeiptr>(command.m_Length.Value), access);
@@ -76,7 +75,7 @@ void ReplayMappedData(MappedDataMetaCommand& command) {
         source += spans[index + 1];
       }
     }
-    auto realUnmapBuffer = player::g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
+    auto realUnmapBuffer = g_DispatchTable.glUnmapBuffer.load(std::memory_order_acquire);
     unmapResult = realUnmapBuffer(GL_COPY_WRITE_BUFFER);
   } else {
     LOG_WARNING << "MappedDataMetaRunner: glMapBufferRange failed for buffer " << buffer

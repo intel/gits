@@ -13,7 +13,7 @@
 #include "glxDrawableService.h"
 #include "hdcVirtualizationService.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "systemApi.h"
 #include "threadContextService.h"
 
@@ -76,7 +76,7 @@ void ScreenshotsLayer::Post(wglDeleteContextCommand& command) {
 }
 
 void ScreenshotsLayer::NoteCurrent() {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   if (const HGLRC context = Real(table.wglGetCurrentContext)()) {
     m_DcContexts[Real(table.wglGetCurrentDC)()] = context;
   }
@@ -102,7 +102,7 @@ void ScreenshotsLayer::Dump(HDC dc) {
 
   // The swapped DC is read with the context last made current on it, since the current one may
   // be made current on another DC, or read another DC.
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   const auto entryPoint = ThreadContextService::Get().CurrentEntryPoint();
   const HGLRC context = Real(table.wglGetCurrentContext)();
   const HDC drawDc = context != nullptr ? Real(table.wglGetCurrentDC)() : nullptr;
@@ -138,7 +138,7 @@ void ScreenshotsLayer::Dump(HDC dc) {
 }
 
 void ScreenshotsLayer::DumpGlx(GLXDrawable drawable) {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   // TODO: Read a drawable that is not current, as Dump() does for a DC, once a stream swaps one.
   if (Real(table.glXGetCurrentDrawable)() != drawable) {
     LOG_WARNING << "ScreenshotsLayer: frame " << m_Frame

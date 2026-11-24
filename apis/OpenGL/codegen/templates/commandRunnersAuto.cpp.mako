@@ -82,7 +82,7 @@ ${AUTO_GENERATED_HEADER}
 #include "layerAuto.h"
 #include "log.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "shareGroupService.h"
 #include "threadContextService.h"
@@ -375,8 +375,8 @@ void ${cmd.name}Runner::Run() {
   // not a stream gap, so it mints a fresh replay-time name, through this bind's own family's
   // Gen command, instead of skipping the call.
   if (!UpdateHandleOrCreate(command.m_${p.name}, GLObjectKind::${kind},
-                            player::g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire),
-                            player::g_DispatchTable.${resolve_override.is_command}.load(std::memory_order_acquire))) {
+                            g_DispatchTable.${resolve_override.gen_command}.load(std::memory_order_acquire),
+                            g_DispatchTable.${resolve_override.is_command}.load(std::memory_order_acquire))) {
     SkipUnmappedObjectNameCall(command, "${cmd.name}");
   }
 % elif resolve_override.identifier_param:
@@ -488,7 +488,7 @@ void ${cmd.name}Runner::Run() {
 % endfor
 % if replayed:
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
 % if pixel_transfer_size_params:
     // An empty-but-HasValue-true captured Data buffer here does not mean this call safely
     // transfers zero real bytes - only m_<param>SizeUnknown.Value == false means that. Skip the

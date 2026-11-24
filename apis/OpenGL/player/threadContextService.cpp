@@ -10,7 +10,7 @@
 
 #include "glxDrawableService.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <algorithm>
 
@@ -18,7 +18,7 @@ namespace gits::opengl {
 
 // wglMakeCurrent makes the draw DC the read DC too.
 HDC ThreadContextService::CurrentReadDc(MakeCurrentEntryPoint entryPoint, HDC drawDc) {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   switch (entryPoint) {
   case MakeCurrentEntryPoint::ARB:
     return table.wglGetCurrentReadDCARB.load(std::memory_order_acquire)();
@@ -33,7 +33,7 @@ bool ThreadContextService::MakeCurrent(MakeCurrentEntryPoint entryPoint,
                                        HDC drawDc,
                                        HDC readDc,
                                        HGLRC context) {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   switch (entryPoint) {
   case MakeCurrentEntryPoint::ARB:
     return table.wglMakeContextCurrentARB.load(std::memory_order_acquire)(drawDc, readDc, context);
@@ -73,7 +73,7 @@ void ThreadContextService::SwitchTo(uint32_t threadId) {
 }
 
 bool ThreadContextService::IsCurrent(const Current& current) {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   if (current.EntryPoint == MakeCurrentEntryPoint::Glx) {
     return table.glXGetCurrentContext.load(std::memory_order_acquire)() == current.GlxContext &&
            (current.GlxContext == nullptr ||
@@ -89,7 +89,7 @@ bool ThreadContextService::IsCurrent(const Current& current) {
 
 bool ThreadContextService::MakeCurrent(const Current& current) {
   if (current.EntryPoint == MakeCurrentEntryPoint::Glx) {
-    return player::g_DispatchTable.glXMakeContextCurrent.load(std::memory_order_acquire)(
+    return g_DispatchTable.glXMakeContextCurrent.load(std::memory_order_acquire)(
                GlxDrawableService::Get().GetDisplay(), current.Drawable, current.ReadDrawable,
                current.GlxContext) != 0;
   }
@@ -97,7 +97,7 @@ bool ThreadContextService::MakeCurrent(const Current& current) {
 }
 
 ThreadContextService::Current ThreadContextService::Capture(MakeCurrentEntryPoint entryPoint) {
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   Current current;
   current.EntryPoint = entryPoint;
   if (entryPoint == MakeCurrentEntryPoint::Glx) {
@@ -139,7 +139,7 @@ void ThreadContextService::Destroy(GLXContext context) {
     m_DestroyPending.push_back(context);
     return;
   }
-  player::g_DispatchTable.glXDestroyContext.load(std::memory_order_acquire)(
+  g_DispatchTable.glXDestroyContext.load(std::memory_order_acquire)(
       GlxDrawableService::Get().GetDisplay(), context);
 }
 
@@ -170,7 +170,7 @@ void ThreadContextService::DestroyReleased() {
     if (IsBound(context)) {
       return false;
     }
-    player::g_DispatchTable.glXDestroyContext.load(std::memory_order_acquire)(
+    g_DispatchTable.glXDestroyContext.load(std::memory_order_acquire)(
         GlxDrawableService::Get().GetDisplay(), context);
     return true;
   });

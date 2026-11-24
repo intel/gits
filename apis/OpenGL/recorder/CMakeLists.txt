@@ -7,8 +7,6 @@
 # ===================== end_copyright_notice ==============================
 
 set(GENERATED_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openglDriversAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/openglDriversAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/clientArraysLayerAuto.h
@@ -85,7 +83,7 @@ target_link_libraries(OpenGL_recorder
   # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
   # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
   # OpenGL_resource_dumping: the screenshot readback and image writing shared with the player.
-  PRIVATE OpenGL_services OpenGL_resource_dumping OpenGL_platform OpenGL_utils
+  PRIVATE OpenGL_dispatch OpenGL_services OpenGL_resource_dumping OpenGL_platform OpenGL_utils
           common_interface log tbb xxhash
 )
 if(WIN32)

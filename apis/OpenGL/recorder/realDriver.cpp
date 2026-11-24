@@ -6,6 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
+#include "driverExports.h"
 #include "realDriver.h"
 
 #ifdef _WIN32
@@ -49,7 +50,7 @@ void FinalizeRealDriver() {
   }
 }
 
-void* GetRealProcAddress(const char* name) {
+void* dispatch::GetDriverExport(const char* name) {
   return reinterpret_cast<void*>(GetProcAddress(g_RealDriverLibrary, name));
 }
 
@@ -78,7 +79,7 @@ void FinalizeRealDriver() {
   }
 }
 
-void* GetRealProcAddress(const char* name) {
+void* dispatch::GetDriverExport(const char* name) {
   return dlsym(g_RealDriverLibrary, name);
 }
 

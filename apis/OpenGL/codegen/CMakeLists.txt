@@ -22,6 +22,7 @@ set(SCRIPTS_SRC
   generator_helpers.py
   generator_enums.py
   generator.py
+  generator_dispatch.py
   generator_interceptor.py
   generator_layer_interface.py
   generator_player.py
@@ -78,10 +79,13 @@ set(OPENGL_GENERATED_INTERCEPTOR_FILES
   ${OPENGL_INTERCEPTOR_DIR}/interceptorAuto.cpp
   ${OPENGL_INTERCEPTOR_DIR}/interceptorAuto.def
 )
+set(OPENGL_DISPATCH_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../common/dispatch)
+set(OPENGL_GENERATED_DISPATCH_FILES
+  ${OPENGL_DISPATCH_DIR}/glDispatchAuto.h
+  ${OPENGL_DISPATCH_DIR}/glDispatchAuto.cpp
+)
 set(OPENGL_RECORDER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../recorder)
 set(OPENGL_GENERATED_RECORDER_FILES
-  ${OPENGL_RECORDER_DIR}/include/openglDriversAuto.h
-  ${OPENGL_RECORDER_DIR}/openglDriversAuto.cpp
   ${OPENGL_RECORDER_DIR}/encoderLayerAuto.h
   ${OPENGL_RECORDER_DIR}/encoderLayerAuto.cpp
   ${OPENGL_RECORDER_DIR}/clientArraysLayerAuto.h
@@ -90,8 +94,7 @@ set(OPENGL_GENERATED_RECORDER_FILES
 )
 set(OPENGL_PLAYER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../player)
 set(OPENGL_GENERATED_PLAYER_FILES
-  ${OPENGL_PLAYER_DIR}/include/openglDriversAuto.h
-  ${OPENGL_PLAYER_DIR}/openglDriversAuto.cpp
+  ${OPENGL_PLAYER_DIR}/dispatchWarmUpAuto.cpp
   ${OPENGL_PLAYER_DIR}/include/commandRunnersAuto.h
   ${OPENGL_PLAYER_DIR}/commandRunnersAuto.cpp
   ${OPENGL_PLAYER_DIR}/openGLCommandFactoryAuto.cpp
@@ -109,6 +112,7 @@ set(OPENGL_GENERATED_PLUGIN_FILES
 
 add_custom_command(
   OUTPUT ${STAMP_FILE} ${OPENGL_GENERATED_LAYER_INTERFACE_FILES}
+         ${OPENGL_GENERATED_DISPATCH_FILES}
          ${OPENGL_GENERATED_INTERCEPTOR_FILES} ${OPENGL_GENERATED_RECORDER_FILES}
          ${OPENGL_GENERATED_PLAYER_FILES} ${OPENGL_GENERATED_PLUGIN_FILES}
   COMMAND ${CMAKE_COMMAND} -E echo "Running OpenGL code generation script..."

@@ -19,7 +19,7 @@
 // mapTrackingWrappers.cpp, which hand-declare instead): this file only includes
 // captureManager.h (deliberately glTypes.h-free, see that header's own comment) and
 // windowGeometryMetaTypes.h (a hand-written meta-command with no gl.xml-derived fields, so no
-// glTypes.h dependency either) - never commandsAuto.h/openglDriversAuto.h, which is what
+// glTypes.h dependency either) - never commandsAuto.h/glDispatchAuto.h, which is what
 // actually pulls in the conflicting glTypes.h declarations elsewhere in this backend. Callers
 // (windowGeometryTrackingLayer.cpp, which DOES need commandsAuto.h for the typed Pre() hooks)
 // pass their glTypes.h HDC values across this boundary as a plain `void*`, which is where the

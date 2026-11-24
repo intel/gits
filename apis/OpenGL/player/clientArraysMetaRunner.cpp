@@ -11,7 +11,7 @@
 #include "glEnumsAuto.h"
 #include "layerAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
 #include "threadContextService.h"
@@ -78,7 +78,7 @@ void ReplayClientArrays(const ClientArraysMetaCommand& command) {
     g_Blocks[command.m_BlockIds.Data[i]].assign(begin, command.m_Data.Data.begin() + dataOffset);
   }
 
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   const ReplayContextCaps& caps = CurrentReplayContextCaps();
   GLint previousArrayBuffer = 0;
   auto bindBuffer = caps.BufferObjectsCore ? table.glBindBuffer.load(std::memory_order_acquire)

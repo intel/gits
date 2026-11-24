@@ -19,7 +19,7 @@
 #include "glVersionString.h"
 #include "log.h"
 #include "messageBus.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "pixelTransferSize.h"
 
 #include <algorithm>

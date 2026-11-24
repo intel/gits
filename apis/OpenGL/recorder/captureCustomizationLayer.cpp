@@ -13,7 +13,7 @@
 #include "glEnumsAuto.h"
 #include "log.h"
 #include "mapTrackingService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 namespace gits::opengl {
 

@@ -11,7 +11,7 @@
 // Queries of the replay driver's state for subcapture state restore.
 
 #include "glEnumsAuto.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <algorithm>
 #include <atomic>
@@ -27,7 +27,7 @@ FunctionT Gl(const std::atomic<FunctionT>& function) {
   return function.load(std::memory_order_acquire);
 }
 
-#define GL_FN(name) Gl(player::g_DispatchTable.name)
+#define GL_FN(name) Gl(g_DispatchTable.name)
 
 inline constexpr GLint MAX_RESTORED_VERTEX_ATTRIBUTES = 32;
 

@@ -11,7 +11,7 @@
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <atomic>
 

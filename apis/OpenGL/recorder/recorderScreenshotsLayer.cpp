@@ -12,7 +12,7 @@
 #include "configurator.h"
 #include "defaultFramebufferImage.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "systemApi.h"
 
 #include <optional>

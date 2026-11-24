@@ -11,7 +11,7 @@
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "pixelTransferSize.h"
 
 #include <mutex>

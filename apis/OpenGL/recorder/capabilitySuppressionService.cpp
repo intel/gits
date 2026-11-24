@@ -12,7 +12,7 @@
 #include "currentContext.h"
 #include "glEnumsAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "systemApi.h"
 
 #include <algorithm>

@@ -11,7 +11,7 @@
 #include "currentContext.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <atomic>
 #include <mutex>
@@ -97,7 +97,7 @@ namespace {
 // Keyed by the context's stable GITSKey (via ContextHandleMapService::GetKey(), which
 // mints/returns the SAME key that UpdateOutputHandle/UpdateHandle already use for every other
 // HGLRC-typed argument - see handleArgumentUpdaters.h), never by the raw live HGLRC value -
-// mirrors WarmUpResolvableFunctions()'s own identical technique in openglDriversAuto.cpp.mako
+// mirrors the player's WarmUpResolvableFunctions() context tracking
 // (see that function's header comment for the full rationale). Windows can and does reuse a
 // destroyed
 // context's numeric HGLRC value for a later, entirely unrelated wglCreateContext[ARB] call;

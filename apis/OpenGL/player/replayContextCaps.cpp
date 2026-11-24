@@ -11,7 +11,7 @@
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
 #include "handleArgumentUpdaters.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <cstring>
 #include <utility>
@@ -31,7 +31,7 @@ thread_local CachedCaps t_Cached;
 class ExtensionChecker {
 public:
   explicit ExtensionChecker(std::pair<int, int> version) : m_Version(version) {
-    auto& table = player::g_DispatchTable;
+    auto& table = g_DispatchTable;
     if (GlVersionAtLeast(m_Version, 3, 0)) {
       // GL_EXTENSIONS is not a valid glGetString name on core profiles.
       table.glGetIntegerv.load(std::memory_order_acquire)(GL_NUM_EXTENSIONS, &m_Count);
@@ -45,7 +45,7 @@ public:
     if (GlVersionLessThan(m_Version, 3, 0)) {
       return ExtensionsStringContainsWholeWord(m_Legacy, name);
     }
-    auto getStringi = player::g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
+    auto getStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
     for (GLint i = 0; i < m_Count; ++i) {
       const auto* extension =
           reinterpret_cast<const char*>(getStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
@@ -64,7 +64,7 @@ private:
 
 ReplayContextCaps QueryCaps() {
   ReplayContextCaps caps;
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   const auto version = ParseGlVersionMajorMinor(
       reinterpret_cast<const char*>(table.glGetString.load(std::memory_order_acquire)(GL_VERSION)));
   if (version.first == 0) {

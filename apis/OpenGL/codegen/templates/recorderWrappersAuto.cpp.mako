@@ -53,7 +53,7 @@ ${AUTO_GENERATED_HEADER}
 #include "mapTrackingService.h"
 #include "mapTrackingWrappers.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "recorderWrappers.h"
 #include "recursionGuard.h"
 #include "shareGroupService.h"

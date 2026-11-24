@@ -43,7 +43,7 @@ add_dependencies(OpenGL_subcapture OpenGL_codegen)
 # State restore reads the replay state through the player's driver and object maps.
 target_include_directories(OpenGL_subcapture
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-  PRIVATE ../player/include ../interceptor
+  PRIVATE ../player/include ../interceptor ../common/dispatch
 )
 target_link_libraries(OpenGL_subcapture
   PUBLIC OpenGL_layer_interface OpenGL_services stream

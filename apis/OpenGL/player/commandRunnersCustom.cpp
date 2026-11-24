@@ -14,7 +14,8 @@
 #include "hdcVirtualizationService.h"
 #include "layerAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "dispatchWarmUp.h"
+#include "glDispatchAuto.h"
 #include "pbufferService.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
@@ -147,7 +148,7 @@ void WglCreateContextRunner::Run() {
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_hDc.Value, nullptr);
-    auto realFunction = player::g_DispatchTable.wglCreateContext.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.wglCreateContext.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hDc);
     UpdateOutputHandle(command.m_Return);
     ShareGroupService::Get().RegisterNewContext(command.m_Return.Value, nullptr);
@@ -172,8 +173,7 @@ void WglCreateContextAttribsARBRunner::Run() {
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     HdcVirtualizationService::Get().EnsurePixelFormatSet(command.m_hDC.Value, nullptr);
-    auto realFunction =
-        player::g_DispatchTable.wglCreateContextAttribsARB.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.wglCreateContextAttribsARB.load(std::memory_order_acquire);
     // command.m_attribList.HasValue (not just .Data.data()) is the correct null check here - a
     // captured null attribList is a legal, meaningful call ("use default attributes"; the ARB
     // extension spec requires a driver to accept a null attribList the same way it requires a
@@ -212,7 +212,7 @@ void WglMakeCurrentRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.wglMakeCurrent.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.wglMakeCurrent.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hDc, command.m_newContext.Value);
     if (command.m_Return.Value) {
       InvalidateReplayContextCaps();
@@ -220,7 +220,7 @@ void WglMakeCurrentRunner::Run() {
     if (command.m_Return.Value && command.m_newContext.Value) {
       // A context just became current on this thread - the only reliable window in which
       // wglGetProcAddress can resolve extension functions (see WarmUpResolvableFunctions's own
-      // comment in openglDriversAuto.h). Real apps commonly release this exact context shortly
+      // comment in dispatchWarmUp.h). Real apps commonly release this exact context shortly
       // after (the "dummy context -> fetch ARB functions -> destroy it -> create the real
       // context" bootstrap pattern), so anything not resolved by then would otherwise fail
       // permanently once this command's own real call resolves it lazily on first use instead.
@@ -269,12 +269,12 @@ void RunMakeContextCurrent(MakeContextCurrentCommand& command, RealFunction& rea
 
 void WglMakeContextCurrentARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunMakeContextCurrent(command, player::g_DispatchTable.wglMakeContextCurrentARB);
+  RunMakeContextCurrent(command, g_DispatchTable.wglMakeContextCurrentARB);
 }
 
 void WglMakeContextCurrentEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunMakeContextCurrent(command, player::g_DispatchTable.wglMakeContextCurrentEXT);
+  RunMakeContextCurrent(command, g_DispatchTable.wglMakeContextCurrentEXT);
 }
 
 void WglSetPixelFormatRunner::Run() {
@@ -334,7 +334,7 @@ void WglSwapBuffersRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.wglSwapBuffers.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.wglSwapBuffers.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hdc);
   }
   for (Layer* layer : manager.GetPostLayers()) {
@@ -351,7 +351,7 @@ void WglSwapLayerBuffersRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.wglSwapLayerBuffers.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.wglSwapLayerBuffers.load(std::memory_order_acquire);
     command.m_Return.Value = realFunction(real_hdc, command.m_fuFlags.Value);
   }
   for (Layer* layer : manager.GetPostLayers()) {
@@ -361,42 +361,42 @@ void WglSwapLayerBuffersRunner::Run() {
 
 void WglCreatePbufferARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunCreatePbuffer(command, player::g_DispatchTable.wglCreatePbufferARB);
+  RunCreatePbuffer(command, g_DispatchTable.wglCreatePbufferARB);
 }
 
 void WglGetPbufferDCARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunGetPbufferDC(command, player::g_DispatchTable.wglGetPbufferDCARB);
+  RunGetPbufferDC(command, g_DispatchTable.wglGetPbufferDCARB);
 }
 
 void WglReleasePbufferDCARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunReleasePbufferDC(command, player::g_DispatchTable.wglReleasePbufferDCARB);
+  RunReleasePbufferDC(command, g_DispatchTable.wglReleasePbufferDCARB);
 }
 
 void WglDestroyPbufferARBRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunDestroyPbuffer(command, player::g_DispatchTable.wglDestroyPbufferARB);
+  RunDestroyPbuffer(command, g_DispatchTable.wglDestroyPbufferARB);
 }
 
 void WglCreatePbufferEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunCreatePbuffer(command, player::g_DispatchTable.wglCreatePbufferEXT);
+  RunCreatePbuffer(command, g_DispatchTable.wglCreatePbufferEXT);
 }
 
 void WglGetPbufferDCEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunGetPbufferDC(command, player::g_DispatchTable.wglGetPbufferDCEXT);
+  RunGetPbufferDC(command, g_DispatchTable.wglGetPbufferDCEXT);
 }
 
 void WglReleasePbufferDCEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunReleasePbufferDC(command, player::g_DispatchTable.wglReleasePbufferDCEXT);
+  RunReleasePbufferDC(command, g_DispatchTable.wglReleasePbufferDCEXT);
 }
 
 void WglDestroyPbufferEXTRunner::Run() {
   ThreadContextService::Get().SwitchTo(command.m_ThreadId);
-  RunDestroyPbuffer(command, player::g_DispatchTable.wglDestroyPbufferEXT);
+  RunDestroyPbuffer(command, g_DispatchTable.wglDestroyPbufferEXT);
 }
 
 #if !defined(_WIN32)
@@ -410,10 +410,9 @@ void GlxCreateContextRunner::Run() {
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     Display* display = GlxDrawableService::Get().GetDisplay();
-    auto getVisual =
-        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    auto getVisual = g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
     XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
-    auto realFunction = player::g_DispatchTable.glXCreateContext.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXCreateContext.load(std::memory_order_acquire);
     command.m_Return.Value =
         visual != nullptr
             ? realFunction(display, visual, command.m_shareList.Value, command.m_direct.Value)
@@ -439,7 +438,7 @@ void GlxMakeCurrentRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXMakeCurrent.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXMakeCurrent.load(std::memory_order_acquire);
     command.m_Return.Value =
         realFunction(GlxDrawableService::Get().GetDisplay(), real_drawable, command.m_ctx.Value);
     if (command.m_Return.Value != 0) {
@@ -464,7 +463,7 @@ void GlxCreateNewContextRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXCreateNewContext.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXCreateNewContext.load(std::memory_order_acquire);
     command.m_Return.Value =
         realFunction(GlxDrawableService::Get().GetDisplay(), config, command.m_render_type.Value,
                      command.m_share_list.Value, command.m_direct.Value);
@@ -487,8 +486,7 @@ void GlxCreateContextAttribsARBRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction =
-        player::g_DispatchTable.glXCreateContextAttribsARB.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXCreateContextAttribsARB.load(std::memory_order_acquire);
     command.m_Return.Value =
         realFunction(GlxDrawableService::Get().GetDisplay(), config, command.m_share_context.Value,
                      command.m_direct.Value,
@@ -516,8 +514,7 @@ void GlxMakeContextCurrentRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction =
-        player::g_DispatchTable.glXMakeContextCurrent.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXMakeContextCurrent.load(std::memory_order_acquire);
     command.m_Return.Value =
         realFunction(drawables.GetDisplay(), real_draw, real_read, command.m_ctx.Value);
     if (command.m_Return.Value != 0) {
@@ -544,8 +541,7 @@ void GlxMakeCurrentReadSGIRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction =
-        player::g_DispatchTable.glXMakeCurrentReadSGI.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXMakeCurrentReadSGI.load(std::memory_order_acquire);
     command.m_Return.Value =
         realFunction(drawables.GetDisplay(), real_draw, real_read, command.m_ctx.Value);
     if (command.m_Return.Value != 0) {
@@ -586,7 +582,7 @@ void GlxCreateWindowRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXCreateWindow.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXCreateWindow.load(std::memory_order_acquire);
     const GLXWindow live =
         realFunction(drawables.GetDisplay(), config, real_win,
                      command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
@@ -610,7 +606,7 @@ void GlxDestroyWindowRunner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     const uint64_t recorded = command.m_win.Value;
     ThreadContextService::Get().DestroyDrawable(real_win, [&drawables, real_win, recorded] {
-      auto realFunction = player::g_DispatchTable.glXDestroyWindow.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXDestroyWindow.load(std::memory_order_acquire);
       realFunction(drawables.GetDisplay(), real_win);
       drawables.RemoveSubstitute(recorded);
     });
@@ -629,7 +625,7 @@ void GlxCreatePbufferRunner::Run() {
     layer->Pre(command);
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
-    auto realFunction = player::g_DispatchTable.glXCreatePbuffer.load(std::memory_order_acquire);
+    auto realFunction = g_DispatchTable.glXCreatePbuffer.load(std::memory_order_acquire);
     const GLXPbuffer live =
         realFunction(drawables.GetDisplay(), config,
                      command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
@@ -653,7 +649,7 @@ void GlxDestroyPbufferRunner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     const uint64_t recorded = command.m_pbuf.Value;
     ThreadContextService::Get().DestroyDrawable(real_pbuf, [&drawables, real_pbuf, recorded] {
-      auto realFunction = player::g_DispatchTable.glXDestroyPbuffer.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXDestroyPbuffer.load(std::memory_order_acquire);
       realFunction(drawables.GetDisplay(), real_pbuf);
       drawables.RemoveSubstitute(recorded);
     });
@@ -673,13 +669,12 @@ void GlxCreatePixmapRunner::Run() {
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     Display* display = drawables.GetDisplay();
-    auto getVisual =
-        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    auto getVisual = g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
     XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
     const Pixmap pixmap = drawables.CreatePixmap(command.m_pixmap.Value, visual);
     GlxDrawableService::Free(visual);
     if (pixmap != 0) {
-      auto realFunction = player::g_DispatchTable.glXCreatePixmap.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXCreatePixmap.load(std::memory_order_acquire);
       const GLXPixmap live = realFunction(
           display, config, pixmap,
           command.m_attrib_list.HasValue ? command.m_attrib_list.Data.data() : nullptr);
@@ -702,7 +697,7 @@ void GlxDestroyPixmapRunner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     const uint64_t recorded = command.m_pixmap.Value;
     ThreadContextService::Get().DestroyDrawable(real_pixmap, [&drawables, real_pixmap, recorded] {
-      auto realFunction = player::g_DispatchTable.glXDestroyPixmap.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXDestroyPixmap.load(std::memory_order_acquire);
       realFunction(drawables.GetDisplay(), real_pixmap);
       drawables.RemoveSubstitute(recorded);
     });
@@ -722,14 +717,12 @@ void GlxCreateGLXPixmapRunner::Run() {
   }
   if (manager.ExecuteCommands() && !command.m_Skip) {
     Display* display = drawables.GetDisplay();
-    auto getVisual =
-        player::g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
+    auto getVisual = g_DispatchTable.glXGetVisualFromFBConfig.load(std::memory_order_acquire);
     XVisualInfo* visual = config != nullptr ? getVisual(display, config) : nullptr;
     const Pixmap pixmap =
         visual != nullptr ? drawables.CreatePixmap(command.m_pixmap.Value, visual) : 0;
     if (pixmap != 0) {
-      auto realFunction =
-          player::g_DispatchTable.glXCreateGLXPixmap.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXCreateGLXPixmap.load(std::memory_order_acquire);
       const GLXPixmap live = realFunction(display, visual, pixmap);
       drawables.SetPixmapSubstitute(command.m_Return.Value, live, pixmap);
     }
@@ -751,8 +744,7 @@ void GlxDestroyGLXPixmapRunner::Run() {
   if (manager.ExecuteCommands() && !command.m_Skip) {
     const uint64_t recorded = command.m_pixmap.Value;
     ThreadContextService::Get().DestroyDrawable(real_pixmap, [&drawables, real_pixmap, recorded] {
-      auto realFunction =
-          player::g_DispatchTable.glXDestroyGLXPixmap.load(std::memory_order_acquire);
+      auto realFunction = g_DispatchTable.glXDestroyGLXPixmap.load(std::memory_order_acquire);
       realFunction(drawables.GetDisplay(), real_pixmap);
       drawables.RemoveSubstitute(recorded);
     });

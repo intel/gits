@@ -12,7 +12,7 @@
 #include "glxDrawableService.h"
 #include "hdcVirtualizationService.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <atomic>
 
@@ -50,8 +50,8 @@ GLXFBConfig GlxFBConfigService::Choose(const std::vector<int32_t>& attributes, b
   }
   requested.push_back(0);
 
-  auto choose = player::g_DispatchTable.glXChooseFBConfig.load(std::memory_order_acquire);
-  auto getAttribute = player::g_DispatchTable.glXGetFBConfigAttrib.load(std::memory_order_acquire);
+  auto choose = g_DispatchTable.glXChooseFBConfig.load(std::memory_order_acquire);
+  auto getAttribute = g_DispatchTable.glXGetFBConfigAttrib.load(std::memory_order_acquire);
   int count = 0;
   GLXFBConfig* configs = choose(display, drawables.GetDefaultScreen(), requested.data(), &count);
   // Contexts and pixmaps with the same recorded attributes are chosen from the same list by the
@@ -119,7 +119,7 @@ uint64_t GlxFBConfigService::VisualId(GLXFBConfig config) {
   if (config == nullptr) {
     return 0;
   }
-  auto getAttribute = player::g_DispatchTable.glXGetFBConfigAttrib.load(std::memory_order_acquire);
+  auto getAttribute = g_DispatchTable.glXGetFBConfigAttrib.load(std::memory_order_acquire);
   int visual = 0;
   if (getAttribute(GlxDrawableService::Get().GetDisplay(), config, GLX_VISUAL_ID, &visual) != 0) {
     return 0;

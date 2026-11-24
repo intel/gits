@@ -10,7 +10,7 @@
 
 #include "glEnumsAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 namespace gits::opengl {
 
@@ -44,7 +44,7 @@ void ProgramBinaryCheckService::OnUse(GITSKey program, GLuint name) {
   if (m_Loaded.erase(program) == 0) {
     return;
   }
-  auto& table = player::g_DispatchTable;
+  auto& table = g_DispatchTable;
   const auto isProgram = table.glIsProgram.load(std::memory_order_acquire);
   const auto getProgramiv = table.glGetProgramiv.load(std::memory_order_acquire);
   if (isProgram == nullptr || getProgramiv == nullptr || isProgram(name) == GL_FALSE) {

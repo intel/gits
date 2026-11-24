@@ -12,7 +12,7 @@
 #include "glxDrawableService.h"
 #include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "programBinaryCheckService.h"
 #include "uniformLocationMapService.h"
@@ -56,8 +56,8 @@ void TrackProgramPipeline(const CommandT& command) {
     return;
   }
   GLint pipeline = 0;
-  player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_PROGRAM_PIPELINE_BINDING,
-                                                                        &pipeline);
+  g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_PROGRAM_PIPELINE_BINDING,
+                                                                &pipeline);
   if (static_cast<GLuint>(pipeline) == command.m_pipeline.Value) {
     UniformLocationMapService::Get().BindProgramPipeline(CurrentContext(), command.m_pipeline.Key);
   }
@@ -103,11 +103,11 @@ void ReplayCustomizationLayer::Post(glBindProgramPipelineEXTCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(glActiveShaderProgramCommand& command) {
-  TrackActiveProgram(command, player::g_DispatchTable.glGetProgramPipelineiv);
+  TrackActiveProgram(command, g_DispatchTable.glGetProgramPipelineiv);
 }
 
 void ReplayCustomizationLayer::Post(glActiveShaderProgramEXTCommand& command) {
-  TrackActiveProgram(command, player::g_DispatchTable.glGetProgramPipelineivEXT);
+  TrackActiveProgram(command, g_DispatchTable.glGetProgramPipelineivEXT);
 }
 
 void ReplayCustomizationLayer::Post(glProgramBinaryCommand& command) {
@@ -137,8 +137,7 @@ void ReplayCustomizationLayer::Post(glDeleteObjectARBCommand& command) {
 void ReplayCustomizationLayer::Post(glUseProgramCommand& command) {
   TrackCurrentProgram(command, command.m_program, [] {
     GLint program = 0;
-    player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_CURRENT_PROGRAM,
-                                                                          &program);
+    g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(GL_CURRENT_PROGRAM, &program);
     return static_cast<GLuint>(program);
   });
   ProgramBinaryCheckService::Get().OnUse(command.m_program.Key, command.m_program.Value);
@@ -147,8 +146,7 @@ void ReplayCustomizationLayer::Post(glUseProgramCommand& command) {
 void ReplayCustomizationLayer::Post(glUseProgramObjectARBCommand& command) {
   // GL_CURRENT_PROGRAM is a GL 2.0 query; a GL_ARB_shader_objects-only driver would reject it.
   TrackCurrentProgram(command, command.m_programObj, [] {
-    return player::g_DispatchTable.glGetHandleARB.load(std::memory_order_acquire)(
-        GL_PROGRAM_OBJECT_ARB);
+    return g_DispatchTable.glGetHandleARB.load(std::memory_order_acquire)(GL_PROGRAM_OBJECT_ARB);
   });
   ProgramBinaryCheckService::Get().OnUse(command.m_programObj.Key, command.m_programObj.Value);
 }
@@ -164,11 +162,11 @@ void ReplayCustomizationLayer::Post(glViewportCommand& command) {
   if (Executed(command) && command.m_x.Value == 0 && command.m_y.Value == 0) {
 #if defined(_WIN32)
     HdcVirtualizationService::Get().GrowToFit(
-        player::g_DispatchTable.wglGetCurrentDC.load(std::memory_order_acquire)(),
-        command.m_width.Value, command.m_height.Value);
+        g_DispatchTable.wglGetCurrentDC.load(std::memory_order_acquire)(), command.m_width.Value,
+        command.m_height.Value);
 #else
     GlxDrawableService::Get().FitViewport(
-        player::g_DispatchTable.glXGetCurrentDrawable.load(std::memory_order_acquire)(),
+        g_DispatchTable.glXGetCurrentDrawable.load(std::memory_order_acquire)(),
         command.m_width.Value, command.m_height.Value);
 #endif
   }
@@ -187,8 +185,7 @@ void ReplayCustomizationLayer::Post(glClientWaitSyncCommand& command) {
     return;
   }
   constexpr GLuint64 retryTimeoutNs = 1000000000;
-  const auto clientWaitSync =
-      player::g_DispatchTable.glClientWaitSync.load(std::memory_order_acquire);
+  const auto clientWaitSync = g_DispatchTable.glClientWaitSync.load(std::memory_order_acquire);
   while (command.m_Return.Value == GL_TIMEOUT_EXPIRED) {
     command.m_Return.Value =
         clientWaitSync(command.m_sync.Value, GL_SYNC_FLUSH_COMMANDS_BIT, retryTimeoutNs);

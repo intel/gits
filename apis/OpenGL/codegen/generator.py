@@ -16,6 +16,7 @@
 from pathlib import Path
 
 from command_ids import build_command_ids
+from generator_dispatch import generate_dispatch_files
 from generator_enums import generate_enum_files
 from generator_interceptor import build_interceptor_command_list, generate_interceptor_files
 from generator_layer_interface import generate_layer_interface_files, generate_pname_value_count_file
@@ -96,6 +97,7 @@ def main() -> None:
         check_function_groups_against_enums(commands, enums)
 
     generate_interceptor_files(interceptor_commands)
+    generate_dispatch_files(interceptor_commands)
     generate_recorder_files(interceptor_commands)
     generate_player_files(interceptor_commands,
                           {key.group for key in enum_name_map if key.group})

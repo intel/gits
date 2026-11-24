@@ -9,7 +9,7 @@
 #include "discardedOutputElements.h"
 
 #include "glEnumsAuto.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 namespace gits::opengl {
 
@@ -45,7 +45,7 @@ GLenum StateListLengthPname(GLenum pname) {
 
 size_t StateListElements(GLenum pname) {
   const GLenum lengthPname = StateListLengthPname(pname);
-  auto realGetIntegerv = player::g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
+  auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
   if (lengthPname == 0 || !realGetIntegerv) {
     return 0;
   }
@@ -56,7 +56,7 @@ size_t StateListElements(GLenum pname) {
 
 size_t TexBumpListElements(GLenum pname) {
   auto realGetTexBumpParameteriv =
-      player::g_DispatchTable.glGetTexBumpParameterivATI.load(std::memory_order_acquire);
+      g_DispatchTable.glGetTexBumpParameterivATI.load(std::memory_order_acquire);
   if (pname != GL_BUMP_TEX_UNITS_ATI || !realGetTexBumpParameteriv) {
     return 0;
   }
@@ -67,7 +67,7 @@ size_t TexBumpListElements(GLenum pname) {
 
 size_t AtomicCounterBufferListElements(GLuint program, GLuint bufferIndex, GLenum pname) {
   auto realGetActiveAtomicCounterBufferiv =
-      player::g_DispatchTable.glGetActiveAtomicCounterBufferiv.load(std::memory_order_acquire);
+      g_DispatchTable.glGetActiveAtomicCounterBufferiv.load(std::memory_order_acquire);
   if (pname != GL_ATOMIC_COUNTER_BUFFER_ACTIVE_ATOMIC_COUNTER_INDICES ||
       !realGetActiveAtomicCounterBufferiv) {
     return 0;
@@ -80,7 +80,7 @@ size_t AtomicCounterBufferListElements(GLuint program, GLuint bufferIndex, GLenu
 
 size_t UniformBlockListElements(GLuint program, GLuint uniformBlockIndex, GLenum pname) {
   auto realGetActiveUniformBlockiv =
-      player::g_DispatchTable.glGetActiveUniformBlockiv.load(std::memory_order_acquire);
+      g_DispatchTable.glGetActiveUniformBlockiv.load(std::memory_order_acquire);
   if (pname != GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES || !realGetActiveUniformBlockiv) {
     return 0;
   }
@@ -95,7 +95,7 @@ size_t SubroutineUniformListElements(GLuint program,
                                      GLuint index,
                                      GLenum pname) {
   auto realGetActiveSubroutineUniformiv =
-      player::g_DispatchTable.glGetActiveSubroutineUniformiv.load(std::memory_order_acquire);
+      g_DispatchTable.glGetActiveSubroutineUniformiv.load(std::memory_order_acquire);
   if (pname != GL_COMPATIBLE_SUBROUTINES || !realGetActiveSubroutineUniformiv) {
     return 0;
   }

@@ -42,7 +42,7 @@
 #include "handleMapService.h"
 #include "log.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "shareGroupService.h"
 
 #include <array>

@@ -18,7 +18,7 @@
 #include "log.h"
 #include "mappedDataMetaTypes.h"
 #include "messageBus.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "recordingSession.h"
 #include "systemApi.h"
 

@@ -9,8 +9,9 @@
 #include "recorderInterface.h"
 
 #include "clientArraysService.h"
+#include "driverExports.h"
+#include "glDispatchAuto.h"
 #include "mapTrackingService.h"
-#include "openglDriversAuto.h"
 #include "realDriver.h"
 #include "recorderWrappers.h"
 
@@ -37,7 +38,7 @@ public:
   }
 
   void* ResolveRealFunction(const char* name) override {
-    return GetRealProcAddress(name);
+    return dispatch::GetDriverExport(name);
   }
 
   bool SetResolvedFunction(const char* name, void* pointer) override {

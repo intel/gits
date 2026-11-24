@@ -12,7 +12,7 @@ ${AUTO_GENERATED_HEADER}
 #include "captureManager.h"
 #include "commandSerializersAuto.h"
 #include "glxDrawableIdentityService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "unsupportedCommandTypes.h"
 
 #include <atomic>

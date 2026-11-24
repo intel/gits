@@ -13,7 +13,7 @@
 #include "layerAuto.h"
 #include "log.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "threadContextService.h"
 
@@ -26,7 +26,7 @@ namespace gits::opengl {
 namespace {
 void ReplayLevel(
     GLuint texture, GLint level, GLint capturedStride, GLint rows, const uint8_t* source) {
-  auto map = player::g_DispatchTable.glMapTexture2DINTEL.load(std::memory_order_acquire);
+  auto map = g_DispatchTable.glMapTexture2DINTEL.load(std::memory_order_acquire);
   GLint stride = 0;
   GLenum layout = 0;
   auto* pointer = static_cast<uint8_t*>(map(texture, level, GL_MAP_WRITE_BIT, &stride, &layout));
@@ -37,7 +37,7 @@ void ReplayLevel(
                    "updates are not replayed (GL_INTEL_map_texture is required)";
     });
     if (pointer != nullptr) {
-      player::g_DispatchTable.glUnmapTexture2DINTEL.load(std::memory_order_acquire)(texture, level);
+      g_DispatchTable.glUnmapTexture2DINTEL.load(std::memory_order_acquire)(texture, level);
     }
     return;
   }
@@ -47,7 +47,7 @@ void ReplayLevel(
     std::memcpy(pointer + static_cast<size_t>(row) * static_cast<size_t>(stride),
                 source + static_cast<size_t>(row) * static_cast<size_t>(capturedStride), rowBytes);
   }
-  player::g_DispatchTable.glUnmapTexture2DINTEL.load(std::memory_order_acquire)(texture, level);
+  g_DispatchTable.glUnmapTexture2DINTEL.load(std::memory_order_acquire)(texture, level);
 }
 
 // Levels of textures the recorder never saw created resolve to name 0 and are left out.

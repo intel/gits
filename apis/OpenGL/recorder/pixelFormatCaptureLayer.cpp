@@ -11,7 +11,7 @@
 #include "captureManager.h"
 #include "glEnumsAuto.h"
 #include "log.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "pixelFormatMetaTypes.h"
 #include "systemApi.h"
 

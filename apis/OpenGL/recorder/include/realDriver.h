@@ -12,6 +12,5 @@ namespace gits::opengl {
 
 void InitializeRealDriver();
 void FinalizeRealDriver();
-void* GetRealProcAddress(const char* name);
 
 } // namespace gits::opengl

@@ -27,10 +27,7 @@ from object_name_lifecycle import ObjectNameRole
 # *Auto.{h,cpp} ones) for "g_DispatchTable.<name>" (WarmUpResolvableFunctions()'s
 # enabled-only probing loop would otherwise never warm these up either - see below for why
 # that still leaves them working correctly either way):
-#   - wglGetProcAddress, glXGetProcAddressARB: openglDriversAuto.cpp.mako's own
-#     ResolveDriverFunction() fallback path
-#     (this is the recorder/player-shared template - see that file's own comment for why
-#     wglGetProcAddress itself has no generated Command/CommandRunner at all, on either side).
+#   - wglGetProcAddress, glXGetProcAddressARB: the shared resolver's fallback path.
 #   - glGetIntegerv/glMapBufferRange: player/mappedDataMetaRunner.cpp's buffer map-tracking
 #     replay, which queries/re-establishes a mapped buffer's real GL state directly - this is
 #     a low-level mechanism operating underneath the generated-command replay path, not a
@@ -48,8 +45,7 @@ from object_name_lifecycle import ObjectNameRole
 # buffer, or resolving some *other* function's real pointer, both require one) - the same
 # condition WarmUpResolvableFunctions() exists to opportunistically catch just after a
 # wglMakeCurrent, so each dispatch-table entry's own lazy resolve-thunk (ResolveAndCall_<cmd>,
-# generated unconditionally for every name in `commands` regardless of this filter - see
-# openglDriversAuto.cpp.mako's own page comment) would resolve them correctly on first use
+# generated for every intercepted command regardless of this filter) would resolve them on first use
 # either way, warmed up or not.
 _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'wglGetProcAddress',
@@ -104,41 +100,14 @@ def analyzed_object_params(commands: list[Command]) -> dict[str, list[str]]:
 
 
 def generate_player_files(commands: list[Command], enum_groups: set[str]) -> None:
-    """Generate the player's own real-driver dispatch and per-command CommandRunners.
-
-    Mirrors generator_recorder.py's shape. The player gets its own, independent copy of
-    openglDriversAuto.{h,cpp} - same templates as the recorder, instantiated a second time
-    under the gits::opengl::player namespace (see codegen/templates/openglDriversAuto.h.mako's
-    header comment and docs/development/opengl-player-skeleton-plan.md's Decision 3) - plus
-    the new commandRunnersAuto.{h,cpp} and openGLCommandFactoryAuto.cpp, which have no
-    recorder-side equivalent.
-
-    `commands` is passed to openglDriversAuto.{h,cpp}.mako unfiltered, same as the recorder's
-    own instantiation of the same two templates (generator_recorder.py) - both need a full
-    dispatch-table entry/resolve-thunk for every intercepted name, enabled or not: the
-    interceptor must transparently forward every intercepted function to the real driver on the
-    recorder side, and a small set of disabled commands are still called directly through the
-    player's own g_DispatchTable by hand-written code, bypassing the generated
-    Run()/CommandFactory path entirely (see _PLAYER_DIRECT_DISPATCH_COMMANDS above for exactly
-    which ones and why). Only `warmup_commands` - consumed solely by
-    WarmUpResolvableFunctions()'s own speculative probing loop, the one thing in this template
-    that actually scales with how many *disabled* commands it iterates - is narrowed: a disabled
-    command always replays through the generic UnsupportedCommandRunner instead (see
-    commandRunnersAuto.cpp.mako's own `% if cmd.enabled:` guard), never touching g_DispatchTable,
-    so probing one up front on every wglMakeCurrent (see
-    player/commandRunnersCustom.cpp's WglMakeCurrentRunner::Run()) is pure waste.
-    """
+    """Generate replay warm-up, command runners, and command factories."""
     warmup_commands = [
         c for c in commands
         if c.enabled or c.name in _PLAYER_DIRECT_DISPATCH_COMMANDS
     ]
-    mako_write('templates/openglDriversAuto.h.mako',
-               'player/include/openglDriversAuto.h', commands=commands,
-               namespace='gits::opengl::player')
-    mako_write('templates/openglDriversAuto.cpp.mako',
-               'player/openglDriversAuto.cpp', commands=commands,
-               warmup_commands=warmup_commands, platform_guards=PLATFORM_GUARDS,
-               namespace='gits::opengl::player')
+    mako_write('templates/dispatchWarmUpAuto.cpp.mako',
+               'player/dispatchWarmUpAuto.cpp', warmup_commands=warmup_commands,
+               platform_guards=PLATFORM_GUARDS)
     mako_write('templates/commandRunnersAuto.h.mako',
                'player/include/commandRunnersAuto.h', commands=commands,
                platform_guards=PLATFORM_GUARDS)

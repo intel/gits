@@ -11,7 +11,7 @@
 // The context current on the calling thread, which the real driver reports: an HGLRC on Windows
 // and a GLXContext elsewhere.
 #include "handleMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <atomic>
 

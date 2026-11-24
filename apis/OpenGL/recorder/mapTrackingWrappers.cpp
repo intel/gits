@@ -16,7 +16,7 @@
 #include "log.h"
 #include "mapTrackingService.h"
 #include "mappedTextureService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "recursionGuard.h"
 
 #include <cstring>

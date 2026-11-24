@@ -46,7 +46,7 @@
 #include "handleMapService.h"
 #include "log.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 
 #include <atomic>
 #include <cstddef>
@@ -68,12 +68,12 @@ namespace gits::opengl {
 // comment for why program-in-use is per-context GL state, not per-share-group or process-wide.
 #if defined(_WIN32)
 inline HGLRC CurrentContext() {
-  auto realFunction = player::g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
+  auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
   return realFunction ? realFunction() : nullptr;
 }
 #else
 inline GLXContext CurrentContext() {
-  auto realFunction = player::g_DispatchTable.glXGetCurrentContext.load(std::memory_order_acquire);
+  auto realFunction = g_DispatchTable.glXGetCurrentContext.load(std::memory_order_acquire);
   return realFunction ? realFunction() : nullptr;
 }
 #endif

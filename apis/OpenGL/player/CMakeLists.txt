@@ -7,8 +7,7 @@
 # ===================== end_copyright_notice ==============================
 
 set(GENERATED_SRC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/openglDriversAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/openglDriversAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/dispatchWarmUpAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/commandRunnersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/openGLCommandFactoryAuto.cpp
@@ -21,7 +20,7 @@ add_library(OpenGL_player STATIC
   include/openGLCommandFactory.h
   include/playerLayerManager.h
   include/playerManager.h
-  include/realDriver.h
+  include/dispatchWarmUp.h
   include/bindlessHandleMapService.h
   include/clientArraysMetaRunner.h
   include/discardedOutputElements.h
@@ -77,8 +76,8 @@ target_include_directories(OpenGL_player
 
 target_link_libraries(OpenGL_player
   PUBLIC OpenGL_layer_interface
-  PRIVATE OpenGL_resource_dumping OpenGL_trace OpenGL_subcapture OpenGL_services OpenGL_utils stream
-          windowing log common_interface
+  PRIVATE OpenGL_dispatch OpenGL_resource_dumping OpenGL_trace OpenGL_subcapture OpenGL_services
+          OpenGL_utils stream windowing log common_interface
 )
 if(WIN32)
   target_link_libraries(OpenGL_player PRIVATE gdi32)

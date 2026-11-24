@@ -13,7 +13,7 @@
 #include "configurator.h"
 #include "encoderLayerAuto.h"
 #include "mappedTextureLayer.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "pixelFormatCaptureLayer.h"
 #include "pluginService.h"
 #include "recorderScreenshotsLayer.h"

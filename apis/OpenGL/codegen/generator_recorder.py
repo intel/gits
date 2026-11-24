@@ -224,16 +224,12 @@ def drawable_identities(commands: list[Command]) -> dict[str, DrawableIdentities
 
 
 def generate_recorder_files(commands: list[Command]) -> None:
-    """Generate forwarding wrappers and real-driver dispatch for interceptor commands."""
+    """Generate capture layers and forwarding wrappers for interceptor commands."""
     draws = client_array_draws(commands)
     mako_write('templates/clientArraysLayerAuto.h.mako',
                'recorder/clientArraysLayerAuto.h', client_array_draws=draws)
     mako_write('templates/clientArraysLayerAuto.cpp.mako',
                'recorder/clientArraysLayerAuto.cpp', client_array_draws=draws)
-    mako_write('templates/openglDriversAuto.h.mako',
-               'recorder/include/openglDriversAuto.h', commands=commands)
-    mako_write('templates/openglDriversAuto.cpp.mako',
-               'recorder/openglDriversAuto.cpp', commands=commands)
     mako_write('templates/recorderWrappersAuto.cpp.mako',
                'recorder/recorderWrappersAuto.cpp', commands=commands,
                handle_creating_commands=HANDLE_CREATING_COMMANDS,

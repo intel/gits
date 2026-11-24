@@ -78,7 +78,7 @@ class MappedHandleLifecycle:
     param_to_erase_on_success: dict[str, str]
     """Command name -> name of this handle type's parameter to erase from its
     HandleMapService<cpp_type> after a successful call. Parameter name must match the
-    registry's declared name for this command (see recorder/include/openglDriversAuto.h)."""
+    registry's declared name for this command (see common/dispatch/glDispatchAuto.h)."""
 
 
 # Commands whose *return value* mints a fresh HGLRC key (UpdateOutputHandle), rather than

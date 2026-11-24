@@ -14,7 +14,7 @@
 #include "handleArgumentUpdaters.h"
 #include "log.h"
 #include "mappedTextureDataMetaTypes.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "systemApi.h"
 
 #include "xxhash.h"

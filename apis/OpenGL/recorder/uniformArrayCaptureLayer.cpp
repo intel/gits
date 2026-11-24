@@ -9,7 +9,7 @@
 #include "uniformArrayCaptureLayer.h"
 
 #include "captureManager.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "uniformArrayMetaTypes.h"
 
 namespace gits::opengl {

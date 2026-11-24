@@ -15,7 +15,7 @@ add_library(OpenGL_resource_dumping STATIC
 add_dependencies(OpenGL_resource_dumping OpenGL_codegen)
 target_include_directories(OpenGL_resource_dumping
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-  PRIVATE ../../player/include ${STB_DIR}
+  PRIVATE ../../common/dispatch ../../player/include ${STB_DIR}
 )
 target_link_libraries(OpenGL_resource_dumping
   PUBLIC OpenGL_layer_interface OpenGL_utils

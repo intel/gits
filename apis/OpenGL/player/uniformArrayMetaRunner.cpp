@@ -10,7 +10,7 @@
 
 #include "layerAuto.h"
 #include "objectNameMapService.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "playerManager.h"
 #include "replayContextCaps.h"
 #include "threadContextService.h"
@@ -66,7 +66,7 @@ void UniformArrayMetaRunner::Run() {
     // GL_OBJECT_ACTIVE_UNIFORMS_ARB/GL_OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB have the values of
     // the GL_ACTIVE_UNIFORMS/GL_ACTIVE_UNIFORM_MAX_LENGTH FindUniformArrayElement queries.
     const ReplayContextCaps& caps = CurrentReplayContextCaps();
-    auto& table = player::g_DispatchTable;
+    auto& table = g_DispatchTable;
     if (caps.ShaderObjectsCore) {
       ReplayUniformArray(command, table.glGetProgramiv.load(std::memory_order_acquire),
                          table.glGetActiveUniform.load(std::memory_order_acquire),

@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-#include "realDriver.h"
+#include "driverExports.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -20,7 +20,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace gits::opengl::player {
+namespace gits::opengl::dispatch {
 
 namespace {
 
@@ -29,8 +29,6 @@ HMODULE g_RealDriverLibrary = nullptr;
 #else
 void* g_RealDriverLibrary = nullptr;
 #endif
-
-} // namespace
 
 #ifdef _WIN32
 void InitializeRealDriver() {
@@ -56,14 +54,9 @@ void InitializeRealDriver() {
 }
 #endif
 
-void FinalizeRealDriver() {
-  // Deliberately a no-op: GetModuleHandleA above does not take out a reference, so
-  // unconditionally FreeLibrary-ing here could unload the driver out from under other code in
-  // this process still using it. Simpler and safer to let the OS unload it at process exit,
-  // matching every other player-owned process-global resource in this skeleton.
-}
+} // namespace
 
-void* GetRealProcAddress(const char* name) {
+void* GetDriverExport(const char* name) {
   // Self-initializing: unlike the recorder (which has a dedicated bootstrap step in
   // recorder.cpp), this player skeleton has no separate startup sequence yet, so the first
   // resolution request lazily loads the driver instead.
@@ -76,4 +69,4 @@ void* GetRealProcAddress(const char* name) {
 #endif
 }
 
-} // namespace gits::opengl::player
+} // namespace gits::opengl::dispatch

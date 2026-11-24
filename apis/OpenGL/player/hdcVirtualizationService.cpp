@@ -10,7 +10,7 @@
 
 #include "configurator.h"
 #include "glEnumsAuto.h"
-#include "openglDriversAuto.h"
+#include "glDispatchAuto.h"
 #include "pbufferService.h"
 #include "windowManager.h"
 
@@ -312,7 +312,7 @@ int HdcVirtualizationService::ChooseCapturedPixelFormat(HDC realDc,
   attributes.push_back(0);
   int format = 0;
   UINT count = 0;
-  auto choose = player::g_DispatchTable.wglChoosePixelFormatARB.load(std::memory_order_acquire);
+  auto choose = g_DispatchTable.wglChoosePixelFormatARB.load(std::memory_order_acquire);
   if (choose(realDc, attributes.data(), nullptr, 1, &format, &count) && count > 0) {
     return format;
   }
