@@ -11,6 +11,7 @@
 #include "clientMemoryCapture.h"
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
+#include "glVersionString.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"
 #include "mapTrackingService.h"
@@ -390,8 +391,7 @@ bool BufferShadowService::ReadThroughStaging(uint64_t shareGroup,
   const StagingKey stagingKey{shareGroup, reinterpret_cast<uintptr_t>(CurrentContext())};
   // ARB_copy_buffer can come with only ARB_vertex_buffer_object before GL 1.5, whose context
   // resolves only the ARB-suffixed buffer entry points.
-  const auto [major, minor] = CurrentContextGLVersion();
-  const bool coreBuffers = major > 1 || (major == 1 && minor >= 5);
+  const bool coreBuffers = GlVersionAtLeast(CurrentContextGLVersion(), 1, 5);
   GLuint staging = 0;
   {
     std::lock_guard<std::mutex> lock(m_Mutex);

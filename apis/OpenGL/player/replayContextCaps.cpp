@@ -14,6 +14,7 @@
 #include "openglDriversAuto.h"
 
 #include <cstring>
+#include <utility>
 
 namespace gits::opengl {
 
@@ -41,7 +42,7 @@ public:
   }
 
   bool Has(const char* name) const {
-    if (!GlVersionAtLeast(m_Version, 3, 0)) {
+    if (GlVersionLessThan(m_Version, 3, 0)) {
       return ExtensionsStringContainsWholeWord(m_Legacy, name);
     }
     auto getStringi = player::g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
@@ -104,7 +105,7 @@ ReplayContextCaps QueryCaps() {
     GLint profile = 0;
     getIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
     core = core || (profile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-  } else if (version.first == 3 && version.second == 1) {
+  } else if (version == std::pair{3, 1}) {
     core = core || !extensions.Has("GL_ARB_compatibility");
   }
   caps.DisplayLists = !core;

@@ -31,9 +31,16 @@ bool ContextSupportsInternalformatQuery2();
 // which callers treat as "supports nothing".
 std::pair<int, int> CurrentContextGLVersion();
 
-// Whether the current context (of GL major version `major`, from CurrentContextGLVersion())
-// lists `extensionName`, using only the enumeration form legal on that version.
-bool CurrentContextHasExtension(int major, const char* extensionName);
+// Whether the current context lists `extensionName`. Pass its version from
+// CurrentContextGLVersion() to select the legal enumeration form.
+bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName);
+
+// Uncached check using the current context's already queried version.
+bool SupportsCoreOrExtension(std::pair<int, int> version,
+                             int coreMajor,
+                             int coreMinor,
+                             const char* extension,
+                             const char* alternate = nullptr);
 
 bool ContextSupportsPixelBufferObject();
 bool ContextSupportsQueryBufferObject();

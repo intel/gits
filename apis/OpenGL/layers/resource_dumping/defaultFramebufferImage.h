@@ -12,10 +12,10 @@
 // driver through dispatch tables of their own.
 #include "glEnumsAuto.h"
 #include "glTypes.h"
+#include "glVersionString.h"
 
 #include <atomic>
 #include <cstdint>
-#include <cstdio>
 #include <filesystem>
 #include <iterator>
 #include <string_view>
@@ -57,13 +57,10 @@ std::vector<uint8_t> ReadDefaultFramebuffer(DispatchTableT& table, GLsizei width
     Real(table.glGetIntegerv)(pname, &value);
     return value;
   };
-  int major = 0;
-  int minor = 0;
-  if (const auto* version = reinterpret_cast<const char*>(Real(table.glGetString)(GL_VERSION))) {
-    std::sscanf(version, "%d.%d", &major, &minor);
-  }
-  const auto atLeast = [&](int requiredMajor, int requiredMinor) {
-    return major > requiredMajor || (major == requiredMajor && minor >= requiredMinor);
+  const auto version =
+      ParseGlVersionMajorMinor(reinterpret_cast<const char*>(Real(table.glGetString)(GL_VERSION)));
+  const auto atLeast = [version](int requiredMajor, int requiredMinor) {
+    return GlVersionAtLeast(version, requiredMajor, requiredMinor);
   };
 
   // Before 3.0, framebuffer objects come from GL_ARB_framebuffer_object or

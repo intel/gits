@@ -9,6 +9,7 @@
 #include "stateTrackingLayer.h"
 
 #include "commandSerializersAuto.h"
+#include "glVersionString.h"
 #include "handleArgumentUpdaters.h"
 #include "liveGl.h"
 #include "pixelFormatMetaTypes.h"
@@ -17,7 +18,6 @@
 #include "uniformLocationMapService.h"
 
 #include <algorithm>
-#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -662,13 +662,9 @@ bool StateTrackingLayer::Compatibility(uint32_t threadId) {
   if (known != m_Compatibility.end()) {
     return known->second;
   }
-  int major = 0;
-  int minor = 0;
-  if (const auto* version = reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION));
-      version != nullptr) {
-    std::sscanf(version, "%d.%d", &major, &minor);
-  }
-  const bool compatibility = CompatibilityContext(major, minor);
+  const auto version =
+      ParseGlVersionMajorMinor(reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION)));
+  const bool compatibility = CompatibilityContext(version);
   m_Compatibility.emplace(context, compatibility);
   return compatibility;
 }

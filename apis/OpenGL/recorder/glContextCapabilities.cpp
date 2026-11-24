@@ -25,8 +25,8 @@ std::pair<int, int> CurrentContextGLVersion() {
   return ParseGlVersionMajorMinor(reinterpret_cast<const char*>(realGetString(GL_VERSION)));
 }
 
-bool CurrentContextHasExtension(int major, const char* extensionName) {
-  if (major >= 3) {
+bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName) {
+  if (version.first >= 3) {
     // GL_NUM_EXTENSIONS/glGetStringi are themselves only legal from 3.0 on.
     GLint numExtensions = 0;
     auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
@@ -47,6 +47,16 @@ bool CurrentContextHasExtension(int major, const char* extensionName) {
   auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
   return ExtensionsStringContainsWholeWord(
       reinterpret_cast<const char*>(realGetString(GL_EXTENSIONS)), extensionName);
+}
+
+bool SupportsCoreOrExtension(std::pair<int, int> version,
+                             int coreMajor,
+                             int coreMinor,
+                             const char* extension,
+                             const char* alternate) {
+  return GlVersionAtLeast(version, coreMajor, coreMinor) ||
+         CurrentContextHasExtension(version, extension) ||
+         (alternate != nullptr && CurrentContextHasExtension(version, alternate));
 }
 
 namespace {
@@ -151,13 +161,8 @@ bool ContextSupportsGLFeature(std::mutex& cacheMutex,
       return it->second;
     }
   }
-  const auto [major, minor] = CurrentContextGLVersion();
-  // Either candidate name is sufficient - see ContextSupportsPixelBufferObject()'s own comment
-  // for why GL_EXT_pixel_buffer_object is passed as `extensionNameAlias` there.
-  const bool supported =
-      major > coreSinceMajor || (major == coreSinceMajor && minor >= coreSinceMinor) ||
-      CurrentContextHasExtension(major, extensionName) ||
-      (extensionNameAlias != nullptr && CurrentContextHasExtension(major, extensionNameAlias));
+  const bool supported = SupportsCoreOrExtension(CurrentContextGLVersion(), coreSinceMajor,
+                                                 coreSinceMinor, extensionName, extensionNameAlias);
   if (cacheable) {
     std::lock_guard<std::mutex> lock(cacheMutex);
     cache[contextKey] = supported;

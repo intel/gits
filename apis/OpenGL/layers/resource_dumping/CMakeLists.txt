@@ -18,7 +18,7 @@ target_include_directories(OpenGL_resource_dumping
   PRIVATE ../../player/include ${STB_DIR}
 )
 target_link_libraries(OpenGL_resource_dumping
-  PUBLIC OpenGL_layer_interface
+  PUBLIC OpenGL_layer_interface OpenGL_utils
   PRIVATE stb_implementation log common_interface OpenGL_platform
 )
 set_target_properties(OpenGL_resource_dumping PROPERTIES FOLDER OpenGL)

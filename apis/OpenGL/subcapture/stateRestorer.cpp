@@ -9,6 +9,7 @@
 #include "stateRestorer.h"
 
 #include "commandSerializersAuto.h"
+#include "glVersionString.h"
 #include "glxDrawableService.h"
 #include "handleMapService.h"
 #include "hdcVirtualizationService.h"
@@ -18,7 +19,6 @@
 #include "threadContextService.h"
 
 #include <algorithm>
-#include <cstdio>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -266,7 +266,7 @@ uint64_t StateRestorer::LiveDrawable() const {
 // A make-context-current call can read another window or pbuffer than the one it draws to. That
 // drawable is restored as the draw one of a wglMakeCurrent, then the recorded call is made again.
 void StateRestorer::RestoreReadDrawable(const MakeCurrent& current) {
-  if (!m_Version.AtLeast(3, 0)) {
+  if (m_Version.LessThan(3, 0)) {
     return;
   }
   if (current.GlxDisplay != nullptr) {
@@ -725,12 +725,9 @@ void StateRestorer::ReadExtensions() {
 }
 
 void StateRestorer::ReadVersion() {
-  m_Version = {};
-  const auto* version = reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION));
-  if (version != nullptr) {
-    std::sscanf(version, "%d.%d", &m_Version.Major, &m_Version.Minor);
-  }
-  m_Version.Compatibility = CompatibilityContext(m_Version.Major, m_Version.Minor);
+  const auto version =
+      ParseGlVersionMajorMinor(reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION)));
+  m_Version = {version, CompatibilityContext(version)};
 }
 
 void StateRestorer::MapNames(GITSKey shareGroup, GITSKey context) {
@@ -1728,7 +1725,7 @@ void StateRestorer::RestoreBindings() {
     RestoreArbProgramBindings();
   }
 
-  if (!m_Version.AtLeast(3, 0)) {
+  if (m_Version.LessThan(3, 0)) {
     glDrawBufferCommand drawBuffer;
     drawBuffer.m_buf.Value = GetInteger(GL_DRAW_BUFFER);
     Emit<glDrawBufferCommandSerializer>(drawBuffer);

@@ -10,6 +10,7 @@
 
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
+#include "glVersionString.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
@@ -318,8 +319,7 @@ bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value) {
 }
 
 bool GetBoundBufferSize(GLenum target, GLint64& size) {
-  const auto [major, minor] = CurrentContextGLVersion();
-  if (major > 3 || (major == 3 && minor >= 2)) {
+  if (GlVersionAtLeast(CurrentContextGLVersion(), 3, 2)) {
     if (!TryResolveRealFunction("glGetBufferParameteri64v")) {
       return false;
     }

@@ -564,7 +564,7 @@ void StateRestorer::RestoreClientArrays() {
     }
   }
 
-  if (!m_Version.AtLeast(1, 3)) {
+  if (m_Version.LessThan(1, 3)) {
     return;
   }
   const GLint clientActiveTexture = GetInteger(GL_CLIENT_ACTIVE_TEXTURE);
@@ -620,7 +620,7 @@ void StateRestorer::ResetClientArrays() {
     }
   }
 
-  if (!m_Version.AtLeast(1, 3)) {
+  if (m_Version.LessThan(1, 3)) {
     return;
   }
   const GLint clientActiveTexture = GetInteger(GL_CLIENT_ACTIVE_TEXTURE);

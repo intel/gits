@@ -12,6 +12,7 @@
 #include "clientMemoryCapture.h"
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
+#include "glVersionString.h"
 #include "log.h"
 #include "mapTrackingService.h"
 #include "mappedTextureService.h"
@@ -26,41 +27,37 @@ namespace gits::opengl {
 
 namespace {
 
-bool CanQueryBufferBinding(GLenum target, int major, int minor) {
-  const auto supports = [major, minor](int coreMajor, int coreMinor, const char* extension,
-                                       const char* alternate = nullptr) {
-    return major > coreMajor || (major == coreMajor && minor >= coreMinor) ||
-           CurrentContextHasExtension(major, extension) ||
-           (alternate != nullptr && CurrentContextHasExtension(major, alternate));
-  };
+bool CanQueryBufferBinding(GLenum target, std::pair<int, int> version) {
   switch (target) {
   case GL_ARRAY_BUFFER:
   case GL_ELEMENT_ARRAY_BUFFER:
-    return supports(1, 5, "GL_ARB_vertex_buffer_object");
+    return SupportsCoreOrExtension(version, 1, 5, "GL_ARB_vertex_buffer_object");
   case GL_PIXEL_PACK_BUFFER:
   case GL_PIXEL_UNPACK_BUFFER:
-    return supports(2, 1, "GL_ARB_pixel_buffer_object", "GL_EXT_pixel_buffer_object");
+    return SupportsCoreOrExtension(version, 2, 1, "GL_ARB_pixel_buffer_object",
+                                   "GL_EXT_pixel_buffer_object");
   case GL_UNIFORM_BUFFER:
-    return supports(3, 1, "GL_ARB_uniform_buffer_object");
+    return SupportsCoreOrExtension(version, 3, 1, "GL_ARB_uniform_buffer_object");
   case GL_TRANSFORM_FEEDBACK_BUFFER:
-    return supports(3, 0, "GL_EXT_transform_feedback");
+    return SupportsCoreOrExtension(version, 3, 0, "GL_EXT_transform_feedback");
   case GL_COPY_READ_BUFFER:
   case GL_COPY_WRITE_BUFFER:
-    return supports(3, 1, "GL_ARB_copy_buffer");
+    return SupportsCoreOrExtension(version, 3, 1, "GL_ARB_copy_buffer");
   case GL_DRAW_INDIRECT_BUFFER:
-    return supports(4, 0, "GL_ARB_draw_indirect");
+    return SupportsCoreOrExtension(version, 4, 0, "GL_ARB_draw_indirect");
   case GL_ATOMIC_COUNTER_BUFFER:
-    return supports(4, 2, "GL_ARB_shader_atomic_counters");
+    return SupportsCoreOrExtension(version, 4, 2, "GL_ARB_shader_atomic_counters");
   case GL_DISPATCH_INDIRECT_BUFFER:
-    return supports(4, 3, "GL_ARB_compute_shader");
+    return SupportsCoreOrExtension(version, 4, 3, "GL_ARB_compute_shader");
   case GL_SHADER_STORAGE_BUFFER:
-    return supports(4, 3, "GL_ARB_shader_storage_buffer_object");
+    return SupportsCoreOrExtension(version, 4, 3, "GL_ARB_shader_storage_buffer_object");
   case GL_QUERY_BUFFER:
-    return supports(4, 4, "GL_ARB_query_buffer_object");
+    return SupportsCoreOrExtension(version, 4, 4, "GL_ARB_query_buffer_object");
   case GL_TEXTURE_BUFFER:
-    return supports(3, 1, "GL_ARB_texture_buffer_object", "GL_EXT_texture_buffer_object");
+    return SupportsCoreOrExtension(version, 3, 1, "GL_ARB_texture_buffer_object",
+                                   "GL_EXT_texture_buffer_object");
   case GL_PARAMETER_BUFFER:
-    return supports(4, 6, "GL_ARB_indirect_parameters");
+    return SupportsCoreOrExtension(version, 4, 6, "GL_ARB_indirect_parameters");
   default:
     return false;
   }
@@ -74,15 +71,15 @@ void* APIENTRY CustomWrapper_glMapBufferRange(GLenum target,
   const bool record = !guard.IsNested();
   std::vector<uint8_t> initialBytes;
   if (record && MapTrackingService::NeedsInitialShadowContents(access)) {
-    const auto [major, minor] = CurrentContextGLVersion();
-    const GLuint buffer = CanQueryBufferBinding(target, major, minor)
+    const auto version = CurrentContextGLVersion();
+    const GLuint buffer = CanQueryBufferBinding(target, version)
                               ? MapTrackingService::Get().ResolveBoundBuffer(target)
                               : 0;
-    const bool getterAvailable = buffer != 0 && (major > 1 || (major == 1 && minor >= 5)) &&
-                                 TryResolveRealFunction("glGetBufferParameteriv") &&
-                                 (major < 3 || (major == 3 && minor < 2) ||
-                                  TryResolveRealFunction("glGetBufferParameteri64v")) &&
-                                 TryResolveRealFunction("glGetBufferSubData");
+    const bool getterAvailable =
+        buffer != 0 && GlVersionAtLeast(version, 1, 5) &&
+        TryResolveRealFunction("glGetBufferParameteriv") &&
+        (GlVersionLessThan(version, 3, 2) || TryResolveRealFunction("glGetBufferParameteri64v")) &&
+        TryResolveRealFunction("glGetBufferSubData");
     initialBytes = MapTrackingService::Get().PrepareInitialBytes(
         offset, length, access, getterAvailable,
         /*parameter=*/
@@ -245,10 +242,10 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
   const bool record = !guard.IsNested();
   std::vector<uint8_t> initialBytes;
   if (record && MapTrackingService::NeedsInitialShadowContents(access)) {
-    const int major = CurrentContextGLVersion().first;
+    const auto version = CurrentContextGLVersion();
     constexpr bool ext = Family == NamedBufferFamily::EXT;
     // EXT entry points require GL_EXT_direct_state_access; core DSA support does not imply it.
-    const bool supported = ext ? CurrentContextHasExtension(major, "GL_EXT_direct_state_access")
+    const bool supported = ext ? CurrentContextHasExtension(version, "GL_EXT_direct_state_access")
                                : ContextSupportsDirectStateAccess();
     const char* getterName = ext ? "glGetNamedBufferSubDataEXT" : "glGetNamedBufferSubData";
     const bool getterAvailable =
@@ -339,20 +336,20 @@ void APIENTRY CustomWrapper_GetBufferPointerv(GLenum target, GLenum pname, void*
       *params == nullptr) {
     return;
   }
-  const auto [major, minor] = CurrentContextGLVersion();
+  const auto version = CurrentContextGLVersion();
   bool supported = false;
   const char* name = nullptr;
   if constexpr (Family == TargetPointerFamily::Core) {
-    supported = major > 1 || (major == 1 && minor >= 5);
+    supported = GlVersionAtLeast(version, 1, 5);
     name = "glGetBufferPointerv";
   } else if constexpr (Family == TargetPointerFamily::ARB) {
-    supported = CurrentContextHasExtension(major, "GL_ARB_vertex_buffer_object");
+    supported = CurrentContextHasExtension(version, "GL_ARB_vertex_buffer_object");
     name = "glGetBufferPointervARB";
   } else {
-    supported = CurrentContextHasExtension(major, "GL_OES_mapbuffer");
+    supported = CurrentContextHasExtension(version, "GL_OES_mapbuffer");
     name = "glGetBufferPointervOES";
   }
-  if (!supported || !CanQueryBufferBinding(target, major, minor)) {
+  if (!supported || !CanQueryBufferBinding(target, version)) {
     return;
   }
   if (TryResolveRealFunction(name)) {
@@ -369,10 +366,10 @@ void APIENTRY CustomWrapper_GetNamedBufferPointerv(GLuint buffer, GLenum pname, 
       *params == nullptr) {
     return;
   }
-  const bool supported = Family == NamedBufferFamily::Core
-                             ? ContextSupportsDirectStateAccess()
-                             : CurrentContextHasExtension(CurrentContextGLVersion().first,
-                                                          "GL_EXT_direct_state_access");
+  const bool supported =
+      Family == NamedBufferFamily::Core
+          ? ContextSupportsDirectStateAccess()
+          : CurrentContextHasExtension(CurrentContextGLVersion(), "GL_EXT_direct_state_access");
   const char* name = Family == NamedBufferFamily::Core ? "glGetNamedBufferPointerv"
                                                        : "glGetNamedBufferPointervEXT";
   if (supported && TryResolveRealFunction(name)) {

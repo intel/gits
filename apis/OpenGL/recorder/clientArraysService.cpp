@@ -31,6 +31,7 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace gits::opengl {
@@ -68,10 +69,6 @@ struct ContextCaps {
   OpenGLDispatchTable::glClientActiveTextureARBPtr ClientActiveTexture{nullptr};
 };
 
-bool AtLeast(std::pair<int, int> version, int major, int minor) {
-  return GlVersionAtLeast(version, major, minor);
-}
-
 GLint GetInteger(GLenum pname) {
   GLint value = 0;
   g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(pname, &value);
@@ -87,57 +84,50 @@ ContextCaps QueryContextCaps() {
   // Client arrays were removed from core profiles (and from forward-compatible contexts, which
   // drop every deprecated feature); on those contexts every array is necessarily buffer-backed.
   bool core = false;
-  if (AtLeast(version, 3, 0)) {
+  if (GlVersionAtLeast(version, 3, 0)) {
     core = (GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0;
   }
-  if (AtLeast(version, 3, 2)) {
+  if (GlVersionAtLeast(version, 3, 2)) {
     core = core || (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-  } else if (version.first == 3 && version.second == 1) {
-    core = core || !CurrentContextHasExtension(version.first, "GL_ARB_compatibility");
+  } else if (version == std::pair{3, 1}) {
+    core = core || !CurrentContextHasExtension(version, "GL_ARB_compatibility");
   }
   if (core) {
     return caps;
   }
   caps.ClientArrays = true;
-  caps.BufferObjects = AtLeast(version, 1, 5) ||
-                       CurrentContextHasExtension(version.first, "GL_ARB_vertex_buffer_object");
-  const bool multiTextureCore = AtLeast(version, 1, 3);
+  caps.BufferObjects = SupportsCoreOrExtension(version, 1, 5, "GL_ARB_vertex_buffer_object");
+  const bool multiTextureCore = GlVersionAtLeast(version, 1, 3);
   caps.MultiTexture =
-      multiTextureCore || CurrentContextHasExtension(version.first, "GL_ARB_multitexture");
+      multiTextureCore || CurrentContextHasExtension(version, "GL_ARB_multitexture");
   if (caps.MultiTexture) {
     caps.ClientActiveTexture =
         multiTextureCore ? g_DispatchTable.glClientActiveTexture.load(std::memory_order_acquire)
                          : g_DispatchTable.glClientActiveTextureARB.load(std::memory_order_acquire);
   }
-  caps.SecondaryColor =
-      AtLeast(version, 1, 4) || CurrentContextHasExtension(version.first, "GL_EXT_secondary_color");
-  caps.FogCoord =
-      AtLeast(version, 1, 4) || CurrentContextHasExtension(version.first, "GL_EXT_fog_coord");
-  caps.GenericAttribsCore = AtLeast(version, 2, 0);
+  caps.SecondaryColor = SupportsCoreOrExtension(version, 1, 4, "GL_EXT_secondary_color");
+  caps.FogCoord = SupportsCoreOrExtension(version, 1, 4, "GL_EXT_fog_coord");
+  caps.GenericAttribsCore = GlVersionAtLeast(version, 2, 0);
   caps.GenericAttribs = caps.GenericAttribsCore ||
-                        CurrentContextHasExtension(version.first, "GL_ARB_vertex_shader") ||
-                        CurrentContextHasExtension(version.first, "GL_ARB_vertex_program");
-  caps.IntegerAttribs =
-      AtLeast(version, 3, 0) || CurrentContextHasExtension(version.first, "GL_EXT_gpu_shader4");
-  caps.Divisor = AtLeast(version, 3, 3) ||
-                 CurrentContextHasExtension(version.first, "GL_ARB_instanced_arrays") ||
-                 CurrentContextHasExtension(version.first, "GL_EXT_instanced_arrays") ||
-                 CurrentContextHasExtension(version.first, "GL_NV_instanced_arrays");
-  caps.LongAttribs = AtLeast(version, 4, 3);
-  caps.PrimitiveRestart = AtLeast(version, 3, 1);
-  caps.PrimitiveRestartNV = CurrentContextHasExtension(version.first, "GL_NV_primitive_restart");
-  caps.FixedIndexRestart = AtLeast(version, 4, 3) ||
-                           CurrentContextHasExtension(version.first, "GL_ARB_ES3_compatibility");
-  caps.PersistentMaps = AtLeast(version, 4, 4) ||
-                        (AtLeast(version, 3, 0) &&
-                         (CurrentContextHasExtension(version.first, "GL_ARB_buffer_storage") ||
-                          CurrentContextHasExtension(version.first, "GL_EXT_buffer_storage")));
-  caps.CopyBuffer =
-      AtLeast(version, 3, 1) || CurrentContextHasExtension(version.first, "GL_ARB_copy_buffer");
-  caps.VertexArrays = AtLeast(version, 3, 0) ||
-                      CurrentContextHasExtension(version.first, "GL_ARB_vertex_array_object") ||
-                      CurrentContextHasExtension(version.first, "GL_APPLE_vertex_array_object");
-  if (AtLeast(version, 2, 0)) {
+                        CurrentContextHasExtension(version, "GL_ARB_vertex_shader") ||
+                        CurrentContextHasExtension(version, "GL_ARB_vertex_program");
+  caps.IntegerAttribs = SupportsCoreOrExtension(version, 3, 0, "GL_EXT_gpu_shader4");
+  caps.Divisor = GlVersionAtLeast(version, 3, 3) ||
+                 CurrentContextHasExtension(version, "GL_ARB_instanced_arrays") ||
+                 CurrentContextHasExtension(version, "GL_EXT_instanced_arrays") ||
+                 CurrentContextHasExtension(version, "GL_NV_instanced_arrays");
+  caps.LongAttribs = GlVersionAtLeast(version, 4, 3);
+  caps.PrimitiveRestart = GlVersionAtLeast(version, 3, 1);
+  caps.PrimitiveRestartNV = CurrentContextHasExtension(version, "GL_NV_primitive_restart");
+  caps.FixedIndexRestart = SupportsCoreOrExtension(version, 4, 3, "GL_ARB_ES3_compatibility");
+  caps.PersistentMaps = GlVersionAtLeast(version, 4, 4) ||
+                        (GlVersionAtLeast(version, 3, 0) &&
+                         (CurrentContextHasExtension(version, "GL_ARB_buffer_storage") ||
+                          CurrentContextHasExtension(version, "GL_EXT_buffer_storage")));
+  caps.CopyBuffer = SupportsCoreOrExtension(version, 3, 1, "GL_ARB_copy_buffer");
+  caps.VertexArrays = SupportsCoreOrExtension(version, 3, 0, "GL_ARB_vertex_array_object",
+                                              "GL_APPLE_vertex_array_object");
+  if (GlVersionAtLeast(version, 2, 0)) {
     caps.MaxTexCoords = GetInteger(GL_MAX_TEXTURE_COORDS);
   } else if (caps.MultiTexture) {
     caps.MaxTexCoords = GetInteger(GL_MAX_TEXTURE_UNITS);

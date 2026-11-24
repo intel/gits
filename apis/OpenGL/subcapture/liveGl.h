@@ -17,6 +17,7 @@
 #include <atomic>
 #include <cstring>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace gits::opengl {
@@ -58,20 +59,20 @@ inline GLuint GetName(GLenum pname) {
   return static_cast<GLuint>(GetInteger(pname));
 }
 
-// Whether the current context, of GL `major`.`minor`, keeps the features GL 3.0 deprecated. A
+// Whether the current context, of the given GL version, keeps the features GL 3.0 deprecated. A
 // forward-compatible context removes them, a GL 3.1 context keeps them only with
 // GL_ARB_compatibility, and a later one only in a compatibility profile.
-inline bool CompatibilityContext(int major, int minor) {
-  if (major < 3) {
+inline bool CompatibilityContext(std::pair<int, int> version) {
+  if (version.first < 3) {
     return true;
   }
   if ((GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0) {
     return false;
   }
-  if (major == 3 && minor == 0) {
+  if (version == std::pair{3, 0}) {
     return true;
   }
-  if (major == 3 && minor == 1) {
+  if (version == std::pair{3, 1}) {
     const GLint count = GetInteger(GL_NUM_EXTENSIONS);
     for (GLint i = 0; i < count; ++i) {
       const auto* name =

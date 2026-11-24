@@ -29,4 +29,8 @@ inline bool GlVersionAtLeast(std::pair<int, int> version, int major, int minor) 
   return version.first > major || (version.first == major && version.second >= minor);
 }
 
+inline bool GlVersionLessThan(std::pair<int, int> version, int major, int minor) {
+  return !GlVersionAtLeast(version, major, minor);
+}
+
 } // namespace gits::opengl

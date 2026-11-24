@@ -9,6 +9,7 @@
 #pragma once
 
 #include "analyzerResults.h"
+#include "glVersionString.h"
 #include "stateTrackingService.h"
 #include "subcaptureRecorder.h"
 
@@ -65,11 +66,13 @@ public:
 
 private:
   struct Version {
-    int Major{};
-    int Minor{};
+    std::pair<int, int> MajorMinor{};
     bool Compatibility{};
     bool AtLeast(int major, int minor) const {
-      return Major > major || (Major == major && Minor >= minor);
+      return GlVersionAtLeast(MajorMinor, major, minor);
+    }
+    bool LessThan(int major, int minor) const {
+      return GlVersionLessThan(MajorMinor, major, minor);
     }
   };
 

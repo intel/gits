@@ -11,8 +11,8 @@
 #include "bufferShadowService.h"
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
-#include "glContextCapabilities.h"
 #include "configurator.h"
+#include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"
@@ -48,9 +48,8 @@ WatchedShadow::Tracking PublishedShadowTracking(GLbitfield access) {
 }
 
 void RequireShadowMapAlignment() {
-  const auto [major, minor] = CurrentContextGLVersion();
-  GITS_ASSERT(major > 4 || (major == 4 && minor >= 2) ||
-                  CurrentContextHasExtension(major, "GL_ARB_map_buffer_alignment"),
+  const auto version = CurrentContextGLVersion();
+  GITS_ASSERT(SupportsCoreOrExtension(version, 4, 2, "GL_ARB_map_buffer_alignment"),
               "Shadow mapping requires OpenGL 4.2 or GL_ARB_map_buffer_alignment");
 }
 
@@ -129,10 +128,10 @@ bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* 
 }
 
 bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
-  const auto [major, minor] = CurrentContextGLVersion();
-  if ((major < 4 || (major == 4 && minor < 4)) &&
-      !CurrentContextHasExtension(major, "GL_ARB_buffer_storage") &&
-      !CurrentContextHasExtension(major, "GL_EXT_buffer_storage")) {
+  const auto version = CurrentContextGLVersion();
+  const bool supportsBufferStorage =
+      SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage");
+  if (!supportsBufferStorage) {
     return true;
   }
   GLint flags = 0;
@@ -158,11 +157,10 @@ PersistentStorage PersistentMapSanityCheck(
     GLsizeiptr length,
     GLbitfield access,
     const MapTrackingService::BufferParameterCallback& parameter) {
-  const auto [major, minor] = CurrentContextGLVersion();
-  GITS_ASSERT(major > 4 || (major == 4 && minor >= 4) ||
-                  CurrentContextHasExtension(major, "GL_ARB_buffer_storage") ||
-                  CurrentContextHasExtension(major, "GL_EXT_buffer_storage"),
-              "Persistent buffer mapping requires buffer storage support");
+  const auto version = CurrentContextGLVersion();
+  GITS_ASSERT(
+      SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage"),
+      "Persistent buffer mapping requires buffer storage support");
   GLint64 size = 0;
   GLint64 storageFlags = 0;
   GLint64 mapped = 0;

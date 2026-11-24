@@ -1933,7 +1933,7 @@ GITSKey StateRestorer::EmitSampleProgram(const std::string& fragmentSource) {
 // bit per draw. The context state restore sets the state these draws change again. Samples that
 // cannot be read stop the subcapture.
 void StateRestorer::RestoreMultisampleContents(GITSKey key, GLenum target, GLuint name) {
-  if (!m_Version.AtLeast(3, 2)) {
+  if (m_Version.LessThan(3, 2)) {
     FailSamples(key, "they are read with GL 3.2; record the subcapture on a system with it.");
   }
   const auto context = m_State.Contexts().find(m_Context);
