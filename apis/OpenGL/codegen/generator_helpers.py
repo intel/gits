@@ -361,15 +361,18 @@ def mako_render(inpath: str, **kwargs) -> str | None:
             print(f"{filename}({lineno}) : error in {function}")
             print(line, "\n")
         print(f"{traceback.error.__class__.__name__}: {traceback.error}")
-        print(f"Could not render template {inpath}, skipping.")
+        print(f"Could not render template {inpath}.")
         return None
 
 
 def mako_write(inpath: str, outpath: str, **kwargs) -> None:
-    """Render a Mako template into a file."""
+    """Render a Mako template into a file.
+
+    Raise RuntimeError if rendering fails, leaving the destination unchanged.
+    """
     rendered: str | None = mako_render(inpath, **kwargs)
     if rendered is None:
-        return
+        raise RuntimeError(f'Failed to generate {outpath}: could not render {inpath}')
 
     destination = Path('..') / outpath
     with destination.open('w') as fout:
