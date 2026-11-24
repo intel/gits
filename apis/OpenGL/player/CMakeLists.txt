@@ -77,7 +77,7 @@ target_include_directories(OpenGL_player
 
 target_link_libraries(OpenGL_player
   PUBLIC OpenGL_layer_interface
-  PRIVATE OpenGL_resource_dumping OpenGL_trace OpenGL_subcapture OpenGL_services stream
+  PRIVATE OpenGL_resource_dumping OpenGL_trace OpenGL_subcapture OpenGL_services OpenGL_utils stream
           windowing log common_interface
 )
 if(WIN32)

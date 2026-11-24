@@ -38,8 +38,6 @@ add_library(OpenGL_layer_interface STATIC
   uniformArrayMetaTypes.h
   unsupportedCommandTypes.h
   windowGeometryMetaTypes.h
-  glVersionString.h
-  glVersionString.cpp
   pixelTransferSize.h
   pixelTransferSize.cpp
 )

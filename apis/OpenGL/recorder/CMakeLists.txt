@@ -81,8 +81,8 @@ target_link_libraries(OpenGL_recorder
   # common_interface: messageBus.h, for clientArraysService.cpp's program-exit statistics.
   # xxhash: mappedTextureService.cpp hashes mapped texture contents to skip unchanged ones.
   # OpenGL_resource_dumping: the screenshot readback and image writing shared with the player.
-  PRIVATE OpenGL_services OpenGL_resource_dumping OpenGL_platform common_interface log tbb
-          xxhash
+  PRIVATE OpenGL_services OpenGL_resource_dumping OpenGL_platform OpenGL_utils
+          common_interface log tbb xxhash
 )
 if(WIN32)
   # gdi32: PixelFormatCaptureLayer calls the real GetPixelFormat()/DescribePixelFormat() GDI
