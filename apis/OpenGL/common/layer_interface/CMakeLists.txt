@@ -46,9 +46,7 @@ add_dependencies(OpenGL_layer_interface OpenGL_codegen)
 
 target_include_directories(OpenGL_layer_interface PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
-  # commandsAuto.h uses GLenum/GLfloat/etc. from glTypes.h, which is hand-declared in
-  # apis/OpenGL/interceptor (see that header's own comment) instead of pulling in <GL/gl.h>.
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../interceptor
+  ${CMAKE_CURRENT_SOURCE_DIR}/../types
 )
 
 target_link_libraries(OpenGL_layer_interface PUBLIC

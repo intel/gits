@@ -14,7 +14,7 @@ set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
 source_group("Generated Files" FILES ${GENERATED_SRC})
 
 set(HAND_WRITTEN_SRC
-  glTypes.h
+  ../common/types/glTypes.h
   interceptorExports.h
   interceptorExports.cpp
   logging.h
@@ -40,7 +40,7 @@ endif()
 
 add_dependencies(OpenGL_interceptor OpenGL_codegen)
 
-target_include_directories(OpenGL_interceptor PRIVATE ../recorder/include)
+target_include_directories(OpenGL_interceptor PRIVATE ../common/types ../recorder/include)
 
 target_link_libraries(OpenGL_interceptor PRIVATE
   common_interface

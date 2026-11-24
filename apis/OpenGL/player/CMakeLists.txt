@@ -71,7 +71,7 @@ add_dependencies(OpenGL_player OpenGL_codegen)
 
 target_include_directories(OpenGL_player
   PUBLIC include
-  PRIVATE ../interceptor ${CMAKE_SOURCE_DIR}/plugins
+  PRIVATE ${CMAKE_SOURCE_DIR}/plugins
 )
 
 target_link_libraries(OpenGL_player

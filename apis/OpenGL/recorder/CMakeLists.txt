@@ -73,10 +73,7 @@ add_library(OpenGL_recorder STATIC
 
 add_dependencies(OpenGL_recorder OpenGL_codegen)
 
-target_include_directories(OpenGL_recorder
-  PUBLIC include
-  PRIVATE ../interceptor
-)
+target_include_directories(OpenGL_recorder PUBLIC include)
 
 target_link_libraries(OpenGL_recorder
   PUBLIC OpenGL_layer_interface
