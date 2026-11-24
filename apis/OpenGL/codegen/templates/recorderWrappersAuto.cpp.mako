@@ -59,23 +59,255 @@ ${AUTO_GENERATED_HEADER}
 #include "shareGroupService.h"
 #include "systemApi.h"
 #include "unsupportedCommand.h"
-
 #include <cstdint>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
-namespace gits::opengl {
-
-namespace {
-
-% for cmd in commands:
+<%def name="command_arguments(cmd)">\
+% for p in cmd.params:
 <%
-    ret = cmd.return_value.type.strip()
-    is_void = ret.lower() == 'void'  # WGL commands use Win32 'VOID', GL commands use 'void'.
-    param_decls = ', '.join(f'{p.type} {p.name}' for p in cmd.params)
-    param_names = ', '.join(p.name for p in cmd.params)
+    in_override = pointer_override_for(cmd, p.name)
+    is_pixel_transfer_in = (in_override is not None and
+                             in_override.direction == PointerDirection.IN and
+                             in_override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE)
+    # unpack_pbo_guard is a SIBLING_PARAM-shaped (or any other non-
+    # PIXEL_TRANSFER_SIZE) IN-direction parameter with the identical client-pointer-or-PBO-
+    # offset duality as the PIXEL_TRANSFER_SIZE case above (glCompressedTexImage*/
+    # glCompressedTexSubImage*'s `data` - see pointer_metadata.py's own field comment) - route
+    # it through the exact same GuardUnpackPixelsPointer() call rather than reinventing a
+    # second guard mechanism. _validate_pointer_override already forbids setting both
+    # unpack_pbo_guard and PIXEL_TRANSFER_SIZE on the same override, so these two conditions
+    # are mutually exclusive in practice; written as two independent checks anyway (rather than
+    # one combined boolean) so each stays independently readable at this call site.
+    is_unpack_pbo_guard_in = in_override is not None and in_override.unpack_pbo_guard
+    is_indirect_in = (in_override is not None and
+                      in_override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
+    is_element_indices_in = (in_override is not None and
+                             in_override.length_source_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE)
+%>\
+% if is_pixel_transfer_in or is_unpack_pbo_guard_in:
+, static_cast<${p.type}>(GuardUnpackPixelsPointer("${cmd.name}", ${p.name}))\
+% elif is_indirect_in:
+, GuardDrawIndirectPointer(${p.name})\
+% elif is_element_indices_in:
+, GuardElementArrayPointer(${p.name})\
+% else:
+, ${p.name}\
+% endif
+% endfor
+</%def>\
+## Gives a Pre layer that sets m_Skip the application's OUT buffers to answer through.
+<%def name="out_pointers(cmd, indent)">\
+% for p in cmd.params:
+<%
+    target_override = pointer_override_for(cmd, p.name)
+    target_wrapper = (wrapper_for(p.type_facts, object_name_override_for(cmd.name, p.name, p.class_),
+                                  target_override, array_of_arrays_override_for(cmd.name, p.name))
+                      if target_override is not None and p.name not in consumed_pointer_params(cmd.name)
+                      else None)
+%>\
+% if target_wrapper == 'ArrayArgument' and target_override.direction == PointerDirection.OUT:
+${indent}command.m_${p.name}.Pointer = static_cast<${member_cpp_type(p, target_override)}*>(${p.name});
+% endif
+% endfor
+</%def>\
+## What the guards in command_arguments() hide of an IN pointer: its own bit pattern, which is a
+## buffer offset while a buffer is bound, and for a pixel transfer whether its size is known and
+## whether it is a buffer offset.
+<%def name="input_pointer_facts(cmd, indent)">\
+% for p in cmd.params:
+<%
+    raw_offset_in_override = pointer_override_for(cmd, p.name)
+%>\
+% if pointer_needs_raw_offset_capture(raw_offset_in_override) and raw_offset_in_override.direction == PointerDirection.IN:
+${indent}// See pointer_needs_raw_offset_capture()'s own header comment
+${indent}// (generator_helpers.py). ${p.name} here is still this wrapper's own, ORIGINAL,
+${indent}// never-guarded parameter - the constructor call above only ever guards the copy it passes
+${indent}// into the constructor, never this local - so this always captures the real bit pattern
+${indent}// regardless of whether the guard above suppressed the byte-array capture for it.
+${indent}command.m_${p.name}RawPointer.Value = reinterpret_cast<uintptr_t>(${p.name});
+% endif
+% if pointer_needs_pixel_transfer_unknown_flag(raw_offset_in_override) and raw_offset_in_override.direction == PointerDirection.IN:
+<%
+    pixel_transfer_args_in = (
+        f'{raw_offset_in_override.pixel_format_param}, {raw_offset_in_override.pixel_type_param}, '
+        f'{raw_offset_in_override.pixel_width_param}, '
+        f'{raw_offset_in_override.pixel_height_param if raw_offset_in_override.pixel_height_param else "1"}, '
+        f'QueryUnpackAlignment(), '
+        f'{raw_offset_in_override.pixel_depth_param if raw_offset_in_override.pixel_depth_param else "1"}, '
+        + ('QueryUnpackImageHeight(), QueryUnpackSkipImages(), '
+           if raw_offset_in_override.pixel_depth_param else '0, 0, ')
+        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
+        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
+        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
+        # dimensionality, so it is always queried live. Exactly ONE `+` joins this ternary to
+        # the previous one: a second, redundant `+` here (from
+        # a comment sitting between two supposedly-adjacent `+`-joined expressions) parses as
+        # Python's unary `+` applied to a str and raises TypeError at codegen time, not at
+        # template-authoring time, so this is easy to reintroduce by accident.
+        + ('QueryUnpackRowLength(), QueryUnpackSkipRows(), '
+           if raw_offset_in_override.pixel_height_param else '0, 0, ') +
+        f'QueryUnpackSkipPixels(), "{cmd.name}"'
+    )
+%>\
+${indent}// See pointer_needs_pixel_transfer_unknown_flag()'s
+${indent}// own header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
+${indent}// comment (pixelTransferSize.h). Uses the exact same argument list as the m_${p.name}
+${indent}// member's own ComputePixelTransferByteSize() call in commandsAuto.h.mako's constructor
+${indent}// (same GL_UNPACK_* pixel-store state, queried again here rather than threaded through -
+${indent}// none of it can have changed since the constructor ran a few lines above, and every
+${indent}// warning either call might log is warn-once per commandName regardless), so the two can
+${indent}// never disagree about whether this call's captured size is genuine-zero or unknown.
+${indent}command.m_${p.name}SizeUnknown.Value = PixelTransferSizeIsUnknown(${pixel_transfer_args_in});
+${indent}// See
+${indent}// UnpackPixelsPointerIsBufferOffset()'s own header comment (clientMemoryCapture.h). Uses
+${indent}// ${p.name} here too - this wrapper's own, ORIGINAL, never-guarded parameter, the same one
+${indent}// m_${p.name}RawPointer.Value above captures - never whatever the constructor call's own
+${indent}// GuardUnpackPixelsPointer() invocation returned, so this always reflects the real guard
+${indent}// decision for this exact call regardless of what the constructor's captured Data ended
+${indent}// up holding.
+${indent}command.m_${p.name}IsBufferOffset.Value = UnpackPixelsPointerIsBufferOffset(${p.name});
+% endif
+% endfor
+</%def>\
+## The defs below keep the keys of GL objects and handles, the share groups and the handle
+## lifecycles. They are process-local and never touch the stream, so they run whether or not
+## recording is enabled.
+##
+## Before the call: CREATE never applies to a parameter (only object_name_lifecycle.py
+## return-value entries use it) - a LOOKUP or DELETE-role field must resolve its key before the
+## real call, both so the delete-on-success step has a key to delete and so the field has
+## something to serialize (HandleArgument<T>/HandleArrayArgument<T> only ever put .Key on the
+## wire, never .Value).
+<%def name="input_keys(cmd, indent)">\
+% for p in cmd.params:
+% if p.type_facts.is_mapped_handle:
+${indent}UpdateHandle(command.m_${p.name});
+% endif
+<%
+    obj_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if obj_override is not None and obj_override.role != ObjectNameRole.CREATE:
+% if p.type_facts.is_array_element_eligible and obj_override.role == ObjectNameRole.DELETE:
+${indent}UpdateDeletedHandleArray(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif p.type_facts.is_array_element_eligible:
+${indent}UpdateHandleArray(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif obj_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+${indent}// See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a miss here may be the real driver
+${indent}// about to implicitly create a new object; ConfirmImplicitCreate decides after the call.
+${indent}UpdateHandleIfKnown(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif is_existence_query(cmd.name, cmd.return_value.type, obj_override):
+${indent}UpdateHandleIfRegistered(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% elif obj_override.target_param is not None:
+${indent}UpdateHandle(command.m_${p.name}, ImageObjectKind(${obj_override.target_param}));
+% elif obj_override.identifier_param is not None:
+${indent}if (ObjectIdentifierMapsNames(${obj_override.identifier_param})) {
+${indent}  UpdateHandle(command.m_${p.name}, ObjectIdentifierKind(${obj_override.identifier_param}));
+${indent}} else {
+${indent}  command.m_${p.name}.Key = ${p.name};
+${indent}}
+% else:
+${indent}UpdateHandle(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
+% endif
+% endif
+% endfor
+</%def>\
+## After the Pre layers, right before the real call.
+<%def name="implicit_create_checks(cmd, indent)">\
+% for p in cmd.params:
+<%
+    bind_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if bind_override is not None and bind_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+${indent}const bool ${p.name}ExistedBeforeBind = ExistsBeforeImplicitCreate(
+${indent}    command.m_${p.name},
+${indent}    g_DispatchTable.${bind_override.is_command}.load(std::memory_order_acquire));
+% endif
+% endfor
+</%def>\
+## Right after the real call.
+<%def name="implicit_create_confirmations(cmd, indent)">\
+% for p in cmd.params:
+<%
+    create_override = object_name_override_for(cmd.name, p.name, p.class_)
+%>\
+% if create_override is not None and create_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
+${indent}ConfirmImplicitCreate(
+${indent}    command.m_${p.name}, GLObjectKind::${create_override.kind.value},
+${indent}    g_DispatchTable.${create_override.is_command}.load(std::memory_order_acquire),
+${indent}    ${p.name}ExistedBeforeBind);
+% elif create_override is not None and not p.type_facts.is_array_element_eligible and is_existence_query(cmd.name, cmd.return_value.type, create_override):
+${indent}ConfirmExistenceQuery(command.m_${p.name}, GLObjectKind::${create_override.kind.value}, result);
+% endif
+% endfor
+</%def>\
+## The names the driver wrote into an OUT array (glGen*). With `capture`, first reads them from
+## the application's array, which recording does with the other OUT arrays.
+<%def name="output_name_keys(cmd, indent, capture)">\
+% for p in cmd.params:
+<%
+    names_override = pointer_override_for(cmd, p.name)
+    out_obj_override = object_name_override_for(cmd.name, p.name, p.class_)
+    is_output_names = (names_override is not None and out_obj_override is not None and
+                       names_override.direction == PointerDirection.OUT and
+                       names_override.length_source_kind != LengthSourceKind.DISCARDED_OUTPUT)
+    if (is_output_names and capture and
+            names_override.length_source_kind not in (LengthSourceKind.SIBLING_PARAM,
+                                                       LengthSourceKind.FIXED_COUNT)):
+        raise ValueError(f'{cmd.name}.{p.name}: output names need a sibling or fixed count')
+%>\
+% if is_output_names:
+% if capture:
+${indent}command.m_${p.name}.Capture(${p.name}, ${names_override.length_source_value});
+% endif
+${indent}// CREATE role: the driver just wrote brand-new names into this buffer (see this array
+${indent}// param's OBJECT_NAME_PARAM_OVERRIDES entry) - create one key per element and register it.
+${indent}UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${out_obj_override.kind.value});
+% endif
+% endfor
+</%def>\
+## Stores the result and registers the handle or object it names.
+<%def name="return_keys(cmd, indent)">\
+% if has_return_member(cmd):
+${indent}command.m_Return.Value = result;
+<%
+    return_obj_override = object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_)
+%>\
+% if cmd.return_value.type_facts.is_mapped_handle:
+% if cmd.name in handle_creating_commands:
+${indent}UpdateOutputHandle(command.m_Return);
+% if cmd.name in context_share_param:
+<%
+    share_param = context_share_param.get(cmd.name)
+%>\
+${indent}// See common/services/shareGroupService.h's own header comment and
+${indent}// codegen/handle_lifecycle.py's CONTEXT_SHARE_PARAM for why a newly-created context must
+${indent}// join its share context's group (if any) right away, using the real, recorder-process
+${indent}// context values (ShareGroupService is process-local, unserialized bookkeeping - see that
+${indent}// class's header comment). Guarded to context-creating commands: handle_creating_commands
+${indent}// is a combined set also covering glFenceSync's GLsync return (see handle_lifecycle.py's
+${indent}// MAPPED_HANDLE_LIFECYCLES), and a GLsync is never part of any share group.
+${indent}ShareGroupService::Get().RegisterNewContext(
+${indent}    command.m_Return.Value, ${f'command.m_{share_param}.Value' if share_param is not None else 'nullptr'});
+% endif
+% else:
+${indent}UpdateHandle(command.m_Return);
+% endif
+% elif return_obj_override is not None:
+${indent}// return_obj_override.role is always CREATE - see intermediates_creator.py's
+${indent}// _validate_object_name_override (a return value can never be a LOOKUP/DELETE target).
+${indent}UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
+% endif
+% elif has_unserialized_return(cmd):
+${indent}command.m_Return.Value = result;
+% endif
+</%def>\
+## Erases deleted handles and object names, and merges share groups.
+<%def name="lifecycle_updates(cmd, indent)">\
+<%
+    is_void = cmd.return_value.type.strip().lower() == 'void'
     erase_param = handle_param_to_erase_on_success.get(cmd.name)
     # Which map service's Erase() to call is a fact about erase_param's OWN type, not about
     # which command this is - handle_param_to_erase_on_success is a single dict already
@@ -86,11 +318,102 @@ namespace {
     if erase_param:
         erase_param_obj = next(p for p in cmd.params if p.name == erase_param)
         erase_service = mapped_handle_service_names[erase_param_obj.type_facts.base_type]
+    share_lists_params = share_lists_commands.get(cmd.name)
+    delete_object_name_params = [
+        p for p in cmd.params
+        if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
+            object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.DELETE)
+    ]
+%>\
+## HandleShareGroupFor() (recorder/include/handleArgumentUpdaters.h) is overloaded per HandleT -
+## 0 (process-global) for HGLRC, the real CurrentShareGroup() for GLsync - so this one call site
+## is correct for every erase_service alike; see that function's own header comment.
+% if erase_param and is_void:
+${indent}${erase_service}::Get().Erase(command.m_${erase_param}.Value,
+${indent}                               HandleShareGroupFor(command.m_${erase_param}.Value));
+% elif erase_param:
+${indent}if (result) {
+${indent}  ${erase_service}::Get().Erase(command.m_${erase_param}.Value,
+${indent}                                 HandleShareGroupFor(command.m_${erase_param}.Value));
+${indent}}
+% endif
+% if share_lists_params is not None:
+${indent}// See common/services/shareGroupService.h's own header comment and
+${indent}// codegen/handle_lifecycle.py's SHARE_LISTS_COMMANDS - only merge on success, matching
+${indent}// wglShareLists' own documented failure semantics (no sharing takes effect).
+${indent}if (result) {
+${indent}  ShareGroupService::Get().MergeGroups(command.m_${share_lists_params[0]}.Value,
+${indent}                                        command.m_${share_lists_params[1]}.Value);
+${indent}}
+% endif
+% for p in delete_object_name_params:
+<%
+    delete_kind = object_name_override_for(cmd.name, p.name, p.class_).kind.value
+    delete_condition = '!command.m_Skip' if is_void else '!command.m_Skip && result'
+%>\
+${indent}if (${delete_condition}) {
+% if p.type_facts.is_array_element_eligible:
+${indent}  for (GLuint name : command.m_${p.name}.Value) {
+${indent}    ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
+${indent}                                        GroupIdentityFor(GLObjectKind::${delete_kind}), name);
+${indent}  }
+% else:
+${indent}  ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
+${indent}                                      GroupIdentityFor(GLObjectKind::${delete_kind}),
+${indent}                                      command.m_${p.name}.Value);
+% endif
+${indent}}
+% endfor
+</%def>\
+namespace gits::opengl {
+
+namespace {
+
+% for cmd in commands:
+<%
+    ret = cmd.return_value.type.strip()
+    is_void = ret.lower() == 'void'  # WGL commands use Win32 'VOID', GL commands use 'void'.
+    param_decls = ', '.join(f'{p.type} {p.name}' for p in cmd.params)
+    param_names = ', '.join(p.name for p in cmd.params)
 %>\
 ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   const RecursionGuard guard;
   auto realFunction = g_DispatchTable.${cmd.name}.load(std::memory_order_acquire);
-  if (guard.IsNested()) {
+  if (guard.IsNested() || !RecordingEnabled()) {
+% if cmd.enabled:
+    if (!guard.IsNested() && PluginLayersLoaded()) {
+      // Only the plugin layers run. They see the arguments and the keys of the GL objects and
+      // handles, without the output arrays other than new object names that recording collects.
+      ${cmd.name}Command command(CurrentThreadId()${command_arguments(cmd)});
+      command.m_Key = CaptureManager::Get().CreatePluginCommandKey();
+${input_pointer_facts(cmd, '      ')}\
+${input_keys(cmd, '      ')}\
+${out_pointers(cmd, '      ')}\
+      for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
+        preLayer->Pre(command);
+      }
+${implicit_create_checks(cmd, '      ')}\
+% if is_void:
+      if (!command.m_Skip) {
+        realFunction(${param_names});
+      }
+% else:
+      ${ret} result = command.m_Skip ? command.m_Return.Value : realFunction(${param_names});
+% endif
+${implicit_create_confirmations(cmd, '      ')}\
+${output_name_keys(cmd, '      ', capture=True)}\
+${return_keys(cmd, '      ')}\
+${lifecycle_updates(cmd, '      ')}\
+      for (Layer* postLayer : CaptureManager::Get().GetPostLayers()) {
+        postLayer->Post(command);
+      }
+% if is_void:
+      return;
+% else:
+      return command.m_Return.Value;
+% endif
+    }
+% endif
 % if is_void:
     realFunction(${param_names});
     return;
@@ -204,159 +527,20 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // and modern-opengl-backend-architecture.md's "Classify payloads from evidence"); OUT-
   // direction array members stay default-constructed (empty) until Capture() runs below, once
   // the driver has actually written into the app's buffer.
-  ${cmd.name}Command command(CurrentThreadId()\
-% for p in cmd.params:
-<%
-    in_override = pointer_override_for(cmd, p.name)
-    is_pixel_transfer_in = (in_override is not None and
-                             in_override.direction == PointerDirection.IN and
-                             in_override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE)
-    # unpack_pbo_guard is a SIBLING_PARAM-shaped (or any other non-
-    # PIXEL_TRANSFER_SIZE) IN-direction parameter with the identical client-pointer-or-PBO-
-    # offset duality as the PIXEL_TRANSFER_SIZE case above (glCompressedTexImage*/
-    # glCompressedTexSubImage*'s `data` - see pointer_metadata.py's own field comment) - route
-    # it through the exact same GuardUnpackPixelsPointer() call rather than reinventing a
-    # second guard mechanism. _validate_pointer_override already forbids setting both
-    # unpack_pbo_guard and PIXEL_TRANSFER_SIZE on the same override, so these two conditions
-    # are mutually exclusive in practice; written as two independent checks anyway (rather than
-    # one combined boolean) so each stays independently readable at this call site.
-    is_unpack_pbo_guard_in = in_override is not None and in_override.unpack_pbo_guard
-    is_indirect_in = (in_override is not None and
-                      in_override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
-    is_element_indices_in = (in_override is not None and
-                             in_override.length_source_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE)
-%>\
-% if is_pixel_transfer_in or is_unpack_pbo_guard_in:
-, static_cast<${p.type}>(GuardUnpackPixelsPointer("${cmd.name}", ${p.name}))\
-% elif is_indirect_in:
-, GuardDrawIndirectPointer(${p.name})\
-% elif is_element_indices_in:
-, GuardElementArrayPointer(${p.name})\
-% else:
-, ${p.name}\
-% endif
-% endfor
-);
+  ${cmd.name}Command command(CurrentThreadId()${command_arguments(cmd)});
   // See this function's own header comment: reserved before the real driver dispatch above,
   // not here - `orderingKey` was already minted before `command` was even constructed.
   // Assigning it into the Command object now, rather than after the real call, still happens
   // well before the CommandSerializer that encodes `command.m_Key` onto the wire is
   // constructed further below.
   command.m_Key = orderingKey;
-% for p in cmd.params:
-<%
-    raw_offset_in_override = pointer_override_for(cmd, p.name)
-%>\
-% if pointer_needs_raw_offset_capture(raw_offset_in_override) and raw_offset_in_override.direction == PointerDirection.IN:
-  // See pointer_needs_raw_offset_capture()'s own header comment
-  // (generator_helpers.py). ${p.name} here is still this wrapper's own, ORIGINAL,
-  // never-guarded parameter - the constructor call above only ever guards the copy it passes
-  // into the constructor, never this local - so this always captures the real bit pattern
-  // regardless of whether the guard above suppressed the byte-array capture for it.
-  command.m_${p.name}RawPointer.Value = reinterpret_cast<uintptr_t>(${p.name});
-% endif
-% if pointer_needs_pixel_transfer_unknown_flag(raw_offset_in_override) and raw_offset_in_override.direction == PointerDirection.IN:
-<%
-    pixel_transfer_args_in = (
-        f'{raw_offset_in_override.pixel_format_param}, {raw_offset_in_override.pixel_type_param}, '
-        f'{raw_offset_in_override.pixel_width_param}, '
-        f'{raw_offset_in_override.pixel_height_param if raw_offset_in_override.pixel_height_param else "1"}, '
-        f'QueryUnpackAlignment(), '
-        f'{raw_offset_in_override.pixel_depth_param if raw_offset_in_override.pixel_depth_param else "1"}, '
-        + ('QueryUnpackImageHeight(), QueryUnpackSkipImages(), '
-           if raw_offset_in_override.pixel_depth_param else '0, 0, ')
-        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
-        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
-        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
-        # dimensionality, so it is always queried live. Exactly ONE `+` joins this ternary to
-        # the previous one: a second, redundant `+` here (from
-        # a comment sitting between two supposedly-adjacent `+`-joined expressions) parses as
-        # Python's unary `+` applied to a str and raises TypeError at codegen time, not at
-        # template-authoring time, so this is easy to reintroduce by accident.
-        + ('QueryUnpackRowLength(), QueryUnpackSkipRows(), '
-           if raw_offset_in_override.pixel_height_param else '0, 0, ') +
-        f'QueryUnpackSkipPixels(), "{cmd.name}"'
-    )
-%>\
-  // See pointer_needs_pixel_transfer_unknown_flag()'s
-  // own header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
-  // comment (pixelTransferSize.h). Uses the exact same argument list as the m_${p.name}
-  // member's own ComputePixelTransferByteSize() call in commandsAuto.h.mako's constructor
-  // (same GL_UNPACK_* pixel-store state, queried again here rather than threaded through -
-  // none of it can have changed since the constructor ran a few lines above, and every
-  // warning either call might log is warn-once per commandName regardless), so the two can
-  // never disagree about whether this call's captured size is genuine-zero or unknown.
-  command.m_${p.name}SizeUnknown.Value = PixelTransferSizeIsUnknown(${pixel_transfer_args_in});
-  // See
-  // UnpackPixelsPointerIsBufferOffset()'s own header comment (clientMemoryCapture.h). Uses
-  // ${p.name} here too - this wrapper's own, ORIGINAL, never-guarded parameter, the same one
-  // m_${p.name}RawPointer.Value above captures - never whatever the constructor call's own
-  // GuardUnpackPixelsPointer() invocation returned, so this always reflects the real guard
-  // decision for this exact call regardless of what the constructor's captured Data ended
-  // up holding.
-  command.m_${p.name}IsBufferOffset.Value = UnpackPixelsPointerIsBufferOffset(${p.name});
-% endif
-% endfor
-% for p in cmd.params:
-% if p.type_facts.is_mapped_handle:
-  UpdateHandle(command.m_${p.name});
-% endif
-<%
-    obj_override = object_name_override_for(cmd.name, p.name, p.class_)
-%>\
-## CREATE never applies to a parameter (only object_name_lifecycle.py return-value entries use
-## it) - a LOOKUP or DELETE-role field must resolve its key before the real call, both so the
-## delete-on-success step below has a key to delete and so the field has something to serialize
-## (HandleArgument<T>/HandleArrayArgument<T> only ever put .Key on the wire, never .Value).
-% if obj_override is not None and obj_override.role != ObjectNameRole.CREATE:
-% if p.type_facts.is_array_element_eligible and obj_override.role == ObjectNameRole.DELETE:
-  UpdateDeletedHandleArray(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
-% elif p.type_facts.is_array_element_eligible:
-  UpdateHandleArray(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
-% elif obj_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
-  // See ObjectNameRole.LOOKUP_OR_CREATE's own comment - a miss here may be the real driver
-  // about to implicitly create a new object; ConfirmImplicitCreate decides after the call.
-  UpdateHandleIfKnown(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
-% elif is_existence_query(cmd.name, cmd.return_value.type, obj_override):
-  UpdateHandleIfRegistered(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
-% elif obj_override.target_param is not None:
-  UpdateHandle(command.m_${p.name}, ImageObjectKind(${obj_override.target_param}));
-% elif obj_override.identifier_param is not None:
-  if (ObjectIdentifierMapsNames(${obj_override.identifier_param})) {
-    UpdateHandle(command.m_${p.name}, ObjectIdentifierKind(${obj_override.identifier_param}));
-  } else {
-    command.m_${p.name}.Key = ${p.name};
-  }
-% else:
-  UpdateHandle(command.m_${p.name}, GLObjectKind::${obj_override.kind.value});
-% endif
-% endif
-% endfor
-% for p in cmd.params:
-<%
-    target_override = pointer_override_for(cmd, p.name)
-    target_wrapper = (wrapper_for(p.type_facts, object_name_override_for(cmd.name, p.name, p.class_),
-                                  target_override, array_of_arrays_override_for(cmd.name, p.name))
-                      if target_override is not None and p.name not in consumed_pointer_params(cmd.name)
-                      else None)
-%>\
-% if target_wrapper == 'ArrayArgument' and target_override.direction == PointerDirection.OUT:
-  command.m_${p.name}.Pointer = static_cast<${member_cpp_type(p, target_override)}*>(${p.name});
-% endif
-% endfor
+${input_pointer_facts(cmd, '  ')}\
+${input_keys(cmd, '  ')}\
+${out_pointers(cmd, '  ')}\
   for (Layer* preLayer : CaptureManager::Get().GetPreLayers()) {
     preLayer->Pre(command);
   }
-% for p in cmd.params:
-<%
-    bind_override = object_name_override_for(cmd.name, p.name, p.class_)
-%>\
-% if bind_override is not None and bind_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
-  const bool ${p.name}ExistedBeforeBind = ExistsBeforeImplicitCreate(
-      command.m_${p.name},
-      g_DispatchTable.${bind_override.is_command}.load(std::memory_order_acquire));
-% endif
-% endfor
+${implicit_create_checks(cmd, '  ')}\
 % if cmd.name in frame_end_commands:
   CaptureManager::Get().FrameEndPreLayersRan(orderingKey);
 % endif
@@ -437,19 +621,7 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   }
 % endif
 % if cmd.enabled:
-% for p in cmd.params:
-<%
-    create_override = object_name_override_for(cmd.name, p.name, p.class_)
-%>\
-% if create_override is not None and create_override.role == ObjectNameRole.LOOKUP_OR_CREATE:
-  ConfirmImplicitCreate(
-      command.m_${p.name}, GLObjectKind::${create_override.kind.value},
-      g_DispatchTable.${create_override.is_command}.load(std::memory_order_acquire),
-      ${p.name}ExistedBeforeBind);
-% elif create_override is not None and not p.type_facts.is_array_element_eligible and is_existence_query(cmd.name, cmd.return_value.type, create_override):
-  ConfirmExistenceQuery(command.m_${p.name}, GLObjectKind::${create_override.kind.value}, result);
-% endif
-% endfor
+${implicit_create_confirmations(cmd, '  ')}\
 % for p in cmd.params:
 <%
     override = pointer_override_for(cmd, p.name)
@@ -587,98 +759,11 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
   // object caused the capture above to be suppressed for it.
   command.m_${p.name}RawPointer.Value = reinterpret_cast<uintptr_t>(${p.name});
 % endif
-<%
-    out_obj_override = object_name_override_for(cmd.name, p.name, p.class_)
-%>\
-% if out_obj_override is not None:
-  // CREATE role: the driver just wrote brand-new names into this buffer (see this array
-  // param's OBJECT_NAME_PARAM_OVERRIDES entry) - create one key per element and register it.
-  UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${out_obj_override.kind.value});
-% endif
 % endif
 % endfor
-% if has_return_member(cmd):
-  command.m_Return.Value = result;
-<%
-    return_obj_override = object_name_override_for(cmd.name, 'return_value', cmd.return_value.class_)
-%>\
-% if cmd.return_value.type_facts.is_mapped_handle:
-% if cmd.name in handle_creating_commands:
-  UpdateOutputHandle(command.m_Return);
-% if cmd.name in context_share_param:
-<%
-    share_param = context_share_param.get(cmd.name)
-%>\
-  // See common/services/shareGroupService.h's own header comment and
-  // codegen/handle_lifecycle.py's CONTEXT_SHARE_PARAM for why a newly-created context must
-  // join its share context's group (if any) right away, using the real, recorder-process
-  // context values (ShareGroupService is process-local, unserialized bookkeeping - see that
-  // class's header comment). Guarded to context-creating commands: handle_creating_commands
-  // is a combined set also covering glFenceSync's GLsync return (see handle_lifecycle.py's
-  // MAPPED_HANDLE_LIFECYCLES), and a GLsync is never part of any share group.
-  ShareGroupService::Get().RegisterNewContext(
-      command.m_Return.Value, ${f'command.m_{share_param}.Value' if share_param is not None else 'nullptr'});
-% endif
-% else:
-  UpdateHandle(command.m_Return);
-% endif
-% elif return_obj_override is not None:
-  // return_obj_override.role is always CREATE - see intermediates_creator.py's
-  // _validate_object_name_override (a return value can never be a LOOKUP/DELETE target).
-  UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
-% endif
-% elif has_unserialized_return(cmd):
-  command.m_Return.Value = result;
-% endif
-## HandleShareGroupFor() (recorder/include/handleArgumentUpdaters.h) is overloaded per HandleT -
-## 0 (process-global) for HGLRC, the real CurrentShareGroup() for GLsync - so this one call site
-## is correct for every erase_service alike; see that function's own header comment.
-% if erase_param and is_void:
-  ${erase_service}::Get().Erase(command.m_${erase_param}.Value,
-                                 HandleShareGroupFor(command.m_${erase_param}.Value));
-% elif erase_param:
-  if (result) {
-    ${erase_service}::Get().Erase(command.m_${erase_param}.Value,
-                                   HandleShareGroupFor(command.m_${erase_param}.Value));
-  }
-% endif
-<%
-    share_lists_params = share_lists_commands.get(cmd.name)
-%>\
-% if share_lists_params is not None:
-  // See common/services/shareGroupService.h's own header comment and
-  // codegen/handle_lifecycle.py's SHARE_LISTS_COMMANDS - only merge on success, matching
-  // wglShareLists' own documented failure semantics (no sharing takes effect).
-  if (result) {
-    ShareGroupService::Get().MergeGroups(command.m_${share_lists_params[0]}.Value,
-                                          command.m_${share_lists_params[1]}.Value);
-  }
-% endif
-<%
-    delete_object_name_params = [
-        p for p in cmd.params
-        if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
-            object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.DELETE)
-    ]
-%>\
-% for p in delete_object_name_params:
-<%
-    delete_kind = object_name_override_for(cmd.name, p.name, p.class_).kind.value
-    delete_condition = '!command.m_Skip' if is_void else '!command.m_Skip && result'
-%>\
-  if (${delete_condition}) {
-% if p.type_facts.is_array_element_eligible:
-    for (GLuint name : command.m_${p.name}.Value) {
-      ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
-                                          GroupIdentityFor(GLObjectKind::${delete_kind}), name);
-    }
-% else:
-    ObjectNameMapService::Get().Delete(GLObjectKind::${delete_kind},
-                                        GroupIdentityFor(GLObjectKind::${delete_kind}),
-                                        command.m_${p.name}.Value);
-% endif
-  }
-% endfor
+${output_name_keys(cmd, '  ', capture=False)}\
+${return_keys(cmd, '  ')}\
+${lifecycle_updates(cmd, '  ')}\
   for (Layer* postLayer : CaptureManager::Get().GetPostLayers()) {
     postLayer->Post(command);
   }
@@ -701,9 +786,12 @@ ${ret} APIENTRY Wrapper_${cmd.name}(${param_decls}) {
 
 void* GetGeneratedRecorderWrapper(const char* name) {
   // Checked first so glMapBufferRange/glUnmapBuffer never reach their own generated entries
-  // below - see docs/development/opengl-buffer-map-tracking-plan.md's Decision 3.
-  if (void* custom = GetCustomRecorderWrapper(name)) {
-    return custom;
+  // below - see docs/development/opengl-buffer-map-tracking-plan.md's Decision 3. Maps are tracked
+  // only while recording.
+  if (RecordingEnabled()) {
+    if (void* custom = GetCustomRecorderWrapper(name)) {
+      return custom;
+    }
   }
   // A braced map initializer would construct every key inline, which makes this function very
   // slow to compile.

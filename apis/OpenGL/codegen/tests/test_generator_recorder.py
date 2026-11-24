@@ -31,7 +31,9 @@ from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_
                                 PRE_HOOK_KEY_PAIR_COMMANDS, PRIMITIVE_PAIR_COMMANDS,
                                 DrawableIdentities, drawable_identities, mapped_write_publishers,
                                 query_buffer_publishers)
-from handle_lifecycle import FRAME_END_COMMANDS
+from handle_lifecycle import (CONTEXT_SHARE_PARAM, FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS,
+                              HANDLE_PARAM_TO_ERASE_ON_SUCCESS, MAPPED_HANDLE_SERVICE_NAMES,
+                              SHARE_LISTS_COMMANDS)
 from intermediates import Api, CmdType, Command, Parameter, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
@@ -68,11 +70,16 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
                     mapped_write_publishers: frozenset[str] = frozenset(),
                     primitive_pair_commands: dict[str, bool] | None = None,
                     query_buffer_publishers: frozenset[str] = frozenset(),
-                    buffer_content_hooks: dict[str, BufferContentHook] | None = None) -> str:
+                    buffer_content_hooks: dict[str, BufferContentHook] | None = None,
+                    with_handle_lifecycles: bool = False) -> str:
     rendered = mako_render(
-        TEMPLATE_PATH, commands=commands, handle_creating_commands=frozenset(),
-        handle_param_to_erase_on_success={}, mapped_handle_service_names={},
-        context_share_param={}, share_lists_commands={},
+        TEMPLATE_PATH, commands=commands,
+        handle_creating_commands=HANDLE_CREATING_COMMANDS if with_handle_lifecycles else frozenset(),
+        handle_param_to_erase_on_success=(HANDLE_PARAM_TO_ERASE_ON_SUCCESS
+                                          if with_handle_lifecycles else {}),
+        mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES if with_handle_lifecycles else {},
+        context_share_param=CONTEXT_SHARE_PARAM if with_handle_lifecycles else {},
+        share_lists_commands=SHARE_LISTS_COMMANDS if with_handle_lifecycles else {},
         pre_hook_key_pair_commands=pre_hook_key_pair_commands,
         post_hook_key_pair_commands=post_hook_key_pair_commands,
         pre_hook_extra_key_commands=pre_hook_extra_key_commands or {},
@@ -236,6 +243,14 @@ def registry_command(name: str, api: Api = Api.GL) -> Command:
     return get_commands_from_xml_data({api: [raw]})[api][0]
 
 
+def wrapper_paths(body: str) -> dict[str, str]:
+    """The plugin path, taken while recording is disabled, and the recording path of an enabled
+    command's wrapper."""
+    plugin_start = body.find('if (!guard.IsNested() && PluginLayersLoaded()) {')
+    recording_start = body.find('CaptureManager::Get().CreateCommandKey')
+    return {'plugin': body[plugin_start:recording_start], 'recording': body[recording_start:]}
+
+
 class ExistenceQueryWrapperTests(unittest.TestCase):
     """glIs* keeps a registered name's key, looked up without the unmapped fallback before the
     call, and confirms an unregistered name against the driver's result after it. Neither half
@@ -244,17 +259,87 @@ class ExistenceQueryWrapperTests(unittest.TestCase):
     def test_lookup_precedes_the_call_and_confirmation_follows_it(self) -> None:
         body = extract_wrapper_body(
             render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
-        lookup = body.find(
-            'UpdateHandleIfRegistered(command.m_texture, GLObjectKind::Texture);')
-        call = body.rfind('realFunction(texture);')
-        confirm = body.find(
-            'ConfirmExistenceQuery(command.m_texture, GLObjectKind::Texture, result);')
-        self.assertNotEqual(lookup, -1, body)
-        self.assertNotEqual(call, -1, body)
-        self.assertNotEqual(confirm, -1, body)
-        self.assertLess(lookup, call)
-        self.assertLess(call, confirm)
+        for name, path in wrapper_paths(body).items():
+            with self.subTest(path=name):
+                lookup = path.find(
+                    'UpdateHandleIfRegistered(command.m_texture, GLObjectKind::Texture);')
+                call = path.find('realFunction(texture);')
+                confirm = path.find(
+                    'ConfirmExistenceQuery(command.m_texture, GLObjectKind::Texture, result);')
+                self.assertNotEqual(lookup, -1, path)
+                self.assertNotEqual(call, -1, path)
+                self.assertNotEqual(confirm, -1, path)
+                self.assertLess(lookup, call)
+                self.assertLess(call, confirm)
         self.assertNotIn('UpdateHandle(command.m_texture', body)
+
+
+class PluginPathPointerTests(unittest.TestCase):
+    """While recording is disabled, plugin layers see a buffer offset passed for an IN pointer,
+    which the argument guards hide from the pointer's array."""
+
+    def test_buffer_offset_of_indices_reaches_the_pre_layers(self) -> None:
+        body = extract_wrapper_body(
+            render_commands([registry_command('glDrawElements')], frozenset()), 'glDrawElements')
+        path = wrapper_paths(body)['plugin']
+        raw = path.find(
+            'command.m_indicesRawPointer.Value = reinterpret_cast<uintptr_t>(indices);')
+        self.assertNotEqual(raw, -1, path)
+        self.assertLess(raw, path.find('preLayer->Pre(command);'))
+
+
+class PluginPathIdentityTests(unittest.TestCase):
+    """While recording is disabled, plugin layers identify GL objects, contexts and their share
+    groups by the same keys as while recording."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        commands = [registry_command(name) for name in
+                    ('glGenTextures', 'glDeleteTextures', 'glUseProgram')]
+        commands += [registry_command(name, Api.WGL) for name in
+                     ('wglCreateContext', 'wglDeleteContext', 'wglShareLists')]
+        rendered = render_commands(commands, frozenset(), with_handle_lifecycles=True)
+        cls.paths = {name: wrapper_paths(extract_wrapper_body(rendered, name))['plugin']
+                     for name in (command.name for command in commands)}
+
+    def assert_between_call_and_post_layers(self, name: str, text: str) -> None:
+        path = self.paths[name]
+        position = path.find(text)
+        self.assertNotEqual(position, -1, path)
+        self.assertLess(path.find('realFunction('), position)
+        self.assertLess(position, path.find('postLayer->Post(command);'))
+
+    def test_bound_program_key_is_looked_up_before_the_pre_layers(self) -> None:
+        path = self.paths['glUseProgram']
+        lookup = path.find('UpdateHandle(command.m_program, GLObjectKind::Program);')
+        self.assertNotEqual(lookup, -1, path)
+        self.assertLess(lookup, path.find('preLayer->Pre(command);'))
+
+    def test_generated_names_are_read_and_registered(self) -> None:
+        path = self.paths['glGenTextures']
+        capture = path.find('command.m_textures.Capture(textures, n);')
+        self.assert_between_call_and_post_layers(
+            'glGenTextures', 'UpdateOutputHandleArray(command.m_textures, GLObjectKind::Texture);')
+        self.assertLess(path.find('realFunction('), capture)
+        self.assertLess(capture, path.find('UpdateOutputHandleArray('))
+
+    def test_deleted_names_are_forgotten(self) -> None:
+        self.assert_between_call_and_post_layers(
+            'glDeleteTextures', 'ObjectNameMapService::Get().Delete(GLObjectKind::Texture,')
+
+    def test_context_is_registered_with_its_share_group(self) -> None:
+        self.assert_between_call_and_post_layers('wglCreateContext',
+                                                 'UpdateOutputHandle(command.m_Return);')
+        self.assert_between_call_and_post_layers('wglCreateContext',
+                                                 'ShareGroupService::Get().RegisterNewContext(')
+
+    def test_deleted_context_is_erased_on_success(self) -> None:
+        self.assert_between_call_and_post_layers(
+            'wglDeleteContext', 'if (result) {\n        ContextHandleMapService::Get().Erase(')
+
+    def test_shared_lists_merge_share_groups(self) -> None:
+        self.assert_between_call_and_post_layers('wglShareLists',
+                                                 'ShareGroupService::Get().MergeGroups(')
 
 
 class LayerReplacedCallWrapperTests(unittest.TestCase):
@@ -269,11 +354,16 @@ class LayerReplacedCallWrapperTests(unittest.TestCase):
             frozenset())
 
     def test_out_pointer_is_set_before_the_pre_layers(self) -> None:
+        # Both the recording path and the plugin path, taken while recording is disabled.
         body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
-        pointer = body.find('command.m_data.Pointer = static_cast<GLint*>(data);')
-        pre = body.find('preLayer->Pre(command);')
-        self.assertNotEqual(pointer, -1, body)
-        self.assertLess(pointer, pre)
+        pointers = [m.start() for m in
+                    re.finditer(re.escape('command.m_data.Pointer = static_cast<GLint*>(data);'),
+                                body)]
+        pres = [m.start() for m in re.finditer(re.escape('preLayer->Pre(command);'), body)]
+        self.assertEqual(len(pointers), 2, body)
+        self.assertEqual(len(pres), 2, body)
+        for pointer, pre in zip(pointers, pres):
+            self.assertLess(pointer, pre)
 
     def test_void_call_is_skipped(self) -> None:
         body = extract_wrapper_body(self.rendered, 'glGetIntegerv')
@@ -295,16 +385,34 @@ class LayerReplacedCallWrapperTests(unittest.TestCase):
 
 
 class NestedCallWrapperTests(unittest.TestCase):
-    """A call nested in another wrapper's call only reaches the driver: it reserves no key and
-    runs no layers."""
+    """A call nested in another wrapper's call only reaches the driver, and a call made while
+    recording is disabled runs at most the plugin layers: neither reserves a key of the stream."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.body = extract_wrapper_body(
+            render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
 
     def test_nested_call_returns_before_reserving_a_key(self) -> None:
-        body = extract_wrapper_body(
-            render_commands([registry_command('glIsTexture')], frozenset()), 'glIsTexture')
-        nested = body.find('if (guard.IsNested()) {\n    return realFunction(texture);\n  }')
-        key = body.find('CaptureManager::Get().CreateCommandKey()')
-        self.assertNotEqual(nested, -1, body)
-        self.assertLess(nested, key)
+        early = self.body.find('if (guard.IsNested() || !RecordingEnabled()) {')
+        driver = self.body.find('    return realFunction(texture);\n  }', early)
+        key = self.body.find('CaptureManager::Get().CreateCommandKey()')
+        self.assertNotEqual(early, -1, self.body)
+        self.assertNotEqual(driver, -1, self.body)
+        self.assertLess(driver, key)
+
+    def test_disabled_recording_runs_plugin_layers_under_a_plugin_key(self) -> None:
+        plugins = self.body.find('if (!guard.IsNested() && PluginLayersLoaded()) {')
+        plugin_key = self.body.find(
+            'command.m_Key = CaptureManager::Get().CreatePluginCommandKey();')
+        pre = self.body.find('preLayer->Pre(command);')
+        post = self.body.find('postLayer->Post(command);')
+        key = self.body.find('CaptureManager::Get().CreateCommandKey()')
+        self.assertNotEqual(plugins, -1, self.body)
+        self.assertLess(plugins, plugin_key)
+        self.assertLess(plugin_key, pre)
+        self.assertLess(pre, post)
+        self.assertLess(post, key)
 
 
 class MappedWritePublisherTests(unittest.TestCase):

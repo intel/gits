@@ -9,14 +9,23 @@
 #include "cpuFrameBenchmarkService.h"
 #include "log.h"
 
+#include <filesystem>
 #include <fstream>
+#include <system_error>
 
 namespace gits::opengl {
 
 CpuFrameBenchmarkService::CpuFrameBenchmarkService(const BenchmarkConfig& cfg,
                                                    gits::MessageBus& msgBus)
     : m_Cfg(cfg), m_MsgBus(msgBus) {
-  if (cfg.IsCapture) {
+  if (cfg.IsCapture && !cfg.IsRecording) {
+    // No stream is saved, so the results are written when the recorder closes.
+    const auto write = [this](Topic, const MessagePtr&) { WriteResults(); };
+    m_SubscriptionIds.push_back(
+        m_MsgBus.subscribe({PUBLISHER_PLUGIN, TOPIC_CLOSE_RECORDER}, write));
+    m_SubscriptionIds.push_back(
+        m_MsgBus.subscribe({PUBLISHER_RECORDER, TOPIC_PROGRAM_EXIT}, write));
+  } else if (cfg.IsCapture) {
     // The recorder drops the frames presented while it closes, before it saves the stream. It
     // closes when a plugin asks it to and at program exit.
     const auto stop = [this](Topic, const MessagePtr&) {
@@ -59,6 +68,10 @@ void CpuFrameBenchmarkService::OnFrameEnd() {
 
 void CpuFrameBenchmarkService::WriteResults() {
   const std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_ResultsWritten) {
+    return;
+  }
+  m_ResultsWritten = true;
   m_Stopped = true;
   const auto toSeconds = [](std::chrono::steady_clock::duration d) {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(d).count() * 0.000'000'001;
@@ -66,7 +79,13 @@ void CpuFrameBenchmarkService::WriteResults() {
 
   // CSV: one row per counted swap. Frame 1's time is the context-creation-to-first-swap interval
   // (0 if no start baseline was captured); every later frame's time is the swap-to-swap delta.
-  std::ofstream stream(m_Cfg.Output);
+  // The recorder creates the dump directory only when it records a stream.
+  const std::filesystem::path path(m_Cfg.Output);
+  if (path.has_parent_path()) {
+    std::error_code error;
+    std::filesystem::create_directories(path.parent_path(), error);
+  }
+  std::ofstream stream(path);
   GITS_ASSERT(stream.good(), "CpuFrameBenchmarkService - failed to create file: " + m_Cfg.Output);
   stream << "Frame#,Time[sec]\n";
   for (size_t i = 0; i < m_FrameEndTimes.size(); ++i) {

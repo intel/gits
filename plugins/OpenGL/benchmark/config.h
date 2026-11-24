@@ -17,6 +17,8 @@ struct BenchmarkConfig {
   // Number of leading frames excluded from the average-FPS summary (warm-up).
   unsigned WarmupFrames{3};
   bool IsCapture{};
+  // Under the recorder, whether it records a stream.
+  bool IsRecording{};
 };
 
 } // namespace gits::opengl

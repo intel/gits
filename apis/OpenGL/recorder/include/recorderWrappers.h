@@ -11,5 +11,9 @@
 namespace gits::opengl {
 
 void* GetGeneratedRecorderWrapper(const char* name);
+// Common.Recorder.Enabled. While it is false, wrappers run only the plugin layers.
+bool RecordingEnabled();
+// While recording is disabled, whether any plugin layer is loaded. Loads the plugins on first use.
+bool PluginLayersLoaded();
 
 } // namespace gits::opengl

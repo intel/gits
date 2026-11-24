@@ -16,7 +16,7 @@
 namespace gits::opengl {
 
 // Returns a custom wrapper for tracked map/unmap entry points, or nullptr otherwise.
-// GetGeneratedRecorderWrapper checks this before generated wrappers.
+// While recording, GetGeneratedRecorderWrapper checks this before generated wrappers.
 void* GetCustomRecorderWrapper(const char* name);
 
 } // namespace gits::opengl

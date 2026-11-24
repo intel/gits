@@ -20,7 +20,8 @@ class Layer;
 class PluginService;
 
 // Builds and owns the recorder's Pre and Post layers, with EncoderLayer last among the built-in
-// Post layers, followed by the plugin layers.
+// Post layers, followed by the plugin layers. While recording is disabled, only the plugin layers
+// are loaded.
 class CaptureLayerManager {
 public:
   // Defined in the .cpp file, as Layer is forward-declared and owned by unique_ptr.
@@ -37,12 +38,19 @@ public:
   std::vector<Layer*>& GetPostLayers() {
     return m_PostLayers;
   }
+  bool HasPluginLayers() const {
+    return m_HasPluginLayers;
+  }
 
 private:
+  void LoadCaptureLayers();
+  void LoadPluginLayers();
+
   std::unique_ptr<PluginService> m_PluginService;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
+  bool m_HasPluginLayers{};
 };
 
 } // namespace gits::opengl

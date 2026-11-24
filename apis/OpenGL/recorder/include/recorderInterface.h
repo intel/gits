@@ -29,6 +29,9 @@ public:
   virtual void* GetWrapper(const char* name) = 0;
   virtual void* ResolveRealFunction(const char* name) = 0;
   virtual bool SetResolvedFunction(const char* name, void* pointer) = 0;
+  // False when neither recording nor a plugin needs the calls, so the application may call the
+  // driver directly.
+  virtual bool WrapsCalls() = 0;
   virtual void Close() = 0;
 };
 

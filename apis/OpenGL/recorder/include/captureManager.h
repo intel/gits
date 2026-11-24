@@ -113,6 +113,12 @@ public:
     return m_HandleKey.fetch_add(1, std::memory_order_relaxed) + 1;
   }
 
+  // Keys of the commands that only the plugin layers see while recording is disabled. Not taken
+  // from stream::RecordingSession, which opens the stream when it is constructed.
+  uint64_t CreatePluginCommandKey() {
+    return m_PluginCommandKey.fetch_add(1, std::memory_order_relaxed) + 1;
+  }
+
   // Generic recording path for any typed Command (enabled commands, see
   // apis/OpenGL/common/layer_interface/commandsAuto.h): hands the command's already-built
   // serializer to OrderingRecorder under its ordering key. Takes ownership of
@@ -246,6 +252,9 @@ public:
   std::vector<Layer*>& GetPostLayers() {
     return m_LayerManager.GetPostLayers();
   }
+  bool HasPluginLayers() const {
+    return m_LayerManager.HasPluginLayers();
+  }
 
 private:
   CaptureManager();
@@ -253,6 +262,7 @@ private:
 
   stream::OrderingRecorder* m_Recorder{};
   std::atomic<GITSKey> m_HandleKey{0};
+  std::atomic<uint64_t> m_PluginCommandKey{0};
   std::mutex m_FrameEndMutex;
   std::set<uint64_t> m_PendingFrameEnds;
   CaptureLayerManager m_LayerManager;

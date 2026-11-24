@@ -19,8 +19,9 @@ namespace gits::opengl {
 
 // Measures per-frame (swap-to-swap) CPU frame times and writes them to a .csv file. The average
 // FPS is computed over a steady-state window that excludes the first WarmupFrames swaps. Results
-// are flushed when the stream is saved (capture) or when the player exits (playback), via the
-// MessageBus; under the recorder, frames stop being counted once it is asked to close. The
+// are flushed when the stream is saved (capture), when the recorder closes without recording a
+// stream, or when the player exits (playback), via the MessageBus; under the recorder, frames stop
+// being counted once it is asked to close. The
 // recorder calls its layers from every application thread, so all members are guarded by
 // m_Mutex.
 class CpuFrameBenchmarkService {
@@ -50,6 +51,7 @@ private:
   std::vector<std::chrono::steady_clock::time_point> m_FrameEndTimes;
   // Set once the recorder stops recording frames.
   bool m_Stopped{};
+  bool m_ResultsWritten{};
   std::vector<unsigned> m_SubscriptionIds;
 };
 

@@ -46,6 +46,7 @@ public:
         std::filesystem::path outputPath = m_Context.config->common.recorder.dumpPath / cfg.Output;
         cfg.Output = outputPath.string();
         cfg.IsCapture = true;
+        cfg.IsRecording = m_Context.config->common.recorder.enabled;
       }
       GITS_ASSERT(m_Context.msgBus);
       m_PluginLayer = std::make_unique<BenchmarkLayer>(cfg, *m_Context.msgBus);

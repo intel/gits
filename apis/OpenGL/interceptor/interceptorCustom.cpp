@@ -52,6 +52,9 @@ void* InterceptedProcAddress(IRecorder& recorder, const char* name, void* realPr
   // calls it - by which point the bootstrap context may already be gone,
   // causing a resolution failure for a function that's genuinely available.
   bool knownFunction = recorder.SetResolvedFunction(name, realProc);
+  if (!recorder.WrapsCalls()) {
+    return realProc;
+  }
 
   // If we generated our own trampoline for this name, hand that out instead
   // of the raw real pointer, so calls made through it are still logged and

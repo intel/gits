@@ -27,6 +27,13 @@ CaptureLayerManager::CaptureLayerManager() = default;
 CaptureLayerManager::~CaptureLayerManager() = default;
 
 void CaptureLayerManager::LoadLayers() {
+  if (Configurator::Get().common.recorder.enabled) {
+    LoadCaptureLayers();
+  }
+  LoadPluginLayers();
+}
+
+void CaptureLayerManager::LoadCaptureLayers() {
   auto captureCustomizationLayer = std::make_unique<CaptureCustomizationLayer>();
   auto windowGeometryTrackingLayer = std::make_unique<WindowGeometryTrackingLayer>();
   // Records client-memory vertex arrays ahead of the draws that read them.
@@ -73,7 +80,9 @@ void CaptureLayerManager::LoadLayers() {
     m_LayersOwner.push_back(std::move(screenshotsLayer));
   }
   m_LayersOwner.push_back(std::move(encoderLayer));
+}
 
+void CaptureLayerManager::LoadPluginLayers() {
   m_PluginService = std::make_unique<PluginService>(&GetRealFunction);
   m_PluginService->LoadPlugins();
   for (const auto& plugin : m_PluginService->GetPlugins()) {
@@ -81,6 +90,7 @@ void CaptureLayerManager::LoadLayers() {
     if (layer) {
       m_PreLayers.push_back(layer);
       m_PostLayers.push_back(layer);
+      m_HasPluginLayers = true;
     }
   }
 }

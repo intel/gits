@@ -8,9 +8,12 @@
 
 #include "recorderInterface.h"
 
+#include "captureManager.h"
 #include "clientArraysService.h"
+#include "configurator.h"
 #include "driverExports.h"
 #include "glDispatchAuto.h"
+#include "log.h"
 #include "mapTrackingService.h"
 #include "realDriver.h"
 #include "recorderWrappers.h"
@@ -19,10 +22,28 @@
 
 namespace gits::opengl {
 
+bool RecordingEnabled() {
+  static const bool enabled = Configurator::Get().common.recorder.enabled;
+  return enabled;
+}
+
+bool PluginLayersLoaded() {
+  static const bool loaded = !RecordingEnabled() && CaptureManager::Get().HasPluginLayers();
+  return loaded;
+}
+
 class Recorder final : public IRecorder {
 public:
   Recorder() {
     InitializeRealDriver();
+    if (!RecordingEnabled()) {
+      if (PluginLayersLoaded()) {
+        LOG_INFO << "No stream is recorded. OpenGL calls run only the recorder plugins.";
+      } else {
+        LOG_INFO << "No stream is recorded. OpenGL calls go directly to the driver.";
+      }
+      return;
+    }
     // Register both services' exit callbacks during serialized startup.
     // Lazy construction on separate GL threads would race in MessageBus::subscribe().
     ClientArraysService::Get();
@@ -30,6 +51,11 @@ public:
   }
 
   void* GetWrapper(const char* name) override {
+    if (!WrapsCalls()) {
+      if (void* real = dispatch::GetDriverExport(name)) {
+        return real;
+      }
+    }
     void* wrapper = GetGeneratedRecorderWrapper(name);
     if (wrapper == nullptr) {
       throw std::runtime_error("Missing generated recorder wrapper");
@@ -43,6 +69,10 @@ public:
 
   bool SetResolvedFunction(const char* name, void* pointer) override {
     return TryCacheRealFunction(name, pointer);
+  }
+
+  bool WrapsCalls() override {
+    return RecordingEnabled() || PluginLayersLoaded();
   }
 
   void Close() override {
