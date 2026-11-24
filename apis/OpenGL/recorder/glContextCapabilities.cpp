@@ -222,6 +222,10 @@ bool ContextSupportsCopyBuffer() {
                                   "GL_ARB_copy_buffer", 3, 1);
 }
 
+bool ContextSupportsBufferStorage(std::pair<int, int> version) {
+  return SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage");
+}
+
 bool ContextSupportsDirectStateAccess() {
   return ContextSupportsGLFeature(g_DirectStateAccessFeatureMutex,
                                   g_DirectStateAccessFeatureByContext, "GL_ARB_direct_state_access",

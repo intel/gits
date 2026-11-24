@@ -129,9 +129,7 @@ bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* 
 
 bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
   const auto version = CurrentContextGLVersion();
-  const bool supportsBufferStorage =
-      SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage");
-  if (!supportsBufferStorage) {
+  if (!ContextSupportsBufferStorage(version)) {
     return true;
   }
   GLint flags = 0;
@@ -158,9 +156,8 @@ PersistentStorage PersistentMapSanityCheck(
     GLbitfield access,
     const MapTrackingService::BufferParameterCallback& parameter) {
   const auto version = CurrentContextGLVersion();
-  GITS_ASSERT(
-      SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage"),
-      "Persistent buffer mapping requires buffer storage support");
+  GITS_ASSERT(ContextSupportsBufferStorage(version),
+              "Persistent buffer mapping requires buffer storage support");
   GLint64 size = 0;
   GLint64 storageFlags = 0;
   GLint64 mapped = 0;

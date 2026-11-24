@@ -56,11 +56,10 @@ struct ContextCaps {
   // GL 4.3: GL_VERTEX_ATTRIB_ARRAY_LONG. GL 4.1 and ARB/EXT_vertex_attrib_64bit add the long
   // setters but not this query, so there the setter flag says.
   bool LongAttribs{false};
-  bool PrimitiveRestart{false};   // GL 3.1.
-  bool PrimitiveRestartNV{false}; // NV_primitive_restart, with its own enums.
-  bool FixedIndexRestart{false};  // GL 4.3 / ARB_ES3_compatibility.
-  // GL 4.4 / ARB or EXT_buffer_storage, with GL 3.0 for the GL_BUFFER_ACCESS_FLAGS query.
-  bool PersistentMaps{false};
+  bool PrimitiveRestart{false};         // GL 3.1.
+  bool PrimitiveRestartNV{false};       // NV_primitive_restart, with its own enums.
+  bool FixedIndexRestart{false};        // GL 4.3 / ARB_ES3_compatibility.
+  bool PersistentMapAccessFlags{false}; // GL 3.0 and buffer storage support.
   bool CopyBuffer{false};   // GL 3.1 / ARB_copy_buffer: BufferShadowService's staging copy.
   bool VertexArrays{false}; // GL 3.0 / ARB_ or APPLE_vertex_array_object.
   GLint MaxTexCoords{1};
@@ -121,10 +120,9 @@ ContextCaps QueryContextCaps() {
   caps.PrimitiveRestart = GlVersionAtLeast(version, 3, 1);
   caps.PrimitiveRestartNV = CurrentContextHasExtension(version, "GL_NV_primitive_restart");
   caps.FixedIndexRestart = SupportsCoreOrExtension(version, 4, 3, "GL_ARB_ES3_compatibility");
-  caps.PersistentMaps = GlVersionAtLeast(version, 4, 4) ||
-                        (GlVersionAtLeast(version, 3, 0) &&
-                         (CurrentContextHasExtension(version, "GL_ARB_buffer_storage") ||
-                          CurrentContextHasExtension(version, "GL_EXT_buffer_storage")));
+  // GL_BUFFER_ACCESS_FLAGS is a core query from GL 3.0.
+  caps.PersistentMapAccessFlags =
+      GlVersionAtLeast(version, 3, 0) && ContextSupportsBufferStorage(version);
   caps.CopyBuffer = SupportsCoreOrExtension(version, 3, 1, "GL_ARB_copy_buffer");
   caps.VertexArrays = SupportsCoreOrExtension(version, 3, 0, "GL_ARB_vertex_array_object",
                                               "GL_APPLE_vertex_array_object");
@@ -518,7 +516,7 @@ bool ReadIndices(const ContextCaps& caps,
   GetBoundBufferParameter(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_MAPPED, mapped);
   if (mapped != 0) {
     GLint accessFlags = 0;
-    if (caps.PersistentMaps) {
+    if (caps.PersistentMapAccessFlags) {
       GetBoundBufferParameter(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_ACCESS_FLAGS, accessFlags);
     }
     if ((accessFlags & GL_MAP_PERSISTENT_BIT) == 0) {
