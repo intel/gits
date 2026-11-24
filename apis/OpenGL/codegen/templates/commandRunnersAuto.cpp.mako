@@ -75,6 +75,7 @@ ${AUTO_GENERATED_HEADER}
 #include "commandRunnersAuto.h"
 #include "bindlessHandleMapService.h"
 #include "discardedOutputElements.h"
+#include "glContextQueries.h"
 #include "glxDrawableService.h"
 #include "glxFBConfigService.h"
 #include "handleArgumentUpdaters.h"

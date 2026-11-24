@@ -8,10 +8,19 @@
 
 #pragma once
 
+#include "glTypes.h"
+
 #include <functional>
 #include <utility>
 
 namespace gits::opengl {
+
+// The native context current on this thread, or nullptr, as reported by the real driver.
+#if defined(_WIN32)
+HGLRC CurrentContext();
+#else
+GLXContext CurrentContext();
+#endif
 
 // Queries the current context's GL_VERSION. Returns (0, 0) if it cannot be parsed.
 std::pair<int, int> CurrentContextGLVersion();

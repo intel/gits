@@ -15,9 +15,9 @@ add_library(OpenGL_utils STATIC
 
 add_dependencies(OpenGL_utils OpenGL_codegen)
 target_include_directories(OpenGL_utils
-  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ../types
   # Live queries use the generated declarations; each final binary supplies its own table.
-  PRIVATE ../dispatch ../layer_interface ../types
+  PRIVATE ../dispatch ../layer_interface
 )
 
 set_target_properties(OpenGL_utils PROPERTIES

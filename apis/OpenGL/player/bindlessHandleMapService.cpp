@@ -7,7 +7,7 @@
 // ===================== end_copyright_notice ==============================
 
 #include "bindlessHandleMapService.h"
-#include "handleArgumentUpdaters.h"
+#include "glContextQueries.h"
 #include "shareGroupService.h"
 
 namespace gits::opengl {

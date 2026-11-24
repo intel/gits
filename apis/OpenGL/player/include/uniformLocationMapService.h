@@ -13,7 +13,7 @@
 // same reason in the opposite direction: every method below is only ever called from player-
 // side code (ReplayCustomizationLayer/commandRunnersAuto.cpp.mako - see this class's own
 // method comments for each call site) and only ever needs player-side identity
-// (CurrentContext()'s live, replay-time context - player/include/handleArgumentUpdaters.h). The
+// (the live replay context returned by CurrentContext()). The
 // recorder has no counterpart: a captured stream already records whichever location the
 // recording-time driver returned, so there is nothing for the recorder itself to remap.
 
@@ -97,7 +97,7 @@ namespace gits::opengl {
 // since program/shader objects are shareable but which one is bound for use is not (see the
 // GL spec's "Shared Objects and Multiple Contexts" - program/shader objects are shared,
 // GL_CURRENT_PROGRAM is not). Tracked here keyed by the real, replay-time context (see
-// player/include/handleArgumentUpdaters.h's CurrentContext()) rather than a single
+// CurrentContext()) rather than a single
 // process-global value, so a replay that runs multiple GL contexts - sharing or not,
 // concurrently on different threads or serially on one - resolves each glUniform*() call
 // against the program actually bound on its own context, not whichever context last called

@@ -8,9 +8,9 @@
 
 #include "replayCustomizationLayer.h"
 
+#include "glContextQueries.h"
 #include "glEnumsAuto.h"
 #include "glxDrawableService.h"
-#include "handleArgumentUpdaters.h"
 #include "hdcVirtualizationService.h"
 #include "glDispatchAuto.h"
 #include "playerManager.h"

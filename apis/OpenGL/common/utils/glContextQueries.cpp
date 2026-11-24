@@ -37,6 +37,18 @@ bool VisitIndexedExtensions(GLint count, Predicate stop) {
 
 } // namespace
 
+#if defined(_WIN32)
+HGLRC CurrentContext() {
+  auto realFunction = g_DispatchTable.wglGetCurrentContext.load(std::memory_order_acquire);
+  return realFunction ? realFunction() : nullptr;
+}
+#else
+GLXContext CurrentContext() {
+  auto realFunction = g_DispatchTable.glXGetCurrentContext.load(std::memory_order_acquire);
+  return realFunction ? realFunction() : nullptr;
+}
+#endif
+
 std::pair<int, int> CurrentContextGLVersion() {
   auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
   return ParseGlVersionMajorMinor(reinterpret_cast<const char*>(realGetString(GL_VERSION)));

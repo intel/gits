@@ -10,7 +10,6 @@
 
 #include "commandSerializersAuto.h"
 #include "glContextQueries.h"
-#include "handleArgumentUpdaters.h"
 #include "liveGl.h"
 #include "pixelFormatMetaTypes.h"
 #include "stateRestorer.h"
