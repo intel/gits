@@ -84,16 +84,7 @@ ContextCaps QueryContextCaps() {
   }
   // Client arrays were removed from core profiles (and from forward-compatible contexts, which
   // drop every deprecated feature); on those contexts every array is necessarily buffer-backed.
-  bool core = false;
-  if (GlVersionAtLeast(version, 3, 0)) {
-    core = (GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0;
-  }
-  if (GlVersionAtLeast(version, 3, 2)) {
-    core = core || (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-  } else if (version == std::pair{3, 1}) {
-    core = core || !CurrentContextHasExtension(version, "GL_ARB_compatibility");
-  }
-  if (core) {
+  if (CurrentContextIsCoreOrForwardCompatible(version)) {
     return caps;
   }
   caps.ClientArrays = true;

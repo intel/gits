@@ -45,6 +45,15 @@ private:
 // One-off extension lookup using the current context's already queried version.
 bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName);
 
+// Checks the forward-compatible flag first, then the core profile (implicit on GL 3.1).
+// Pass extensions to reuse an existing extension query for GL 3.1.
+bool CurrentContextIsCoreOrForwardCompatible(std::pair<int, int> version,
+                                             const CurrentContextExtensions* extensions = nullptr);
+
+// Tests whether the context retains features deprecated in GL 3.0. On GL 3.2 and later this
+// requires the compatibility bit and is not simply the inverse of the core profile bit.
+bool CompatibilityContext(std::pair<int, int> version);
+
 // Checks core support first, then the extensions in order. Does not cache the result.
 bool SupportsCoreOrExtension(std::pair<int, int> version,
                              int coreMajor,

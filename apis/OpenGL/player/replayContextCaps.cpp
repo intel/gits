@@ -59,19 +59,7 @@ ReplayContextCaps QueryCaps() {
       GlVersionAtLeast(version, 4, 5) || extensions.Has("GL_ARB_direct_state_access");
 
   auto getIntegerv = table.glGetIntegerv.load(std::memory_order_acquire);
-  bool core = false;
-  if (GlVersionAtLeast(version, 3, 0)) {
-    GLint flags = 0;
-    getIntegerv(GL_CONTEXT_FLAGS, &flags);
-    core = (flags & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0;
-  }
-  if (GlVersionAtLeast(version, 3, 2)) {
-    GLint profile = 0;
-    getIntegerv(GL_CONTEXT_PROFILE_MASK, &profile);
-    core = core || (profile & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
-  } else if (version == std::pair{3, 1}) {
-    core = core || !extensions.Has("GL_ARB_compatibility");
-  }
+  const bool core = CurrentContextIsCoreOrForwardCompatible(version, &extensions);
   caps.DisplayLists = !core;
 
   GLint units = 1;

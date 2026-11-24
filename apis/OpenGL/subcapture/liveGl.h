@@ -59,25 +59,6 @@ inline GLuint GetName(GLenum pname) {
   return static_cast<GLuint>(GetInteger(pname));
 }
 
-// Whether the current context, of the given GL version, keeps the features GL 3.0 deprecated. A
-// forward-compatible context removes them, a GL 3.1 context keeps them only with
-// GL_ARB_compatibility, and a later one only in a compatibility profile.
-inline bool CompatibilityContext(std::pair<int, int> version) {
-  if (version.first < 3) {
-    return true;
-  }
-  if ((GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0) {
-    return false;
-  }
-  if (version == std::pair{3, 0}) {
-    return true;
-  }
-  if (version == std::pair{3, 1}) {
-    return CurrentContextHasExtension(version, "GL_ARB_compatibility");
-  }
-  return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
-}
-
 // The texture bound to `binding` on `texunit`, GL_TEXTUREi, by the query GL_EXT_direct_state_access
 // adds with its glMultiTex* commands.
 inline GLuint GetMultiTexName(GLenum binding, GLenum texunit) {

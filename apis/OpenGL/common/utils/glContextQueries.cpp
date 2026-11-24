@@ -21,6 +21,21 @@ namespace gits::opengl {
 
 namespace {
 
+GLint GetInteger(GLenum pname) {
+  GLint value = 0;
+  g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire)(pname, &value);
+  return value;
+}
+
+bool IsForwardCompatible() {
+  return (GetInteger(GL_CONTEXT_FLAGS) & GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT) != 0;
+}
+
+bool HasArbCompatibility(std::pair<int, int> version, const CurrentContextExtensions* extensions) {
+  constexpr char extension[] = "GL_ARB_compatibility";
+  return extensions ? extensions->Has(extension) : CurrentContextHasExtension(version, extension);
+}
+
 template <typename Predicate>
 bool VisitIndexedExtensions(GLint count, Predicate stop) {
   for (GLint i = 0; i < count; ++i) {
@@ -89,6 +104,33 @@ void CurrentContextExtensions::ForEach(const std::function<void(const char*)>& v
 
 bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName) {
   return CurrentContextExtensions(version).Has(extensionName);
+}
+
+bool CurrentContextIsCoreOrForwardCompatible(std::pair<int, int> version,
+                                             const CurrentContextExtensions* extensions) {
+  if (GlVersionAtLeast(version, 3, 0) && IsForwardCompatible()) {
+    return true;
+  }
+  if (GlVersionAtLeast(version, 3, 2)) {
+    return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_CORE_PROFILE_BIT) != 0;
+  }
+  return version == std::pair{3, 1} && !HasArbCompatibility(version, extensions);
+}
+
+bool CompatibilityContext(std::pair<int, int> version) {
+  if (version.first < 3) {
+    return true;
+  }
+  if (IsForwardCompatible()) {
+    return false;
+  }
+  if (version == std::pair{3, 0}) {
+    return true;
+  }
+  if (version == std::pair{3, 1}) {
+    return HasArbCompatibility(version, nullptr);
+  }
+  return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
 }
 
 bool SupportsCoreOrExtension(std::pair<int, int> version,
