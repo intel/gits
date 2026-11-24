@@ -8,6 +8,7 @@
 
 #include "replayContextCaps.h"
 
+#include "glContextQueries.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
 #include "handleArgumentUpdaters.h"
@@ -65,8 +66,7 @@ private:
 ReplayContextCaps QueryCaps() {
   ReplayContextCaps caps;
   auto& table = g_DispatchTable;
-  const auto version = ParseGlVersionMajorMinor(
-      reinterpret_cast<const char*>(table.glGetString.load(std::memory_order_acquire)(GL_VERSION)));
+  const auto version = CurrentContextGLVersion();
   if (version.first == 0) {
     return caps;
   }

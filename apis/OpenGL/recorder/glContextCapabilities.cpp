@@ -9,6 +9,7 @@
 #include "glContextCapabilities.h"
 
 #include "currentContext.h"
+#include "glContextQueries.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
 #include "glDispatchAuto.h"
@@ -19,11 +20,6 @@
 #include <unordered_map>
 
 namespace gits::opengl {
-
-std::pair<int, int> CurrentContextGLVersion() {
-  auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
-  return ParseGlVersionMajorMinor(reinterpret_cast<const char*>(realGetString(GL_VERSION)));
-}
 
 bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName) {
   if (version.first >= 3) {

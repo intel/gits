@@ -13,6 +13,7 @@
 #include "configurator.h"
 #include "glBufferQueries.h"
 #include "glContextCapabilities.h"
+#include "glContextQueries.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"

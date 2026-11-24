@@ -9,7 +9,7 @@
 #include "stateTrackingLayer.h"
 
 #include "commandSerializersAuto.h"
-#include "glVersionString.h"
+#include "glContextQueries.h"
 #include "handleArgumentUpdaters.h"
 #include "liveGl.h"
 #include "pixelFormatMetaTypes.h"
@@ -662,8 +662,7 @@ bool StateTrackingLayer::Compatibility(uint32_t threadId) {
   if (known != m_Compatibility.end()) {
     return known->second;
   }
-  const auto version =
-      ParseGlVersionMajorMinor(reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION)));
+  const auto version = CurrentContextGLVersion();
   const bool compatibility = CompatibilityContext(version);
   m_Compatibility.emplace(context, compatibility);
   return compatibility;

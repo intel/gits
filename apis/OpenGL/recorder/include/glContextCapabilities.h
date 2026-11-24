@@ -30,10 +30,6 @@ bool ContextSupportsDirectStateAccess();
 // ARB_internalformat_query2). Cached per context.
 bool ContextSupportsInternalformatQuery2();
 
-// (major, minor) parsed from the current context's GL_VERSION; (0, 0) if it cannot be parsed,
-// which callers treat as "supports nothing".
-std::pair<int, int> CurrentContextGLVersion();
-
 // Whether the current context lists `extensionName`. Pass its version from
 // CurrentContextGLVersion() to select the legal enumeration form.
 bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName);

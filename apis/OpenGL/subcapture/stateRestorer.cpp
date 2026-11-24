@@ -9,7 +9,7 @@
 #include "stateRestorer.h"
 
 #include "commandSerializersAuto.h"
-#include "glVersionString.h"
+#include "glContextQueries.h"
 #include "glxDrawableService.h"
 #include "handleMapService.h"
 #include "hdcVirtualizationService.h"
@@ -725,8 +725,7 @@ void StateRestorer::ReadExtensions() {
 }
 
 void StateRestorer::ReadVersion() {
-  const auto version =
-      ParseGlVersionMajorMinor(reinterpret_cast<const char*>(GL_FN(glGetString)(GL_VERSION)));
+  const auto version = CurrentContextGLVersion();
   m_Version = {version, CompatibilityContext(version)};
 }
 
