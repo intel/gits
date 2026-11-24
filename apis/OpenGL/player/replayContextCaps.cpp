@@ -14,7 +14,6 @@
 #include "handleArgumentUpdaters.h"
 #include "glDispatchAuto.h"
 
-#include <cstring>
 #include <utility>
 
 namespace gits::opengl {
@@ -29,40 +28,6 @@ struct CachedCaps {
 
 thread_local CachedCaps t_Cached;
 
-class ExtensionChecker {
-public:
-  explicit ExtensionChecker(std::pair<int, int> version) : m_Version(version) {
-    auto& table = g_DispatchTable;
-    if (GlVersionAtLeast(m_Version, 3, 0)) {
-      // GL_EXTENSIONS is not a valid glGetString name on core profiles.
-      table.glGetIntegerv.load(std::memory_order_acquire)(GL_NUM_EXTENSIONS, &m_Count);
-    } else {
-      m_Legacy = reinterpret_cast<const char*>(
-          table.glGetString.load(std::memory_order_acquire)(GL_EXTENSIONS));
-    }
-  }
-
-  bool Has(const char* name) const {
-    if (GlVersionLessThan(m_Version, 3, 0)) {
-      return ExtensionsStringContainsWholeWord(m_Legacy, name);
-    }
-    auto getStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
-    for (GLint i = 0; i < m_Count; ++i) {
-      const auto* extension =
-          reinterpret_cast<const char*>(getStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
-      if (extension != nullptr && std::strcmp(extension, name) == 0) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-private:
-  std::pair<int, int> m_Version;
-  GLint m_Count{0};
-  const char* m_Legacy{nullptr};
-};
-
 ReplayContextCaps QueryCaps() {
   ReplayContextCaps caps;
   auto& table = g_DispatchTable;
@@ -70,7 +35,7 @@ ReplayContextCaps QueryCaps() {
   if (version.first == 0) {
     return caps;
   }
-  const ExtensionChecker extensions(version);
+  const CurrentContextExtensions extensions(version);
   caps.MultiTextureCore = GlVersionAtLeast(version, 1, 3);
   caps.MultiTexture = caps.MultiTextureCore || extensions.Has("GL_ARB_multitexture");
   caps.SecondaryColorCore = GlVersionAtLeast(version, 1, 4);

@@ -10,12 +10,12 @@
 
 // Queries of the replay driver's state for subcapture state restore.
 
+#include "glContextQueries.h"
 #include "glEnumsAuto.h"
 #include "glDispatchAuto.h"
 
 #include <algorithm>
 #include <atomic>
-#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
@@ -73,15 +73,7 @@ inline bool CompatibilityContext(std::pair<int, int> version) {
     return true;
   }
   if (version == std::pair{3, 1}) {
-    const GLint count = GetInteger(GL_NUM_EXTENSIONS);
-    for (GLint i = 0; i < count; ++i) {
-      const auto* name =
-          reinterpret_cast<const char*>(GL_FN(glGetStringi)(GL_EXTENSIONS, static_cast<GLuint>(i)));
-      if (name != nullptr && std::strcmp(name, "GL_ARB_compatibility") == 0) {
-        return true;
-      }
-    }
-    return false;
+    return CurrentContextHasExtension(version, "GL_ARB_compatibility");
   }
   return (GetInteger(GL_CONTEXT_PROFILE_MASK) & GL_CONTEXT_COMPATIBILITY_PROFILE_BIT) != 0;
 }

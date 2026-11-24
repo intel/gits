@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
-#include <sstream>
 #include <tuple>
 
 namespace gits::opengl {
@@ -707,21 +706,9 @@ bool StateRestorer::SwitchTo(const MakeCurrent& current) {
 
 void StateRestorer::ReadExtensions() {
   m_Extensions.clear();
-  if (m_Version.AtLeast(3, 0)) {
-    const GLint count = GetInteger(GL_NUM_EXTENSIONS);
-    for (GLint i = 0; i < count; ++i) {
-      const auto* name =
-          reinterpret_cast<const char*>(GL_FN(glGetStringi)(GL_EXTENSIONS, static_cast<GLuint>(i)));
-      if (name != nullptr) {
-        m_Extensions.insert(name);
-      }
-    }
-  } else if (const auto* names = reinterpret_cast<const char*>(GL_FN(glGetString)(GL_EXTENSIONS))) {
-    std::istringstream stream(names);
-    for (std::string name; stream >> name;) {
-      m_Extensions.insert(name);
-    }
-  }
+  CurrentContextExtensions(m_Version.MajorMinor).ForEach([this](const char* name) {
+    m_Extensions.insert(name);
+  });
 }
 
 void StateRestorer::ReadVersion() {

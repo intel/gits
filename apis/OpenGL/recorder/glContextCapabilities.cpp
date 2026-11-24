@@ -10,50 +10,11 @@
 
 #include "currentContext.h"
 #include "glContextQueries.h"
-#include "glEnumsAuto.h"
-#include "glVersionString.h"
-#include "glDispatchAuto.h"
 
-#include <atomic>
 #include <mutex>
-#include <string>
 #include <unordered_map>
 
 namespace gits::opengl {
-
-bool CurrentContextHasExtension(std::pair<int, int> version, const char* extensionName) {
-  if (version.first >= 3) {
-    // GL_NUM_EXTENSIONS/glGetStringi are themselves only legal from 3.0 on.
-    GLint numExtensions = 0;
-    auto realGetIntegerv = g_DispatchTable.glGetIntegerv.load(std::memory_order_acquire);
-    realGetIntegerv(GL_NUM_EXTENSIONS, &numExtensions);
-    auto realGetStringi = g_DispatchTable.glGetStringi.load(std::memory_order_acquire);
-    for (GLint i = 0; i < numExtensions; ++i) {
-      const char* extension =
-          reinterpret_cast<const char*>(realGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
-      if (extension != nullptr && std::string(extension) == extensionName) {
-        return true;
-      }
-    }
-    return false;
-  }
-  // Pre-3.0: no profile concept exists yet (core/compatibility profiles start at 3.2), so the
-  // legacy single-string form is always legal here - and it is the only enumeration strategy
-  // that even exists pre-3.0.
-  auto realGetString = g_DispatchTable.glGetString.load(std::memory_order_acquire);
-  return ExtensionsStringContainsWholeWord(
-      reinterpret_cast<const char*>(realGetString(GL_EXTENSIONS)), extensionName);
-}
-
-bool SupportsCoreOrExtension(std::pair<int, int> version,
-                             int coreMajor,
-                             int coreMinor,
-                             const char* extension,
-                             const char* alternate) {
-  return GlVersionAtLeast(version, coreMajor, coreMinor) ||
-         CurrentContextHasExtension(version, extension) ||
-         (alternate != nullptr && CurrentContextHasExtension(version, alternate));
-}
 
 namespace {
 
@@ -76,13 +37,8 @@ namespace {
 // ships a sub-1.5 context) but the exact same class of bug, so guarded identically rather than
 // assumed safe.
 //
-// Every enum this function itself queries is chosen so it is unconditionally legal on whatever
-// context version led to that particular query executing: GL_VERSION (queried first, always
-// legal on any GL version/profile) decides which of the two extension-enumeration strategies
-// below is itself safe to use next - GL_NUM_EXTENSIONS/glGetStringi (legal 3.0+ only) vs. the
-// legacy glGetString(GL_EXTENSIONS) single string (legal on any pre-3.2 context, and on any
-// compatibility-profile context regardless of version) - so this function can never itself
-// become a second instance of the exact hazard it exists to prevent.
+// On a cache miss, the shared context queries read GL_VERSION first to select the extension
+// enumeration form.
 //
 // Cached per-(context, feature) behind a mutex: a context's own GL version/extension set is
 // fixed for its entire lifetime once created, so re-parsing GL_VERSION and re-enumerating every
@@ -135,13 +91,6 @@ namespace {
 // context must be current across a whole wglMakeCurrent-to-app-exit span without this recorder
 // ever having seen its creation) and correctness matters far more here than that micro-cost.
 //
-// The feature probes below deliberately use GL_VERSION, GL_EXTENSIONS, and GL_NUM_EXTENSIONS
-// only where each enum is legal for the current context/version/profile. GL_VERSION is legal on
-// every GL context. GL_NUM_EXTENSIONS and glGetStringi are queried only after establishing GL
-// 3.0 or newer, while the legacy GL_EXTENSIONS string is queried only before GL 3.0, where no
-// core-profile restriction exists. In particular, do not replace the unconditional GL_VERSION
-// query with GL_MAJOR_VERSION, or query either extension form before its corresponding version
-// check.
 bool ContextSupportsGLFeature(std::mutex& cacheMutex,
                               std::unordered_map<GITSKey, bool>& cache,
                               const char* extensionName,
