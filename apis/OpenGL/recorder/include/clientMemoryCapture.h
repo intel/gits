@@ -21,7 +21,7 @@ namespace gits::opengl {
 // GL_PIXEL_(UN)PACK_BUFFER_BINDING directly via the real driver (same technique as
 // ResolveBoundBuffer() in mapTrackingService.cpp, but quiet - "nothing bound" is the
 // overwhelmingly common, unremarkable case here, unlike ResolveBoundBuffer's own map/unmap-
-// specific callers) - but only once ContextSupportsPixelBufferObject()
+// specific callers) - but only once ContextSupportsPixelBufferObjectCached()
 // (glContextCapabilities.cpp) has confirmed the binding-point enum itself is legal on the current
 // context/version: an unconditional query here would otherwise risk injecting a spurious
 // GL_INVALID_ENUM into the APPLICATION's own GL error state on a context old enough to lack the
@@ -77,7 +77,7 @@ bool PackPixelsPointerIsBufferOffset(const void* pixels);
 // PointerParamOverride.query_buffer_guard for the full ARB_query_buffer_object rationale.
 // Same technique/shape as GuardUnpackPixelsPointer/GuardPackPixelsPointer above (quiet
 // GL_QUERY_BUFFER_BINDING query via the real driver, "nothing bound" the common case, and the
-// same ContextSupportsQueryBufferObject() version/extension gate before
+// same ContextSupportsQueryBufferObjectCached() version/extension gate before
 // ever querying GL_QUERY_BUFFER_BINDING itself: glGetQueryObject* is valid as far back as GL
 // 1.5/ARB_occlusion_query, well below GL_ARB_query_buffer_object's own 4.4 core promotion, so
 // an unconditional query would inject a spurious GL_INVALID_ENUM into the application's own

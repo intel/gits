@@ -42,7 +42,7 @@ LevelSize QueryLevelSize(GLuint texture, GLint level) {
       get(target, level, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &size.CompressedImageSize);
     }
   };
-  if (ContextSupportsDirectStateAccess()) {
+  if (ContextSupportsDirectStateAccessCached()) {
     query(g_DispatchTable.glGetTextureLevelParameteriv.load(std::memory_order_acquire), texture);
     return size;
   }
@@ -65,7 +65,7 @@ GLint MappedRows(const LevelSize& size, GLint stride) {
     return size.Height;
   }
   GLint blockHeight = 0;
-  if (ContextSupportsInternalformatQuery2()) {
+  if (ContextSupportsInternalformatQuery2Cached()) {
     g_DispatchTable.glGetInternalformativ.load(std::memory_order_acquire)(
         GL_TEXTURE_2D, static_cast<GLenum>(size.InternalFormat), GL_TEXTURE_COMPRESSED_BLOCK_HEIGHT,
         1, &blockHeight);

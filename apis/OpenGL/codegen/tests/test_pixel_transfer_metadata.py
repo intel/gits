@@ -552,7 +552,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
                          'PixelBufferObjectIsBound() must not null-check anything - a legal '
                          'offset-0 PBO call (pixels == nullptr) must still be classified as '
                          'buffer-offset mode')
-        self.assertIn('ContextSupportsPixelBufferObject()', body)
+        self.assertIn('ContextSupportsPixelBufferObjectCached()', body)
         self.assertIn('QueryBoundBufferQuiet(bindingPname) != 0', body)
 
         # Both public predicates must delegate to the single-argument form (no pixels forwarded

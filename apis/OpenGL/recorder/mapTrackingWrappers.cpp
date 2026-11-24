@@ -186,7 +186,7 @@ GLboolean APIENTRY CustomWrapper_glUnmapBufferARB(GLenum target) {
 // each still calls its own driver export.
 
 GLint64 NamedBufferSize(GLuint buffer) {
-  GITS_ASSERT(ContextSupportsDirectStateAccess() &&
+  GITS_ASSERT(ContextSupportsDirectStateAccessCached() &&
                   TryResolveRealFunction("glGetNamedBufferParameteri64v"),
               "Named buffer size queries require glGetNamedBufferParameteri64v "
               "(OpenGL 4.5 or ARB_direct_state_access); alternative size queries are unsupported");
@@ -247,7 +247,7 @@ void* APIENTRY CustomWrapper_MapNamedBufferRange(GLuint buffer,
     constexpr bool ext = Family == NamedBufferFamily::EXT;
     // EXT entry points require GL_EXT_direct_state_access; core DSA support does not imply it.
     const bool supported = ext ? CurrentContextHasExtension(version, "GL_EXT_direct_state_access")
-                               : ContextSupportsDirectStateAccess();
+                               : ContextSupportsDirectStateAccessCached();
     const char* getterName = ext ? "glGetNamedBufferSubDataEXT" : "glGetNamedBufferSubData";
     const bool getterAvailable =
         buffer != 0 && supported && TryResolveRealFunction("glIsBuffer") &&
@@ -369,7 +369,7 @@ void APIENTRY CustomWrapper_GetNamedBufferPointerv(GLuint buffer, GLenum pname, 
   }
   const bool supported =
       Family == NamedBufferFamily::Core
-          ? ContextSupportsDirectStateAccess()
+          ? ContextSupportsDirectStateAccessCached()
           : CurrentContextHasExtension(CurrentContextGLVersion(), "GL_EXT_direct_state_access");
   const char* name = Family == NamedBufferFamily::Core ? "glGetNamedBufferPointerv"
                                                        : "glGetNamedBufferPointervEXT";

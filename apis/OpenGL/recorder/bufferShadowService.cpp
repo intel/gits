@@ -69,7 +69,7 @@ void BufferShadowService::OnData(const char* command,
   // Without a staging copy a buffer never seen on GL_ELEMENT_ARRAY_BUFFER could not be read later
   // if it gets bound there, so every upload is kept.
   const bool retain = ref.Target == GL_ELEMENT_ARRAY_BUFFER ||
-                      (!clientMemoryTarget && !ContextSupportsCopyBuffer());
+                      (!clientMemoryTarget && !ContextSupportsCopyBufferCached());
   if (!retain && !clientMemoryTarget) {
     std::lock_guard<std::mutex> lock(m_Mutex);
     if (m_Shadows.empty()) {

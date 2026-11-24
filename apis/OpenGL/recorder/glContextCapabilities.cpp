@@ -91,12 +91,12 @@ namespace {
 // context must be current across a whole wglMakeCurrent-to-app-exit span without this recorder
 // ever having seen its creation) and correctness matters far more here than that micro-cost.
 //
-bool ContextSupportsGLFeature(std::mutex& cacheMutex,
-                              std::unordered_map<GITSKey, bool>& cache,
-                              const char* extensionName,
-                              int coreSinceMajor,
-                              int coreSinceMinor,
-                              const char* extensionNameAlias = nullptr) {
+bool ContextSupportsGLFeatureCached(std::mutex& cacheMutex,
+                                    std::unordered_map<GITSKey, bool>& cache,
+                                    const char* extensionName,
+                                    int coreSinceMajor,
+                                    int coreSinceMinor,
+                                    const char* extensionNameAlias = nullptr) {
   const GITSKey contextKey = CurrentContextKey();
   const bool cacheable = contextKey != 0;
   if (cacheable) {
@@ -132,7 +132,7 @@ std::unordered_map<GITSKey, bool> g_InternalformatQuery2FeatureByContext;
 } // namespace
 
 // GL_ARB_pixel_buffer_object was promoted to core in OpenGL 2.1 - see
-// ContextSupportsGLFeature's own header comment for why this is checked at all (a narrower,
+// ContextSupportsGLFeatureCached's own header comment for why this is checked at all (a narrower,
 // largely theoretical counterpart of the GL_QUERY_BUFFER_BINDING hazard below, kept for
 // consistency rather than assumed safe).
 //
@@ -144,48 +144,49 @@ std::unordered_map<GITSKey, bool> g_InternalformatQuery2FeatureByContext;
 // EXT_pixel_buffer_object is not merely similarly-named, it is bit-for-bit the same binding-point
 // enum surface ARB_pixel_buffer_object (and later core 2.1) reused verbatim. A pre-2.1 context
 // exposing only the EXT form (no ARB string) would previously fail this check outright, making
-// ContextSupportsPixelBufferObject() return false and GuardPixelsPointer skip its bound-buffer
+// ContextSupportsPixelBufferObjectCached() return false and GuardPixelsPointer skip its bound-buffer
 // check entirely on such a context - exactly the "dereference a buffer-relative byte offset as a
 // real client pointer" hazard this guard exists to prevent, on a context that in fact has a pixel
 // buffer bound via the EXT path.
-bool ContextSupportsPixelBufferObject() {
-  return ContextSupportsGLFeature(g_PixelBufferFeatureMutex, g_PixelBufferFeatureByContext,
-                                  "GL_ARB_pixel_buffer_object", 2, 1, "GL_EXT_pixel_buffer_object");
+bool ContextSupportsPixelBufferObjectCached() {
+  return ContextSupportsGLFeatureCached(g_PixelBufferFeatureMutex, g_PixelBufferFeatureByContext,
+                                        "GL_ARB_pixel_buffer_object", 2, 1,
+                                        "GL_EXT_pixel_buffer_object");
 }
 
 // GL_ARB_query_buffer_object was promoted to core in OpenGL 4.4 - see
-// ContextSupportsGLFeature's own header comment for the full rationale: glGetQueryObject*
+// ContextSupportsGLFeatureCached's own header comment for the full rationale: glGetQueryObject*
 // itself is valid as far back as GL 1.5/ARB_occlusion_query, well below 4.4, so this gate must
 // probe GL_ARB_query_buffer_object's own version/extension support separately.
-bool ContextSupportsQueryBufferObject() {
-  return ContextSupportsGLFeature(g_QueryBufferFeatureMutex, g_QueryBufferFeatureByContext,
-                                  "GL_ARB_query_buffer_object", 4, 4);
+bool ContextSupportsQueryBufferObjectCached() {
+  return ContextSupportsGLFeatureCached(g_QueryBufferFeatureMutex, g_QueryBufferFeatureByContext,
+                                        "GL_ARB_query_buffer_object", 4, 4);
 }
 
-bool ContextSupportsCopyBuffer() {
-  return ContextSupportsGLFeature(g_CopyBufferFeatureMutex, g_CopyBufferFeatureByContext,
-                                  "GL_ARB_copy_buffer", 3, 1);
+bool ContextSupportsCopyBufferCached() {
+  return ContextSupportsGLFeatureCached(g_CopyBufferFeatureMutex, g_CopyBufferFeatureByContext,
+                                        "GL_ARB_copy_buffer", 3, 1);
 }
 
 bool ContextSupportsBufferStorage(std::pair<int, int> version) {
   return SupportsCoreOrExtension(version, 4, 4, "GL_ARB_buffer_storage", "GL_EXT_buffer_storage");
 }
 
-bool ContextSupportsDirectStateAccess() {
-  return ContextSupportsGLFeature(g_DirectStateAccessFeatureMutex,
-                                  g_DirectStateAccessFeatureByContext, "GL_ARB_direct_state_access",
-                                  4, 5);
+bool ContextSupportsDirectStateAccessCached() {
+  return ContextSupportsGLFeatureCached(g_DirectStateAccessFeatureMutex,
+                                        g_DirectStateAccessFeatureByContext,
+                                        "GL_ARB_direct_state_access", 4, 5);
 }
 
-bool ContextSupportsInternalformatQuery2() {
-  return ContextSupportsGLFeature(g_InternalformatQuery2FeatureMutex,
-                                  g_InternalformatQuery2FeatureByContext,
-                                  "GL_ARB_internalformat_query2", 4, 3);
+bool ContextSupportsInternalformatQuery2Cached() {
+  return ContextSupportsGLFeatureCached(g_InternalformatQuery2FeatureMutex,
+                                        g_InternalformatQuery2FeatureByContext,
+                                        "GL_ARB_internalformat_query2", 4, 3);
 }
 
-bool ContextSupportsBufferObjects() {
-  return ContextSupportsGLFeature(g_BufferObjectFeatureMutex, g_BufferObjectFeatureByContext,
-                                  "GL_ARB_vertex_buffer_object", 1, 5);
+bool ContextSupportsBufferObjectsCached() {
+  return ContextSupportsGLFeatureCached(g_BufferObjectFeatureMutex, g_BufferObjectFeatureByContext,
+                                        "GL_ARB_vertex_buffer_object", 1, 5);
 }
 
 } // namespace gits::opengl

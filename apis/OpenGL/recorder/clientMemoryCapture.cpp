@@ -50,7 +50,7 @@ GLuint QueryBoundBufferQuiet(GLenum bindingPname) {
 // so misreporting IsBufferOffset as false there would incorrectly skip a perfectly valid,
 // PBO-backed call at offset 0 instead of letting it run normally against the bound buffer.
 bool PixelBufferObjectIsBound(GLenum bindingPname) {
-  return ContextSupportsPixelBufferObject() && QueryBoundBufferQuiet(bindingPname) != 0;
+  return ContextSupportsPixelBufferObjectCached() && QueryBoundBufferQuiet(bindingPname) != 0;
 }
 
 const void* GuardPixelsPointer(const void* pixels, GLenum bindingPname) {
@@ -62,7 +62,8 @@ std::unordered_set<std::string> g_WarnedQueryBufferGuardCommands;
 } // namespace
 
 bool QueryBufferIsBound() {
-  return ContextSupportsQueryBufferObject() && QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) != 0;
+  return ContextSupportsQueryBufferObjectCached() &&
+         QueryBoundBufferQuiet(GL_QUERY_BUFFER_BINDING) != 0;
 }
 
 const void* GuardUnpackPixelsPointer(const char* /*commandName*/, const void* pixels) {
@@ -128,7 +129,7 @@ const void* GuardDrawIndirectPointer(const void* indirect) {
 }
 
 bool ElementArrayBufferIsBound() {
-  return ContextSupportsBufferObjects() &&
+  return ContextSupportsBufferObjectsCached() &&
          QueryBoundBufferQuiet(GL_ELEMENT_ARRAY_BUFFER_BINDING) != 0;
 }
 
