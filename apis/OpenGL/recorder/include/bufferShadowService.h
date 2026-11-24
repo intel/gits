@@ -21,10 +21,6 @@
 
 namespace gits::opengl {
 
-// The pname reporting which buffer is bound to `target`, or 0 for a target that is not a
-// buffer binding point.
-GLenum BufferBindingPname(GLenum target);
-
 // A buffer addressed by the binding of `Target` on the current context, or by name.
 struct BufferRef {
   GLenum Target{0};

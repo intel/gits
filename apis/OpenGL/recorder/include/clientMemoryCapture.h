@@ -117,18 +117,6 @@ const void* GuardElementArrayPointer(const void* indices);
 // buffer object support.
 bool ElementArrayBufferIsBound();
 
-// glGetBufferParameteriv of the buffer bound to `target`, through the core entry point.
-// False (and `value` untouched) if the getter could not be resolved.
-bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value);
-
-// Uses GetBoundBufferSize for GL_BUFFER_SIZE and widens other integer parameters to GLint64.
-bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value);
-
-// GL_BUFFER_SIZE of the buffer bound to `target`. GL_BUFFER_SIZE is a GLsizeiptr, so it is
-// queried through glGetBufferParameteri64v on a GL 3.2+ context; older contexts only have the
-// 32-bit getter of GetBoundBufferParameter. False (and `size` untouched) if no getter resolved.
-bool GetBoundBufferSize(GLenum target, GLint64& size);
-
 // ComputePixelTransferByteSize()/PixelTransferSizeIsUnknown() (pixelTransferSize.h) for a
 // read-back of a whole texture level (glGetTexImage): `level` of the texture bound to `target`,
 // packed with the current GL_PACK_* state. The level's width, height and depth are queried

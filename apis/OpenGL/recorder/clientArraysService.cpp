@@ -13,6 +13,7 @@
 #include "clientArraysMetaTypes.h"
 #include "clientMemoryCapture.h"
 #include "currentContext.h"
+#include "glBufferQueries.h"
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"

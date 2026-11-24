@@ -43,6 +43,7 @@ ${AUTO_GENERATED_HEADER}
 #include "clientArraysMetaTypes.h"
 #include "clientArraysService.h"
 #include "clientMemoryCapture.h"
+#include "glBufferQueries.h"
 #include "glEnumsAuto.h"
 #include "commandSerializersAuto.h"
 #include "handleArgumentUpdaters.h"

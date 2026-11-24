@@ -10,8 +10,8 @@
 
 #include "bufferShadowService.h"
 #include "captureManager.h"
-#include "clientMemoryCapture.h"
 #include "configurator.h"
+#include "glBufferQueries.h"
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"

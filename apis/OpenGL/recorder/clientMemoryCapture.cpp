@@ -10,7 +10,6 @@
 
 #include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
-#include "glVersionString.h"
 #include "log.h"
 #include "openglDriversAuto.h"
 #include "pixelTransferSize.h"
@@ -295,44 +294,6 @@ bool TextureLevelPackSizeIsUnknown(
                                       [](bool known, auto... transfer) {
                                         return !known || PixelTransferSizeIsUnknown(transfer...);
                                       });
-}
-
-bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint& value) {
-  if (!TryResolveRealFunction("glGetBufferParameteriv")) {
-    return false;
-  }
-  auto get = g_DispatchTable.glGetBufferParameteriv.load(std::memory_order_acquire);
-  get(target, pname, &value);
-  return true;
-}
-
-bool GetBoundBufferParameter(GLenum target, GLenum pname, GLint64& value) {
-  if (pname == GL_BUFFER_SIZE) {
-    return GetBoundBufferSize(target, value);
-  }
-  GLint result = 0;
-  if (!GetBoundBufferParameter(target, pname, result)) {
-    return false;
-  }
-  value = result;
-  return true;
-}
-
-bool GetBoundBufferSize(GLenum target, GLint64& size) {
-  if (GlVersionAtLeast(CurrentContextGLVersion(), 3, 2)) {
-    if (!TryResolveRealFunction("glGetBufferParameteri64v")) {
-      return false;
-    }
-    auto get = g_DispatchTable.glGetBufferParameteri64v.load(std::memory_order_acquire);
-    get(target, GL_BUFFER_SIZE, &size);
-    return true;
-  }
-  GLint value = 0;
-  if (!GetBoundBufferParameter(target, GL_BUFFER_SIZE, value)) {
-    return false;
-  }
-  size = value;
-  return true;
 }
 
 } // namespace gits::opengl

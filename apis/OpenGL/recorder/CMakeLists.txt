@@ -28,6 +28,7 @@ add_library(OpenGL_recorder STATIC
   include/clientArraysService.h
   include/clientMemoryCapture.h
   include/currentContext.h
+  include/glBufferQueries.h
   include/glContextCapabilities.h
   include/glxDrawableIdentityService.h
   include/handleArgumentUpdaters.h
@@ -53,6 +54,7 @@ add_library(OpenGL_recorder STATIC
   captureManager.cpp
   clientArraysService.cpp
   clientMemoryCapture.cpp
+  glBufferQueries.cpp
   glContextCapabilities.cpp
   glxDrawableIdentityService.cpp
   mapTrackingService.cpp
