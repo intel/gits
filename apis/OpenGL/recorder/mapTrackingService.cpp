@@ -11,6 +11,7 @@
 #include "bufferShadowService.h"
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
+#include "glContextCapabilities.h"
 #include "configurator.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"

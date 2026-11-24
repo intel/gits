@@ -13,6 +13,7 @@
 #include "clientArraysMetaTypes.h"
 #include "clientMemoryCapture.h"
 #include "currentContext.h"
+#include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "glVersionString.h"
 #include "log.h"
@@ -203,7 +204,7 @@ ContextState MakeContextState() {
 
 // Keyed by context GITSKey. A context is current on at most one thread, so its entry is used
 // without the lock once found; unordered_map never moves its elements. Contexts with the shared
-// unregistered key 0 (see ContextSupportsGLFeature(), clientMemoryCapture.cpp) get fresh,
+// unregistered key 0 (see glContextCapabilities.cpp) get fresh,
 // unscanned state on every call, so each of their draws scans every slot.
 std::mutex g_ContextsMutex;
 std::unordered_map<GITSKey, ContextState> g_Contexts;

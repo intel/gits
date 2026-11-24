@@ -9,7 +9,7 @@
 #include "mappedTextureService.h"
 
 #include "captureManager.h"
-#include "clientMemoryCapture.h"
+#include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "handleArgumentUpdaters.h"
 #include "log.h"

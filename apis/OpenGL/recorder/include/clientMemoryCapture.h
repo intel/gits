@@ -11,7 +11,6 @@
 #include "glTypes.h"
 
 #include <cstdint>
-#include <utility>
 
 namespace gits::opengl {
 
@@ -23,7 +22,7 @@ namespace gits::opengl {
 // ResolveBoundBuffer() in mapTrackingService.cpp, but quiet - "nothing bound" is the
 // overwhelmingly common, unremarkable case here, unlike ResolveBoundBuffer's own map/unmap-
 // specific callers) - but only once ContextSupportsPixelBufferObject()
-// (clientMemoryCapture.cpp) has confirmed the binding-point enum itself is legal on the current
+// (glContextCapabilities.cpp) has confirmed the binding-point enum itself is legal on the current
 // context/version: an unconditional query here would otherwise risk injecting a spurious
 // GL_INVALID_ENUM into the APPLICATION's own GL error state on a context old enough to lack the
 // feature entirely.
@@ -117,26 +116,6 @@ const void* GuardElementArrayPointer(const void* indices);
 // Whether the current context has a GL_ELEMENT_ARRAY_BUFFER bound. False on contexts without
 // buffer object support.
 bool ElementArrayBufferIsBound();
-
-// Whether the current context has glCopyBufferSubData (GL 3.1 / ARB_copy_buffer). Cached per
-// context, like the feature probes behind the guards above.
-bool ContextSupportsCopyBuffer();
-
-// Whether the current context has core direct state access (GL 4.5 / ARB_direct_state_access).
-// Cached per context, like ContextSupportsCopyBuffer().
-bool ContextSupportsDirectStateAccess();
-
-// Whether the current context has glGetInternalformativ's format queries (GL 4.3 /
-// ARB_internalformat_query2). Cached per context, like ContextSupportsCopyBuffer().
-bool ContextSupportsInternalformatQuery2();
-
-// (major, minor) parsed from the current context's GL_VERSION; (0, 0) if it cannot be parsed,
-// which callers treat as "supports nothing".
-std::pair<int, int> CurrentContextGLVersion();
-
-// Whether the current context (of GL major version `major`, from CurrentContextGLVersion())
-// lists `extensionName`, using only the enumeration form legal on that version.
-bool CurrentContextHasExtension(int major, const char* extensionName);
 
 // glGetBufferParameteriv of the buffer bound to `target`, through the core entry point.
 // False (and `value` untouched) if the getter could not be resolved.

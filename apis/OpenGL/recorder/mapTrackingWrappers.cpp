@@ -10,6 +10,7 @@
 
 #include "captureManager.h"
 #include "clientMemoryCapture.h"
+#include "glContextCapabilities.h"
 #include "glEnumsAuto.h"
 #include "log.h"
 #include "mapTrackingService.h"
