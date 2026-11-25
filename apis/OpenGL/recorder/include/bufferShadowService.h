@@ -61,9 +61,14 @@ public:
   // MapTrackingService::PublishInvalidationBeforeSubData.
   void BeforeSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
   void OnSubData(BufferRef ref, uint64_t offset, uint64_t size, const void* data);
-  // GL commands writing the buffer, such as copies and clears, which a writable persistent
-  // mapping does not support.
+  // Before copies and clears writing [offset, offset + size) of the buffer, or all of it, reserve
+  // their key. See MapTrackingService::BeforeGpuWrite.
+  void BeforeGpuWrite(BufferRef ref);
+  void BeforeGpuWrite(BufferRef ref, uint64_t offset, uint64_t size);
+  // After copies and clears writing [offset, offset + size) of the buffer, or all of it. See
+  // MapTrackingService::OnGpuWrite.
   void OnGpuWrite(const char* command, BufferRef ref);
+  void OnGpuWrite(const char* command, BufferRef ref, uint64_t offset, uint64_t size);
   // GL commands after which the GPU or external memory may write the buffer in commands that are
   // not hooked, such as image stores to a buffer texture, which a writable persistent mapping
   // does not support, whether they come before or during it.

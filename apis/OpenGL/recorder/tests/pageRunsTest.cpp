@@ -9,11 +9,14 @@
 // Host-only tests for the runs of written pages that a coherent map publishes. A run spanning
 // clean pages would copy and record them too, which for sparse writes to a large map inflates the
 // capture overhead and the stream by up to the size of the map. Also for the changed spans of a
-// run that a GPU-written map publishes, so that its unchanged bytes do not overwrite GPU results.
+// run that a GPU-written map publishes, so that its unchanged bytes do not overwrite GPU results,
+// and for the bytes a map publishes around the ones the recorder read back after a GPU copy.
 
 #include "watchedShadow.h"
 
+#include <algorithm>
 #include <cstdio>
+#include <span>
 #include <vector>
 
 namespace {
@@ -28,6 +31,7 @@ void Check(bool condition, const char* what) {
 }
 
 using gits::opengl::ChangedSpans;
+using gits::opengl::KnownBytes;
 using gits::opengl::PageRuns;
 using gits::opengl::WatchedShadow;
 
@@ -104,6 +108,41 @@ void TestAdjacentChangedBytesGiveOneSpan() {
         "adjacent changed bytes give one span, up to the end");
 }
 
+void TestUnknownBytesAreAllPublished() {
+  const KnownBytes known;
+  const std::vector<uint8_t> bytes(16, 0);
+  Check(Equal(known.UnknownOrChangedSpans(0, bytes), {{0, 16}}),
+        "without known bytes, every byte is published");
+}
+
+void TestKnownBytesAreSkippedUnlessChanged() {
+  // Bytes 4 to 12 were read back, and the application then wrote byte 8.
+  KnownBytes known;
+  known.Set(4, std::vector<uint8_t>(8, 9));
+  std::vector<uint8_t> bytes(16, 0);
+  std::fill(bytes.begin() + 4, bytes.begin() + 12, 9);
+  bytes[8] = 1;
+  Check(Equal(known.UnknownOrChangedSpans(0, bytes), {{0, 4}, {8, 1}, {12, 4}}),
+        "known bytes the application did not change are skipped, and the others published");
+  Check(Equal(known.UnknownOrChangedSpans(6, std::span(bytes).subspan(6, 4)), {{2, 1}}),
+        "spans of a run starting within known bytes are relative to the run");
+}
+
+void TestKnownBytesAreReplacedAndForgotten() {
+  KnownBytes known;
+  known.Set(0, std::vector<uint8_t>(16, 1));
+  known.Set(4, std::vector<uint8_t>(4, 2));
+  std::vector<uint8_t> bytes(16, 1);
+  std::fill(bytes.begin() + 4, bytes.begin() + 8, 2);
+  Check(known.UnknownOrChangedSpans(0, bytes).empty(), "a later read-back replaces known bytes");
+  known.Forget(2, 4);
+  known.Forget(10, 2);
+  Check(Equal(known.UnknownOrChangedSpans(0, bytes), {{2, 4}, {10, 2}}),
+        "forgotten bytes are published again, within and across earlier read-backs");
+  known.Forget(0, 16);
+  Check(known.Empty(), "forgetting every known byte leaves none");
+}
+
 } // namespace
 
 int main() {
@@ -115,6 +154,9 @@ int main() {
   TestUnchangedBytesGiveNoSpan();
   TestChangedBytesGiveTheirSpans();
   TestAdjacentChangedBytesGiveOneSpan();
+  TestUnknownBytesAreAllPublished();
+  TestKnownBytesAreSkippedUnlessChanged();
+  TestKnownBytesAreReplacedAndForgotten();
   if (g_Failures != 0) {
     std::printf("pageRunsTest: %d check(s) failed\n", g_Failures);
     return 1;

@@ -88,10 +88,26 @@ def _sub_data(command: str, names: set[str]) -> BufferContentHook | None:
                              prepare=f'BeforeSubData({arguments})')
 
 
-def _gpu_write(target: str, buffer: str, hook: str = 'OnGpuWrite'):
+def _gpu_write(target: str, buffer: str, hook: str):
     def build(command: str, names: set[str]) -> str | None:
         ref = _ref(names, target, buffer)
         return None if ref is None else f'{hook}({_command(command)}, {ref})'
+    return build
+
+
+def _gpu_range_write(target: str, buffer: str, offset: str):
+    """Copies and clears, which pass the range they write when they have `offset` and `size`."""
+    def build(command: str, names: set[str]) -> BufferContentHook | None:
+        ref = _ref(names, target, buffer)
+        if ref is None:
+            return None
+        if not {offset, 'size'} <= names:
+            return BufferContentHook(call=f'OnGpuWrite({_command(command)}, {ref})',
+                                     prepare=f'BeforeGpuWrite({ref})')
+        arguments = f'{ref}, {_size(offset)}, {_size("size")}'
+        return BufferContentHook(call=f'OnGpuWrite({_command(command)}, {arguments})',
+                                 guard=_non_negative(offset, 'size'),
+                                 prepare=f'BeforeGpuWrite({arguments})')
     return build
 
 
@@ -132,10 +148,12 @@ def _delete(command: str, names: set[str]) -> str | None:
 _FAMILIES = (
     (re.compile(r'^gl(Named)?Buffer(Data|Storage)(ARB|EXT)?$'), _data),
     (re.compile(r'^gl(Named)?BufferSubData(ARB|EXT)?$'), _sub_data),
-    (re.compile(r'^glCopyBufferSubData$'), _gpu_write('writeTarget', 'writeBuffer')),
+    (re.compile(r'^glCopyBufferSubData$'),
+     _gpu_range_write('writeTarget', 'writeBuffer', 'writeOffset')),
     (re.compile(r'^gl(CopyNamed|NamedCopy)BufferSubData(EXT)?$'),
-     _gpu_write('writeTarget', 'writeBuffer')),
-    (re.compile(r'^glClear(Named)?Buffer(Sub)?Data(EXT)?$'), _gpu_write('target', 'buffer')),
+     _gpu_range_write('writeTarget', 'writeBuffer', 'writeOffset')),
+    (re.compile(r'^glClear(Named)?Buffer(Sub)?Data(EXT)?$'),
+     _gpu_range_write('target', 'buffer', 'offset')),
     # After these, the GPU or external memory may write the buffer in commands that are not
     # hooked: image stores to a buffer texture, external memory, and shaders through a resident
     # address.

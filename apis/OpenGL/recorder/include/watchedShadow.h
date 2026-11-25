@@ -12,6 +12,8 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <iterator>
+#include <map>
 #include <optional>
 #include <span>
 #include <vector>
@@ -190,5 +192,73 @@ inline std::vector<WatchedShadow::ByteRange> ChangedSpans(std::span<const uint8_
   }
   return spans;
 }
+
+// Bytes of a shadow that the buffer already holds, by offset: GL wrote them into the buffer, and
+// the recorder copied them into the shadow, which marks their pages written.
+class KnownBytes {
+public:
+  bool Empty() const {
+    return m_Runs.empty();
+  }
+  // Records `bytes` at `offset`, replacing what was known there.
+  void Set(size_t offset, std::span<const uint8_t> bytes) {
+    Forget(offset, bytes.size());
+    m_Runs.emplace(offset, std::vector<uint8_t>(bytes.begin(), bytes.end()));
+  }
+  void Forget(size_t offset, size_t length) {
+    const size_t end = offset + length;
+    auto it = m_Runs.lower_bound(offset);
+    if (it != m_Runs.begin()) {
+      const auto previous = std::prev(it);
+      const size_t previousEnd = previous->first + previous->second.size();
+      if (previousEnd > offset) {
+        if (previousEnd > end) {
+          const auto tail =
+              previous->second.begin() + static_cast<std::ptrdiff_t>(end - previous->first);
+          m_Runs.emplace_hint(it, end, std::vector<uint8_t>(tail, previous->second.end()));
+        }
+        previous->second.resize(offset - previous->first);
+      }
+    }
+    while (it != m_Runs.end() && it->first < end) {
+      const size_t runEnd = it->first + it->second.size();
+      if (runEnd > end) {
+        std::vector<uint8_t> tail(it->second.begin() + static_cast<std::ptrdiff_t>(end - it->first),
+                                  it->second.end());
+        m_Runs.erase(it);
+        m_Runs.emplace(end, std::move(tail));
+        return;
+      }
+      it = m_Runs.erase(it);
+    }
+  }
+  // The maximal spans of `bytes`, at `offset` and relative to it, that are not known or differ
+  // from the known bytes.
+  std::vector<WatchedShadow::ByteRange> UnknownOrChangedSpans(
+      size_t offset, std::span<const uint8_t> bytes) const {
+    // Unknown bytes compare against their complement, so that they always differ.
+    std::vector<uint8_t> reference(bytes.size());
+    std::transform(bytes.begin(), bytes.end(), reference.begin(),
+                   [](uint8_t byte) { return static_cast<uint8_t>(~byte); });
+    const size_t end = offset + bytes.size();
+    auto it = m_Runs.upper_bound(offset);
+    if (it != m_Runs.begin()) {
+      --it;
+    }
+    for (; it != m_Runs.end() && it->first < end; ++it) {
+      const size_t first = std::max(offset, it->first);
+      const size_t last = std::min(end, it->first + it->second.size());
+      if (first < last) {
+        std::copy_n(it->second.begin() + static_cast<std::ptrdiff_t>(first - it->first),
+                    last - first, reference.begin() + static_cast<std::ptrdiff_t>(first - offset));
+      }
+    }
+    return ChangedSpans(bytes, reference);
+  }
+
+private:
+  // Disjoint and nonempty runs of known bytes by their offset.
+  std::map<size_t, std::vector<uint8_t>> m_Runs;
+};
 
 } // namespace gits::opengl

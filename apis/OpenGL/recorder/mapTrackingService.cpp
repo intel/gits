@@ -30,6 +30,7 @@
 #include <new>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -126,6 +127,29 @@ bool ReadBufferSubData(GLenum target, GLintptr offset, GLsizeiptr length, void* 
   g_DispatchTable.glGetBufferSubData.load(std::memory_order_acquire)(target, offset, length, data);
   return g_DispatchTable.glGetBufferSubData.load(std::memory_order_acquire) !=
          &ResolveAndCall_glGetBufferSubData;
+}
+
+// Reads bytes a copy or clear `command` wrote: through `target` when it wrote through a binding,
+// otherwise by name with the getter of the command's DSA family, core or EXT.
+bool ReadGpuWrittenBytes(const char* command,
+                         GLenum target,
+                         GLuint buffer,
+                         GLintptr offset,
+                         GLsizeiptr length,
+                         void* data) {
+  if (target != 0) {
+    return ReadBufferSubData(target, offset, length, data);
+  }
+  if (std::string_view(command).ends_with("EXT")) {
+    g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire)(buffer, offset,
+                                                                               length, data);
+    return g_DispatchTable.glGetNamedBufferSubDataEXT.load(std::memory_order_acquire) !=
+           &ResolveAndCall_glGetNamedBufferSubDataEXT;
+  }
+  g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire)(buffer, offset, length,
+                                                                          data);
+  return g_DispatchTable.glGetNamedBufferSubData.load(std::memory_order_acquire) !=
+         &ResolveAndCall_glGetNamedBufferSubData;
 }
 
 bool CanRemapForRead(const std::function<bool(GLint&)>& queryStorageFlags) {
@@ -615,16 +639,39 @@ void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
     updates.emplace_back(CaptureManager::Get().CreateCommandKey(),
                          MakeMappedUpdate(range, interval, std::move(bytes)));
   };
+  const auto thread = std::this_thread::get_id();
+  for (const MappedRange::PendingGpuWrite& pending : range.PendingGpuWrites) {
+    if (range.GpuWritten || pending.Thread == thread) {
+      continue;
+    }
+    for (const WatchedShadow::ByteRange& run : dirty) {
+      if (run.Offset < pending.End && pending.Begin < run.Offset + run.Length) {
+        GITS_ASSERT(false, "Publishing a written page of a writable persistent mapping while a "
+                           "copy or clear on another thread writes it is unsupported: the stale "
+                           "shadow bytes would overwrite the GPU results " +
+                               DescribeMapping(nullptr, 0, range.Map.Buffer, range));
+      }
+    }
+  }
   for (const WatchedShadow::ByteRange& run : dirty) {
-    if (!range.GpuWritten) {
+    if (!range.GpuWritten && range.Known.Empty()) {
       append(run.Offset, run.Length);
       continue;
     }
-    // Unchanged bytes between changed ones may be GPU results newer than the shadow, so the run
-    // publishes only its changed spans, in one update rather than one per span.
+    // Unchanged bytes between changed ones may be GPU results newer than the shadow, and known
+    // bytes are in the buffer already, so the run publishes only its changed spans, in one update
+    // rather than one per span.
     const auto snapshot = range.Source.Snapshot(run.Offset, run.Length);
-    const auto changed = ChangedSpans(
-        snapshot, std::span<const uint8_t>(range.Source.Baseline).subspan(run.Offset, run.Length));
+    std::vector<WatchedShadow::ByteRange> changed;
+    if (range.GpuWritten) {
+      changed = ChangedSpans(
+          snapshot,
+          std::span<const uint8_t>(range.Source.Baseline).subspan(run.Offset, run.Length));
+    } else {
+      changed = range.Known.UnknownOrChangedSpans(run.Offset, snapshot);
+      // A later write to these pages makes them written again, and publishes them whole.
+      range.Known.Forget(run.Offset, run.Length);
+    }
     if (changed.empty()) {
       continue;
     }
@@ -637,7 +684,9 @@ void MapTrackingService::AppendPublishedUpdates(MappedRange& range,
       const auto spanBytes = std::span<const uint8_t>(snapshot).subspan(span.Offset, span.Length);
       const size_t offset = run.Offset + span.Offset;
       range.Source.WriteBack(offset, spanBytes);
-      std::memcpy(range.Source.Baseline.data() + offset, spanBytes.data(), span.Length);
+      if (!range.Source.Baseline.empty()) {
+        std::memcpy(range.Source.Baseline.data() + offset, spanBytes.data(), span.Length);
+      }
       bytes.insert(bytes.end(), spanBytes.begin(), spanBytes.end());
       spans.push_back({span.Offset - first, span.Length});
     }
@@ -666,6 +715,8 @@ void MapTrackingService::StartGpuWriteTracking(MappedRange& range, KeyedUpdates&
   // page, published whole into the baseline, or on a page written again that differs from it.
   range.Source.Baseline.assign(shadow, shadow + length);
   TakePublishedUpdates(range, updates);
+  // The baseline now holds the known bytes of the pages not taken.
+  range.Known = {};
   const bool refreshOnRead = Configurator::Get().opengl.recorder.gpuWrittenMapRefresh ==
                              OpenGLGpuWrittenMapRefresh::ON_READ;
   range.Source.Shadow->SetRefreshSource(
@@ -776,7 +827,9 @@ GLboolean MapTrackingService::SnapshotBufferAndUnmap(
   if (!range || (range->Access & GL_MAP_WRITE_BIT) == 0) {
     return realUnmap();
   }
-  if (range->GpuWritten) {
+  // Known bytes need publishing per run, as the enclosing dirty range would carry them again,
+  // and so do pending GPU writes, which AppendPublishedUpdates() checks.
+  if (range->GpuWritten || !range->Known.Empty() || !range->PendingGpuWrites.empty()) {
     KeyedUpdates updates;
     TakePublishedUpdates(*range, updates);
     const GLboolean result = realUnmap();
@@ -967,7 +1020,6 @@ bool MapTrackingService::MappedRange::AcceptsSubData(uint64_t offset, uint64_t s
 
 bool MapTrackingService::MappedRange::MayDeferInvalidation() const {
   return (Access & GL_MAP_INVALIDATE_BUFFER_BIT) != 0 && (Access & GL_MAP_PERSISTENT_BIT) != 0 &&
-         (StorageFlags & GL_DYNAMIC_STORAGE_BIT) != 0 &&
          Source.Type == ByteSource::Kind::WatchedShadow;
 }
 
@@ -975,13 +1027,47 @@ bool MapTrackingService::MayDeferInvalidation() const {
   return m_DeferredInvalidationMaps.load(std::memory_order_acquire) != 0;
 }
 
+bool MapTrackingService::MayNeedBeforeGpuWrite() const {
+  return m_PublishedBeforeUseMaps.load(std::memory_order_acquire) != 0 ||
+         m_DeferredInvalidationMaps.load(std::memory_order_acquire) != 0;
+}
+
+void MapTrackingService::AppendDeferredInvalidation(MappedRange& range, KeyedUpdates& updates) {
+  if (range.Updated || !range.MayDeferInvalidation()) {
+    return;
+  }
+  // The first byte of the shadow carries the invalidation: the invalidated contents are
+  // undefined until written, and a page the application writes is published again.
+  auto bytes = range.Source.Snapshot(0, 1);
+  range.Source.WriteBack(0, bytes);
+  auto update = MakeMappedUpdate(range, MapRelativeRange{0, 1}, std::move(bytes));
+  updates.emplace_back(CaptureManager::Get().CreateCommandKey(), std::move(update));
+}
+
 void MapTrackingService::PublishInvalidationBeforeSubData(
     uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data) {
   if (data == nullptr || size == 0) {
     return;
   }
-  std::optional<MappedBufferUpdate> update;
-  uint64_t key = 0;
+  KeyedUpdates updates;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
+    if (it == m_MappedBuffers.end() || !it->second.AcceptsSubData(offset, size)) {
+      return;
+    }
+    AppendDeferredInvalidation(it->second, updates);
+  }
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
+}
+
+void MapTrackingService::BeforeGpuWrite(uint64_t shareGroup,
+                                        GLuint buffer,
+                                        uint64_t offset,
+                                        uint64_t size) {
+  KeyedUpdates updates;
   {
     std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
     const auto it = m_MappedBuffers.find(Key{shareGroup, buffer});
@@ -989,17 +1075,33 @@ void MapTrackingService::PublishInvalidationBeforeSubData(
       return;
     }
     MappedRange& range = it->second;
-    if (range.Updated || !range.MayDeferInvalidation() || !range.AcceptsSubData(offset, size)) {
-      return;
+    AppendDeferredInvalidation(range, updates);
+    const auto thread = std::this_thread::get_id();
+    auto& pending = range.PendingGpuWrites;
+    // A thread runs one command at a time, so a range it marked before was not read back.
+    pending.erase(std::remove_if(pending.begin(), pending.end(),
+                                 [thread](const MappedRange::PendingGpuWrite& write) {
+                                   return write.Thread == thread;
+                                 }),
+                  pending.end());
+    constexpr GLbitfield persistentWrite = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
+    const auto mapBegin = static_cast<uint64_t>(range.Offset);
+    const uint64_t mapEnd = mapBegin + static_cast<uint64_t>(range.Length);
+    const uint64_t begin = std::max(offset, mapBegin);
+    const uint64_t end = offset < mapEnd && size < mapEnd - offset ? offset + size : mapEnd;
+    // GPU-written mappings publish only bytes differing from their baseline, which the stale
+    // bytes do not.
+    if ((range.Access & persistentWrite) == persistentWrite && PublishesBeforeUse(range.Access) &&
+        !range.GpuWritten && begin < end) {
+      // From now on, application writes to the range race with the command.
+      TakePublishedUpdates(range, updates);
+      pending.push_back(
+          {thread, static_cast<size_t>(begin - mapBegin), static_cast<size_t>(end - mapBegin)});
     }
-    // The first byte of the shadow carries the invalidation: the invalidated contents are
-    // undefined until written, and a page the application writes is published again.
-    auto bytes = range.Source.Snapshot(0, 1);
-    range.Source.WriteBack(0, bytes);
-    update = MakeMappedUpdate(range, MapRelativeRange{0, 1}, std::move(bytes));
-    key = CaptureManager::Get().CreateCommandKey();
   }
-  RecordOrSkipMappedUpdate(key, update);
+  for (const auto& [key, update] : updates) {
+    RecordOrSkipMappedUpdate(key, update);
+  }
 }
 
 void MapTrackingService::OnSubData(
@@ -1016,6 +1118,11 @@ void MapTrackingService::OnSubData(
   if (!range.AcceptsSubData(offset, size) || range.Source.Type != ByteSource::Kind::WatchedShadow) {
     return;
   }
+  CopyIntoShadow(range, offset, size, data, false);
+}
+
+void MapTrackingService::CopyIntoShadow(
+    MappedRange& range, uint64_t offset, uint64_t size, const void* data, bool known) {
   const auto mapBegin = static_cast<uint64_t>(range.Offset);
   const uint64_t mapEnd = mapBegin + static_cast<uint64_t>(range.Length);
   const uint64_t begin = std::max(offset, mapBegin);
@@ -1030,6 +1137,11 @@ void MapTrackingService::OnSubData(
   // The application may pass a pointer into its own mapping.
   if (!range.GpuWritten) {
     std::memmove(destination, source, length);
+    if (known) {
+      range.Known.Set(mapOffset, std::span<const uint8_t>(source, length));
+    } else {
+      range.Known.Forget(mapOffset, length);
+    }
     return;
   }
   // Writing a stale page refreshes it into the baseline, which must then get the update.
@@ -1169,6 +1281,75 @@ void MapTrackingService::AssertNoWritablePersistentMap(const char* command,
               "mapping are unsupported: a mapped snapshot could overwrite replayed GPU results "
               "with stale bytes " +
                   DescribeMapping(command, target, buffer, it->second));
+}
+
+void MapTrackingService::OnGpuWrite(const char* command,
+                                    GLenum target,
+                                    uint64_t shareGroup,
+                                    GLuint buffer,
+                                    uint64_t offset,
+                                    uint64_t size) {
+  const Key key{shareGroup, buffer};
+  const auto thread = std::this_thread::get_id();
+  const auto endPendingWrite = [thread](MappedRange& range) {
+    auto& pending = range.PendingGpuWrites;
+    pending.erase(std::remove_if(pending.begin(), pending.end(),
+                                 [thread](const MappedRange::PendingGpuWrite& write) {
+                                   return write.Thread == thread;
+                                 }),
+                  pending.end());
+  };
+  const WatchedShadow* shadow = nullptr;
+  uint64_t begin = 0;
+  uint64_t end = 0;
+  std::string description;
+  {
+    std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+    const auto it = m_MappedBuffers.find(key);
+    if (it == m_MappedBuffers.end()) {
+      return;
+    }
+    MappedRange& range = it->second;
+    constexpr GLbitfield persistentWrite = GL_MAP_PERSISTENT_BIT | GL_MAP_WRITE_BIT;
+    if ((range.Access & persistentWrite) != persistentWrite) {
+      endPendingWrite(range);
+      return;
+    }
+    if (!PublishesBeforeUse(range.Access)) {
+      GITS_ASSERT(false, "GPU copies and clears during an explicit-flush noncoherent writable "
+                         "persistent mapping are unsupported: a flushed snapshot could record GPU "
+                         "results as the application's writes " +
+                             DescribeMapping(command, target, buffer, range));
+      return;
+    }
+    const auto mapBegin = static_cast<uint64_t>(range.Offset);
+    const uint64_t mapEnd = mapBegin + static_cast<uint64_t>(range.Length);
+    begin = std::max(offset, mapBegin);
+    end = offset < mapEnd && size < mapEnd - offset ? offset + size : mapEnd;
+    if (begin >= end) {
+      endPendingWrite(range);
+      return;
+    }
+    shadow = range.Source.Shadow.get();
+    description = DescribeMapping(command, target, buffer, range);
+  }
+  // The command published the mapped writes before it ran, so the shadow differs from the buffer
+  // only where the command wrote. The getters may read a persistently mapped buffer.
+  std::vector<uint8_t> bytes(static_cast<size_t>(end - begin));
+  GITS_ASSERT(ReadGpuWrittenBytes(command, target, buffer, static_cast<GLintptr>(begin),
+                                  static_cast<GLsizeiptr>(bytes.size()), bytes.data()),
+              "Cannot read back the bytes GPU work wrote during a writable persistent mapping " +
+                  description);
+  std::lock_guard<std::mutex> lock(m_MappedBuffersMutex);
+  const auto it = m_MappedBuffers.find(key);
+  if (it == m_MappedBuffers.end()) {
+    return;
+  }
+  // A mapping made since then by another thread already has the written bytes.
+  if (it->second.Source.Shadow.get() == shadow) {
+    CopyIntoShadow(it->second, begin, bytes.size(), bytes.data(), true);
+  }
+  endPendingWrite(it->second);
 }
 
 void MapTrackingService::OnGpuResultWrite(const char* command,

@@ -30,6 +30,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -107,12 +108,23 @@ public:
   // Whether a mapping may need PublishInvalidationBeforeSubData(). Reads no locked state, so that
   // uploads check it cheaply.
   bool MayDeferInvalidation() const;
+  // Whether a mapping may need BeforeGpuWrite(), likewise for copies and clears.
+  bool MayNeedBeforeGpuWrite() const;
   // Before a glBufferSubData-family call reserves its key: the driver invalidated the buffer when
   // the application mapped it, but replay invalidates it at the first update of the mapping. If
   // the driver accepts the upload during a mapping with GL_MAP_INVALIDATE_BUFFER_BIT that has no
   // update yet, records an update that carries the invalidation, so the upload replays after it.
   void PublishInvalidationBeforeSubData(
       uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size, const void* data);
+  // Before a copy or clear writing [offset, offset + size) of `buffer`, the end clipped to the
+  // buffer, reserves its key:
+  // - Records an update that carries a pending invalidation, as PublishInvalidationBeforeSubData()
+  //   before an upload. Copies and clears write persistently mapped buffers whatever their storage
+  //   flags, and the invalidation discards the whole buffer, so this applies to any range.
+  // - Publishes the pending writes of a mapping that OnGpuWrite() reads back, and marks the range
+  //   as written by this thread until OnGpuWrite() returns. The shadow holds stale bytes there
+  //   until then, so publishing its pages on another thread meanwhile is unsupported.
+  void BeforeGpuWrite(uint64_t shareGroup, GLuint buffer, uint64_t offset, uint64_t size);
   // Before glDeleteBuffers, which implicitly unmaps the buffers it deletes: publishes the writes
   // to their persistent mappings, as their retained objects may still be used, and the driver
   // mappings are gone once the call returns. Other mappings of deleted buffers are unsupported.
@@ -124,6 +136,18 @@ public:
                                      GLenum target,
                                      uint64_t shareGroup,
                                      GLuint buffer);
+  // After a copy or clear `command` wrote [offset, offset + size) of `buffer`, the end clipped to
+  // the buffer: reads the written bytes of a writable persistent mapping whose writes are
+  // published before use back into its shadow, so publishing a page the application writes later
+  // does not restore the bytes the GPU replaced. The bytes read back are not published again
+  // unless the application changes them. `target` is the binding the command wrote through, or 0
+  // when it named the buffer directly. Other writable persistent mappings are unsupported.
+  void OnGpuWrite(const char* command,
+                  GLenum target,
+                  uint64_t shareGroup,
+                  GLuint buffer,
+                  uint64_t offset,
+                  uint64_t size);
   // Before GPU work may write `buffer` through `target`: a writable persistent mapping of it whose
   // writes are published before use gets the GPU results at RefreshGpuWrittenMaps(), and from
   // then on publishes only the bytes the application changed. Such mappings without
@@ -259,12 +283,25 @@ private:
     // it are published, so that publishing does not overwrite GPU results. The shadow refreshes
     // pages into it, so it is not reallocated.
     bool GpuWritten{false};
+    // Of a shadow-backed mapping that is not GPU-written: the bytes copies and clears wrote that
+    // the recorder read back into the shadow, by offset in the mapping, until a publication takes
+    // their pages. It publishes only the bytes of those pages that are not known or differ from
+    // the known ones, so that the recorder's copies are not recorded as the application's writes.
+    KnownBytes Known;
+    // The ranges in the mapping that copies and clears are writing, from BeforeGpuWrite() until
+    // OnGpuWrite() reads them back.
+    struct PendingGpuWrite {
+      std::thread::id Thread;
+      size_t Begin;
+      size_t End;
+    };
+    std::vector<PendingGpuWrite> PendingGpuWrites;
 
     // Whether the driver accepts a glBufferSubData-family update of [offset, offset + size) of
     // the buffer during this mapping.
     bool AcceptsSubData(uint64_t offset, uint64_t size) const;
     // Whether the first update carries GL_MAP_INVALIDATE_BUFFER_BIT, which would discard the
-    // uploads the driver accepts before it.
+    // uploads, copies, and clears the driver accepts before it.
     bool MayDeferInvalidation() const;
   };
 
@@ -289,7 +326,8 @@ private:
   // Copies the written pages in `dirty` of a mapping published before use to the driver mapping,
   // and into Source.Baseline when it has one, and appends their updates, each with its reserved
   // key. Of a GPU-written mapping, only the changed bytes are copied, as the spans of one update
-  // per run.
+  // per run, and of other mappings with known bytes, only the bytes MappedRange::Known allows.
+  // Other mappings must not have pages in the PendingGpuWrites of another thread written.
   // Callers hold m_MappedBuffersMutex, or own `range`, and record the updates after releasing it.
   void AppendPublishedUpdates(MappedRange& range,
                               const std::vector<WatchedShadow::ByteRange>& dirty,
@@ -300,6 +338,17 @@ private:
   // pending writes, and its unwritten shadow pages get the driver contents on their next access.
   // Callers hold m_MappedBuffersMutex or own `range`, and record the updates after releasing it.
   void StartGpuWriteTracking(MappedRange& range, KeyedUpdates& updates);
+  // Copies the bytes GL wrote at [offset, offset + size) of the buffer into the overlapping part
+  // of the shadow of `range`, and of its baseline when it is GPU-written, so that publishing its
+  // pages carries them instead of stale bytes. Of other mappings, the bytes become known when
+  // `known`, and their pages are otherwise published whole. `data` may point into the shadow.
+  // Callers hold m_MappedBuffersMutex.
+  static void CopyIntoShadow(
+      MappedRange& range, uint64_t offset, uint64_t size, const void* data, bool known);
+  // Appends an update that carries the invalidation of a mapping with
+  // GL_MAP_INVALIDATE_BUFFER_BIT that has no update yet.
+  // Callers hold m_MappedBuffersMutex, and record the update after releasing it.
+  void AppendDeferredInvalidation(MappedRange& range, KeyedUpdates& updates);
   // `command` is null when no command is rejected, and `target` 0 when the buffer is named.
   static std::string DescribeMapping(const char* command,
                                      GLenum target,

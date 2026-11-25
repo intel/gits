@@ -19,6 +19,7 @@
 #include "glDispatchAuto.h"
 
 #include <cstring>
+#include <limits>
 
 namespace gits::opengl {
 
@@ -144,14 +145,35 @@ void BufferShadowService::OnSubData(BufferRef ref,
   std::memcpy(shadow.Bytes.data() + offset, data, size);
 }
 
+void BufferShadowService::BeforeGpuWrite(BufferRef ref) {
+  BeforeGpuWrite(ref, 0, std::numeric_limits<uint64_t>::max());
+}
+
+void BufferShadowService::BeforeGpuWrite(BufferRef ref, uint64_t offset, uint64_t size) {
+  if (!MapTrackingService::Get().MayNeedBeforeGpuWrite()) {
+    return;
+  }
+  const Key key = Resolve(ref);
+  if (key.Buffer != 0) {
+    MapTrackingService::Get().BeforeGpuWrite(key.ShareGroup, key.Buffer, offset, size);
+  }
+}
+
 void BufferShadowService::OnGpuWrite(const char* command, BufferRef ref) {
+  OnGpuWrite(command, ref, 0, std::numeric_limits<uint64_t>::max());
+}
+
+void BufferShadowService::OnGpuWrite(const char* command,
+                                     BufferRef ref,
+                                     uint64_t offset,
+                                     uint64_t size) {
   const Key key = Resolve(ref);
   if (key.Buffer == 0) {
     return;
   }
   MarkUntrustedBeforeMapCheck(key);
-  MapTrackingService::Get().AssertNoWritablePersistentMap(command, ref.Target, key.ShareGroup,
-                                                          key.Buffer);
+  MapTrackingService::Get().OnGpuWrite(command, ref.Target, key.ShareGroup, key.Buffer, offset,
+                                       size);
 }
 
 void BufferShadowService::OnGpuResultWrite(const char* command, BufferRef ref) {
