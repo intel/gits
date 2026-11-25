@@ -59,8 +59,6 @@ StreamWriter::~StreamWriter() {
 }
 
 void StreamWriter::Close() {
-  ApiId firstApi{};
-  uint32_t apis{};
   {
     if (m_StopThreads) {
       return;
@@ -68,8 +66,6 @@ void StreamWriter::Close() {
 
     std::unique_lock<std::mutex> lock(m_Mutex);
     m_StopThreads = true;
-    firstApi = m_FirstApi;
-    apis = m_Apis;
     Block* block = FindBlockForRecord(lock, 0);
     if (block->DataSize) {
       ++m_RecordedBlockId;
@@ -90,7 +86,6 @@ void StreamWriter::Close() {
       m_CompressionThreads[i].join();
     }
   }
-  StreamHeader::Get().WriteApis(m_Stream, firstApi, apis);
   StreamHeader::Get().WriteCapturedFrames(m_Stream, m_CapturedFrames.load());
   m_Stream.close();
 }
@@ -256,13 +251,22 @@ void StreamWriter::Compress(unsigned threadIndex) {
 void StreamWriter::WriteCompressedBlocks() {
   unsigned blockIndex = 0;
   unsigned readyBlocks = 0;
+  uint32_t writtenApis = 0;
   while (true) {
     std::unique_lock<std::mutex> lock(m_Mutex);
     CompressedBlock& block = m_CompressedBlocks[blockIndex];
     if (block.Full) {
       if (block.Id == m_WrittenBlockId + 1) {
+        const ApiId firstApi = m_FirstApi;
+        const uint32_t apis = m_Apis;
         lock.unlock();
         try {
+          // The header names the APIs of every written block, so that a stream of an application
+          // that crashes or exits without closing it still replays.
+          if (apis != writtenApis) {
+            StreamHeader::Get().WriteApis(m_Stream, firstApi, apis);
+            writtenApis = apis;
+          }
           m_Stream.write(reinterpret_cast<char*>(&block.DataSize), sizeof(block.DataSize));
           m_Stream.write(reinterpret_cast<char*>(&block.UncompressedDataSize),
                          sizeof(block.UncompressedDataSize));

@@ -40,7 +40,7 @@ private:
   std::ofstream m_Stream;
   std::string m_StreamDir;
   // The API of the first command with an API and the StreamHeader::ApiBit of the APIs of the
-  // commands recorded so far, written to the header on Close.
+  // commands recorded so far, written to the header before the blocks holding their commands.
   ApiId m_FirstApi{};
   uint32_t m_Apis{};
   std::atomic<uint64_t> m_CapturedFrames{};
