@@ -166,10 +166,17 @@ void CaptureCustomizationLayer::Post(glClientWaitSyncAPPLECommand& command) {
 }
 
 void CaptureCustomizationLayer::Post(glGetSyncivCommand& command) {
-  // The generated wrapper does not copy `values`; the application's array holds the result.
+  // The generated wrapper does not copy `values`, whose length is only the caller's capacity; the
+  // driver writes the first element. The player waits for a sync object the application saw
+  // signaled, since the application may then overwrite memory the GPU read through an
+  // unsynchronized map.
   const GLint* values = command.m_values.Pointer;
-  if (command.m_pname.Value == GL_SYNC_STATUS && command.m_count.Value > 0 && values != nullptr &&
-      values[0] == GL_SIGNALED) {
+  if (command.m_count.Value <= 0 || values == nullptr) {
+    return;
+  }
+  command.m_values.Data.assign(values, values + 1);
+  command.m_values.HasValue = true;
+  if (command.m_pname.Value == GL_SYNC_STATUS && values[0] == GL_SIGNALED) {
     MapTrackingService::Get().RefreshGpuWrittenMaps();
   }
 }

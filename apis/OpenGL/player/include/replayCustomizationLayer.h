@@ -45,9 +45,11 @@ public:
   // GlxDrawableService::FitViewport().
   void Post(glViewportCommand& command) override;
 
-  // A wait that reached the sync object in the recording waits again while replay times out.
+  // A wait that reached the sync object in the recording waits again while replay times out, and
+  // a GL_SYNC_STATUS query that returned GL_SIGNALED waits until replay reaches it too.
   void Pre(glClientWaitSyncCommand& command) override;
   void Post(glClientWaitSyncCommand& command) override;
+  void Post(glGetSyncivCommand& command) override;
 };
 
 } // namespace gits::opengl

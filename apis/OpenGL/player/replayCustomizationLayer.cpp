@@ -30,6 +30,19 @@ bool Executed(const Command& command) {
   return PlayerManager::Get().ExecuteCommands() && !command.m_Skip;
 }
 
+// The application went on as if the GPU had reached the sync object, so its next commands may
+// overwrite data the GPU is still reading; a slower replay GPU must catch up first. The waits
+// flush, so they cannot wait on commands the driver has not submitted.
+GLenum WaitForSync(GLsync sync) {
+  constexpr GLuint64 retryTimeoutNs = 1000000000;
+  const auto clientWaitSync = g_DispatchTable.glClientWaitSync.load(std::memory_order_acquire);
+  GLenum result = GL_TIMEOUT_EXPIRED;
+  while (result == GL_TIMEOUT_EXPIRED) {
+    result = clientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, retryTimeoutNs);
+  }
+  return result;
+}
+
 // The other elements of a uniform array the location belongs to are registered by the
 // UniformArrayMetaCommand the recorder records right after the command, which knows the array's
 // capture-time size.
@@ -177,18 +190,19 @@ void ReplayCustomizationLayer::Pre(glClientWaitSyncCommand& command) {
 }
 
 void ReplayCustomizationLayer::Post(glClientWaitSyncCommand& command) {
-  // The application went on as if the GPU had reached the sync object, so its next commands
-  // may overwrite data the GPU is still reading; a slower replay GPU must catch up first. The
-  // retries flush, so they cannot wait on commands the driver has not submitted.
-  if (!Executed(command) || (tl_RecordedWaitResult != GL_ALREADY_SIGNALED &&
-                             tl_RecordedWaitResult != GL_CONDITION_SATISFIED)) {
-    return;
+  if (Executed(command) && command.m_Return.Value == GL_TIMEOUT_EXPIRED &&
+      (tl_RecordedWaitResult == GL_ALREADY_SIGNALED ||
+       tl_RecordedWaitResult == GL_CONDITION_SATISFIED)) {
+    command.m_Return.Value = WaitForSync(command.m_sync.Value);
   }
-  constexpr GLuint64 retryTimeoutNs = 1000000000;
-  const auto clientWaitSync = g_DispatchTable.glClientWaitSync.load(std::memory_order_acquire);
-  while (command.m_Return.Value == GL_TIMEOUT_EXPIRED) {
-    command.m_Return.Value =
-        clientWaitSync(command.m_sync.Value, GL_SYNC_FLUSH_COMMANDS_BIT, retryTimeoutNs);
+}
+
+void ReplayCustomizationLayer::Post(glGetSyncivCommand& command) {
+  // CaptureCustomizationLayer records the value in `values`; the driver writes to scratch.
+  const auto& recorded = command.m_values.Data;
+  if (Executed(command) && command.m_pname.Value == GL_SYNC_STATUS && !recorded.empty() &&
+      recorded[0] == GL_SIGNALED) {
+    WaitForSync(command.m_sync.Value);
   }
 }
 
