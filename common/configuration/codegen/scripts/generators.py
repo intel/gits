@@ -49,14 +49,7 @@ def generate_default_configuration(task, template_manager):
 
     configuration, _, _ = parse_config_yaml(
         task.input_config, template_manager.root_directory)
-    conditions = []
-    if task.directx:
-        conditions = ['is_directx']
-    if task.vulkan:
-        conditions = ['is_vulkan']
-    if task.opengl:
-        conditions = ['is_opengl']
-    context = {'data': configuration, 'platform': task.platform, 'installpath': task.installpath, 'conditions': conditions}
+    context = {'data': configuration, 'platform': task.platform, 'installpath': task.installpath}
     template_manager.render_task(task, context)
 
 

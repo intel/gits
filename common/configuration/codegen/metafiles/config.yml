@@ -543,11 +543,7 @@ Configuration:
             Options:
               - Name: type
                 Type: CompressionType
-                Default: LZ4
-                DefaultCondition:
-                  - is_directx: ZSTD
-                  - is_vulkan: ZSTD
-                  - is_opengl: ZSTD
+                Default: ZSTD
           - Name: extendedDiagnosticInfo
             Type: bool
             Default: true

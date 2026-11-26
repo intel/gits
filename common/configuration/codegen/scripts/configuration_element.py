@@ -194,13 +194,6 @@ class ConfigurationOption(ConfigurationEntry):
         self.access_level = get_if_present(option, 'AccessLevel', 'Developer')
         self.tags.append(f"{ConfigurationOption.ARGS_TAG_PREFIX_ACCESS_LEVEL}:{self.access_level}")
 
-        self.default_condition = {}
-        if 'DefaultCondition' in option:
-            default_condition_lst = option['DefaultCondition']
-            for d in default_condition_lst:
-                for key, value in d.items():
-                    self.default_condition[key] = self.process_default(value)
-
         self.is_deprecated = get_if_present(option, "Deprecated", False)
 
         self.legacy_paths = []
@@ -256,11 +249,8 @@ class ConfigurationOption(ConfigurationEntry):
         return str(result)
 
 
-    def get_default(self, platform: str = None, install_path = None, conditions=[]) -> str:
+    def get_default(self, platform: str = None, install_path = None) -> str:
         value = self.default
-        for condition in conditions:
-            if condition in self.default_condition.keys():
-                value = self.default_condition[condition]
         if platform:
           if self.defaults_per_platform and platform in self.defaults_per_platform:
               value = self.defaults_per_platform[platform]

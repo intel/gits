@@ -59,9 +59,6 @@ Here's the structure to define a configuration option:
 
   DefaultsPerPlatform:      #     opt. additional defaults
       - {platform}: string  #     opt. if `platform` matches
-
-  DefaultCondition:         #     opt. additional defaults
-      - {set_value}: string #     opt. if `set_value` is present
 ```
 
 | Name                  | Description                                                                                                                                                                                                                                 |
@@ -79,7 +76,6 @@ Here's the structure to define a configuration option:
 | `Tags`                | Tag(s) for help filtering and future use-cases. All groups "above" a value - the path segments - are added to the tags automatically.                                                                                                       |
 | `OSVisibility`        | OS(s) that use the option: `WINDOWS`,`X11`.                                                                                                                                                                                                 |
 | `DefaultsPerPlatform` | Specify defaults for specific platforms. The value set by `Default` is a fallback, when no platform matched.                                                                                                                                |
-| `DefaultCondition`    | Specify defaults if certain conditions are _present_. Is evaluated before `DefaultsPerPlatform`. When unmatched, the value set by `Default` is used.                                                                                        |
 | `Deprecated`          | Specifies that the option has been deprecated. Defaults to false if not present. Such option won't be put into the default config file but will be read properly (with a warning) if present - used for backwards compatibility.            |
 | `LegacyPaths`         | List of old (legacy) paths for the option that will be checked if an option is not found under its regular path. Allows for backward compatibility with old configs / CLI / envars. If found under a legacy path a warning will be printed.            |
 
@@ -130,7 +126,6 @@ generate.py --step <Step>                       # generation step to run
             --outDir <outputFolder>             # output base folder
             --platform <platformString>         # [win32, lnx_32, lnx_64, lnx_arm]
             --installpath <installationpath>    # where gits is installed
-            --directx | --vulkan | --opengl     # apply the API-specific defaults
 ```
 
 where `Step` can be one of the following:
