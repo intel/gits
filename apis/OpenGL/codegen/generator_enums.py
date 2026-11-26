@@ -6,6 +6,7 @@
 #
 # ===================== end_copyright_notice ==============================
 
+from collections.abc import Iterable
 from typing import NamedTuple
 
 from generator_helpers import mako_write
@@ -21,26 +22,13 @@ class EnumEntry(NamedTuple):
     name: str
 
 
-def _build_enum_entries_by_api(enum_name_map: EnumNameMap) -> dict[Api, list[EnumEntry]]:
-    """Build per-API data for group-aware enum-to-name lookup."""
+def _sorted_by_api(entries: Iterable[tuple[Api, EnumEntry]]) -> dict[Api, list[EnumEntry]]:
+    """Group entries by API, each API's entries sorted."""
     result: dict[Api, list[EnumEntry]] = {api: [] for api in Api}
-    for key, name in enum_name_map.items():
-        result[key.api].append(EnumEntry(key.group or 'NoGroup', key.value, name))
-    for entries in result.values():
-        entries.sort()
-    return result
-
-
-def _build_bitflag_entries_by_api(
-    enum_name_map: EnumNameMap, bitmask_groups: frozenset[str],
-) -> dict[Api, list[EnumEntry]]:
-    """Build per-API single-bit entries used to decompose bitmasks."""
-    result: dict[Api, list[EnumEntry]] = {api: [] for api in Api}
-    for key, name in enum_name_map.items():
-        if key.group in bitmask_groups and key.value.bit_count() == 1:
-            result[key.api].append(EnumEntry(key.group, key.value, name))
-    for entries in result.values():
-        entries.sort()
+    for api, entry in entries:
+        result[api].append(entry)
+    for api_entries in result.values():
+        api_entries.sort()
     return result
 
 
@@ -51,8 +39,15 @@ def generate_enum_files(
 ) -> None:
     """Generate enum definitions and group-aware enum stringification."""
     enums = [enum for api_enums in enums_by_api.values() for enum in api_enums]
-    enum_entries_by_api = _build_enum_entries_by_api(enum_name_map)
-    bitflag_entries_by_api = _build_bitflag_entries_by_api(enum_name_map, bitmask_groups)
+    # Group-aware enum-to-name lookup.
+    enum_entries_by_api = _sorted_by_api(
+        (key.api, EnumEntry(key.group or 'NoGroup', key.value, name))
+        for key, name in enum_name_map.items())
+    # Single-bit entries of bitmask groups, used to decompose bitmasks.
+    bitflag_entries_by_api = _sorted_by_api(
+        (key.api, EnumEntry(key.group, key.value, name))
+        for key, name in enum_name_map.items()
+        if key.group in bitmask_groups and key.value.bit_count() == 1)
     mako_write('templates/glEnumsAuto.h.mako', 'common/layer_interface/glEnumsAuto.h',
                enums=enums, enum_name_map=enum_name_map)
     mako_write('templates/glEnumsAuto.cpp.mako', 'common/layer_interface/glEnumsAuto.cpp',

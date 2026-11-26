@@ -35,74 +35,39 @@ namespace gits::opengl {
 
 % for cmd in commands:
 % if cmd.enabled:
+<%
+  members = ['m_Key', 'm_ThreadId']
+  for p in cmd.params:
+      if p.name in consumed_pointer_params(cmd.name):
+          continue
+      members.append(f'm_{p.name}')
+      override = pointer_override_for(cmd, p.name)
+      if pointer_needs_raw_offset_capture(override):
+          members.append(f'm_{p.name}RawPointer')
+      if pointer_needs_pixel_transfer_unknown_flag(override):
+          members += [f'm_{p.name}SizeUnknown', f'm_{p.name}IsBufferOffset']
+  if has_return_member(cmd):
+      members.append('m_Return')
+%>\
 template <>
 uint64_t GetSize(const ${cmd.name}Command& command) {
-  return GetSize(command.m_Key) +
-         GetSize(command.m_ThreadId)\
-% for p in cmd.params:
-% if p.name not in consumed_pointer_params(cmd.name):
- +
-         GetSize(command.m_${p.name})\
-% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
- +
-         GetSize(command.m_${p.name}RawPointer)\
-% endif
-% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
- +
-         GetSize(command.m_${p.name}SizeUnknown) +
-         GetSize(command.m_${p.name}IsBufferOffset)\
-% endif
-% endif
-% endfor
-% if has_return_member(cmd):
- +
-         GetSize(command.m_Return)\
-% endif
-;
+  return ${' +\n         '.join(f'GetSize(command.{member})' for member in members)};
 }
 
 template <>
 void Encode(const ${cmd.name}Command& command, char* dest) {
   uint64_t offset = 0;
-  Encode(dest, offset, command.m_Key);
-  Encode(dest, offset, command.m_ThreadId);
-% for p in cmd.params:
-% if p.name not in consumed_pointer_params(cmd.name):
-  Encode(dest, offset, command.m_${p.name});
-% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
-  Encode(dest, offset, command.m_${p.name}RawPointer);
-% endif
-% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
-  Encode(dest, offset, command.m_${p.name}SizeUnknown);
-  Encode(dest, offset, command.m_${p.name}IsBufferOffset);
-% endif
-% endif
+% for member in members:
+  Encode(dest, offset, command.${member});
 % endfor
-% if has_return_member(cmd):
-  Encode(dest, offset, command.m_Return);
-% endif
 }
 
 template <>
 void Decode(const char* src, ${cmd.name}Command& command) {
   uint64_t offset = 0;
-  Decode(src, offset, command.m_Key);
-  Decode(src, offset, command.m_ThreadId);
-% for p in cmd.params:
-% if p.name not in consumed_pointer_params(cmd.name):
-  Decode(src, offset, command.m_${p.name});
-% if pointer_needs_raw_offset_capture(pointer_override_for(cmd, p.name)):
-  Decode(src, offset, command.m_${p.name}RawPointer);
-% endif
-% if pointer_needs_pixel_transfer_unknown_flag(pointer_override_for(cmd, p.name)):
-  Decode(src, offset, command.m_${p.name}SizeUnknown);
-  Decode(src, offset, command.m_${p.name}IsBufferOffset);
-% endif
-% endif
+% for member in members:
+  Decode(src, offset, command.${member});
 % endfor
-% if has_return_member(cmd):
-  Decode(src, offset, command.m_Return);
-% endif
 }
 
 % endif

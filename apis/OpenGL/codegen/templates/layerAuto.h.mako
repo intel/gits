@@ -19,6 +19,14 @@ ${AUTO_GENERATED_HEADER}
 #include "unsupportedCommandTypes.h"
 #include "windowGeometryMetaTypes.h"
 
+<%def name="forwarding_hooks(command_class)">\
+  virtual void Pre(${command_class}& command) {
+    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
+  }
+  virtual void Post(${command_class}& command) {
+    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
+  }
+</%def>\
 namespace gits::opengl {
 
 // Adds a typed Pre(FooCommand&)/Post(FooCommand&) override pair per enabled command on top of
@@ -49,57 +57,18 @@ public:
 
 % for cmd in commands:
 % if cmd.enabled:
-  virtual void Pre(${cmd.name}Command& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(${cmd.name}Command& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
+${forwarding_hooks(f'{cmd.name}Command')}\
 % endif
 % endfor
 
-  virtual void Pre(MappedDataMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(MappedDataMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(UnsupportedCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(UnsupportedCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(WindowGeometryMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(WindowGeometryMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(ClientArraysMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(ClientArraysMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(UniformArrayMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(UniformArrayMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(MappedTextureDataMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(MappedTextureDataMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
-  virtual void Pre(PixelFormatMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Pre(static_cast<Command&>(command));
-  }
-  virtual void Post(PixelFormatMetaCommand& command) {
-    static_cast<LayerBase&>(*this).Post(static_cast<Command&>(command));
-  }
+<%
+  meta_commands = ['MappedDataMetaCommand', 'UnsupportedCommand', 'WindowGeometryMetaCommand',
+                   'ClientArraysMetaCommand', 'UniformArrayMetaCommand',
+                   'MappedTextureDataMetaCommand', 'PixelFormatMetaCommand']
+%>\
+% for command_class in meta_commands:
+${forwarding_hooks(command_class)}\
+% endfor
 };
 
 } // namespace gits::opengl

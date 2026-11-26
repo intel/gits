@@ -17,37 +17,15 @@ from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS, SHARE
 from intermediates import Command
 from object_name_lifecycle import ObjectNameRole
 
-# HANDLE_CREATING_COMMANDS is already unioned across every mapped-handle type (HGLRC, GLsync,
-# ...) by handle_lifecycle.py itself - kept in sync with the same table generator_recorder.py
-# passes to recorderWrappersAuto.cpp.mako so both the recorder and player agree on which
-# commands mint a fresh mapped-handle key from their return value.
-
-# Disabled commands the player's own hand-written code still calls directly through
-# g_DispatchTable, bypassing the generated per-command Run()/CommandFactory path entirely -
-# found by grepping every hand-written player/*.cpp,*.h file (excluding the generated
-# *Auto.{h,cpp} ones) for "g_DispatchTable.<name>" (WarmUpResolvableFunctions()'s
-# enabled-only probing loop would otherwise never warm these up either - see below for why
-# that still leaves them working correctly either way):
+# Disabled commands the player's hand-written code calls directly through g_DispatchTable, which
+# WarmUpResolvableFunctions() warms up along with the enabled ones:
 #   - wglGetProcAddress, glXGetProcAddressARB: the shared resolver's fallback path.
 #   - glGetIntegerv/glMapBufferRange: player/mappedDataMetaRunner.cpp's buffer map-tracking
-#     replay, which queries/re-establishes a mapped buffer's real GL state directly - this is
-#     a low-level mechanism operating underneath the generated-command replay path, not a
-#     replayed command in its own right (mirrors recorder/mapTrackingWrappers.cpp's identical
-#     precedent for the same reason).
+#     replay.
 #   - glMapTexture2DINTEL: player/mappedTextureDataMetaRunner.cpp, which maps a texture level
 #     itself to replay its captured contents.
-#
-# Included in `warmup_commands` below purely to preserve this function's pre-existing behavior
-# for these specific names unchanged (they were warmed up before this filter existed too, as
-# part of the full, unfiltered list) - not because it is load-bearing for correctness. Every
-# other call site of the real, driver-resolved function for these (mappedDataMetaRunner.
-# cpp's direct calls, ResolveDriverFunction's own recursive-looking call for
-# wglGetProcAddress itself) runs while a context is already current by construction (mapping a
-# buffer, or resolving some *other* function's real pointer, both require one) - the same
-# condition WarmUpResolvableFunctions() exists to opportunistically catch just after a
-# wglMakeCurrent, so each dispatch-table entry's own lazy resolve-thunk (ResolveAndCall_<cmd>,
-# generated for every intercepted command regardless of this filter) would resolve them on first use
-# either way, warmed up or not.
+# Not needed for correctness: these calls run with a context current, so each function's lazy
+# resolve-thunk resolves it on first use anyway.
 _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'wglGetProcAddress',
     'glXGetProcAddressARB',
@@ -85,7 +63,8 @@ def display_list_commands(commands: list[Command]) -> frozenset[str]:
 
 
 # Commands AnalyzerLayer handles by hand: display list compilation and frame ends.
-ANALYZER_LAYER_CUSTOM_COMMANDS: frozenset[str] = frozenset({'glNewList', 'glEndList'}) | FRAME_END_COMMANDS
+ANALYZER_LAYER_CUSTOM_COMMANDS: frozenset[str] = (frozenset({'glNewList', 'glEndList'}) |
+                                                  FRAME_END_COMMANDS)
 
 _SUBCAPTURE_FRAME_END_COMMANDS: list[str] = sorted(FRAME_END_COMMANDS)
 

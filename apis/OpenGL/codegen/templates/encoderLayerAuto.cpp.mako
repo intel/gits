@@ -44,10 +44,6 @@ void EncoderLayer::Post(${cmd.name}Command& command) {
   CaptureManager::Get().RecordCommand(command, new ${cmd.name}CommandSerializer(command));
 % endif
 % if cmd.name in frame_end_commands:
-<%
-    ret = cmd.return_value.type.strip()
-    is_void = ret.lower() == 'void'  # WGL commands use Win32 'VOID', GL commands use 'void'.
-%>\
   // See codegen/handle_lifecycle.py's FRAME_END_COMMANDS and
   // common/layer_interface/unsupportedCommandTypes.h's FrameEndCommand - only emit the marker
   // on a successful swap (this used to be gated on the wrapper's own local `result`, before the
@@ -56,7 +52,7 @@ void EncoderLayer::Post(${cmd.name}Command& command) {
   // unsuccessful swap does not advance the shared player infrastructure's frame count. Reuses
   // command.m_ThreadId (identical to the recording thread's CurrentThreadId() at the point
   // the wrapper constructed `command`) instead of calling CurrentThreadId() again here.
-% if is_void:
+% if returns_void(cmd):
   FrameEndCommand frameEndCommand(command.m_ThreadId);
   frameEndCommand.m_Key = CaptureManager::Get().CreateCommandKey();
   CaptureManager::Get().RecordCommand(frameEndCommand, new FrameEndSerializer(frameEndCommand));

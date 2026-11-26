@@ -75,29 +75,19 @@ ${AUTO_GENERATED_HEADER}
 % for p in cmd.params:
 <%
     in_override = pointer_override_for(cmd, p.name)
-    is_pixel_transfer_in = (in_override is not None and
-                             in_override.direction == PointerDirection.IN and
-                             in_override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE)
-    # unpack_pbo_guard is a SIBLING_PARAM-shaped (or any other non-
-    # PIXEL_TRANSFER_SIZE) IN-direction parameter with the identical client-pointer-or-PBO-
-    # offset duality as the PIXEL_TRANSFER_SIZE case above (glCompressedTexImage*/
-    # glCompressedTexSubImage*'s `data` - see pointer_metadata.py's own field comment) - route
-    # it through the exact same GuardUnpackPixelsPointer() call rather than reinventing a
-    # second guard mechanism. _validate_pointer_override already forbids setting both
-    # unpack_pbo_guard and PIXEL_TRANSFER_SIZE on the same override, so these two conditions
-    # are mutually exclusive in practice; written as two independent checks anyway (rather than
-    # one combined boolean) so each stays independently readable at this call site.
-    is_unpack_pbo_guard_in = in_override is not None and in_override.unpack_pbo_guard
-    is_indirect_in = (in_override is not None and
-                      in_override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE)
-    is_element_indices_in = (in_override is not None and
-                             in_override.length_source_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE)
+    in_kind = in_override.length_source_kind if in_override is not None else None
+    # An unpack_pbo_guard parameter (glCompressedTexImage*'s `data`) is a client pointer or an
+    # unpack buffer offset, like an IN-direction pixel transfer.
+    is_unpack_pixels_in = in_override is not None and (
+        in_override.unpack_pbo_guard or
+        (in_override.direction == PointerDirection.IN and
+         in_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE))
 %>\
-% if is_pixel_transfer_in or is_unpack_pbo_guard_in:
+% if is_unpack_pixels_in:
 , static_cast<${p.type}>(GuardUnpackPixelsPointer("${cmd.name}", ${p.name}))\
-% elif is_indirect_in:
+% elif in_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
 , GuardDrawIndirectPointer(${p.name})\
-% elif is_element_indices_in:
+% elif in_kind == LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE:
 , GuardElementArrayPointer(${p.name})\
 % else:
 , ${p.name}\
@@ -137,26 +127,7 @@ ${indent}command.m_${p.name}RawPointer.Value = reinterpret_cast<uintptr_t>(${p.n
 % endif
 % if pointer_needs_pixel_transfer_unknown_flag(raw_offset_in_override) and raw_offset_in_override.direction == PointerDirection.IN:
 <%
-    pixel_transfer_args_in = (
-        f'{raw_offset_in_override.pixel_format_param}, {raw_offset_in_override.pixel_type_param}, '
-        f'{raw_offset_in_override.pixel_width_param}, '
-        f'{raw_offset_in_override.pixel_height_param if raw_offset_in_override.pixel_height_param else "1"}, '
-        f'QueryUnpackAlignment(), '
-        f'{raw_offset_in_override.pixel_depth_param if raw_offset_in_override.pixel_depth_param else "1"}, '
-        + ('QueryUnpackImageHeight(), QueryUnpackSkipImages(), '
-           if raw_offset_in_override.pixel_depth_param else '0, 0, ')
-        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
-        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
-        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
-        # dimensionality, so it is always queried live. Exactly ONE `+` joins this ternary to
-        # the previous one: a second, redundant `+` here (from
-        # a comment sitting between two supposedly-adjacent `+`-joined expressions) parses as
-        # Python's unary `+` applied to a str and raises TypeError at codegen time, not at
-        # template-authoring time, so this is easy to reintroduce by accident.
-        + ('QueryUnpackRowLength(), QueryUnpackSkipRows(), '
-           if raw_offset_in_override.pixel_height_param else '0, 0, ') +
-        f'QueryUnpackSkipPixels(), "{cmd.name}"'
-    )
+    pixel_transfer_args_in = pixel_transfer_size_args(raw_offset_in_override, cmd.name, 'Unpack')
 %>\
 ${indent}// See pointer_needs_pixel_transfer_unknown_flag()'s
 ${indent}// own header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
@@ -313,23 +284,20 @@ ${indent}command.m_Return.Value = result;
 ## Erases deleted handles and object names, and merges share groups.
 <%def name="lifecycle_updates(cmd, indent)">\
 <%
-    is_void = cmd.return_value.type.strip().lower() == 'void'
+    is_void = returns_void(cmd)
     erase_param = handle_param_to_erase_on_success.get(cmd.name)
-    # Which map service's Erase() to call is a fact about erase_param's OWN type, not about
-    # which command this is - handle_param_to_erase_on_success is a single dict already
-    # unioned across every mapped-handle type (see handle_lifecycle.py), so this looks the
-    # parameter itself up (via MAPPED_HANDLE_SERVICE_NAMES, generic over every entry in that
-    # module's MAPPED_HANDLE_LIFECYCLES - no per-type name hardcoded here) to tell them apart.
+    # The map service whose Erase() to call follows from erase_param's own type.
     erase_service = None
     if erase_param:
         erase_param_obj = next(p for p in cmd.params if p.name == erase_param)
         erase_service = mapped_handle_service_names[erase_param_obj.type_facts.base_type]
     share_lists_params = share_lists_commands.get(cmd.name)
-    delete_object_name_params = [
-        p for p in cmd.params
-        if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
-            object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.DELETE)
-    ]
+    delete_kinds = {}
+    for p in cmd.params:
+        delete_override = object_name_override_for(cmd.name, p.name, p.class_)
+        if delete_override is not None and delete_override.role == ObjectNameRole.DELETE:
+            delete_kinds[p.name] = delete_override.kind.value
+    delete_object_name_params = [p for p in cmd.params if p.name in delete_kinds]
 %>\
 ## HandleShareGroupFor() (recorder/include/handleArgumentUpdaters.h) is overloaded per HandleT -
 ## 0 (process-global) for HGLRC, the real CurrentShareGroup() for GLsync - so this one call site
@@ -354,7 +322,7 @@ ${indent}}
 % endif
 % for p in delete_object_name_params:
 <%
-    delete_kind = object_name_override_for(cmd.name, p.name, p.class_).kind.value
+    delete_kind = delete_kinds[p.name]
     delete_condition = '!command.m_Skip' if is_void else '!command.m_Skip && result'
 %>\
 ${indent}if (${delete_condition}) {
@@ -371,6 +339,15 @@ ${indent}                                      command.m_${p.name}.Value);
 ${indent}}
 % endfor
 </%def>\
+<%def name="buffer_shadow_call(guard, call)">\
+% if guard:
+  if (${guard}) {
+    BufferShadowService::Get().${call};
+  }
+% else:
+  BufferShadowService::Get().${call};
+% endif
+</%def>\
 namespace gits::opengl {
 
 namespace {
@@ -378,7 +355,7 @@ namespace {
 % for cmd in commands:
 <%
     ret = cmd.return_value.type.strip()
-    is_void = ret.lower() == 'void'  # WGL commands use Win32 'VOID', GL commands use 'void'.
+    is_void = returns_void(cmd)
     param_decls = ', '.join(f'{p.type} {p.name}' for p in cmd.params)
     param_names = ', '.join(p.name for p in cmd.params)
 %>\
@@ -427,31 +404,14 @@ ${lifecycle_updates(cmd, '      ')}\
     return realFunction(${param_names});
 % endif
   }
-% if cmd.name in buffer_content_hooks and buffer_content_hooks[cmd.name].before_call:
-<%
-    hook = buffer_content_hooks[cmd.name]
-%>\
+<% hook = buffer_content_hooks.get(cmd.name) %>\
+% if hook is not None and hook.before_call:
   // See buffer_content_hooks.py's BufferContentHook.before_call.
-% if hook.guard:
-  if (${hook.guard}) {
-    BufferShadowService::Get().${hook.call};
-  }
-% else:
-  BufferShadowService::Get().${hook.call};
+${buffer_shadow_call(hook.guard, hook.call)}\
 % endif
-% endif
-% if cmd.name in buffer_content_hooks and buffer_content_hooks[cmd.name].prepare:
-<%
-    hook = buffer_content_hooks[cmd.name]
-%>\
+% if hook is not None and hook.prepare:
   // See buffer_content_hooks.py's BufferContentHook.prepare.
-% if hook.guard:
-  if (${hook.guard}) {
-    BufferShadowService::Get().${hook.prepare};
-  }
-% else:
-  BufferShadowService::Get().${hook.prepare};
-% endif
+${buffer_shadow_call(hook.guard, hook.prepare)}\
 % endif
 % if cmd.name in mapped_write_publishers:
   // See generator_recorder.py's mapped_write_publishers(): the published writes must replay before
@@ -590,9 +550,8 @@ ${implicit_create_checks(cmd, '  ')}\
   // See generator_recorder.py's PRIMITIVE_PAIR_COMMANDS.
   MapTrackingService::Get().SetInPrimitivePair(${'true' if primitive_pair_commands[cmd.name] else 'false'});
 % endif
-% if cmd.name in buffer_content_hooks and not buffer_content_hooks[cmd.name].before_call:
+% if hook is not None and not hook.before_call:
 <%
-    hook = buffer_content_hooks[cmd.name]
     hook_conditions = (['!command.m_Skip'] if cmd.enabled else []) + ([hook.guard] if hook.guard else [])
 %>\
   // Reported whether or not this command is enabled - see buffer_content_hooks.py.
@@ -637,19 +596,11 @@ ${implicit_create_confirmations(cmd, '  ')}\
 % elif override is not None and override.direction == PointerDirection.OUT:
   // Read only now that the driver has actually written into the app's buffer.
 <%
-    # 'void *' OUT params (glReadPixels et al.) need an explicit cast to the substituted
-    # element type (see array_element_cpp_type()) - void* has no implicit conversion to
-    # uint8_t*, mirroring commandsAuto.h.mako's IN-direction arg_expr cast above. A
-    # PIXEL_TRANSFER_SIZE OUT param (glReadPixels' `pixels`) additionally routes through
-    # GuardPackPixelsPointer first - see that function's own header comment: `pixels` is a
-    # buffer-relative offset, not a client pointer, when a pixel-pack buffer is bound, and must
-    # not be read from directly in that case. A query_buffer_guard OUT param
-    # (glGetQueryObjecti64v/ui64v/uiv's `params`) has the identical buffer-relative-offset-vs-
-    # real-pointer duality, but for GL_QUERY_BUFFER rather than GL_PIXEL_PACK_BUFFER, and for a
-    # non-`void*`-typed pointer (GLint64*/GLuint64*/GLuint*, never blob-shaped) - so it casts
-    # back to this param's own declared pointer type (`p.type` already includes the `*`)
-    # rather than array_element_cpp_type()'s void-substitution helper, which only applies to a
-    # genuine `void*`/`const void*` field.
+    # 'void *' OUT params (glReadPixels et al.) need an explicit cast to the substituted element
+    # type (see array_element_cpp_type()). A pixel transfer is a buffer offset while a pixel pack
+    # buffer is bound, and a query_buffer_guard param (glGetQueryObject*v's `params`) while a
+    # query buffer is bound, so neither is read through directly: GuardPackPixelsPointer/
+    # GuardQueryBufferPointer decide.
     is_pixel_transfer_out = override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE
     is_query_buffer_guard_out = override.query_buffer_guard
     if p.type_facts.base_type == 'void' and is_pixel_transfer_out:
@@ -664,20 +615,8 @@ ${implicit_create_confirmations(cmd, '  ')}\
         capture_arg_expr = p.name
 %>\
 % if override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE:
-## COMPSIZE(format,type,width[,height[,depth]]) has no single sibling to read directly -
-## mirrors commandsAuto.h.mako's own IN-direction PIXEL_TRANSFER_SIZE branch (glTexImage2D),
-## just computed after the call instead of before it (see pixelTransferSize.h). This whole
-## block is only reached for an OUT-direction override (guarded above) - i.e. glReadPixels-
-## shaped commands, which read GL_PACK_ALIGNMENT, never GL_UNPACK_ALIGNMENT. No enabled
-## OUT-direction command has a depth dimension today (glReadPixels is 2D-only), but
-## pixel_height_param/pixel_depth_param (and, for symmetry with the IN-direction branch above,
-## GL_PACK_IMAGE_HEIGHT/GL_PACK_SKIP_IMAGES querying - see ComputePixelTransferByteSize's own
-## header comment) are handled the same optional way as the IN-direction branch
-## above, in case a future OUT-direction 3D transfer is ever enabled. GL_PACK_ROW_LENGTH/
-## SKIP_ROWS/SKIP_PIXELS and this command's own name, by contrast (see
-## ComputePixelTransferByteSize's own header comment for the full rationale), are ALWAYS
-## queried and passed here too, mirroring the IN-direction branch's own unconditional query of
-## the GL_UNPACK_* counterparts.
+## An OUT-direction (glReadPixels-shaped) pixel transfer, sized after the call from the
+## GL_PACK_* pixel-store state - or, for a texture level readback, from the level itself.
 <%
     if override.pixel_texture_level_param:
         compute_size_out = 'ComputeTextureLevelPackByteSize'
@@ -688,35 +627,8 @@ ${implicit_create_confirmations(cmd, '  ')}\
     else:
         compute_size_out = 'ComputePixelTransferByteSize'
         size_unknown_out = 'PixelTransferSizeIsUnknown'
-        pixel_transfer_args_out = None
+        pixel_transfer_args_out = pixel_transfer_size_args(override, cmd.name, 'Pack')
 %>\
-% if pixel_transfer_args_out is None:
-<%
-    pixel_transfer_args_out = (
-        f'{override.pixel_format_param}, {override.pixel_type_param}, '
-        f'{override.pixel_width_param}, '
-        f'{override.pixel_height_param if override.pixel_height_param else "1"}, '
-        f'QueryPackAlignment(), '
-        f'{override.pixel_depth_param if override.pixel_depth_param else "1"}, '
-        + ('QueryPackImageHeight(), QueryPackSkipImages(), '
-           if override.pixel_depth_param else '0, 0, ')
-        # GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect on a 1D transfer (no `height`
-        # sibling) - see commandsAuto.h.mako's identical, more fully-commented conditional for
-        # this same PIXEL_TRANSFER_SIZE argument list; SKIP_PIXELS still applies regardless of
-        # dimensionality, so it is always queried live. No enabled OUT-direction command is
-        # ever 1D in practice (glReadPixels is the only OUT-direction match, always 2D - see
-        # pixel_transfer_metadata.py's own audit), so this branch never actually fires today;
-        # kept for symmetry with the IN-direction case above and to fail safe rather than
-        # silently regress if a 1D OUT-direction command is ever added later. Exactly ONE `+`
-        # joins this ternary to the previous one - see the IN-direction branch's own identical
-        # comment above for why a second, redundant `+` here is easy to reintroduce
-        # by accident and fails only at codegen time, not at template-authoring time.
-        + ('QueryPackRowLength(), QueryPackSkipRows(), '
-           if override.pixel_height_param else '0, 0, ') +
-        f'QueryPackSkipPixels(), "{cmd.name}"'
-    )
-%>\
-% endif
   command.m_${p.name}.Capture(${capture_arg_expr}, ${compute_size_out}(${pixel_transfer_args_out}));
   // See pointer_needs_pixel_transfer_unknown_flag()'s
   // own header comment (generator_helpers.py) and PixelTransferSizeIsUnknown()'s own header
@@ -737,24 +649,14 @@ ${implicit_create_confirmations(cmd, '  ')}\
 <% length_param = TEXT_OUTPUT_BUFFERS[(cmd.name, p.name)] %>\
   command.m_${p.name}.Capture(${capture_arg_expr}, TextOutputCaptureSize(${p.name}, ${override.length_source_value}, ${length_param}));
 % elif override.length_source_kind == LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
-## COMPSIZE(buffer) depends on the sibling enum's *value* - mirrors commandsAuto.h.mako's own
-## IN-direction CLEAR_BUFFER_VALUE_COUNT branch; no enabled command needs this combination yet,
-## kept for symmetry with the PIXEL_TRANSFER_SIZE branch above.
+## COMPSIZE(buffer) depends on the sibling enum's value.
   command.m_${p.name}.Capture(${capture_arg_expr}, ComputeClearBufferValueCount(${override.clear_buffer_param}));
 % elif override.length_source_kind == LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value* - see that LengthSourceKind's own
-## comment (pointer_metadata.py) and pixelTransferSize.h. OUT direction only
-## (glGetVertexAttribiv is a getter; _validate_pointer_override's own direction check already
-## enforces this), computed after the call like every other OUT-direction branch here, not
-## before it like TEX_SAMPLER_PARAMETER_VALUE_COUNT/PATCH_PARAMETER_VALUE_COUNT's own IN-only
-## commandsAuto.h.mako branch.
+## COMPSIZE(pname) of glGetVertexAttribiv depends on the sibling enum's value. OUT direction
+## only.
   command.m_${p.name}.Capture(${capture_arg_expr}, ComputeVertexAttribParameterValueCount(${override.pname_param}));
 % else:
-## Passed as the sibling's own type verbatim (no cast here) - ArrayArgument<T>/
-## HandleArrayArgument<T>::Capture() is templated on SizeT and does the static_cast<size_t>
-## itself (mirrors Vulkan's BufferArgument - see arguments.h's own comment and
-## commandsAuto.h.mako's matching IN-direction branch), so a 64-bit sibling like
-## glBufferSubData's `size` (GLsizeiptr) is captured correctly instead of narrowed here.
+## The sibling is passed in its own type; Capture() converts it to size_t itself.
   command.m_${p.name}.Capture(${capture_arg_expr}, ${override.length_source_value});
 % endif
 % if pointer_needs_raw_offset_capture(override):

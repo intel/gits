@@ -138,7 +138,12 @@ T* DiscardedOutputScratch(size_t listElements) {
 % for cmd in commands:
 % if cmd.enabled:
 <%
-  is_void = cmd.return_value.type.strip().lower() == 'void'  # WGL uses Win32 'VOID', GL uses 'void'.
+  is_void = returns_void(cmd)
+  name_overrides = {p.name: object_name_override_for(cmd.name, p.name, p.class_)
+                    for p in cmd.params}
+  pointer_overrides = {p.name: pointer_override_for(cmd, p.name) for p in cmd.params}
+  pointer_kinds = {name: override.length_source_kind if override is not None else None
+                   for name, override in pointer_overrides.items()}
   handle_params = [p for p in cmd.params if p.type_facts.is_mapped_handle]
   hdc_params = [p for p in cmd.params
                 if p.type_facts.is_opaque_handle and p.type_facts.base_type == 'HDC']
@@ -170,84 +175,46 @@ T* DiscardedOutputScratch(size_t listElements) {
   # real call writes into it, and a CREATE-role return value has no Key yet at all).
   resolve_object_name_params = [
       p for p in cmd.params
-      if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
-          object_name_override_for(cmd.name, p.name, p.class_).role != ObjectNameRole.CREATE)
+      if name_overrides[p.name] is not None and name_overrides[p.name].role != ObjectNameRole.CREATE
   ]
   # Deleting a program pipeline unbinds it, so once the real call ran, UniformLocationMapService
   # no longer resolves classic glUniform*() calls against its active program.
   deleted_pipeline_params = [
       p for p in resolve_object_name_params
-      if (object_name_override_for(cmd.name, p.name, p.class_).kind ==
-              GLObjectKind.PROGRAM_PIPELINE and
-          object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.DELETE)
+      if (name_overrides[p.name].kind == GLObjectKind.PROGRAM_PIPELINE and
+          name_overrides[p.name].role == ObjectNameRole.DELETE)
   ]
   register_object_name_array_params = [
       p for p in cmd.params
-      if (object_name_override_for(cmd.name, p.name, p.class_) is not None and
-          object_name_override_for(cmd.name, p.name, p.class_).role == ObjectNameRole.CREATE)
+      if name_overrides[p.name] is not None and name_overrides[p.name].role == ObjectNameRole.CREATE
   ]
-  # glShaderSource-shaped doubly-indirect params (see array_of_arrays_metadata.py): the real
-  # driver call needs a live `const T* const*`, but ArrayOfArrays<T> only stores owned
-  # std::vector<T> elements - so a temporary pointer array is rebuilt just before the call,
-  # named "<param>Ptrs" below. Its own element-length sibling (e.g. `length`) is never in this
-  # list - it has no member of its own to resolve (see consumed_pointer_params()) - and is
-  # instead resolved straight from the owner's .Lengths in call_arg() below.
+  # glShaderSource-shaped doubly-indirect params: the call needs a `const T* const*`, rebuilt
+  # into "<param>Ptrs" from the owned elements of ArrayOfArrays<T>. The element-length sibling
+  # has no member of its own and is passed from the owner's .Lengths (see call_arg()).
   array_of_arrays_params = [
       p for p in cmd.params if array_of_arrays_override_for(cmd.name, p.name) is not None
   ]
-
-  # glMultiDrawElementsBaseVertex-shaped doubly-indirect params whose ELEMENTS are opaque bit
-  # patterns, never dereferenced (see pointer_metadata.py's
-  # LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY): the real driver call needs a live
-  # `const void* const*`, but ArrayArgument<uintptr_t> only stores a std::vector<uintptr_t> of
-  # raw values - so a temporary pointer array is rebuilt just before the call, named
-  # "<param>Ptrs" below, exactly like array_of_arrays_params above but one level shallower
-  # (each element is reinterpreted directly, never copied byte-by-byte).
+  # glMultiDrawElementsBaseVertex-shaped doubly-indirect params whose elements are opaque bit
+  # patterns: rebuilt into a `const void*` "<param>Ptrs" array like array_of_arrays_params.
   opaque_bit_pattern_array_params = [
       p for p in cmd.params
-      if (pointer_override_for(cmd, p.name) is not None and
-          pointer_override_for(cmd, p.name).length_source_kind ==
-              LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY)
+      if pointer_kinds[p.name] == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY
   ]
-
-  # Every PIXEL_TRANSFER_SIZE-shaped parameter (glTexImage2D-
-  # /glReadPixels-shaped) this command has, i.e. every parameter with its own companion
-  # m_<param>SizeUnknown member (see pointer_needs_pixel_transfer_unknown_flag()'s own header
-  # comment, generator_helpers.py, and commandsAuto.h.mako's matching member-declaration
-  # branch). Checked immediately below, before the real driver call: an
-  # empty-but-HasValue-true captured Data buffer for one of these params does NOT mean "this
-  # call transfers zero real bytes" unless m_<param>SizeUnknown.Value is false - see
-  # PixelTransferSizeIsUnknown()'s own header comment (pixelTransferSize.h) for the full
-  # rationale. In practice at most one such parameter exists per enabled command today, but
-  # this is written to cover every one of them uniformly rather than assume that.
+  # Parameters with m_<param>SizeUnknown/m_<param>IsBufferOffset companions, checked before the
+  # real call (see pointer_needs_pixel_transfer_unknown_flag()).
   pixel_transfer_size_params = [
-      p for p in cmd.params
-      if (pointer_override_for(cmd, p.name) is not None and
-          pointer_override_for(cmd, p.name).length_source_kind ==
-              LengthSourceKind.PIXEL_TRANSFER_SIZE)
+      p for p in cmd.params if pointer_kinds[p.name] == LengthSourceKind.PIXEL_TRANSFER_SIZE
   ]
   # Only glTexImage*-shaped commands accept a null client pointer, which allocates storage
   # without data. Every other pixel transfer reads or writes through the pointer.
   null_pixels_allocate = cmd.name.startswith(('glTexImage', 'glTextureImage', 'glMultiTexImage'))
 
-  # Any command with a scalar GLint parameter literally named 'location' is one of the
-  # glUniform*(location, ...) family (glUniform1f/.../4fv, glUniformMatrix*fv, ...) - a
-  # structural rule rather than a per-command-name table, so it automatically covers every
-  # such command that is or becomes enabled, present and future, with no table to keep in
-  # sync. See UniformLocationMapService's own header comment for why the captured location
-  # value cannot simply be replayed verbatim. A GLint* 'location' is an output
-  # (glGetTransformFeedbackVaryingNV, glGetShadingRateSampleLocationivNV), not a uniform.
+  # A scalar GLint 'location' is a glUniform*() location, which UniformLocationMapService maps
+  # to the replay one. A GLint* 'location' is an output, not a uniform.
   def is_uniform_location_param(p):
       return (p.name == 'location' and p.type_facts.base_type == 'GLint'
               and p.type_facts.is_scalar)
 
-  # glProgramUniform*(program, location, ...) DSA commands also have a 'location' param, but
-  # unlike classic glUniform*(), they resolve against their own explicit program parameter
-  # instead of whichever program happens to be glUseProgram-bound at replay time - see
-  # UniformLocationMapService::ResolveForProgram's own comment. Also a structural rule (any
-  # command with both a Program-kind object-name parameter and a 'location' parameter), not a
-  # per-command-name table, for the same reason as is_uniform_location_param above. The
-  # parameter is `program` in core and `programObj` in GL_ARB_shader_objects.
   # Bindless texture and image handles are assigned by the driver - see
   # BindlessHandleMapService. A glGet*Handle* command returns one; a scalar GLuint64 `handle`,
   # or the `value` of a glUniformHandleui64* or glProgramUniformHandleui64* setter, passes one.
@@ -258,9 +225,11 @@ T* DiscardedOutputScratch(size_t listElements) {
       return (p.type_facts.base_type == 'GLuint64' and p.type_facts.is_scalar and
               (p.name == 'handle' or (p.name == 'value' and 'UniformHandleui64' in cmd.name)))
 
+  # glProgramUniform*(program, location, ...) resolves the location against its own program
+  # (`program` in core, `programObj` in GL_ARB_shader_objects), not the bound one.
   def explicit_program_param():
       for p in cmd.params:
-          override = object_name_override_for(cmd.name, p.name, p.class_)
+          override = name_overrides[p.name]
           if override is not None and override.kind == GLObjectKind.PROGRAM:
               return p
       return None
@@ -269,13 +238,8 @@ T* DiscardedOutputScratch(size_t listElements) {
       if is_uniform_location_param(p):
           program_param = explicit_program_param()
           if program_param is not None:
-              # UniformLocationMapService keys by the program's stream-stable GITSKey
-              # (command.m_<program>.Key), not its live replay-time handle - see that class's
-              # own header comment for why keying by the live handle collides across
-              # independent, non-sharing contexts (each share group's driver-assigned names
-              # independently start from small integers, so two unrelated programs can both be
-              # live handle 1 at the same time). Unrelated to the real call itself, which still
-              # uses command.m_<program>.Value via this same function's own fallback branch below.
+              # Keyed by the program's stream-stable GITSKey, not its live handle, which can
+              # collide across non-sharing contexts.
               return (f'UniformLocationMapService::Get().ResolveForProgram('
                       f'command.m_{program_param.name}.Key, command.m_{p.name}.Value)')
           return (f'UniformLocationMapService::Get().Resolve(CurrentContext(), '
@@ -292,24 +256,15 @@ T* DiscardedOutputScratch(size_t listElements) {
       if owner is not None:
           return f'command.m_{owner}.Lengths.data()'
       if array_of_arrays_override_for(cmd.name, p.name) is not None:
-          # HasValue guard mirrors the ArrayArgument/HandleArrayArgument branches below - see
-          # their own comment for why an empty-but-HasValue-false container's .data() must not
-          # be forwarded to the driver unconditionally.
           return f'(command.m_{p.name}.HasValue ? {p.name}Ptrs.data() : nullptr)'
-      ptr_override = pointer_override_for(cmd, p.name)
-      if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
-          # Same HasValue guard as the ArrayArgument branch below, same rationale - see that
-          # branch's own comment. ${p.name}Ptrs is rebuilt from the captured bit patterns just
-          # above this function's own call site - see opaque_bit_pattern_array_params.
+      ptr_override = pointer_overrides[p.name]
+      ptr_kind = pointer_kinds[p.name]
+      if ptr_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
           return f'(command.m_{p.name}.HasValue ? {p.name}Ptrs.data() : nullptr)'
-      if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
-          # Cast the captured bit pattern back to its original pointer type - see
-          # docs/development/opengl-rendering-pipeline-pointer-support-plan.md; never
-          # dereferenced, so a reinterpret_cast of the raw uintptr_t is exactly right whether
-          # the value is really a buffer-relative offset or (unsupported here) a client
-          # -memory address.
+      if ptr_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
+          # The captured bit pattern, cast back to its pointer type and never dereferenced.
           return f'reinterpret_cast<{p.type}>(command.m_{p.name}.Value)'
-      if ptr_override is not None and ptr_override.length_source_kind == LengthSourceKind.DISCARDED_OUTPUT:
+      if ptr_kind == LengthSourceKind.DISCARDED_OUTPUT:
           slot = next(i for i, q in enumerate(cmd.params) if q.name == p.name)
           element = p.type[:p.type.rindex('*')].strip() if p.type_facts.pointer_depth == 2 else p.type_facts.base_type
           scratch = f'DiscardedOutputScratch<{element}, {slot}>'
@@ -321,36 +276,19 @@ T* DiscardedOutputScratch(size_t listElements) {
               return f'{scratch}(0)'
           sizer_args = ', '.join(f'command.m_{name}.Value' for name in sizer[1])
           return f'{scratch}({sizer[0]}({sizer_args}))'
-      override = object_name_override_for(cmd.name, p.name, p.class_)
-      w = wrapper_for(p.type_facts, override, ptr_override, array_of_arrays_override_for(cmd.name, p.name))
+      w = wrapper_for(p.type_facts, name_overrides[p.name], ptr_override,
+                      array_of_arrays_override_for(cmd.name, p.name))
       if w == 'ArrayArgument':
-          # HasValue (not just .Data.data()) is the correct null check here: a
-          # default-constructed/empty-but-HasValue-false vector's .data() is not guaranteed
-          # nullptr by the standard, so forwarding it unconditionally can hand the driver a
-          # non-null-but-non-dereferenceable pointer for a parameter whose captured value was
-          # actually a null pointer (a legal call for some commands, e.g. wglCreateContextAttribsARB's
-          # attribList - "use default attributes") - see
-          # WglSetPixelFormatRunner::Run()'s hand-written precedent (commandRunnersCustom.cpp).
-          #
-          # For a pointer_needs_raw_offset_capture() parameter (glTexImage2D-
-          # shaped/glCompressedTexImage2D-shaped/glGetQueryObject*-shaped - see that predicate's
-          # own header comment, generator_helpers.py), a HasValue-false Command was NOT
-          # necessarily a genuine null pointer at capture time - it may equally be a real,
-          # non-null buffer-relative offset that GuardUnpackPixelsPointer/GuardPackPixelsPointer/
-          # GuardQueryBufferPointer deliberately declined to dereference. Falling back to a bare
-          # nullptr here (offset 0) in that case would silently replay the call against the
-          # WRONG offset within whichever buffer object ends up bound at replay time. Falling
-          # back to the companion m_<param>RawPointer field instead reconstructs the app's own
-          # original bit pattern verbatim - correct whether it turns out to be a genuine null
-          # pointer (RawPointer.Value == 0, identical to the plain nullptr fallback below) or a
-          # real offset (RawPointer.Value == that offset, exactly reproducing the original call).
+          # A captured null pointer has HasValue false, and the .data() of an empty vector need
+          # not be null, so every array is passed through a HasValue check. A guarded pointer
+          # without a captured value may instead be a buffer offset, which m_<param>RawPointer
+          # holds (0 for a null pointer). Falling back to nullptr instead would replay a real
+          # buffer offset as offset 0.
           if pointer_needs_raw_offset_capture(ptr_override):
               return (f'(command.m_{p.name}.HasValue ? command.m_{p.name}.Data.data() : '
                       f'reinterpret_cast<{p.type}>(command.m_{p.name}RawPointer.Value))')
           return f'(command.m_{p.name}.HasValue ? command.m_{p.name}.Data.data() : nullptr)'
       if w == 'HandleArrayArgument':
-          # Same HasValue guard as the ArrayArgument branch above, same rationale - see that
-          # branch's own comment.
           return f'(command.m_{p.name}.HasValue ? command.m_{p.name}.Value.data() : nullptr)'
       return f'command.m_{p.name}.Value'
 
@@ -368,14 +306,10 @@ void ${cmd.name}Runner::Run() {
 % endfor
 % for p in resolve_object_name_params:
 <%
-    resolve_override = object_name_override_for(cmd.name, p.name, p.class_)
+    resolve_override = name_overrides[p.name]
     kind = resolve_override.kind.value if resolve_override.kind is not None else None
-    # Structural (kind/role-driven, not command-name-driven) rule: any command that DELETEs a
-    # PROGRAM name must purge UniformLocationMapService's own stale per-program location
-    # entries for that same program identity before it can be reused by a later, unrelated
-    # program - see that class's own PurgeProgram() header comment for why. Deliberately keyed
-    # off (kind, role) rather than `cmd.name == 'glDeleteProgram'` so a future second command
-    # sharing this same (kind, role) pair is automatically covered too.
+    # Deleting a program purges its locations from UniformLocationMapService, so a later
+    # program reusing the key does not see them.
     purges_uniform_locations = (resolve_override.kind == GLObjectKind.PROGRAM and
                                 resolve_override.role == ObjectNameRole.DELETE)
     if resolve_override.target_param:
@@ -436,7 +370,7 @@ void ${cmd.name}Runner::Run() {
 % for p in cmd.params:
 % if (cmd.name, p.name) in TEXT_OUTPUT_BUFFERS:
   if (command.m_${p.name}.HasValue) {
-    command.m_${p.name}.Data.resize(std::max<size_t>(1, ClampCountToSizeT(command.m_${pointer_override_for(cmd, p.name).length_source_value}.Value)));
+    command.m_${p.name}.Data.resize(std::max<size_t>(1, ClampCountToSizeT(command.m_${pointer_overrides[p.name].length_source_value}.Value)));
   }
 % endif
 % endfor
@@ -573,7 +507,7 @@ ${call_indent}realFunction(${call_args});
     UpdateOutputHandle(command.m_Return, GLObjectKind::${return_obj_override.kind.value});
 % endif
 % for p in register_object_name_array_params:
-    UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${object_name_override_for(cmd.name, p.name, p.class_).kind.value});
+    UpdateOutputHandleArray(command.m_${p.name}, GLObjectKind::${name_overrides[p.name].kind.value});
 % endfor
 % for p in deleted_pipeline_params:
     for (GITSKey key : command.m_${p.name}.Key) {

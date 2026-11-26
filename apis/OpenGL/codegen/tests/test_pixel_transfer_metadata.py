@@ -14,7 +14,8 @@ from pathlib import Path
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
-from generator_helpers import pointer_needs_pixel_transfer_unknown_flag, pointer_override_for
+from generator_helpers import (mako_render, pointer_needs_pixel_transfer_unknown_flag,
+                               pointer_override_for)
 from intermediates import Api, Command, CmdType, Parameter, ReturnValue
 from intermediates_creator import (
     FILE_TO_API,
@@ -35,6 +36,18 @@ def load_registry(api: Api) -> Registry:
     registry = Registry()
     registry.loadFile(REGISTRY_PATHS[api])
     return registry
+
+
+def render_command_coders(name: str) -> str:
+    """commandCodersAuto.cpp.mako rendered for the one live gl.xml command `name`."""
+    registry = load_registry(Api.GL)
+    raw = next(c for c in extract_commands_from_registry(registry)
+               if c['command_attribs']['name'] == name)
+    command = get_commands_from_xml_data({Api.GL: [raw]})[Api.GL][0]
+    rendered = mako_render(str(CODEGEN_DIR / 'templates' / 'commandCodersAuto.cpp.mako'),
+                           commands=[command])
+    assert rendered is not None, 'commandCodersAuto.cpp.mako failed to render - see stderr'
+    return rendered
 
 
 def _format_param() -> Parameter:
@@ -444,8 +457,9 @@ class PixelTransferSizeIsUnknownCppHelperTests(unittest.TestCase):
         self.assertIn('Argument<bool> m_${p.name}SizeUnknown;', source)
 
     def test_command_coders_auto_cpp_mako_walks_size_unknown_member(self) -> None:
-        source = self._COMMAND_CODERS_AUTO_CPP_MAKO.read_text(encoding='utf-8')
-        self.assertIn('command.m_${p.name}SizeUnknown', source)
+        rendered = render_command_coders('glTexImage2D')
+        # Once each in GetSize, Encode and Decode.
+        self.assertEqual(rendered.count('command.m_pixelsSizeUnknown'), 3)
 
     def test_recorder_wrappers_auto_cpp_mako_populates_size_unknown_both_directions(
             self) -> None:
@@ -586,8 +600,9 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
         self.assertLess(size_unknown_pos, is_buffer_offset_pos)
 
     def test_command_coders_auto_cpp_mako_walks_is_buffer_offset_member(self) -> None:
-        source = self._COMMAND_CODERS_AUTO_CPP_MAKO.read_text(encoding='utf-8')
-        self.assertIn('command.m_${p.name}IsBufferOffset', source)
+        rendered = render_command_coders('glTexImage2D')
+        # Once each in GetSize, Encode and Decode.
+        self.assertEqual(rendered.count('command.m_pixelsIsBufferOffset'), 3)
 
     def test_recorder_wrappers_auto_cpp_mako_populates_is_buffer_offset_both_directions(
             self) -> None:

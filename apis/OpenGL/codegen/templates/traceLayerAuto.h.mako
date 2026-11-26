@@ -34,20 +34,15 @@ public:
   void Post(${cmd.name}Command& command) override;
 % endif
 % endfor
-  void Pre(MappedDataMetaCommand& command) override;
-  void Post(MappedDataMetaCommand& command) override;
-  void Pre(WindowGeometryMetaCommand& command) override;
-  void Post(WindowGeometryMetaCommand& command) override;
-  void Pre(ClientArraysMetaCommand& command) override;
-  void Post(ClientArraysMetaCommand& command) override;
-  void Pre(UniformArrayMetaCommand& command) override;
-  void Post(UniformArrayMetaCommand& command) override;
-  void Pre(MappedTextureDataMetaCommand& command) override;
-  void Post(MappedTextureDataMetaCommand& command) override;
-  void Pre(PixelFormatMetaCommand& command) override;
-  void Post(PixelFormatMetaCommand& command) override;
-  void Pre(UnsupportedCommand& command) override;
-  void Post(UnsupportedCommand& command) override;
+<%
+  meta_commands = ['MappedDataMetaCommand', 'WindowGeometryMetaCommand', 'ClientArraysMetaCommand',
+                   'UniformArrayMetaCommand', 'MappedTextureDataMetaCommand',
+                   'PixelFormatMetaCommand', 'UnsupportedCommand']
+%>\
+% for command_class in meta_commands:
+  void Pre(${command_class}& command) override;
+  void Post(${command_class}& command) override;
+% endfor
 
 private:
   FastOStream& m_PreStream;

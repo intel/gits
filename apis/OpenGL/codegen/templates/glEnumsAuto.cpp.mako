@@ -6,7 +6,7 @@
 //
 // ===================== end_copyright_notice ==============================
 
-${AUTO_GENERATED_HEADER.replace('#', '/')}
+${AUTO_GENERATED_HEADER}
 
 /**
  * @file   glEnumsAuto.cpp

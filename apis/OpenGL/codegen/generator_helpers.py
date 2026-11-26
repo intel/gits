@@ -10,7 +10,6 @@
 
 # Generic, reusable codegen utilities shared by generator_*.py modules.
 
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -34,7 +33,7 @@ from intermediates import (
     ReturnValue,
     TypeFacts,
 )
-from intermediates_creator import is_discarded_string_return
+from intermediates_creator import derive_pointer_override, is_discarded_string_return
 from object_name_lifecycle import (
     GLObjectKind,
     ObjectNameOverride,
@@ -42,7 +41,6 @@ from object_name_lifecycle import (
     is_existence_query,
     resolve_object_name_override,
 )
-from pixel_transfer_metadata import derive_pixel_transfer_override
 from pointer_metadata import (
     POINTER_PARAM_OVERRIDES,
     TEXT_OUTPUT_BUFFERS,
@@ -51,10 +49,7 @@ from pointer_metadata import (
     PointerParamOverride,
     TexOrSamplerParameterFamily,
 )
-from pname_value_counts import derive_pname_value_count_override
-from pointer_length_derivation import derive_pointer_param_override, discarded_output_list_sizer
-from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
-from uniform_setter_metadata import derive_uniform_setter_override
+from pointer_length_derivation import discarded_output_list_sizer
 
 AUTO_GENERATED_HEADER = f"""
 //
@@ -70,17 +65,10 @@ PLATFORM_GUARDS: dict[Api, str] = {
 }
 
 
-def object_name_override_for(
-    cmd_name: str, param_name: str, class_: str | None,
-) -> ObjectNameOverride | None:
-    """Thin wrapper around object_name_lifecycle.py's resolve_object_name_override(), for use
-    directly from Mako templates (see
-    commandsAuto.h.mako/recorderWrappersAuto.cpp.mako/commandRunnersAuto.cpp.mako). `param_name`
-    is 'return_value' for a command's return value, matching object_name_lifecycle.py's own
-    keying convention. `class_` is the same field's own Parameter.class_/ReturnValue.class_ -
-    every call site already has the field object itself (`p`/`cmd.return_value`) at hand, so
-    passing `p.class_`/`cmd.return_value.class_` costs nothing there."""
-    return resolve_object_name_override(cmd_name, param_name, class_)
+# Resolves a GL object name (GLuint) field's classification, for use directly from Mako
+# templates. `param_name` is 'return_value' for a command's return value, and `class_` is the
+# field's own Parameter.class_/ReturnValue.class_.
+object_name_override_for = resolve_object_name_override
 
 
 def wrapper_for(
@@ -91,52 +79,26 @@ def wrapper_for(
 ) -> str:
     """Name of the arguments.h wrapper template a field of this type is stored in.
 
-    Every enabled command's params/return value are, by construction, is_scalar,
-    is_opaque_handle, is_mapped_handle, is_array_element_eligible-with-an-override, or
-    is_array_of_arrays_eligible-with-an-override (see
-    intermediates_creator.py's _is_fully_capturable_command) - is_opaque_handle is a plain
-    Argument<T> (arguments.h treats it as a fixed-size, unremapped value), is_mapped_handle
-    (HGLRC) gets the real GITSKey-based HandleArgument<T>, is_array_element_eligible with no
-    object-name override gets ArrayArgument<T> (see pointer_metadata.py/arguments.h), and a
-    plain is_scalar field (which includes every GLuint object name, since GLuint itself is
-    just a scalar C++ type - see object_name_lifecycle.py's module comment) gets a plain
-    Argument<T> UNLESS `object_name_override` says otherwise.
-    `object_name_override` - from object_name_lifecycle.py's resolve_object_name_override() via
-    object_name_override_for() above - overrides is_scalar/is_array_element_eligible's default
-    choice for a GL object
-    name (GLuint) field: HandleArgument<T> for a scalar name, HandleArrayArgument<T> for an
-    array of names, regardless of role (CREATE/LOOKUP/DELETE - the wrapper type is the same for
-    all three; only the ObjectNameMapService calls generated around it differ). It never
-    applies to a genuinely is_mapped_handle field (HGLRC) - no command's HGLRC field ever has
-    an object-name override; the two classification mechanisms address disjoint field sets.
-    `pointer_override` - from POINTER_PARAM_OVERRIDES via pointer_override_for() below -
-    overrides is_array_element_eligible's default ArrayArgument<T> choice to plain Argument<T>
-    when length_source_kind is OPAQUE_BIT_PATTERN: that shape is a pointer's own bit pattern
-    captured by value, never an array to memcpy (see
-    docs/development/opengl-rendering-pipeline-pointer-support-plan.md).
-    `array_of_arrays_override` - from ARRAY_OF_ARRAYS_PARAM_OVERRIDES via
-    array_of_arrays_override_for() below - takes precedence over everything else: a doubly
-    -indirect parameter (glShaderSource's `string`) always gets ArrayOfArrays<T>, regardless of
-    what is_array_element_eligible/is_mapped_handle would otherwise say (they don't apply at
-    pointer_depth == 2 anyway, but the explicit override keeps the priority order self-evident
-    at the call site rather than relying on that fact silently).
-    Shared by commandsAuto.h.mako (member declarations) and commandCodersAuto.cpp.mako (which
-    never needs to care which wrapper it is, since argumentCoders.h overloads
-    GetSize/Encode/Decode per wrapper type - but the constructor initializer list in
-    commandsAuto.h.mako does need the type name to construct one).
+    Every enabled command's fields are scalar, opaque handles, mapped handles, or pointers with
+    an override (see intermediates_creator.py's _is_fully_capturable_command). In priority order:
+    - an array-of-arrays override (glShaderSource's `string`) gets ArrayOfArrays<T>;
+    - an object-name override (object_name_override_for()) gets HandleArgument<T> for a scalar
+      name and HandleArrayArgument<T> for an array of names, whatever its role;
+    - an OPAQUE_BIT_PATTERN pointer is its own bit pattern, captured by value as Argument<T>,
+      and an OPAQUE_BIT_PATTERN_ARRAY pointer an ArrayArgument<T> of bit patterns (never
+      ArrayOfArrays: the elements are not dereferenced);
+    - a mapped handle (HGLRC) gets HandleArgument<T>;
+    - any other array-element-eligible pointer gets ArrayArgument<T>;
+    - everything else, including GLuint object names without an override, gets Argument<T>.
     """
     if array_of_arrays_override is not None:
         return 'ArrayOfArrays'
     if object_name_override is not None:
         return 'HandleArrayArgument' if type_facts.is_array_element_eligible else 'HandleArgument'
-    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
+    kind = pointer_override.length_source_kind if pointer_override is not None else None
+    if kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
         return 'Argument'
-    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
-        # A doubly-indirect (`const void* const*`) field whose own elements are opaque bit
-        # patterns, not real byte arrays - overrides is_array_of_arrays_eligible's default
-        # ArrayOfArrays<T> choice (which would try to dereference/copy each element's pointee)
-        # to plain ArrayArgument<T>, the same wrapper is_array_element_eligible fields already
-        # use - see that LengthSourceKind's own comment (pointer_metadata.py).
+    if kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
         return 'ArrayArgument'
     if type_facts.is_mapped_handle:
         return 'HandleArgument'
@@ -146,12 +108,9 @@ def wrapper_for(
 
 
 def array_element_cpp_type(base_type: str) -> str:
-    """C++ type to instantiate ArrayArgument<T> with for a given TypeFacts.base_type. Only
-    'void' needs substitution - see TypeFacts.is_array_element_eligible's docstring for why
-    reusing _SCALAR_BASE_TYPES (which already includes 'void' for byte-blob params like
-    glBufferData's `data`) needs this one adjustment at codegen time rather than at
-    classification time (sizeof(void) is ill-formed, so 'void' can never be a real C++
-    template argument)."""
+    """C++ type to instantiate ArrayArgument<T> with for a given TypeFacts.base_type: 'void'
+    byte blobs (glBufferData's `data`) are stored as uint8_t, since sizeof(void) is
+    ill-formed."""
     return 'uint8_t' if base_type == 'void' else base_type
 
 
@@ -160,16 +119,11 @@ def member_cpp_type(
     pointer_override: PointerParamOverride | None = None,
     array_of_arrays_override: ArrayOfArraysOverride | None = None,
 ) -> str:
-    """C++ template argument for wrapper_for()'s chosen wrapper - consolidates the growing set
-    of per-shape exceptions to "use array_element_cpp_type(base_type) if is_array_element_eligible
-    else the plain declared type" into one place, rather than repeating the same ternary at
-    every commandsAuto.h.mako call site (member declaration and constructor initializer both
-    need it)."""
+    """C++ template argument for wrapper_for()'s chosen wrapper."""
     if array_of_arrays_override is not None:
         return param.type_facts.base_type
-    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
-        return 'uintptr_t'
-    if pointer_override is not None and pointer_override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+    if pointer_override is not None and pointer_override.length_source_kind in (
+            LengthSourceKind.OPAQUE_BIT_PATTERN, LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY):
         return 'uintptr_t'
     if param.type_facts.is_array_element_eligible:
         return array_element_cpp_type(param.type_facts.base_type)
@@ -181,28 +135,15 @@ def member_cpp_type(
 
 
 def pointer_needs_raw_offset_capture(override: PointerParamOverride | None) -> bool:
-    """True for a pointer-shaped parameter whose ArrayArgument<T> capture
-    is routed through one of the buffer-object-aware guards (GuardUnpackPixelsPointer/
-    GuardPackPixelsPointer for PIXEL_TRANSFER_SIZE and unpack_pbo_guard, GuardQueryBufferPointer
-    for query_buffer_guard, GuardDrawIndirectPointer for INDIRECT_COMMANDS_BYTE_SIZE,
-    GuardElementArrayPointer for ELEMENT_INDICES_BYTE_SIZE - see
-    clientMemoryCapture.h) - i.e. every case where a bound
-    buffer object can turn this parameter's real, live value into a byte offset rather than a
-    dereferenceable client pointer, and the guard responds by suppressing the ArrayArgument<T>
-    byte-array capture (Data stays empty, HasValue stays false) rather than risk dereferencing
-    that offset as an address.
-    
-    Suppressing the byte-array capture is correct and necessary, but on its own it silently
-    discards the parameter's own raw bit pattern too - the ACTUAL byte offset the app passed -
-    which the replayed call still needs verbatim (the buffer binding itself replays correctly;
-    only the offset WITHIN that buffer was ever at risk). A parameter meeting this predicate
-    gets an extra, unconditionally-populated companion member (commandsAuto.h.mako's own
-    `m_<param>RawPointer`, an Argument<uintptr_t>) alongside its normal ArrayArgument<T> one,
-    capturing reinterpret_cast<uintptr_t>(<param>) - the parameter's ORIGINAL, unguarded value -
-    every time, guard or no guard. commandRunnersAuto.cpp.mako's call_arg() then falls back to
-    that raw value, instead of nullptr, whenever the ArrayArgument's own HasValue is false -
-    see that function's own comment for why nullptr on its own silently corrupts the offset a
-    query-buffer or pixel-buffer write should have landed at."""
+    """True for a pointer captured through one of the buffer-object-aware guards of
+    clientMemoryCapture.h (GuardUnpackPixelsPointer/GuardPackPixelsPointer,
+    GuardQueryBufferPointer, GuardDrawIndirectPointer, GuardElementArrayPointer).
+
+    While a buffer is bound, the pointer is a byte offset into it, and the guard suppresses the
+    ArrayArgument<T> capture. The replayed call still needs that offset, so such a parameter gets
+    a companion Argument<uintptr_t> m_<param>RawPointer member holding the original, unguarded
+    bit pattern, which commandRunnersAuto.cpp.mako's call_arg() falls back to whenever the
+    ArrayArgument's HasValue is false."""
     if override is None:
         return False
     return (override.unpack_pbo_guard or override.query_buffer_guard or
@@ -212,69 +153,44 @@ def pointer_needs_raw_offset_capture(override: PointerParamOverride | None) -> b
 
 
 def pointer_needs_pixel_transfer_unknown_flag(override: PointerParamOverride | None) -> bool:
-    """True for a PIXEL_TRANSFER_SIZE-shaped parameter
-    (glTexImage2D-/glReadPixels-shaped - see pointer_metadata.py's
-    LengthSourceKind.PIXEL_TRANSFER_SIZE), i.e. the one parameter shape whose captured length
-    comes from ComputePixelTransferByteSize()/PixelTransferSizeIsUnknown()
-    (apis/OpenGL/common/layer_interface/pixelTransferSize.h) rather than a sibling parameter's own
-    value.
+    """True for a PIXEL_TRANSFER_SIZE-shaped parameter (glTexImage2D's/glReadPixels' `pixels`),
+    whose captured length comes from ComputePixelTransferByteSize() (pixelTransferSize.h).
 
-    ComputePixelTransferByteSize() returning 0 does not always mean "this call transfers zero
-    real bytes" - it is also the exact same sentinel returned for a negative pixel-store
-    value, an unrecognized format/type combination, or an overflowing size
-    computation, none of which are safe to treat as "empty buffer, call away" at replay time
-    (see PixelTransferSizeIsUnknown()'s own header comment for exactly how the two categories
-    are told apart). A parameter meeting this predicate gets an extra, unconditionally-
-    populated companion member (commandsAuto.h.mako's own `m_<param>SizeUnknown`, an
-    Argument<bool>) alongside its normal ArrayArgument<T> one, which
-    commandRunnersAuto.cpp.mako's Run() checks BEFORE issuing the real driver call - skipping
-    it entirely (with a degraded-fidelity warning, mirroring
-    UnsupportedCommandRunner::Run()'s own wording/warn-once convention) whenever true, rather
-    than calling the driver with a captured buffer whose size does not match what it will
-    actually read/write.
+    That function also returns 0 for a negative pixel-store value, an unrecognized format/type
+    combination or an overflowing size, so such a parameter gets two companion Argument<bool>
+    members, walked right after m_<param>: m_<param>SizeUnknown (PixelTransferSizeIsUnknown())
+    and m_<param>IsBufferOffset (Unpack/PackPixelsPointerIsBufferOffset()). The two are
+    orthogonal; commandRunnersAuto.cpp.mako's Run() skips the real call, with a warning, when
+    `SizeUnknown && !IsBufferOffset` for any such parameter."""
+    return (override is not None and
+            override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE)
 
-    SizeUnknown alone is not enough to decide
-    whether to skip - a parameter meeting this SAME predicate also gets a second companion
-    member, `m_<param>IsBufferOffset` (also an Argument<bool>, declared and walked immediately
-    after `m_<param>SizeUnknown` - see commandsAuto.h.mako/commandCodersAuto.cpp.mako),
-    populated from UnpackPixelsPointerIsBufferOffset()/PackPixelsPointerIsBufferOffset()
-    (mapTrackingWrappers.h) instead of PixelTransferSizeIsUnknown(). SizeUnknown and
-    IsBufferOffset are orthogonal - PixelTransferSizeIsUnknown() knows nothing about buffer
-    bindings, and IsBufferOffset knows nothing about format/type/dimensions/pixel-store state -
-    so both are always captured, and commandRunnersAuto.cpp.mako's skip gate ANDs
-    `SizeUnknown && !IsBufferOffset` per parameter (bypassing the skip, regardless of
-    SizeUnknown, whenever IsBufferOffset is true for that parameter) rather than trusting
-    SizeUnknown on its own.
-    """
-    return override is not None and override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE
+
+def pixel_transfer_size_args(override: PointerParamOverride, cmd_name: str, store: str) -> str:
+    """Arguments of ComputePixelTransferByteSize()/PixelTransferSizeIsUnknown() for a
+    PIXEL_TRANSFER_SIZE override. `store` is 'Unpack' or 'Pack', selecting the pixel-store
+    queries. The image height and skip images apply only to a 3D transfer, and the row length
+    and skip rows only to a 2D or 3D one; skip pixels applies to every transfer. A dimension
+    that does not apply passes 0, 0: querying its pixel store would make the recorder size
+    the read as if the application's buffer were larger than it is, and read past it."""
+    images = (f'Query{store}ImageHeight(), Query{store}SkipImages()'
+              if override.pixel_depth_param else '0, 0')
+    rows = (f'Query{store}RowLength(), Query{store}SkipRows()'
+            if override.pixel_height_param else '0, 0')
+    return (f'{override.pixel_format_param}, {override.pixel_type_param}, '
+            f'{override.pixel_width_param}, {override.pixel_height_param or "1"}, '
+            f'Query{store}Alignment(), {override.pixel_depth_param or "1"}, {images}, {rows}, '
+            f'Query{store}SkipPixels(), "{cmd_name}"')
 
 
 def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride | None:
-    """Resolve a (command, param) pointer classification, for use directly from Mako templates
-    (see commandsAuto.h.mako/recorderWrappersAuto.cpp.mako/commandRunnersAuto.cpp.mako). An
-    explicit POINTER_PARAM_OVERRIDES entry for `cmd.name` always wins; if none exists, falls
-    back to `cmd.alias`'s entry for the same param_name (see intermediates_creator.py's
-    _pointer_override_for_command_or_alias - gl.xml's <alias name="..."/> marks `cmd` as a
-    byte-for-byte functional duplicate of `cmd.alias`'s command, e.g. glDeleteBuffersARB's
-    alias is glDeleteBuffers, so glDeleteBuffers' own already-validated `buffers` entry applies
-    unchanged); if still none, falls back to pixel_transfer_metadata.py's
-    derive_pixel_transfer_override() for the one narrow, exhaustively-audited
-    COMPSIZE(format,type,<dims>) pixel-transfer shape it recognizes, then to
-    uniform_setter_metadata.py's derive_uniform_setter_override() for the glUniform*v/
-    glProgramUniform*v/glUniformMatrix*v/glProgramUniformMatrix*v sibling-family shape it
-    recognizes, then to tex_sampler_parameter_metadata.py's
-    derive_tex_sampler_parameter_override() for the glTexParameter*v/glSamplerParameter*v
-    sibling-family shape it recognizes (see each module's own header comment for exactly what
-    it requires before returning non-None). This mirrors intermediates_creator.py's
-    _is_param_capturable, which gates the `enabled` flag with the exact same precedence (own
-    entry, then alias entry, then each fallback in the same order) - a command's generated code
-    and its enabled-ness must never disagree about which override applies, or a Mako template
-    would either silently drop a real override or try to use one _is_param_capturable never
-    validated.
+    """Resolve a (command, param) pointer classification, for use directly from Mako templates.
 
-    `cmd` is the full Command object, not just its name - unlike a plain table lookup, every
-    fallback needs every sibling parameter (to resolve and validate the sibling names their own
-    shape references), which only the full param list provides.
+    An explicit POINTER_PARAM_OVERRIDES entry for `cmd.name` wins, then one for `cmd.alias`
+    (gl.xml's <alias> marks a functional duplicate, e.g. glDeleteBuffersARB of glDeleteBuffers),
+    then derive_pointer_override(). This is the same precedence intermediates_creator.py's
+    _is_param_capturable uses to set `enabled`, so the generated code and a command's
+    enabled-ness always agree on which override applies.
     """
     override = POINTER_PARAM_OVERRIDES.get((cmd.name, param_name))
     if override is None and cmd.alias is not None:
@@ -285,35 +201,24 @@ def pointer_override_for(cmd: Command, param_name: str) -> PointerParamOverride 
     if param is None:
         return None
     other_params = [p for p in cmd.params if p.name != param_name]
-    override = derive_pixel_transfer_override(param, other_params)
-    if override is not None:
-        return override
-    override = derive_uniform_setter_override(cmd.name, param, other_params)
-    if override is not None:
-        return override
-    override = derive_tex_sampler_parameter_override(cmd.name, param, other_params)
-    if override is not None:
-        return override
-    override = derive_pname_value_count_override(cmd.name, param, other_params)
-    if override is not None:
-        return override
-    return derive_pointer_param_override(cmd.name, param, other_params)
+    return derive_pointer_override(cmd.name, param, other_params)
+
+
+def returns_void(cmd: Command) -> bool:
+    """Whether the command returns nothing. WGL uses Win32 'VOID', GL uses 'void'."""
+    return cmd.return_value.type.strip().lower() == 'void'
 
 
 def has_return_member(cmd: Command) -> bool:
     """Whether the typed Command stores its return value in m_Return. False for void and for a
     discarded string return (see intermediates_creator.py's is_discarded_string_return)."""
-    if cmd.return_value.type.strip().lower() == 'void':  # WGL uses Win32 'VOID'.
-        return False
-    return not is_discarded_string_return(cmd.name, cmd.return_value)
+    return not returns_void(cmd) and not is_discarded_string_return(cmd.name, cmd.return_value)
 
 
 def has_unserialized_return(cmd: Command) -> bool:
     """Whether the typed Command has an m_Return the stream does not carry: a discarded string
     or framebuffer configuration list return, kept so recorder layers can see and replace it."""
-    if cmd.return_value.type.strip().lower() == 'void':  # WGL uses Win32 'VOID'.
-        return False
-    return is_discarded_string_return(cmd.name, cmd.return_value)
+    return not returns_void(cmd) and is_discarded_string_return(cmd.name, cmd.return_value)
 
 
 def mako_render(inpath: str, **kwargs) -> str | None:
@@ -334,6 +239,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'TEXT_OUTPUT_BUFFERS': TEXT_OUTPUT_BUFFERS,
         'pointer_needs_raw_offset_capture': pointer_needs_raw_offset_capture,
         'pointer_needs_pixel_transfer_unknown_flag': pointer_needs_pixel_transfer_unknown_flag,
+        'pixel_transfer_size_args': pixel_transfer_size_args,
         'PointerDirection': PointerDirection,
         'LengthSourceKind': LengthSourceKind,
         'TexOrSamplerParameterFamily': TexOrSamplerParameterFamily,
@@ -344,6 +250,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
         'array_of_arrays_override_for': array_of_arrays_override_for,
         'consumed_pointer_params': consumed_pointer_params,
         'consumed_param_owner': consumed_param_owner,
+        'returns_void': returns_void,
         'has_return_member': has_return_member,
         'has_unserialized_return': has_unserialized_return,
         'discarded_output_list_sizer': discarded_output_list_sizer,
@@ -352,9 +259,7 @@ def mako_render(inpath: str, **kwargs) -> str | None:
     try:
         print(f"Processing {inpath}...")
         template = mako.template.Template(filename=inpath)
-        rendered = template.render(**(common_objects | kwargs))
-        rendered = re.sub(r'\r\n', r'\n', rendered)
-        return rendered
+        return template.render(**(common_objects | kwargs)).replace('\r\n', '\n')
     except Exception:  # noqa: BLE001
         traceback = mako.exceptions.RichTraceback()
         for filename, lineno, function, line in traceback.traceback:

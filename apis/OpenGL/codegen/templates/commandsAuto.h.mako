@@ -50,43 +50,37 @@ public:
 <%
   override = pointer_override_for(cmd, p.name)
   aoa_override = array_of_arrays_override_for(cmd.name, p.name)
-  # 'const void *' blob params (glBufferData et al.) need an explicit cast to the
-  # substituted element type (see array_element_cpp_type()) - void* has no implicit
-  # conversion to uint8_t*, unlike every other element type this increment uses.
+  # 'const void *' blob params (glBufferData et al.) need an explicit cast to the substituted
+  # element type (see array_element_cpp_type()): void* has no implicit conversion to uint8_t*.
   arg_expr = (f'static_cast<const {array_element_cpp_type(p.type_facts.base_type)}*>({p.name})'
               if override is not None and p.type_facts.base_type == 'void'
               else p.name)
+  # COMPSIZE(pname) setters whose count depends on the sibling enum's value. IN direction only.
+  pname_value_count = {
+      LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT: 'ComputePatchParameterValueCount',
+      LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT: 'ComputeMaterialParameterValueCount',
+      LengthSourceKind.POINT_PARAMETER_VALUE_COUNT: 'ComputePointParameterValueCount',
+      LengthSourceKind.PNAME_VALUE_COUNT: 'ComputePnameValueCount',
+  }.get(override.length_source_kind) if override is not None else None
 %>\
 % if aoa_override is not None:
-## Doubly-indirect (glShaderSource's `string`): the ArrayOfArrays<T> constructor itself reads
-## both this parameter and its sibling element-length pointer (never given a member of its
-## own - see array_of_arrays_metadata.py's consumed_pointer_params()). Passed as the signed
-## sibling type verbatim (no cast here) - ArrayOfArrays<T>'s templated constructor clamps a
-## negative count to zero via ClampCountToSizeT() before narrowing to size_t (see arguments.h's
-## own comment on that helper) - a negative count is a GL client error the real driver call
-## below must still receive unmodified, not something this constructor may crash turning into
-## a huge allocation via a naive static_cast. element_length_param is None for
-## glCreateShaderProgramv/glTransformFeedbackVaryings (no length-array sibling exists at all
-## in gl.xml - see ArrayOfArraysOverride's own comment); pass a literal nullptr in that case so
-## the constructor falls back to its own null-terminated-element scan.
+## Doubly-indirect (glShaderSource's `string`): the ArrayOfArrays<T> constructor reads both this
+## parameter and its element-length sibling, which has no member of its own (see
+## consumed_pointer_params()), and clamps a negative count itself (a negative count is a GL error
+## the driver must still see, not a huge allocation). Without a length sibling
+## (glCreateShaderProgramv, glTransformFeedbackVaryings) the elements are null-terminated.
 , m_${p.name}(${p.name}, ${aoa_override.outer_count_param}, \
-${aoa_override.element_length_param if aoa_override.element_length_param else 'nullptr'})\
+${aoa_override.element_length_param or 'nullptr'})\
 % elif override is None:
 , m_${p.name}(${p.name})\
 % elif override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN:
-## Capture the pointer's own bit pattern verbatim, never its pointee - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and
-## docs/development/opengl-rendering-pipeline-pointer-support-plan.md.
+## The pointer's own bit pattern, never its pointee.
 , m_${p.name}(reinterpret_cast<uintptr_t>(${p.name}))\
 % elif override.length_source_kind == LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
-## Doubly-indirect pointer whose own elements are opaque bit patterns, never dereferenced
-## (e.g. glMultiDrawElementsBaseVertex's `indices`) - see that LengthSourceKind's own comment
-## (pointer_metadata.py). Passed straight through (no cast at this call site) to
-## ArrayArgument<uintptr_t>'s dedicated `const void* const*` constructor overload
-## (arguments.h), which converts each element with its own reinterpret_cast<uintptr_t>(...) -
-## see that constructor's own comment for why this must be a per-element pointer-to-integer
-## conversion rather than reinterpreting the whole array's pointer type and bulk-copying
-## through it (a strict-aliasing violation this call site used to have).
+## Doubly-indirect pointer whose elements are opaque bit patterns (glMultiDrawElementsBaseVertex's
+## `indices`), converted one by one by ArrayArgument<uintptr_t>'s `const void* const*`
+## constructor. The per-element conversion is required: bulk-copying through a reinterpreted
+## array pointer violates strict aliasing.
 , m_${p.name}(${p.name}, ${override.length_source_value})\
 ## OUT-direction: default-constructed, no eager read of not-yet-written app memory.
 % elif override.direction == PointerDirection.OUT:
@@ -95,94 +89,28 @@ ${aoa_override.element_length_param if aoa_override.element_length_param else 'n
 % elif override.length_source_kind == LengthSourceKind.LENGTH_OR_NULL_TERMINATED:
 , m_${p.name}(${arg_expr}, ${override.length_source_value}, LengthOrNullTerminated)\
 % elif override.length_source_kind == LengthSourceKind.KEY_VALUE_LIST:
-## See pointer_metadata.py's LengthSourceKind.KEY_VALUE_LIST/arguments.h's KeyValueListTag -
-## a WGL {key, value, ..., 0} attribute list, terminated on a zero KEY, not just any zero
-## element.
+## A WGL {key, value, ..., 0} attribute list, terminated on a zero key.
 , m_${p.name}(${arg_expr}, KeyValueList)\
 % elif override.length_source_kind == LengthSourceKind.GLX_VISUAL_ATTRIB_LIST:
 , m_${p.name}(${arg_expr}, GlxVisualAttribList)\
 % elif override.length_source_kind == LengthSourceKind.PIXEL_TRANSFER_SIZE:
-## COMPSIZE(format,type,width[,height[,depth]]) has no single sibling to read directly - see
-## that LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. This
-## branch is only ever reached for an IN-direction PIXEL_TRANSFER_SIZE param (the OUT-direction
-## branch above already returns before this point) - i.e. glTexImage2D-shaped commands, which
-## read GL_UNPACK_ALIGNMENT, never GL_PACK_ALIGNMENT. pixel_height_param is None for a 1D-only
-## COMPSIZE(format,type,width) command (pass the literal 1 - ComputePixelTransferByteSize's own
-## height parameter, not a sibling read); pixel_depth_param is None for the plain 2D shape
-## (ComputePixelTransferByteSize's own `depth` parameter defaults to 1 - see that function's
-## header comment - so it is simply omitted from the call rather than passed explicitly). Only
-## when pixel_depth_param IS set (a genuine 3D transfer) do we also query and pass
-## GL_UNPACK_IMAGE_HEIGHT/GL_UNPACK_SKIP_IMAGES - see ComputePixelTransferByteSize's own header
-## comment for how a 3D transfer's size includes them; a 2D-or-1D command never needs to query
-## either (GL ignores both without a third dimension), so those two args are simply omitted
-## (defaulting to 0, 0) rather than queried needlessly. GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS/
-## SKIP_PIXELS and this command's own name, by contrast (see
-## ComputePixelTransferByteSize's own header comment for the full rationale), are ALWAYS
-## queried and passed, for every dimensionality alike - those three affect every pixel
-## transfer, not just a 3D one, so (unlike imageHeight/skipImages) there is no 2D-or-1D case
-## that may skip them.
+## COMPSIZE(format,type,width[,height[,depth]]) of an IN-direction (glTexImage2D-shaped) pixel
+## transfer, which reads the GL_UNPACK_* pixel-store state - see pixelTransferSize.h.
 , m_${p.name}(${arg_expr}, ComputePixelTransferByteSize(\
-${override.pixel_format_param}, ${override.pixel_type_param}, \
-${override.pixel_width_param}, \
-${override.pixel_height_param if override.pixel_height_param else '1'}, \
-QueryUnpackAlignment(), \
-${override.pixel_depth_param if override.pixel_depth_param else '1'}, \
-% if override.pixel_depth_param:
-QueryUnpackImageHeight(), QueryUnpackSkipImages(), \
-% else:
-0, 0, \
-% endif
-## GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS have no effect at all on a 1D transfer (no `height` sibling,
-## i.e. pixel_height_param is None - see pointer_metadata.py's own PIXEL_TRANSFER_SIZE comment
-## and pixelTransferSize.h's own header comment on why ROW_LENGTH/SKIP_ROWS matter for every
-## OTHER (2D/3D) transfer): unlike those, GL_(UN)PACK_SKIP_PIXELS still applies to a 1D transfer
-## (it shifts where in the buffer the single row's own pixel data starts), so it is always
-## queried live regardless of dimensionality. Passing 0 literals here (rather than querying a
-## real, possibly-nonzero global GL_(UN)PACK_ROW_LENGTH/SKIP_ROWS state that is legitimately
-## live for some OTHER, unrelated 2D/3D transfer elsewhere in the same app) avoids
-## ComputePixelTransferByteSize() spuriously inflating a 1D capture's byte count by
-## skipRows * rowStride bytes the driver never actually reads - an out-of-bounds host read past
-## the application's real allocation, since ArrayArgument<T>'s eager copy walks that many bytes
-## regardless of whether GL itself would ever look at them.
-% if override.pixel_height_param:
-QueryUnpackRowLength(), QueryUnpackSkipRows(), QueryUnpackSkipPixels(), "${cmd.name}"\
-% else:
-0, 0, QueryUnpackSkipPixels(), "${cmd.name}"\
-% endif
-))\
+${pixel_transfer_size_args(override, cmd.name, 'Unpack')}))\
 % elif override.length_source_kind == LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
-## COMPSIZE(buffer) depends on the sibling enum's *value*, not just its presence - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h.
+## COMPSIZE(buffer) depends on the sibling enum's value.
 , m_${p.name}(${arg_expr}, ComputeClearBufferValueCount(${override.clear_buffer_param}))\
 % elif override.length_source_kind == LengthSourceKind.TEXEL_BYTE_SIZE:
-## COMPSIZE(format,type) - one clear value, see that LengthSourceKind's own comment.
+## COMPSIZE(format,type) - one clear value.
 , m_${p.name}(${arg_expr}, ComputeTexelByteSize(${override.pixel_format_param}, ${override.pixel_type_param}))\
 % elif override.length_source_kind == LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value* AND on which command family is
-## calling (GL_TEXTURE_SWIZZLE_RGBA is legal only for the Tex- family - see that
-## LengthSourceKind's own comment (pointer_metadata.py), TexOrSamplerParameterCommand's own
-## comment, and pixelTransferSize.h's own comment). IN direction only - see
-## _validate_pointer_override's own direction check for this kind.
+## COMPSIZE(pname) depends on the sibling enum's value and on the command family
+## (GL_TEXTURE_SWIZZLE_RGBA is legal only for glTexParameter*). IN direction only.
 , m_${p.name}(${arg_expr}, ComputeTexOrSamplerParameterValueCount(${override.pname_param}, \
 TexOrSamplerParameterCommand::${'kTexParameter' if override.tex_sampler_family == TexOrSamplerParameterFamily.TEX_PARAMETER else 'kSamplerParameter'}))\
-% elif override.length_source_kind == LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
-## only - see _validate_pointer_override's own direction check for this kind.
-, m_${p.name}(${arg_expr}, ComputePatchParameterValueCount(${override.pname_param}))\
-% elif override.length_source_kind == LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
-## only - see _validate_pointer_override's own direction check for this kind.
-, m_${p.name}(${arg_expr}, ComputeMaterialParameterValueCount(${override.pname_param}))\
-% elif override.length_source_kind == LengthSourceKind.POINT_PARAMETER_VALUE_COUNT:
-## COMPSIZE(pname) depends on the sibling enum's *value*, not just its presence - see that
-## LengthSourceKind's own comment (pointer_metadata.py) and pixelTransferSize.h. IN direction
-## only - see _validate_pointer_override's own direction check for this kind.
-, m_${p.name}(${arg_expr}, ComputePointParameterValueCount(${override.pname_param}))\
-% elif override.length_source_kind == LengthSourceKind.PNAME_VALUE_COUNT:
-## Audited COMPSIZE(pname) setter - see pname_value_counts.py. IN direction only.
-, m_${p.name}(${arg_expr}, ComputePnameValueCount(${override.pname_param}))\
+% elif pname_value_count is not None:
+, m_${p.name}(${arg_expr}, ${pname_value_count}(${override.pname_param}))\
 % elif override.length_source_kind == LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
 ## Draw commands read from client memory; null (no capture) when the recorder's
 ## GuardDrawIndirectPointer() found a GL_DRAW_INDIRECT_BUFFER bound. IN direction only.
@@ -201,14 +129,11 @@ ${override.length_source_value or '1'}, ${override.indirect_stride_param or '0'}
 ${override.pixel_height_param or '32'}, QueryUnpackAlignment(), QueryUnpackRowLength(), \
 QueryUnpackSkipRows(), QueryUnpackSkipPixels()))\
 % else:
-## Passed as the sibling's own type verbatim, times length_multiplier as a plain int
-## (no unsigned 'u' suffix) - no cast needed here at all: ArrayArgument<T>/
-## HandleArrayArgument<T>'s constructor is templated on SizeT (mirrors Vulkan's
-## BufferArgument - see arguments.h's own comment) and does the static_cast<size_t> itself,
-## sidestepping both MSVC's C2398 brace-init narrowing check and the uint32_t-narrowing bug
-## a hand-written static_cast<uint32_t> here would reintroduce for a 64-bit sibling like
-## glBufferData/glBufferSubData's `size` (GLsizeiptr). A multiplier is applied after clamping
-## and widening to uint64_t, since the product in the sibling's signed type can overflow.
+## The sibling is passed in its own type: the constructor is templated on the count type and
+## converts it to size_t itself, so a 64-bit sibling (glBufferData's GLsizeiptr `size`) is never
+## narrowed. Do not cast here: static_cast<uint32_t> truncates a 64-bit size, and a narrowing
+## cast in brace-init fails on MSVC (C2398). A multiplier is applied after clamping and widening
+## to uint64_t, since the product in the sibling's signed type can overflow.
 % if override.length_multiplier == 1:
 , m_${p.name}(${arg_expr}, ${override.length_source_value})\
 % else:

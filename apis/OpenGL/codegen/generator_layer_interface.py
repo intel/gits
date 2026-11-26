@@ -34,15 +34,7 @@ def generate_layer_interface_files(
     command_list = list(commands)
     mako_write('templates/commandIdsAuto.h.mako',
                'common/layer_interface/commandIdsAuto.h', command_ids=command_ids)
-    mako_write('templates/commandsAuto.h.mako',
-               'common/layer_interface/commandsAuto.h', commands=command_list)
-    mako_write('templates/layerAuto.h.mako',
-               'common/layer_interface/layerAuto.h', commands=command_list)
-    mako_write('templates/commandCodersAuto.h.mako',
-               'common/layer_interface/commandCodersAuto.h', commands=command_list)
-    mako_write('templates/commandCodersAuto.cpp.mako',
-               'common/layer_interface/commandCodersAuto.cpp', commands=command_list)
-    mako_write('templates/commandSerializersAuto.h.mako',
-               'common/layer_interface/commandSerializersAuto.h', commands=command_list)
-    mako_write('templates/commandSerializersAuto.cpp.mako',
-               'common/layer_interface/commandSerializersAuto.cpp', commands=command_list)
+    for name in ('commandsAuto.h', 'layerAuto.h', 'commandCodersAuto.h', 'commandCodersAuto.cpp',
+                 'commandSerializersAuto.h', 'commandSerializersAuto.cpp'):
+        mako_write(f'templates/{name}.mako', f'common/layer_interface/{name}',
+                   commands=command_list)

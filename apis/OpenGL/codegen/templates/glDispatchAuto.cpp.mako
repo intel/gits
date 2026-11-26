@@ -86,7 +86,7 @@ void* ResolveDriverFunction(const char* name, bool logFailure = true) {
 % for cmd in commands:
 <%
     ret = cmd.return_value.type.strip()
-    is_void = ret.lower() == 'void'  # WGL commands use Win32 'VOID', GL commands use 'void'.
+    is_void = returns_void(cmd)
     param_decls = ', '.join(f'{p.type} {p.name}' for p in cmd.params)
     param_names = ', '.join(p.name for p in cmd.params)
 %>\

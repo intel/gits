@@ -24,29 +24,12 @@ from handle_lifecycle import (
 )
 from intermediates import Command
 
-# HANDLE_CREATING_COMMANDS/HANDLE_PARAM_TO_ERASE_ON_SUCCESS are already unioned across every
-# mapped-handle type (HGLRC, GLsync, ...) by handle_lifecycle.py itself - see that module's own
-# header comment for why a single generic table, not a per-consumer union of per-type modules,
-# is the right shape now that a second mapped-handle type has actually shown up.
-
-# Commands whose Wrapper_<cmd> must reserve its ordering key TOGETHER with a second, "spare"
-# key - via CaptureManager::CreateCommandKeyPair(), one atomic fetch_add(2), not two separate
-# CreateCommandKey() calls - rather than the single CreateCommandKey() every other command
-# reserves. Mostly WindowGeometryTrackingLayer's hooked WGL commands (see that
-# layer's own header comment, apis/OpenGL/recorder/include/windowGeometryTrackingLayer.h): each may
-# need to record a SEPARATE, synthetic WindowGeometryMetaCommand that must decode/replay
-# strictly BEFORE the hooked call itself, and the only race-free way to guarantee that ordering
-# is to reserve both keys as one indivisible unit at the SAME wrapper-entry point a single
-# CreateCommandKey() call would otherwise occupy - see CreateCommandKeyPair()'s own header
-# comment (apis/OpenGL/recorder/include/captureManager.h) for why reserving them separately, at two
-# different points in time (the pattern this table replaced), cannot give the same guarantee.
-#
-# recorderWrappersAuto.cpp.mako's own header comment covers the exact generated shape; the
-# short version: for a command in this set, the spare (first, smaller) key of the pair is
-# handed to CaptureManager::SetPendingPreHookKey() immediately, on the same thread, before this
-# wrapper's own Pre layer loop runs - WindowGeometryTrackingLayer::Pre() is the only consumer,
-# via TakePendingPreHookKey() - and the second (larger) key becomes this wrapper's own
-# `orderingKey`, used exactly like every other command's single reserved key from here on.
+# Commands whose Wrapper_<cmd> reserves its ordering key together with a spare key before it, in
+# one atomic CaptureManager::CreateCommandKeyPair() step, so no other thread's key can land
+# between them. The spare key goes to CaptureManager::SetPendingPreHookKey() before the Pre
+# layers run, for the one Pre layer recording a metacommand that must replay right before the
+# command. Mostly WindowGeometryTrackingLayer's hooked WGL commands
+# (recorder/include/windowGeometryTrackingLayer.h), which record a WindowGeometryMetaCommand.
 #
 # wglCreatePbufferARB/EXT, glXCreateContext and the GLX commands taking a GLXFBConfig, except
 # glXCreateWindow and glXCreatePixmap, are the other entries: PixelFormatCaptureLayer::Pre()
@@ -55,10 +38,6 @@ from intermediates import Command
 # glXCreateGLXPixmap their X pixmap. wglMakeContextCurrentARB/EXT, glXMakeContextCurrent and
 # glXMakeCurrentReadSGI record one geometry sample per drawable, both in the metacommand recorded
 # under the spare key.
-#
-# A plain Python set, not a dict, unlike CONTEXT_SHARE_PARAM/SHARE_LISTS_COMMANDS above:
-# membership alone is everything the template needs here (there is no per-command payload to
-# carry - every entry is handled completely uniformly).
 PRE_HOOK_KEY_PAIR_COMMANDS: frozenset[str] = frozenset({
     'wglSetPixelFormat', 'wglCreateContext', 'wglCreateContextAttribsARB', 'wglMakeCurrent',
     'wglSwapBuffers', 'wglSwapLayerBuffers', 'wglCreatePbufferARB', 'wglCreatePbufferEXT',
@@ -108,9 +87,10 @@ assert FRAME_END_COMMANDS <= PRE_HOOK_EXTRA_KEY_COMMANDS.keys()
 # mipmap generation, the other pixel unpacks a GL_PIXEL_UNPACK_BUFFER may source, query results
 # written into a buffer, and the semaphore signals and waits. Their Wrapper_<cmd> calls
 # MapTrackingService::PublishMappedWrites() before reserving its key, so writes through coherent
-# and implicit-flush persistent maps and host writes to memory GL imports from Vulkan replay before the command accesses the
-# memory, and the pages they wrote are not published again over what it wrote. Buffer maps and flushes have custom wrappers
-# (recorder/mapTrackingWrappers.cpp), which these patterns exclude.
+# and implicit-flush persistent maps and host writes to memory GL imports from Vulkan replay
+# before the command accesses the memory, and the pages they wrote are not published again over
+# what it wrote. Buffer maps and flushes have custom wrappers (recorder/mapTrackingWrappers.cpp),
+# which these patterns exclude.
 _MAPPED_WRITE_PUBLISHER_RE = re.compile(
     r'^gl(?:Multi)?Draw(?!Buffers?(?:ARB|ATI|EXT|NV|IndexedEXT)?$)'
     r'|^glCallLists?$'
@@ -169,13 +149,12 @@ def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
     record a ClientArraysMetaCommand under the spare key the same way. The two sets must not
     overlap: the pending key has a single consumer per call."""
     draws = frozenset(client_array_draws(commands))
-    overlap = draws & PRE_HOOK_KEY_PAIR_COMMANDS
-    if overlap:
+    if overlap := draws & PRE_HOOK_KEY_PAIR_COMMANDS:
         raise ValueError(f"pre-hook key pair commands with two consumers: {sorted(overlap)}")
     pre_hook = PRE_HOOK_KEY_PAIR_COMMANDS | draws
-    if pre_hook & POST_HOOK_KEY_PAIR_COMMANDS:
+    if overlap := pre_hook & POST_HOOK_KEY_PAIR_COMMANDS:
         raise ValueError("commands with both a pre-hook and a post-hook key pair: "
-                         f"{sorted(pre_hook & POST_HOOK_KEY_PAIR_COMMANDS)}")
+                         f"{sorted(overlap)}")
     return pre_hook
 
 
@@ -251,9 +230,7 @@ def generate_recorder_files(commands: list[Command]) -> None:
                      primitive_pair_commands=PRIMITIVE_PAIR_COMMANDS,
                      client_array_setters=client_array_setters(commands),
                      buffer_content_hooks=buffer_content_hooks(commands))
-    # EncoderLayer (docs/development/opengl-layer-architecture-alignment-plan.md): the sole,
-    # last-registered Post layer, dispatched through by the wrapper above via its
-    # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.
+    # EncoderLayer, the last Post layer, records each command.
     mako_write('templates/encoderLayerAuto.h.mako',
                'recorder/encoderLayerAuto.h', commands=commands)
     mako_write('templates/encoderLayerAuto.cpp.mako',
