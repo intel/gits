@@ -9,7 +9,11 @@
 add_library(Vulkan_trace STATIC)
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# traceLayerAuto.cpp comes first because it is the slowest file to compile, and a target compiles
+# its sources roughly in list order.
 set(TRACE_SRC
+  ${SRC_DIR}/traceLayerAuto.h
+  ${SRC_DIR}/traceLayerAuto.cpp
   ${SRC_DIR}/commandPrinter.h
   ${SRC_DIR}/commandPrinter.cpp
   ${SRC_DIR}/enumToStrAuto.h
@@ -31,8 +35,6 @@ set(TRACE_SRC
   ${SRC_DIR}/printPnextAuto.h
   ${SRC_DIR}/printPnextAuto.cpp
   ${SRC_DIR}/traceLayerCustom.cpp
-  ${SRC_DIR}/traceLayerAuto.h
-  ${SRC_DIR}/traceLayerAuto.cpp
   ${SRC_DIR}/traceLayerGroup.h
   ${SRC_DIR}/traceLayerGroup.cpp
 )
