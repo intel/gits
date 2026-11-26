@@ -17,11 +17,16 @@ set(SCRIPTS_SRC
   intermediates_creator.py
   command_ids.json
   command_ids.py
+  find_windows_sdk.py
   generator_helpers.py
   generator.py
+  generator_dml.py
+  generator_dml_helpers.py
   generator_recorder.py
   generator_coders.py
   generator_trace.py
+  generator_api_debug.py
+  generator_to_string.py
   generator_layer.py
   generator_player.py
   generator_subcapture.py
@@ -30,6 +35,7 @@ set(SCRIPTS_SRC
   generator_resource_dumping.py
   generator_skip_calls.py
   generator_ccode.py
+  generator_ccode_project.py
   plugin_generator.py
   generator_xess.py
   generator_xess_helpers.py
@@ -57,6 +63,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E touch ${STAMP_FILE}
   COMMAND ${CMAKE_COMMAND} -E echo "DirectX code generation completed (${STAMP_FILE})."
   WORKING_DIRECTORY ${DIRECTX_SCRIPTS_DIR}
+  DEPENDS ${SCRIPTS_SRC} ${MAKO_TEMPLATES}
 )
 
 unset(DirectX_codegen CACHE)

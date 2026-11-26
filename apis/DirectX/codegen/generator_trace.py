@@ -12,6 +12,11 @@ from textwrap import dedent
 from generator_helpers import *
 from generator_dml_helpers import *
 
+# The structure printers are split into this many files. Changing it also requires changing the
+# printStructuresNAuto.cpp list in apis/DirectX/layers/trace/CMakeLists.txt, which the build does
+# not derive.
+PRINT_STRUCTURES_PARTS = 4
+
 PRINT_ARRAY_VALUES = [
   'DML_BUFFER_TENSOR_DESC',
   'DML_DEQUANTIZE_OPERATOR_DESC',
@@ -89,10 +94,14 @@ def generate_trace_files(context, out_path):
         'traceLayerAuto.h',
         'traceLayerAuto.cpp',
         'printStructuresAuto.h',
-        'printStructuresAuto.cpp',
         'printEnumsAuto.h',
         'printEnumsAuto.cpp'
     ]
 
     for file_name in files_to_generate:
         generate_file(context | additional_context, file_name, out_path)
+
+    # Each overloaded operator<< call resolves against all print overloads, so the structure
+    # printers are split into several files that compile in parallel.
+    generate_file_parts(context | additional_context, 'printStructuresAuto.cpp', out_path,
+                        'structures', PRINT_STRUCTURES_PARTS)

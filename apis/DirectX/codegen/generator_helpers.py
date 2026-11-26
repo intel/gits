@@ -71,9 +71,9 @@ def is_interface_creation(function):
 def is_context_creation(function):
     return any(param.is_context_output for param in function.params)
 
-def generate_file(context, file_name, out_path):
+def generate_file(context, file_name, out_path, out_file_name=None):
     in_file = os.path.join("templates", os.path.basename(file_name) + ".mako")
-    out_file = os.path.join(out_path, file_name)
+    out_file = os.path.join(out_path, out_file_name or file_name)
     
     base_context = {
         'header': AUTO_GENERATED_HEADER,
@@ -90,6 +90,25 @@ def generate_file(context, file_name, out_path):
     rendered = re.sub(r"\r\n", r"\n", rendered)
     with open(out_file, 'w') as file:
         file.write(rendered)
+
+def generate_file_parts(context, file_name, out_path, items_key, part_count):
+    """Generate file_name as part_count files, each with a contiguous part of context[items_key].
+    The part index goes before the Auto suffix, so fooAuto.cpp becomes foo0Auto.cpp, foo1Auto.cpp
+    and so on. Raise ValueError if a part would get no items.
+    """
+    stem, separator, extension = file_name.rpartition('Auto.')
+    if not separator:
+        raise ValueError(f'{file_name} has no Auto suffix')
+    items = context[items_key]
+    if not 0 < part_count <= len(items):
+        raise ValueError(f'Cannot split {len(items)} {items_key} into {part_count} parts')
+    part_size, remainder = divmod(len(items), part_count)
+    start = 0
+    for part_index in range(part_count):
+        end = start + part_size + (1 if part_index < remainder else 0)
+        generate_file(context | {items_key: items[start:end]}, file_name, out_path,
+                      out_file_name=f'{stem}{part_index}Auto.{extension}')
+        start = end
 
 def generate_plugin_file(context, file_name, out_path):
     

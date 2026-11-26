@@ -22,7 +22,10 @@ source_group("trace" FILES ${TRACE_SRC})
 
 set(PRINT_SRC
   ${SRC_DIR}/printStructuresAuto.h
-  ${SRC_DIR}/printStructuresAuto.cpp
+  ${SRC_DIR}/printStructures0Auto.cpp
+  ${SRC_DIR}/printStructures1Auto.cpp
+  ${SRC_DIR}/printStructures2Auto.cpp
+  ${SRC_DIR}/printStructures3Auto.cpp
   ${SRC_DIR}/printEnumsAuto.h
   ${SRC_DIR}/printEnumsAuto.cpp
   ${SRC_DIR}/printCustom.h
