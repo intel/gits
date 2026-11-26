@@ -58,7 +58,10 @@ source_group("services" FILES ${SERVICES_SRC})
 
 set(RUNNER_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners0Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners1Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners2Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners3Auto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersCustom.h
   ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersCustom.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/vulkanCommandFactory.h
