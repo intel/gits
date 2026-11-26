@@ -68,7 +68,7 @@
 import re
 
 from intermediates import Parameter
-from pointer_length_derivation import derive_length_source
+from pointer_length_derivation import derive_length_source, has_scalar_sibling
 from pointer_metadata import LengthSourceKind, PointerDirection, PointerParamOverride
 
 # Anchored full-string matches (re.fullmatch) - a vendor suffix (ARB/EXT/NV/IMG/...) after the
@@ -117,27 +117,19 @@ def derive_uniform_setter_override(
     if expected_multiplier is None:
         return None
 
-    if _MATRIX_SETTER_RE.match(command_name) is not None:
-        transpose = next((p for p in other_params if p.name == 'transpose'), None)
-        if transpose is None or not transpose.type_facts.is_scalar:
-            return None
-
-    location = next((p for p in other_params if p.name == 'location'), None)
-    if location is None or not location.type_facts.is_scalar:
+    if (_MATRIX_SETTER_RE.match(command_name) is not None
+            and not has_scalar_sibling(other_params, 'transpose')):
+        return None
+    if not has_scalar_sibling(other_params, 'location'):
         return None
 
+    # gl.xml's own len= must agree with what the command's name says it should be - a
+    # disagreement signals this member is not the plain, already-audited shape after all (e.g.
+    # a future registry revision, or a name this regex matches by coincidence). Fail safe rather
+    # than trusting either source alone.
     derivation = derive_length_source(param, other_params)
-    if derivation is None:
-        return None
-    if derivation.kind is not LengthSourceKind.SIBLING_PARAM:
-        return None
-    if derivation.value != 'count':
-        return None
-    if derivation.multiplier != expected_multiplier:
-        # gl.xml's own len= disagrees with what the command's name says it should be - a
-        # signal this member is not the plain, already-audited shape after all (e.g. a future
-        # registry revision, or a name this regex matches by coincidence). Fail safe rather
-        # than trusting either source alone.
+    if (derivation is None or derivation.kind is not LengthSourceKind.SIBLING_PARAM
+            or derivation.value != 'count' or derivation.multiplier != expected_multiplier):
         return None
 
     return PointerParamOverride(

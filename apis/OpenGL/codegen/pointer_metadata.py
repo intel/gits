@@ -19,6 +19,8 @@
 
 from dataclasses import dataclass
 
+from intermediates import StrEnum
+
 TEXT_OUTPUT_BUFFERS: dict[tuple[str, str], str] = {
     ('glGetActiveAttrib', 'name'): 'length',
     ('glGetActiveUniform', 'name'): 'length',
@@ -33,14 +35,6 @@ TEXT_OUTPUT_BUFFERS: dict[tuple[str, str], str] = {
     ('glGetActiveUniformName', 'uniformName'): 'length',
     ('glGetProgramResourceName', 'name'): 'length',
 }
-
-try:
-    from enum import StrEnum
-except ImportError:
-    from enum import Enum
-    class StrEnum(str, Enum):
-        def __str__(self) -> str:
-            return self.value
 
 
 class PointerDirection(StrEnum):

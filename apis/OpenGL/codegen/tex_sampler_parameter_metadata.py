@@ -110,6 +110,7 @@
 import re
 
 from intermediates import Parameter
+from pointer_length_derivation import has_scalar_sibling
 from pointer_metadata import (
     LengthSourceKind,
     PointerDirection,
@@ -159,8 +160,7 @@ def derive_tex_sampler_parameter_override(
         # regex matches by coincidence). Fail safe rather than trusting the name alone.
         return None
 
-    pname = next((p for p in other_params if p.name == 'pname'), None)
-    if pname is None or not pname.type_facts.is_scalar:
+    if not has_scalar_sibling(other_params, 'pname'):
         return None
 
     # Family discriminator - never inferred at the C++/Mako call site, always

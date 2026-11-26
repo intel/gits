@@ -76,19 +76,11 @@ import re
 from dataclasses import dataclass
 
 from array_of_arrays_metadata import ARRAY_OF_ARRAYS_PARAM_OVERRIDES
-from intermediates import Api, Command, Parameter
+from intermediates import Api, Command, Parameter, StrEnum
 from object_name_lifecycle import ObjectNameRole, resolve_object_name_override
 from pointer_metadata import (
     POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride,
 )
-
-try:
-    from enum import StrEnum
-except ImportError:
-    from enum import Enum
-    class StrEnum(str, Enum):
-        def __str__(self) -> str:
-            return self.value
 
 
 class LenAttribShape(StrEnum):
@@ -252,27 +244,27 @@ def derive_length_source(
 
     if shape is LenAttribShape.PARAM_NAME:
         assert param.len is not None
-        sibling = next((p for p in other_params if p.name == param.len), None)
-        if sibling is None or not sibling.type_facts.is_scalar:
-            return None
-        return LengthSourceDerivation(kind=LengthSourceKind.SIBLING_PARAM, value=param.len)
-
-    if shape is LenAttribShape.SCALED_PARAM_NAME:
+        sibling_name, multiplier = param.len, 1
+    elif shape is LenAttribShape.SCALED_PARAM_NAME:
         assert param.len is not None
         match = _SCALED_PARAM_NAME_RE.match(param.len)
         assert match is not None
-        sibling_name, multiplier_text = match.group(1), match.group(2)
-        sibling = next((p for p in other_params if p.name == sibling_name), None)
-        if sibling is None or not sibling.type_facts.is_scalar:
-            return None
-        return LengthSourceDerivation(
-            kind=LengthSourceKind.SIBLING_PARAM, value=sibling_name,
-            multiplier=int(multiplier_text))
+        sibling_name, multiplier = match.group(1), int(match.group(2))
+    else:
+        # DIVIDED_PARAM_NAME, COMPSIZE, NONE all get the same "no safe signal" answer - see
+        # classify_len_attrib()'s own docstring (DIVIDED_PARAM_NAME) and this module's header
+        # comment (COMPSIZE) for why each is excluded, not merely unimplemented.
+        return None
 
-    # DIVIDED_PARAM_NAME, COMPSIZE, NONE all fall through to the same "no safe signal" answer -
-    # see classify_len_attrib()'s own docstring (DIVIDED_PARAM_NAME) and this module's header
-    # comment (COMPSIZE) for why each is excluded, not merely unimplemented.
-    return None
+    if not has_scalar_sibling(other_params, sibling_name):
+        return None
+    return LengthSourceDerivation(
+        kind=LengthSourceKind.SIBLING_PARAM, value=sibling_name, multiplier=multiplier)
+
+
+def has_scalar_sibling(other_params: list[Parameter], name: str | None) -> bool:
+    """Whether `other_params` contains a plain by-value scalar parameter named `name`."""
+    return any(p.name == name and p.type_facts.is_scalar for p in other_params)
 
 
 # Commands the generic rule in derive_pointer_param_override() would classify WRONGLY - found by
@@ -360,17 +352,19 @@ def derive_pointer_query_output_override(
         direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT)
 
 
+def _writes_through_query_buffer(command_name: str) -> bool:
+    """Whether `command_name` writes its result through a pointer that becomes a buffer offset
+    while a GL_QUERY_BUFFER is bound, which a scratch buffer would silently redirect."""
+    return 'QueryObject' in command_name or 'QueryBufferObject' in command_name
+
+
 def derive_discarded_output_override(
     command_name: str, param: Parameter, other_params: list[Parameter],
 ) -> PointerParamOverride | None:
     """DISCARDED_OUTPUT override for a glGet* query output whose size depends on driver state,
     or None. Nothing on replay reads a query result, so the recorder skips it and the player
     passes a scratch buffer."""
-    if not command_name.startswith('glGet'):
-        return None
-    # With GL_QUERY_BUFFER bound the pointer is a buffer offset the driver writes through, which
-    # a scratch buffer would silently redirect.
-    if 'QueryObject' in command_name or 'QueryBufferObject' in command_name:
+    if not command_name.startswith('glGet') or _writes_through_query_buffer(command_name):
         return None
     facts = param.type_facts
     if (facts.pointer_depth != 1 or facts.base_type == 'void' or param.type.startswith('const ')
@@ -380,13 +374,14 @@ def derive_discarded_output_override(
         return None
     count_name = _DISCARDED_OUTPUT_PER_ELEMENT_LENS.get(param.len or '')
     if count_name is not None:
-        if not any(p.name == count_name and p.type_facts.is_scalar for p in other_params):
+        if not has_scalar_sibling(other_params, count_name):
             return None
         return PointerParamOverride(
             direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT,
             length_source_value=count_name)
-    has_index = any(p.name == 'index' and p.type_facts.is_scalar for p in other_params)
-    if param.len not in _DISCARDED_OUTPUT_LENS and not (param.len == 'COMPSIZE(target)' and has_index):
+    has_index = has_scalar_sibling(other_params, 'index')
+    if (param.len not in _DISCARDED_OUTPUT_LENS
+            and not (param.len == 'COMPSIZE(target)' and has_index)):
         return None
     return PointerParamOverride(
         direction=PointerDirection.OUT, length_source_kind=LengthSourceKind.DISCARDED_OUTPUT)
@@ -517,7 +512,7 @@ def derive_pointer_param_override(
     elif _GEN_CREATE_DELETE_RE.match(command_name) and facts.base_type in ('GLuint', 'GLint'):
         return None
     elif (direction is PointerDirection.OUT and derived.kind is LengthSourceKind.SIBLING_PARAM
-            and 'QueryObject' not in command_name and 'QueryBufferObject' not in command_name):
+            and not _writes_through_query_buffer(command_name)):
         return PointerParamOverride(
             direction=direction,
             length_source_kind=LengthSourceKind.DISCARDED_OUTPUT,
@@ -532,7 +527,7 @@ def derive_pointer_param_override(
 
 
 def _hand_entry_as_length_source(
-    length_source_kind: LengthSourceKind, length_source_value: str | None, length_multiplier: int,
+    override: PointerParamOverride,
 ) -> tuple[LengthSourceKind, str | None, int] | None:
     """Normalize a hand-authored PointerParamOverride's length-source fields into the same
     (kind, value, multiplier) shape derive_length_source() produces, for
@@ -551,16 +546,38 @@ def _hand_entry_as_length_source(
     OPAQUE_BIT_PATTERN_ARRAY(length_source_value='drawcount') - a real, checked example, not a
     hypothetical one).
     """
-    if length_source_kind in (LengthSourceKind.FIXED_COUNT, LengthSourceKind.SIBLING_PARAM):
-        return (length_source_kind, length_source_value, length_multiplier)
-    if length_source_kind is LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
-        return (LengthSourceKind.SIBLING_PARAM, length_source_value, length_multiplier)
-    # NULL_TERMINATED/KEY_VALUE_LIST/OPAQUE_BIT_PATTERN/PIXEL_TRANSFER_SIZE/
-    # CLEAR_BUFFER_VALUE_COUNT: pure category kinds with no comparable length-source shape
-    # (OPAQUE_BIT_PATTERN/NULL_TERMINATED/KEY_VALUE_LIST have no length at all;
-    # PIXEL_TRANSFER_SIZE/CLEAR_BUFFER_VALUE_COUNT compute a byte size from several siblings via
-    # a runtime helper, not a single sibling's by-value count) - never comparable.
-    return None
+    kind = override.length_source_kind
+    if kind is LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
+        kind = LengthSourceKind.SIBLING_PARAM
+    elif kind not in (LengthSourceKind.FIXED_COUNT, LengthSourceKind.SIBLING_PARAM):
+        return None
+    return (kind, override.length_source_value, override.length_multiplier)
+
+
+def _derive_table_entry_length_source(
+    commands_by_name: dict[str, Command], command_name: str, param_name: str,
+) -> tuple[Parameter, LengthSourceDerivation] | None:
+    """The (param, gl.xml-derived length source) pair a hand-authored table entry is compared
+    against in find_pointer_length_mismatches(), or None when there is nothing to compare."""
+    # A renamed-only alias key (e.g. 'wglSetPixelFormat') has no command - see
+    # find_pointer_length_mismatches()'s own docstring.
+    command = commands_by_name.get(command_name)
+    if command is None:
+        return None
+    # A genuine (command, param) mismatch is _validate_pointer_override's job (raises at
+    # generation time); this lint pass only compares pairs that structurally exist.
+    param = next((p for p in command.params if p.name == param_name), None)
+    if param is None:
+        return None
+    # gl.xml may have no safe opinion (COMPSIZE(...)/no len=/a divided-form length) - not a
+    # disagreement, just nothing to check against. This is the common, expected case for entries
+    # that deliberately override a misleading COMPSIZE(...) hint (glGetShaderiv, glGetProgramiv,
+    # glGetFramebufferAttachmentParameteriv).
+    other_params = [p for p in command.params if p is not param]
+    auto = derive_length_source(param, other_params)
+    if auto is None:
+        return None
+    return param, auto
 
 
 def find_pointer_length_mismatches(commands: dict[Api, list[Command]]) -> list[str]:
@@ -605,32 +622,14 @@ def find_pointer_length_mismatches(commands: dict[Api, list[Command]]) -> list[s
     mismatches: list[str] = []
 
     for (command_name, param_name), override in POINTER_PARAM_OVERRIDES.items():
-        hand = _hand_entry_as_length_source(
-            override.length_source_kind, override.length_source_value, override.length_multiplier)
+        hand = _hand_entry_as_length_source(override)
         if hand is None:
             continue  # Pure category kind - nothing length-source-shaped to compare.
-
-        command = commands_by_name.get(command_name)
-        if command is None:
-            continue  # Renamed-only alias key (e.g. 'wglSetPixelFormat') - see this
-                      # function's own docstring.
-        param = next((p for p in command.params if p.name == param_name), None)
-        if param is None:
-            continue  # A genuine (command, param) mismatch is _validate_pointer_override's
-                      # job (raises at generation time); this lint pass only ever compares
-                      # length sources for pairs that structurally exist.
-
-        other_params = [p for p in command.params if p is not param]
-        auto = derive_length_source(param, other_params)
-        if auto is None:
-            continue  # gl.xml has no safe opinion here (COMPSIZE(...)/no len=/a divided-form
-                      # length) - not a disagreement, just nothing to check the hand entry
-                      # against. This is the common, expected case for entries that
-                      # deliberately override a misleading COMPSIZE(...) hint (glGetShaderiv,
-                      # glGetProgramiv, glGetFramebufferAttachmentParameteriv).
-
-        auto_tuple = (auto.kind, auto.value, auto.multiplier)
-        if hand != auto_tuple:
+        derived = _derive_table_entry_length_source(commands_by_name, command_name, param_name)
+        if derived is None:
+            continue
+        param, auto = derived
+        if hand != (auto.kind, auto.value, auto.multiplier):
             mismatches.append(
                 f'{command_name}.{param_name}: POINTER_PARAM_OVERRIDES has '
                 f'length_source_kind={hand[0]}, length_source_value={hand[1]!r}, '
@@ -640,17 +639,10 @@ def find_pointer_length_mismatches(commands: dict[Api, list[Command]]) -> list[s
             )
 
     for (command_name, param_name), aoa_override in ARRAY_OF_ARRAYS_PARAM_OVERRIDES.items():
-        command = commands_by_name.get(command_name)
-        if command is None:
+        derived = _derive_table_entry_length_source(commands_by_name, command_name, param_name)
+        if derived is None:
             continue
-        param = next((p for p in command.params if p.name == param_name), None)
-        if param is None:
-            continue
-
-        other_params = [p for p in command.params if p is not param]
-        auto = derive_length_source(param, other_params)
-        if auto is None:
-            continue
+        param, auto = derived
 
         # ArrayOfArraysOverride has no length_multiplier field (every real array-of-arrays
         # occurrence today - glShaderSource's `string` - has a plain 1:1 outer count, never a

@@ -53,13 +53,7 @@
 import re
 from dataclasses import dataclass
 
-try:
-    from enum import StrEnum
-except ImportError:
-    from enum import Enum
-    class StrEnum(str, Enum):
-        def __str__(self) -> str:
-            return self.value
+from intermediates import StrEnum
 
 
 class GLObjectKind(StrEnum):

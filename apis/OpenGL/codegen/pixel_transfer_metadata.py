@@ -119,20 +119,23 @@ def _parse_compsize_args(len_attrib: str | None) -> tuple[str, ...] | None:
     return tuple(name.strip() for name in inner.split(','))
 
 
+def _has_pixel_format_and_type(by_name: dict[str, Parameter]) -> bool:
+    """Whether the `format`/`type` siblings are scalar PixelFormat/PixelType enums."""
+    format_param = by_name.get('format')
+    type_param = by_name.get('type')
+    if format_param is None or type_param is None:
+        return False
+    if format_param.group != 'PixelFormat' or type_param.group != 'PixelType':
+        return False
+    return format_param.type_facts.is_scalar and type_param.type_facts.is_scalar
+
+
 def _derive_texel_byte_size_override(
     param: Parameter, by_name: dict[str, Parameter],
 ) -> PointerParamOverride | None:
     """COMPSIZE(format,type) - a single clear value (glClearTexImage/glClearBufferData/...), see
     LengthSourceKind.TEXEL_BYTE_SIZE."""
-    format_param = by_name.get('format')
-    type_param = by_name.get('type')
-    if format_param is None or type_param is None:
-        return None
-    if format_param.group != 'PixelFormat' or type_param.group != 'PixelType':
-        return None
-    if not format_param.type_facts.is_scalar or not type_param.type_facts.is_scalar:
-        return None
-    if param.type != 'const void *':
+    if not _has_pixel_format_and_type(by_name) or param.type != 'const void *':
         return None
     return PointerParamOverride(
         direction=PointerDirection.IN,
@@ -163,23 +166,12 @@ def derive_pixel_transfer_override(
         # OUT match (glExtGetTexSubImageQCOM) stays excluded.
         compsize_args = ('format', 'type') + tuple(
             name for name in ('width', 'height', 'depth') if name in by_name)
-    if compsize_args == ('format', 'type'):
-        return _derive_texel_byte_size_override(param, by_name)
-    if compsize_args is None or len(compsize_args) < 3:
-        return None
-    if compsize_args[0] != 'format' or compsize_args[1] != 'type':
+    if compsize_args is None or compsize_args[:2] != ('format', 'type'):
         return None
     dims = compsize_args[2:]
-    if dims not in _DIMENSION_SHAPES:
-        return None
-
-    format_param = by_name.get('format')
-    type_param = by_name.get('type')
-    if format_param is None or type_param is None:
-        return None
-    if format_param.group != 'PixelFormat' or type_param.group != 'PixelType':
-        return None
-    if not format_param.type_facts.is_scalar or not type_param.type_facts.is_scalar:
+    if not dims:
+        return _derive_texel_byte_size_override(param, by_name)
+    if dims not in _DIMENSION_SHAPES or not _has_pixel_format_and_type(by_name):
         return None
 
     dim_params = [by_name.get(name) for name in dims]
