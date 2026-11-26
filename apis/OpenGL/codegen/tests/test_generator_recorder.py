@@ -26,9 +26,10 @@ CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
 from buffer_content_hooks import BufferContentHook
-from generator_helpers import mako_render
+from generator_helpers import mako_render, mako_render_parts
 from generator_recorder import (POST_HOOK_KEY_PAIR_COMMANDS, PRE_HOOK_EXTRA_KEY_COMMANDS,
                                 PRE_HOOK_KEY_PAIR_COMMANDS, PRIMITIVE_PAIR_COMMANDS,
+                                RECORDER_WRAPPER_PARTS,
                                 DrawableIdentities, drawable_identities, mapped_write_publishers,
                                 query_buffer_publishers)
 from handle_lifecycle import (CONTEXT_SHARE_PARAM, FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS,
@@ -74,6 +75,26 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
                     with_handle_lifecycles: bool = False) -> str:
     rendered = mako_render(
         TEMPLATE_PATH, commands=commands,
+        **template_arguments(pre_hook_key_pair_commands, post_hook_key_pair_commands,
+                             pre_hook_extra_key_commands, frame_end_commands,
+                             mapped_write_publishers, primitive_pair_commands,
+                             query_buffer_publishers, buffer_content_hooks,
+                             with_handle_lifecycles))
+    assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
+    return rendered
+
+
+def template_arguments(pre_hook_key_pair_commands: frozenset[str] = frozenset(),
+                       post_hook_key_pair_commands: frozenset[str] = frozenset(),
+                       pre_hook_extra_key_commands: dict[str, str] | None = None,
+                       frame_end_commands: frozenset[str] = frozenset(),
+                       mapped_write_publishers: frozenset[str] = frozenset(),
+                       primitive_pair_commands: dict[str, bool] | None = None,
+                       query_buffer_publishers: frozenset[str] = frozenset(),
+                       buffer_content_hooks: dict[str, BufferContentHook] | None = None,
+                       with_handle_lifecycles: bool = False) -> dict:
+    """The template arguments other than commands and the part arguments."""
+    return dict(
         handle_creating_commands=HANDLE_CREATING_COMMANDS if with_handle_lifecycles else frozenset(),
         handle_param_to_erase_on_success=(HANDLE_PARAM_TO_ERASE_ON_SUCCESS
                                           if with_handle_lifecycles else {}),
@@ -87,8 +108,6 @@ def render_commands(commands: list[Command], pre_hook_key_pair_commands: frozens
         query_buffer_publishers=query_buffer_publishers,
         primitive_pair_commands=primitive_pair_commands or {},
         client_array_setters={}, buffer_content_hooks=buffer_content_hooks or {})
-    assert rendered is not None, 'recorderWrappersAuto.cpp.mako failed to render - see stderr'
-    return rendered
 
 
 def extract_wrapper_body(rendered: str, name: str) -> str:
@@ -675,6 +694,70 @@ class DrawableIdentityTests(unittest.TestCase):
             'new glXSwapBuffersCommandSerializer(recorded));\n', rendered)
         self.assertIn('  CaptureManager::Get().RecordCommand(command, '
                       'new glXCreateContextCommandSerializer(command));\n', rendered)
+
+
+class RecorderWrapperPartsTests(unittest.TestCase):
+    """The recorder wrappers are generated into RECORDER_WRAPPER_PARTS files whose registration
+    functions all feed the lookup in part 0."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        # Two more than a multiple of the part count, so that the parts differ in size.
+        cls.names = [f'wglFakeCommand{index:02}' for index in range(RECORDER_WRAPPER_PARTS * 3 + 2)]
+        cls.parts = mako_render_parts(TEMPLATE_PATH, RECORDER_WRAPPER_PARTS,
+                                      [fake_command(name) for name in cls.names],
+                                      **template_arguments())
+
+    def test_parts_have_contiguous_commands_of_nearly_equal_counts(self) -> None:
+        registered = [re.findall(r'\{"(\w+)", reinterpret_cast<void\*>\(&Wrapper_\1\)\},', part)
+                      for part in self.parts]
+        self.assertEqual([len(names) for names in registered],
+                         [4, 4] + [3] * (RECORDER_WRAPPER_PARTS - 2))
+        self.assertEqual([name for names in registered for name in names], self.names)
+
+    def test_every_command_is_defined_and_registered_exactly_once(self) -> None:
+        for name in self.names:
+            with self.subTest(command=name):
+                definitions = [part.count(f'APIENTRY Wrapper_{name}(') for part in self.parts]
+                registrations = [part.count(f'{{"{name}", ') for part in self.parts]
+                self.assertEqual(sum(definitions), 1)
+                self.assertEqual(definitions, registrations)
+
+    def test_each_part_defines_its_own_registration_function(self) -> None:
+        for index, part in enumerate(self.parts):
+            with self.subTest(part=index):
+                self.assertEqual(
+                    re.findall(r'^void AddRecorderWrappers(\d+)\(.*\) \{$', part, re.MULTILINE),
+                    [str(index)])
+
+    def test_only_part_0_defines_the_lookup(self) -> None:
+        definition = 'void* GetGeneratedRecorderWrapper(const char* name) {'
+        self.assertEqual([part.count(definition) for part in self.parts],
+                         [1] + [0] * (RECORDER_WRAPPER_PARTS - 1))
+
+    def test_the_lookup_registers_the_wrappers_of_all_parts(self) -> None:
+        lookup = self.parts[0][self.parts[0].index('void* GetGeneratedRecorderWrapper('):]
+        self.assertIn(f'map.reserve({len(self.names)});', lookup)
+        self.assertEqual(re.findall(r'AddRecorderWrappers(\d+)\(map\);', lookup),
+                         [str(index) for index in range(RECORDER_WRAPPER_PARTS)])
+        declarations = re.findall(
+            r'^void AddRecorderWrappers(\d+)\(std::unordered_map<std::string_view, void\*>& '
+            r'nameToWrapper\);$', self.parts[0], re.MULTILINE)
+        self.assertEqual(declarations, [str(index) for index in range(1, RECORDER_WRAPPER_PARTS)])
+
+    def test_a_part_without_commands_is_rejected(self) -> None:
+        commands = [fake_command(name) for name in self.names[:RECORDER_WRAPPER_PARTS - 1]]
+        with self.assertRaises(ValueError):
+            mako_render_parts(TEMPLATE_PATH, RECORDER_WRAPPER_PARTS, commands,
+                              **template_arguments())
+
+    def test_the_build_lists_every_part(self) -> None:
+        expected = [f'recorderWrappers{index}Auto.cpp' for index in range(RECORDER_WRAPPER_PARTS)]
+        for cmake_lists in (CODEGEN_DIR / 'CMakeLists.txt',
+                            CODEGEN_DIR.parent / 'recorder' / 'CMakeLists.txt'):
+            with self.subTest(file=str(cmake_lists)):
+                self.assertEqual(
+                    re.findall(r'recorderWrappers\d+Auto\.cpp', cmake_lists.read_text()), expected)
 
 
 if __name__ == '__main__':

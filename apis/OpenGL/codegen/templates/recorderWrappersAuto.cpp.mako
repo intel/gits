@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: MIT
 //
 // ===================== end_copyright_notice ==============================
+## Without these arguments the template renders every command as one file, as the tests do.
+<%page args="part_index=0, part_count=1, command_count=None"/>\
 ${AUTO_GENERATED_HEADER}
 
 // Recorder-owned wrapper for every command the interceptor forwards to (see
@@ -37,6 +39,10 @@ ${AUTO_GENERATED_HEADER}
 // object_name_override_for() comes from codegen/object_name_lifecycle.py, which classifies GL
 // object-name (GLuint) fields the same way handle_lifecycle.py does for HGLRC - see
 // docs/development/opengl-object-name-mapping-plan.md.
+//
+// The wrappers are split into several files, each with a part of the commands, so that they
+// compile in parallel. Each part adds its wrappers to the lookup of GetGeneratedRecorderWrapper(),
+// which part 0 defines.
 
 #include "bufferShadowService.h"
 #include "captureManager.h"
@@ -784,15 +790,13 @@ ${lifecycle_updates(cmd, '  ')}\
 % endfor
 } // namespace
 
-void* GetGeneratedRecorderWrapper(const char* name) {
-  // Checked first so glMapBufferRange/glUnmapBuffer never reach their own generated entries
-  // below - see docs/development/opengl-buffer-map-tracking-plan.md's Decision 3. Maps are tracked
-  // only while recording.
-  if (RecordingEnabled()) {
-    if (void* custom = GetCustomRecorderWrapper(name)) {
-      return custom;
-    }
-  }
+% if part_index == 0:
+% for other_part in range(1, part_count):
+void AddRecorderWrappers${other_part}(std::unordered_map<std::string_view, void*>& nameToWrapper);
+% endfor
+
+% endif
+void AddRecorderWrappers${part_index}(std::unordered_map<std::string_view, void*>& nameToWrapper) {
   // A braced map initializer would construct every key inline, which makes this function very
   // slow to compile.
   struct WrapperEntry {
@@ -804,12 +808,27 @@ void* GetGeneratedRecorderWrapper(const char* name) {
     {"${cmd.name}", reinterpret_cast<void*>(&Wrapper_${cmd.name})},
 % endfor
   };
+  for (const WrapperEntry& entry : entries) {
+    nameToWrapper.emplace(entry.Name, entry.Wrapper);
+  }
+}
+% if part_index == 0:
+
+void* GetGeneratedRecorderWrapper(const char* name) {
+  // Checked first so glMapBufferRange/glUnmapBuffer never reach their own generated entries
+  // below - see docs/development/opengl-buffer-map-tracking-plan.md's Decision 3. Maps are tracked
+  // only while recording.
+  if (RecordingEnabled()) {
+    if (void* custom = GetCustomRecorderWrapper(name)) {
+      return custom;
+    }
+  }
   static const std::unordered_map<std::string_view, void*> nameToWrapper = [] {
     std::unordered_map<std::string_view, void*> map;
-    map.reserve(std::size(entries));
-    for (const WrapperEntry& entry : entries) {
-      map.emplace(entry.Name, entry.Wrapper);
-    }
+    map.reserve(${command_count if command_count is not None else len(commands)});
+% for other_part in range(part_count):
+    AddRecorderWrappers${other_part}(map);
+% endfor
     return map;
   }();
   auto it = nameToWrapper.find(name);
@@ -818,5 +837,6 @@ void* GetGeneratedRecorderWrapper(const char* name) {
   }
   return it->second;
 }
+% endif
 
 } // namespace gits::opengl

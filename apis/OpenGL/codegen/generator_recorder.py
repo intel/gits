@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 from buffer_content_hooks import buffer_content_hooks
 from client_array_draws import client_array_draws, client_array_setters
-from generator_helpers import mako_write
+from generator_helpers import mako_write, mako_write_parts
 from handle_lifecycle import (
     CONTEXT_SHARE_PARAM,
     FRAME_END_COMMANDS,
@@ -179,6 +179,11 @@ def pre_hook_key_pair_commands(commands: list[Command]) -> frozenset[str]:
     return pre_hook
 
 
+# The recorder wrappers are split into this many files. Changing it also requires changing the
+# recorderWrappersNAuto.cpp lists in apis/OpenGL/codegen/CMakeLists.txt and
+# apis/OpenGL/recorder/CMakeLists.txt, which the build does not derive.
+RECORDER_WRAPPER_PARTS = 4
+
 # GLX drawables and the X windows and pixmaps they are created for, which EncoderLayer records as
 # their GlxDrawableIdentityService identities (recorder/include/glxDrawableIdentityService.h).
 GLX_DRAWABLE_BASE_TYPES: frozenset[str] = frozenset({
@@ -230,22 +235,22 @@ def generate_recorder_files(commands: list[Command]) -> None:
                'recorder/clientArraysLayerAuto.h', client_array_draws=draws)
     mako_write('templates/clientArraysLayerAuto.cpp.mako',
                'recorder/clientArraysLayerAuto.cpp', client_array_draws=draws)
-    mako_write('templates/recorderWrappersAuto.cpp.mako',
-               'recorder/recorderWrappersAuto.cpp', commands=commands,
-               handle_creating_commands=HANDLE_CREATING_COMMANDS,
-               handle_param_to_erase_on_success=HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
-               mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES,
-               context_share_param=CONTEXT_SHARE_PARAM,
-               share_lists_commands=SHARE_LISTS_COMMANDS,
-               pre_hook_key_pair_commands=pre_hook_key_pair_commands(commands),
-               post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
-               pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
-               frame_end_commands=FRAME_END_COMMANDS,
-               mapped_write_publishers=mapped_write_publishers(commands),
-               query_buffer_publishers=query_buffer_publishers(commands),
-               primitive_pair_commands=PRIMITIVE_PAIR_COMMANDS,
-               client_array_setters=client_array_setters(commands),
-               buffer_content_hooks=buffer_content_hooks(commands))
+    mako_write_parts('templates/recorderWrappersAuto.cpp.mako',
+                     'recorder/recorderWrappers{}Auto.cpp', RECORDER_WRAPPER_PARTS, commands,
+                     handle_creating_commands=HANDLE_CREATING_COMMANDS,
+                     handle_param_to_erase_on_success=HANDLE_PARAM_TO_ERASE_ON_SUCCESS,
+                     mapped_handle_service_names=MAPPED_HANDLE_SERVICE_NAMES,
+                     context_share_param=CONTEXT_SHARE_PARAM,
+                     share_lists_commands=SHARE_LISTS_COMMANDS,
+                     pre_hook_key_pair_commands=pre_hook_key_pair_commands(commands),
+                     post_hook_key_pair_commands=POST_HOOK_KEY_PAIR_COMMANDS,
+                     pre_hook_extra_key_commands=PRE_HOOK_EXTRA_KEY_COMMANDS,
+                     frame_end_commands=FRAME_END_COMMANDS,
+                     mapped_write_publishers=mapped_write_publishers(commands),
+                     query_buffer_publishers=query_buffer_publishers(commands),
+                     primitive_pair_commands=PRIMITIVE_PAIR_COMMANDS,
+                     client_array_setters=client_array_setters(commands),
+                     buffer_content_hooks=buffer_content_hooks(commands))
     # EncoderLayer (docs/development/opengl-layer-architecture-alignment-plan.md): the sole,
     # last-registered Post layer, dispatched through by the wrapper above via its
     # GetPostLayers() loop instead of calling CaptureManager::RecordCommand() inline.

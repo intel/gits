@@ -377,3 +377,40 @@ def mako_write(inpath: str, outpath: str, **kwargs) -> None:
     destination = Path('..') / outpath
     with destination.open('w') as fout:
         fout.write(rendered)
+
+
+def mako_render_parts(inpath: str, part_count: int, commands: list[Command],
+                      **kwargs) -> list[str]:
+    """Render a template part_count times, each with its own contiguous part of commands.
+
+    The template also gets part_index, part_count and command_count, the count of all commands.
+    Raise ValueError if a part would get no commands and RuntimeError if rendering fails.
+    """
+    if not 0 < part_count <= len(commands):
+        raise ValueError(f'Cannot split {len(commands)} commands into {part_count} parts')
+    part_size, remainder = divmod(len(commands), part_count)
+    parts = []
+    start = 0
+    for part_index in range(part_count):
+        end = start + part_size + (1 if part_index < remainder else 0)
+        rendered = mako_render(inpath, commands=commands[start:end], part_index=part_index,
+                               part_count=part_count, command_count=len(commands), **kwargs)
+        if rendered is None:
+            raise RuntimeError(f'Failed to render part {part_index} of {inpath}')
+        parts.append(rendered)
+        start = end
+    return parts
+
+
+def mako_write_parts(inpath: str, outpath_pattern: str, part_count: int,
+                     commands: list[Command], **kwargs) -> None:
+    """Render a template into part_count files, so that they compile in parallel.
+
+    The parts are rendered as by mako_render_parts(), and part i is written to
+    outpath_pattern.format(i). Raise if rendering any part fails, leaving all destinations
+    unchanged.
+    """
+    parts = mako_render_parts(inpath, part_count, commands, **kwargs)
+    for part_index, rendered in enumerate(parts):
+        with (Path('..') / outpath_pattern.format(part_index)).open('w') as fout:
+            fout.write(rendered)

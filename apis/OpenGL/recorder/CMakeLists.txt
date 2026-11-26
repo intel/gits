@@ -11,7 +11,10 @@ set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/clientArraysLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/clientArraysLayerAuto.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappers0Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappers1Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappers2Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/recorderWrappers3Auto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)
 source_group("Generated Files" FILES ${GENERATED_SRC})

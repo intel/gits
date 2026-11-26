@@ -90,7 +90,10 @@ set(OPENGL_GENERATED_RECORDER_FILES
   ${OPENGL_RECORDER_DIR}/encoderLayerAuto.cpp
   ${OPENGL_RECORDER_DIR}/clientArraysLayerAuto.h
   ${OPENGL_RECORDER_DIR}/clientArraysLayerAuto.cpp
-  ${OPENGL_RECORDER_DIR}/recorderWrappersAuto.cpp
+  ${OPENGL_RECORDER_DIR}/recorderWrappers0Auto.cpp
+  ${OPENGL_RECORDER_DIR}/recorderWrappers1Auto.cpp
+  ${OPENGL_RECORDER_DIR}/recorderWrappers2Auto.cpp
+  ${OPENGL_RECORDER_DIR}/recorderWrappers3Auto.cpp
 )
 set(OPENGL_PLAYER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../player)
 set(OPENGL_GENERATED_PLAYER_FILES
