@@ -33,6 +33,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # Solution folder grouping the GUI applications (launcher, studio).
 set(GUI_APPS_FOLDER "gui_apps")
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY TRUE)
+# Static and object libraries don't link, so let them compile without waiting for the libraries
+# they link to. Dependencies on code generation and custom commands are kept (CMake 3.19+).
+set(CMAKE_OPTIMIZE_DEPENDENCIES ON)
 
 # build options
 option(WITH_VULKAN "Build Vulkan component" ON)
