@@ -102,16 +102,25 @@ namespace {
 // (discardedOutputElements.h), the recorded capacity of a capacity-sized result, or 0. Other
 // results have a fixed count of at most 16 values (pointer_length_derivation.py's
 // _DISCARDED_OUTPUT_LENS); the minimum capacity is far above it. `Slot` is the parameter index,
-// so outputs of one call never share a buffer.
+// so outputs of one call never share a buffer. The buffers hold bytes, so that each element type
+// does not instantiate its own thread_local vector, which is slow to compile.
 constexpr size_t DISCARDED_OUTPUT_MIN_ELEMENTS = 4096;
+
+void* DiscardedOutputScratchBytes(size_t slot, size_t bytes) {
+  thread_local std::vector<std::vector<std::byte>> scratch;
+  if (scratch.size() <= slot) {
+    scratch.resize(slot + 1);
+  }
+  if (scratch[slot].size() < bytes) {
+    scratch[slot].resize(bytes);
+  }
+  return scratch[slot].data();
+}
 
 template <typename T, size_t Slot>
 T* DiscardedOutputScratch(size_t listElements) {
-  thread_local std::vector<T> scratch(DISCARDED_OUTPUT_MIN_ELEMENTS);
-  if (scratch.size() < listElements) {
-    scratch.resize(listElements);
-  }
-  return scratch.data();
+  return static_cast<T*>(DiscardedOutputScratchBytes(
+      Slot, std::max(listElements, DISCARDED_OUTPUT_MIN_ELEMENTS) * sizeof(T)));
 }
 
 } // namespace
