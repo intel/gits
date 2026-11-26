@@ -11,7 +11,8 @@
 import re
 
 from custom_player_runners import CUSTOM_PLAYER_RUNNERS, UNREPLAYED_COMMANDS
-from generator_helpers import PLATFORM_GUARDS, mako_write, object_name_override_for
+from generator_helpers import (PLATFORM_GUARDS, mako_write, mako_write_parts,
+                               object_name_override_for)
 from handle_lifecycle import FRAME_END_COMMANDS, HANDLE_CREATING_COMMANDS, SHARE_LISTS_COMMANDS
 from intermediates import Command
 from object_name_lifecycle import ObjectNameRole
@@ -54,6 +55,11 @@ _PLAYER_DIRECT_DISPATCH_COMMANDS: frozenset[str] = frozenset({
     'glMapBufferRange',
     'glMapTexture2DINTEL',
 })
+
+# The command runners are split into this many files. Changing it also requires changing the
+# commandRunnersNAuto.cpp lists in apis/OpenGL/codegen/CMakeLists.txt and
+# apis/OpenGL/player/CMakeLists.txt, which the build does not derive.
+COMMAND_RUNNER_PARTS = 4
 
 # Commands subcapture state restore leaves out of the display lists it writes again. GL executes
 # them instead of compiling them, and they create, delete or change objects the restore writes
@@ -111,12 +117,13 @@ def generate_player_files(commands: list[Command], enum_groups: set[str]) -> Non
     mako_write('templates/commandRunnersAuto.h.mako',
                'player/include/commandRunnersAuto.h', commands=commands,
                platform_guards=PLATFORM_GUARDS)
-    mako_write('templates/commandRunnersAuto.cpp.mako',
-               'player/commandRunnersAuto.cpp', commands=commands,
-               handle_creating_commands=HANDLE_CREATING_COMMANDS,
-               share_lists_commands=SHARE_LISTS_COMMANDS,
-               unreplayed_commands=UNREPLAYED_COMMANDS,
-               platform_guards=PLATFORM_GUARDS)
+    # Only enabled commands get a runner, so the parts split them alone.
+    mako_write_parts('templates/commandRunnersAuto.cpp.mako', 'player/commandRunners{}Auto.cpp',
+                     COMMAND_RUNNER_PARTS, [c for c in commands if c.enabled],
+                     handle_creating_commands=HANDLE_CREATING_COMMANDS,
+                     share_lists_commands=SHARE_LISTS_COMMANDS,
+                     unreplayed_commands=UNREPLAYED_COMMANDS,
+                     platform_guards=PLATFORM_GUARDS)
     mako_write('templates/openGLCommandFactoryAuto.cpp.mako',
                'player/openGLCommandFactoryAuto.cpp', commands=commands,
                custom_player_runners=CUSTOM_PLAYER_RUNNERS,

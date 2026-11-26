@@ -99,7 +99,10 @@ set(OPENGL_PLAYER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../player)
 set(OPENGL_GENERATED_PLAYER_FILES
   ${OPENGL_PLAYER_DIR}/dispatchWarmUpAuto.cpp
   ${OPENGL_PLAYER_DIR}/include/commandRunnersAuto.h
-  ${OPENGL_PLAYER_DIR}/commandRunnersAuto.cpp
+  ${OPENGL_PLAYER_DIR}/commandRunners0Auto.cpp
+  ${OPENGL_PLAYER_DIR}/commandRunners1Auto.cpp
+  ${OPENGL_PLAYER_DIR}/commandRunners2Auto.cpp
+  ${OPENGL_PLAYER_DIR}/commandRunners3Auto.cpp
   ${OPENGL_PLAYER_DIR}/openGLCommandFactoryAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/../layers/trace/traceLayerAuto.cpp

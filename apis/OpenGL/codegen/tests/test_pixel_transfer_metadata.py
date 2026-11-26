@@ -613,13 +613,16 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
             '!command.m_${p.name}IsBufferOffset.Value && '
             'command.m_${p.name}RawPointer.Value != 0)', source)
 
+    def generated_runners(self) -> str:
+        parts = sorted((CODEGEN_DIR.parent / 'player').glob('commandRunners[0-9]*Auto.cpp'))
+        if not parts:
+            self.skipTest('generated commandRunners*Auto.cpp not present (codegen not run)')
+        return ''.join(part.read_text(encoding='utf-8') for part in parts)
+
     def test_generated_runner_bypasses_skip_for_gltteximage2d(self) -> None:
         # End-to-end check against the actual generated (not template) source for a real
         # enabled command: confirms codegen output, not just template text, reflects the fix.
-        generated = CODEGEN_DIR.parent / 'player' / 'commandRunnersAuto.cpp'
-        if not generated.exists():
-            self.skipTest('generated commandRunnersAuto.cpp not present (codegen not run)')
-        source = generated.read_text(encoding='utf-8')
+        source = self.generated_runners()
         match = re.search(
             r'glTexImage2DPixelTransferSizeUnknown = (.*?);', source)
         self.assertIsNotNone(match, 'glTexImage2DPixelTransferSizeUnknown not found')
@@ -632,10 +635,7 @@ class PixelBufferOffsetFlagCppHelperTests(unittest.TestCase):
     def test_generated_runner_skips_null_pointer_updates_and_readbacks(self) -> None:
         # A null pointer allocates only for glTexImage*; updates, draws and readbacks would
         # read or write through it, so they keep the skip.
-        generated = CODEGEN_DIR.parent / 'player' / 'commandRunnersAuto.cpp'
-        if not generated.exists():
-            self.skipTest('generated commandRunnersAuto.cpp not present (codegen not run)')
-        source = generated.read_text(encoding='utf-8')
+        source = self.generated_runners()
         for name in ('glTexSubImage2D', 'glDrawPixels', 'glReadPixels'):
             match = re.search(name + r'PixelTransferSizeUnknown = (.*?);', source)
             self.assertIsNotNone(match, name + 'PixelTransferSizeUnknown not found')

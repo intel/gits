@@ -9,7 +9,10 @@
 set(GENERATED_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/dispatchWarmUpAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/commandRunnersAuto.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunnersAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners0Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners1Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners2Auto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/commandRunners3Auto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/openGLCommandFactoryAuto.cpp
 )
 set_source_files_properties(${GENERATED_SRC} PROPERTIES GENERATED TRUE)

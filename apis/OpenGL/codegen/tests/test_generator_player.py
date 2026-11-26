@@ -6,8 +6,10 @@
 #
 # ===================== end_copyright_notice ==============================
 
-"""Tests for the subcapture command sets generator_player.py derives."""
+"""Tests for the subcapture command sets generator_player.py derives and the command runner
+parts it generates."""
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -15,7 +17,10 @@ from pathlib import Path
 CODEGEN_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(CODEGEN_DIR))
 
-from generator_player import analyzed_object_params, display_list_commands
+from custom_player_runners import UNREPLAYED_COMMANDS
+from generator_helpers import PLATFORM_GUARDS, mako_render_parts
+from generator_player import COMMAND_RUNNER_PARTS, analyzed_object_params, display_list_commands
+from handle_lifecycle import HANDLE_CREATING_COMMANDS, SHARE_LISTS_COMMANDS
 from intermediates import Api
 from intermediates_creator import extract_commands_from_registry, get_commands_from_xml_data
 from test_intermediates_creator import load_registry
@@ -76,6 +81,57 @@ class GeneratorPlayerTests(unittest.TestCase):
                      'wglSwapBuffers', 'glClear'):
             with self.subTest(command=name):
                 self.assertNotIn(name, analyzed)
+
+
+class CommandRunnerPartsTests(unittest.TestCase):
+    """The command runners are generated into COMMAND_RUNNER_PARTS files, which share the
+    discarded output buffers defined in part 0."""
+
+    TEMPLATE = str(CODEGEN_DIR / 'templates' / 'commandRunnersAuto.cpp.mako')
+    SCRATCH = 'void* DiscardedOutputScratchBytes(size_t slot, size_t bytes)'
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.commands = list(get_commands().values())
+        for command in cls.commands:
+            command.enabled = True
+        cls.parts = cls.render(cls.commands)
+
+    @classmethod
+    def render(cls, commands) -> list[str]:
+        return mako_render_parts(cls.TEMPLATE, COMMAND_RUNNER_PARTS, commands,
+                                 handle_creating_commands=HANDLE_CREATING_COMMANDS,
+                                 share_lists_commands=SHARE_LISTS_COMMANDS,
+                                 unreplayed_commands=UNREPLAYED_COMMANDS,
+                                 platform_guards=PLATFORM_GUARDS)
+
+    def test_every_runner_is_defined_exactly_once_in_command_order(self) -> None:
+        defined = [re.findall(r'^void (\w+)Runner::Run\(\) \{$', part, re.MULTILINE)
+                   for part in self.parts]
+        self.assertEqual([name for names in defined for name in names],
+                         [command.name for command in self.commands])
+        sizes = [len(names) for names in defined]
+        self.assertLessEqual(max(sizes) - min(sizes), 1)
+
+    def test_only_part_0_defines_the_discarded_output_buffers(self) -> None:
+        self.assertEqual([part.count(self.SCRATCH + ' {') for part in self.parts],
+                         [1] + [0] * (COMMAND_RUNNER_PARTS - 1))
+        self.assertEqual([part.count(self.SCRATCH + ';') for part in self.parts],
+                         [0] + [1] * (COMMAND_RUNNER_PARTS - 1))
+        self.assertEqual([part.count('thread_local std::vector') for part in self.parts],
+                         [1] + [0] * (COMMAND_RUNNER_PARTS - 1))
+
+    def test_a_part_without_commands_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            self.render(self.commands[:COMMAND_RUNNER_PARTS - 1])
+
+    def test_the_build_lists_every_part(self) -> None:
+        expected = [f'commandRunners{index}Auto.cpp' for index in range(COMMAND_RUNNER_PARTS)]
+        for cmake_lists in (CODEGEN_DIR / 'CMakeLists.txt',
+                            CODEGEN_DIR.parent / 'player' / 'CMakeLists.txt'):
+            with self.subTest(file=str(cmake_lists)):
+                self.assertEqual(
+                    re.findall(r'commandRunners\d+Auto\.cpp', cmake_lists.read_text()), expected)
 
 
 if __name__ == '__main__':

@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: MIT
 //
 // ===================== end_copyright_notice ==============================
+## Without these arguments the template renders every command as one file, as the tests do.
+<%page args="part_index=0, part_count=1"/>\
 ${AUTO_GENERATED_HEADER}
 
 // Generated Run() per enabled command - see
@@ -71,6 +73,9 @@ ${AUTO_GENERATED_HEADER}
 // driver call is skipped entirely (with a degraded-fidelity warning) whenever the latter,
 // since an empty-but-HasValue-true captured Data buffer would otherwise stand in for a buffer
 // the driver actually reads/writes a real, nonzero range through at replay time.
+//
+// The runners are split into several files, each with a part of the commands, so that they
+// compile in parallel.
 
 #include "commandRunnersAuto.h"
 #include "bindlessHandleMapService.h"
@@ -95,17 +100,15 @@ ${AUTO_GENERATED_HEADER}
 
 namespace gits::opengl {
 
-namespace {
-
 // Destination for a DISCARDED_OUTPUT query result (pointer_metadata.py), which is never
 // recorded. `listElements` is the live length of a list result, queried from the replay driver
 // (discardedOutputElements.h), the recorded capacity of a capacity-sized result, or 0. Other
 // results have a fixed count of at most 16 values (pointer_length_derivation.py's
 // _DISCARDED_OUTPUT_LENS); the minimum capacity is far above it. `Slot` is the parameter index,
 // so outputs of one call never share a buffer. The buffers hold bytes, so that each element type
-// does not instantiate its own thread_local vector, which is slow to compile.
-constexpr size_t DISCARDED_OUTPUT_MIN_ELEMENTS = 4096;
-
+// does not instantiate its own thread_local vector, which is slow to compile. Part 0 defines
+// them for all parts.
+% if part_index == 0:
 void* DiscardedOutputScratchBytes(size_t slot, size_t bytes) {
   thread_local std::vector<std::vector<std::byte>> scratch;
   if (scratch.size() <= slot) {
@@ -116,6 +119,13 @@ void* DiscardedOutputScratchBytes(size_t slot, size_t bytes) {
   }
   return scratch[slot].data();
 }
+% else:
+void* DiscardedOutputScratchBytes(size_t slot, size_t bytes);
+% endif
+
+namespace {
+
+constexpr size_t DISCARDED_OUTPUT_MIN_ELEMENTS = 4096;
 
 template <typename T, size_t Slot>
 T* DiscardedOutputScratch(size_t listElements) {
