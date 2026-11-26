@@ -40,10 +40,6 @@ class Registry:
         self._load_enums(root)
         self._load_commands(root)
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _key(elem: ET.Element, name: str) -> str | tuple[str, str]:
         """Return the dict key for an element (mirrors reg.py addElementInfo)."""
@@ -54,21 +50,13 @@ class Registry:
 
     def _load_enums(self, root: ET.Element) -> None:
         for enum in root.findall('enums/enum'):
-            name = enum.get('name', '')
-            key = self._key(enum, name)
-            if key not in self.enumdict:
-                self.enumdict[key] = enum
+            self.enumdict.setdefault(self._key(enum, enum.get('name', '')), enum)
 
     def _load_commands(self, root: ET.Element) -> None:
         for cmd in root.findall('commands/command'):
             # reg.py injects 'name' from <proto><name> when the attribute is absent.
             if 'name' not in cmd.attrib:
-                proto = cmd.find('proto')
-                if proto is not None:
-                    name_elem = proto.find('name')
-                    if name_elem is not None:
-                        cmd.attrib['name'] = name_elem.text or ''
-            name = cmd.get('name', '')
-            key = self._key(cmd, name)
-            if key not in self.cmddict:
-                self.cmddict[key] = cmd
+                proto_name = cmd.findtext('proto/name')
+                if proto_name is not None:
+                    cmd.attrib['name'] = proto_name
+            self.cmddict.setdefault(self._key(cmd, cmd.get('name', '')), cmd)

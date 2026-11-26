@@ -14,7 +14,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from intermediates import Api, Command, EnumValue
-from intermediates_creator import strip_suffix
+from intermediates_creator import SENTINEL_GROUP, strip_suffix
 
 # ---------------------------------------------------------------------------
 # Helpers for find_duplicate_enum_values
@@ -49,9 +49,6 @@ def _build_suffix_candidates(alias_clusters: list[list[EnumValue]]) -> list[list
 # ---------------------------------------------------------------------------
 # Result type
 # ---------------------------------------------------------------------------
-
-SENTINEL_GROUP = ''  # Used for enums that belong to no group.
-
 
 @dataclass
 class BucketAnalysis:
@@ -231,13 +228,12 @@ def inspect_enums(label: str, enums: list[EnumValue]) -> None:
     print(f'  Enums without groups: {groupless}, distinct groups: {len(distinct_groups)}')
 
 
-def inspect_cross_file_enums(labeled_enums: dict[str, list[EnumValue]]) -> None:
-    # TODO: adjust logic to match new input type (dict instead of list of tuples).
+def inspect_cross_file_enums(labeled_enums: dict[Api, list[EnumValue]]) -> None:
     """Print cross-file assumption checks for a collection of enum lists."""
     print('\n=== Cross-file enum inspection ===')
 
     # Check for same-named enums across files and whether their values match.
-    by_name: dict[str, list[tuple[str, EnumValue]]] = defaultdict(list)
+    by_name: dict[str, list[tuple[Api, EnumValue]]] = defaultdict(list)
     for label, enums in labeled_enums.items():
         for e in enums:
             by_name[e.name].append((label, e))

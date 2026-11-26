@@ -123,22 +123,12 @@ def _undefined(command: str, names: set[str]) -> str | None:
     return None if ref is None else f'OnUndefined({ref})'
 
 
-def _bind(command: str, names: set[str]) -> str | None:
-    if not {'target', 'buffer'} <= names:
-        return None
-    return f'OnBind({_command(command)}, target, buffer)'
-
-
-def _bind_indexed(command: str, names: set[str]) -> str | None:
-    if not {'target', 'buffer'} <= names:
-        return None
-    return f'OnBindIndexed({_command(command)}, target, buffer)'
-
-
-def _bind_indexed_multi(command: str, names: set[str]) -> str | None:
-    if not {'target', 'count', 'buffers'} <= names:
-        return None
-    return f'OnBindIndexed({_command(command)}, target, count, buffers)'
+def _bind(hook: str, *params: str):
+    def build(command: str, names: set[str]) -> str | None:
+        if not set(params) <= names:
+            return None
+        return f'{hook}({_command(command)}, {", ".join(params)})'
+    return build
 
 
 def _delete(command: str, names: set[str]) -> str | None:
@@ -173,9 +163,11 @@ _FAMILIES = (
     # Maps MapTrackingService tracks have custom wrappers (mapTrackingWrappers.cpp) that update
     # the copies themselves; these generated wrappers only run for the untracked ones.
     (re.compile(r'^glMap(Named)?Buffer(Range)?(ARB|EXT|OES)?$'), _undefined),
-    (re.compile(r'^glBindBuffer(ARB)?$'), _bind),
-    (re.compile(r'^glBindBuffer(Base|Range|Offset)(EXT|NV)?$'), _bind_indexed),
-    (re.compile(r'^glBindBuffers(Base|Range)$'), _bind_indexed_multi),
+    (re.compile(r'^glBindBuffer(ARB)?$'), _bind('OnBind', 'target', 'buffer')),
+    (re.compile(r'^glBindBuffer(Base|Range|Offset)(EXT|NV)?$'),
+     _bind('OnBindIndexed', 'target', 'buffer')),
+    (re.compile(r'^glBindBuffers(Base|Range)$'),
+     _bind('OnBindIndexed', 'target', 'count', 'buffers')),
     (re.compile(r'^glDeleteBuffers(ARB)?$'), _delete),
 )
 

@@ -37,7 +37,7 @@ from pixel_transfer_metadata import derive_pixel_transfer_override
 from pname_value_counts import derive_pname_value_count_override
 from pointer_metadata import POINTER_PARAM_OVERRIDES, LengthSourceKind, PointerDirection, PointerParamOverride
 from registry import Registry
-from pointer_length_derivation import derive_pointer_param_override
+from pointer_length_derivation import derive_pointer_param_override, has_scalar_sibling
 from tex_sampler_parameter_metadata import derive_tex_sampler_parameter_override
 from uniform_setter_metadata import derive_uniform_setter_override
 
@@ -103,8 +103,7 @@ def extract_commands_from_registry(registry: Registry) -> list[dict[str, Any]]:
     """
     raw_commands: list[dict[str, Any]] = []
 
-    for cmd_obj in registry.cmddict.values():
-        cmd_elem = cmd_obj
+    for cmd_elem in registry.cmddict.values():
         proto_elem = cmd_elem.find('proto')
         alias_elem = cmd_elem.find('alias')
 
@@ -205,13 +204,8 @@ def find_unknown_enum_attributes(raw_enums: list[dict[str, Any]]) -> set[str]:
     known_attribs.remove('groups')
     known_attribs.add('group') # XMLs use 'group', our EnumValue uses 'groups'.
 
-    novel: set[str] = set()
-    for enum_dict in raw_enums:
-        for attrib in enum_dict:
-            if attrib not in known_attribs:
-                novel.add(attrib)
-
-    return novel
+    return {attrib for enum_dict in raw_enums for attrib in enum_dict
+            if attrib not in known_attribs}
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +279,27 @@ def normalize_attribs(attribs: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _find_param(params: list[Parameter], name: str | None) -> Parameter | None:
+    """Return the parameter called `name`, or None if `params` has none."""
+    return next((p for p in params if p.name == name), None)
+
+
+def _require_scalar_sibling(
+    where: str, other_params: list[Parameter], sibling_name: str | None, field: str,
+) -> None:
+    """Raise ValueError unless `sibling_name`, named by the override's `field`, is a plain
+    scalar parameter of this command."""
+    sibling = _find_param(other_params, sibling_name)
+    if sibling is None:
+        raise ValueError(
+            f"{where}: {field} names '{sibling_name}', which does not exist on this command"
+        )
+    if not sibling.type_facts.is_scalar:
+        raise ValueError(
+            f"{where}: {field} sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
+        )
+
+
 def _validate_pointer_override(
     command_name: str, param: Parameter, override: PointerParamOverride, other_params: list[Parameter],
 ) -> None:
@@ -292,10 +307,11 @@ def _validate_pointer_override(
     signature - a broken table entry is a codegen bug, caught at generation time, not a reason
     to silently leave the command disabled (contrast: a *missing* entry is always silent and
     safe - see _is_param_capturable)."""
+    where = f'{command_name}.{param.name}'
+    kind = override.length_source_kind
     if override.length_multiplier < 1:
         raise ValueError(
-            f"{command_name}.{param.name}: length_multiplier must be >= 1, got "
-            f"{override.length_multiplier}"
+            f"{where}: length_multiplier must be >= 1, got {override.length_multiplier}"
         )
     # unpack_pbo_guard/query_buffer_guard each rely on their fixed
     # direction to decide which Mako call site actually wires the corresponding
@@ -305,90 +321,79 @@ def _validate_pointer_override(
     # broken-table-entry-as-a-bug this function already treats every other shape mismatch as.
     if override.unpack_pbo_guard and override.direction is not PointerDirection.IN:
         raise ValueError(
-            f"{command_name}.{param.name}: unpack_pbo_guard requires IN direction - "
+            f"{where}: unpack_pbo_guard requires IN direction - "
             f"GL_PIXEL_UNPACK_BUFFER only ever redirects an application-supplied (i.e. "
             f"IN-direction) pointer, never a driver-written OUT one"
         )
-    if override.unpack_pbo_guard and override.length_source_kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
+    if override.unpack_pbo_guard and kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
         raise ValueError(
-            f"{command_name}.{param.name}: unpack_pbo_guard is redundant with "
+            f"{where}: unpack_pbo_guard is redundant with "
             f"PIXEL_TRANSFER_SIZE, which already applies this exact guard unconditionally - "
             f"do not set both"
         )
     if override.query_buffer_guard and override.direction is not PointerDirection.OUT:
         raise ValueError(
-            f"{command_name}.{param.name}: query_buffer_guard requires OUT direction - "
+            f"{where}: query_buffer_guard requires OUT direction - "
             f"GL_QUERY_BUFFER only ever redirects a driver-written (i.e. OUT-direction) "
             f"result, never an application-supplied IN one"
         )
-    if override.length_source_kind is LengthSourceKind.SIBLING_PARAM:
-        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
+    if kind in (LengthSourceKind.SIBLING_PARAM, LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY):
+        # OPAQUE_BIT_PATTERN_ARRAY has the same IN-only direction restriction as the
+        # single-pointer OPAQUE_BIT_PATTERN case below, for the identical reason: every element
+        # is a value (a client-memory pointer or buffer-relative offset), never a buffer the
+        # driver writes into - there is no OUT-direction "array of opaque values the driver
+        # produces" shape in gl.xml today, and commandsAuto.h.mako's own
+        # OPAQUE_BIT_PATTERN_ARRAY branch only ever generates an IN-direction
+        # (eager-capture-before-the-call) constructor call, with no OUT-direction counterpart to
+        # fall back to. Its sibling length is validated like SIBLING_PARAM's - see that
+        # LengthSourceKind's own comment (pointer_metadata.py) for why the element treatment
+        # differs even though the length-discovery mechanism does not.
+        if (kind is LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY
+                and override.direction is not PointerDirection.IN):
+            raise ValueError(
+                f"{where}: OPAQUE_BIT_PATTERN_ARRAY override must be IN "
+                f"direction - each element is a value, not part of a buffer the driver writes "
+                f"into"
+            )
+        sibling = _find_param(other_params, override.length_source_value)
         if sibling is None:
             raise ValueError(
-                f"{command_name}.{param.name}: POINTER_PARAM_OVERRIDES names sibling length "
+                f"{where}: POINTER_PARAM_OVERRIDES names sibling length "
                 f"parameter '{override.length_source_value}', which does not exist on this command"
             )
         if not sibling.type_facts.is_scalar:
             raise ValueError(
-                f"{command_name}.{param.name}: length sibling '{sibling.name}' is not a plain "
+                f"{where}: length sibling '{sibling.name}' is not a plain "
                 f"scalar ({sibling.type})"
             )
-    elif override.length_source_kind is LengthSourceKind.FIXED_COUNT:
+    elif kind is LengthSourceKind.FIXED_COUNT:
         if override.length_source_value is None or not override.length_source_value.isdigit():
             raise ValueError(
-                f"{command_name}.{param.name}: FIXED_COUNT override needs a non-negative "
+                f"{where}: FIXED_COUNT override needs a non-negative "
                 f"integer literal, got {override.length_source_value!r}"
             )
-    elif override.length_source_kind is LengthSourceKind.OPAQUE_BIT_PATTERN:
+    elif kind is LengthSourceKind.OPAQUE_BIT_PATTERN:
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN override must be IN "
+                f"{where}: OPAQUE_BIT_PATTERN override must be IN "
                 f"direction - the pointer's bit pattern is a value, not a buffer the driver "
                 f"writes into"
             )
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN override must not set "
+                f"{where}: OPAQUE_BIT_PATTERN override must not set "
                 f"length_source_value - there is no length, only one opaque value"
             )
-    elif override.length_source_kind is LengthSourceKind.OPAQUE_BIT_PATTERN_ARRAY:
-        # Same IN-only direction restriction as the single-pointer OPAQUE_BIT_PATTERN case
-        # above, for the identical reason: every element is a value (a client-memory pointer
-        # or buffer-relative offset), never a buffer the driver writes into - there is no
-        # OUT-direction "array of opaque values the driver produces" shape in gl.xml today, and
-        # commandsAuto.h.mako's own OPAQUE_BIT_PATTERN_ARRAY branch only ever generates an
-        # IN-direction (eager-capture-before-the-call) constructor call, with no OUT-direction
-        # counterpart to fall back to.
-        if override.direction is not PointerDirection.IN:
-            raise ValueError(
-                f"{command_name}.{param.name}: OPAQUE_BIT_PATTERN_ARRAY override must be IN "
-                f"direction - each element is a value, not part of a buffer the driver writes "
-                f"into"
-            )
-        # Same sibling-length shape/validation as SIBLING_PARAM above - see that
-        # LengthSourceKind's own comment (pointer_metadata.py) for why the element treatment
-        # differs even though the length-discovery mechanism does not.
-        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
-        if sibling is None:
-            raise ValueError(
-                f"{command_name}.{param.name}: POINTER_PARAM_OVERRIDES names sibling length "
-                f"parameter '{override.length_source_value}', which does not exist on this command"
-            )
-        if not sibling.type_facts.is_scalar:
-            raise ValueError(
-                f"{command_name}.{param.name}: length sibling '{sibling.name}' is not a plain "
-                f"scalar ({sibling.type})"
-            )
-    elif override.length_source_kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
+    elif kind is LengthSourceKind.PIXEL_TRANSFER_SIZE:
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE override must not set "
+                f"{where}: PIXEL_TRANSFER_SIZE override must not set "
                 f"length_source_value - use pixel_format_param/pixel_type_param/"
                 f"pixel_width_param/pixel_height_param/pixel_depth_param instead"
             )
         if override.pixel_depth_param is not None and override.pixel_height_param is None:
             raise ValueError(
-                f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's pixel_depth_param "
+                f"{where}: PIXEL_TRANSFER_SIZE's pixel_depth_param "
                 f"requires pixel_height_param to also be set - no 1D-with-depth shape exists"
             )
         texture_level = (override.pixel_texture_target_param is not None or
@@ -397,7 +402,7 @@ def _validate_pointer_override(
             if (override.pixel_texture_target_param is None or
                     override.pixel_texture_level_param is None):
                 raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's "
+                    f"{where}: PIXEL_TRANSFER_SIZE's "
                     f"pixel_texture_target_param and pixel_texture_level_param must be set "
                     f"together"
                 )
@@ -405,12 +410,12 @@ def _validate_pointer_override(
                     override.pixel_height_param is not None or
                     override.pixel_depth_param is not None):
                 raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's texture level "
+                    f"{where}: PIXEL_TRANSFER_SIZE's texture level "
                     f"params replace pixel_width_param/pixel_height_param/pixel_depth_param"
                 )
             if override.direction is not PointerDirection.OUT:
                 raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's texture level "
+                    f"{where}: PIXEL_TRANSFER_SIZE's texture level "
                     f"params are only defined for an OUT read-back"
                 )
         required_fields = ['pixel_format_param', 'pixel_type_param']
@@ -419,8 +424,7 @@ def _validate_pointer_override(
         for field_name in required_fields:
             if getattr(override, field_name) is None:
                 raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE override must set "
-                    f"{field_name}"
+                    f"{where}: PIXEL_TRANSFER_SIZE override must set {field_name}"
                 )
         for field_name in (
             'pixel_format_param', 'pixel_type_param', 'pixel_width_param',
@@ -428,28 +432,19 @@ def _validate_pointer_override(
             'pixel_texture_level_param',
         ):
             sibling_name = getattr(override, field_name)
-            if sibling_name is None:
-                continue  # pixel_height_param/pixel_depth_param may be legitimately absent -
-                          # required-ness is already checked above.
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None:
-                raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's {field_name} names "
-                    f"'{sibling_name}', which does not exist on this command"
-                )
-            if not sibling.type_facts.is_scalar:
-                raise ValueError(
-                    f"{command_name}.{param.name}: PIXEL_TRANSFER_SIZE's {field_name} sibling "
-                    f"'{sibling.name}' is not a plain scalar ({sibling.type})"
-                )
-    elif override.length_source_kind in (
+            # pixel_height_param/pixel_depth_param may be legitimately absent - required-ness
+            # is already checked above.
+            if sibling_name is not None:
+                _require_scalar_sibling(
+                    where, other_params, sibling_name, f"PIXEL_TRANSFER_SIZE's {field_name}")
+    elif kind in (
         LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT, LengthSourceKind.PATCH_PARAMETER_VALUE_COUNT,
         LengthSourceKind.MATERIAL_PARAMETER_VALUE_COUNT, LengthSourceKind.POINT_PARAMETER_VALUE_COUNT,
         LengthSourceKind.PNAME_VALUE_COUNT,
     ):
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind} override must not "
+                f"{where}: {kind} override must not "
                 f"set length_source_value - use pname_param instead"
             )
         if override.direction is not PointerDirection.IN:
@@ -460,26 +455,13 @@ def _validate_pointer_override(
             # through to a Mako branch that would try to print a nonexistent
             # length_source_value.
             raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind} override must be "
+                f"{where}: {kind} override must be "
                 f"IN direction - no OUT-direction user exists yet, and the Mako templates have "
                 f"no OUT-direction branch for it"
             )
         if override.pname_param is None:
-            raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind} override must "
-                f"set pname_param"
-            )
-        sibling = next((p for p in other_params if p.name == override.pname_param), None)
-        if sibling is None:
-            raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind}'s pname_param "
-                f"names '{override.pname_param}', which does not exist on this command"
-            )
-        if not sibling.type_facts.is_scalar:
-            raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind}'s pname_param "
-                f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
-            )
+            raise ValueError(f"{where}: {kind} override must set pname_param")
+        _require_scalar_sibling(where, other_params, override.pname_param, f"{kind}'s pname_param")
         # tex_sampler_family is TEX_SAMPLER_PARAMETER_VALUE_COUNT-only - it
         # disambiguates GL_TEXTURE_SWIZZLE_RGBA's family-dependent legality (see
         # pointer_metadata.py's TexOrSamplerParameterFamily comment), which none of
@@ -489,18 +471,18 @@ def _validate_pointer_override(
         # Enforce both halves explicitly rather than silently ignoring a mismatched/missing
         # field on either kind - a broken table/derivation entry is a bug, matching every other
         # check in this function.
-        if override.length_source_kind is LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
+        if kind is LengthSourceKind.TEX_SAMPLER_PARAMETER_VALUE_COUNT:
             if override.tex_sampler_family is None:
                 raise ValueError(
-                    f"{command_name}.{param.name}: TEX_SAMPLER_PARAMETER_VALUE_COUNT override "
+                    f"{where}: TEX_SAMPLER_PARAMETER_VALUE_COUNT override "
                     f"must set tex_sampler_family"
                 )
         elif override.tex_sampler_family is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: {override.length_source_kind} override must not "
+                f"{where}: {kind} override must not "
                 f"set tex_sampler_family - only TEX_SAMPLER_PARAMETER_VALUE_COUNT uses it"
             )
-    elif override.length_source_kind is LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT:
+    elif kind is LengthSourceKind.VERTEX_ATTRIB_PARAMETER_VALUE_COUNT:
         # See that LengthSourceKind's own comment (pointer_metadata.py).
         # Mirrors the TEX_SAMPLER_PARAMETER_VALUE_COUNT/PATCH_PARAMETER_VALUE_COUNT block
         # above structurally (a pname_param sibling drives a real runtime helper's answer),
@@ -508,182 +490,151 @@ def _validate_pointer_override(
         # `params`, never an IN-direction setter value.
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
+                f"{where}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
                 f"must not set length_source_value - use pname_param instead"
             )
         if override.direction is not PointerDirection.OUT:
             raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
+                f"{where}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
                 f"must be OUT direction - glGetVertexAttribiv's `params` is written by the "
                 f"driver, not read from application memory"
             )
         if override.pname_param is None:
             raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
+                f"{where}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
                 f"must set pname_param"
             )
-        sibling = next((p for p in other_params if p.name == override.pname_param), None)
-        if sibling is None:
-            raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT's "
-                f"pname_param names '{override.pname_param}', which does not exist on this "
-                f"command"
-            )
-        if not sibling.type_facts.is_scalar:
-            raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT's "
-                f"pname_param sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
-            )
+        _require_scalar_sibling(where, other_params, override.pname_param,
+                                "VERTEX_ATTRIB_PARAMETER_VALUE_COUNT's pname_param")
         if override.tex_sampler_family is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
+                f"{where}: VERTEX_ATTRIB_PARAMETER_VALUE_COUNT override "
                 f"must not set tex_sampler_family - only TEX_SAMPLER_PARAMETER_VALUE_COUNT "
                 f"uses it"
             )
-    elif override.length_source_kind is LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
+    elif kind is LengthSourceKind.CLEAR_BUFFER_VALUE_COUNT:
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT override must not set "
+                f"{where}: CLEAR_BUFFER_VALUE_COUNT override must not set "
                 f"length_source_value - use clear_buffer_param instead"
             )
         if override.clear_buffer_param is None:
             raise ValueError(
-                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT override must set "
-                f"clear_buffer_param"
+                f"{where}: CLEAR_BUFFER_VALUE_COUNT override must set clear_buffer_param"
             )
-        sibling = next((p for p in other_params if p.name == override.clear_buffer_param), None)
-        if sibling is None:
-            raise ValueError(
-                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
-                f"names '{override.clear_buffer_param}', which does not exist on this command"
-            )
-        if not sibling.type_facts.is_scalar:
-            raise ValueError(
-                f"{command_name}.{param.name}: CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param "
-                f"sibling '{sibling.name}' is not a plain scalar ({sibling.type})"
-            )
-    elif override.length_source_kind is LengthSourceKind.DISCARDED_OUTPUT:
+        _require_scalar_sibling(where, other_params, override.clear_buffer_param,
+                                "CLEAR_BUFFER_VALUE_COUNT's clear_buffer_param")
+    elif kind is LengthSourceKind.DISCARDED_OUTPUT:
         if override.direction is not PointerDirection.OUT:
             raise ValueError(
-                f"{command_name}.{param.name}: DISCARDED_OUTPUT override must be OUT direction - "
+                f"{where}: DISCARDED_OUTPUT override must be OUT direction - "
                 f"an IN value the driver reads can never be dropped"
             )
-        if override.length_source_value is not None:
-            sibling = next((p for p in other_params if p.name == override.length_source_value), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
-                raise ValueError(
-                    f"{command_name}.{param.name}: DISCARDED_OUTPUT's length_source_value "
-                    f"'{override.length_source_value}' must name a scalar capacity sibling"
-                )
+        if (override.length_source_value is not None
+                and not has_scalar_sibling(other_params, override.length_source_value)):
+            raise ValueError(
+                f"{where}: DISCARDED_OUTPUT's length_source_value "
+                f"'{override.length_source_value}' must name a scalar capacity sibling"
+            )
         if param.type_facts.base_type == 'void' and param.type_facts.pointer_depth != 2:
             raise ValueError(
-                f"{command_name}.{param.name}: DISCARDED_OUTPUT needs a typed element - the "
+                f"{where}: DISCARDED_OUTPUT needs a typed element - the "
                 f"player's scratch buffer is sized in elements"
             )
-    elif override.length_source_kind is LengthSourceKind.TEXEL_BYTE_SIZE:
+    elif kind is LengthSourceKind.TEXEL_BYTE_SIZE:
         if override.length_source_value is not None:
             raise ValueError(
-                f"{command_name}.{param.name}: TEXEL_BYTE_SIZE override must not set "
+                f"{where}: TEXEL_BYTE_SIZE override must not set "
                 f"length_source_value - use pixel_format_param/pixel_type_param instead"
             )
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: TEXEL_BYTE_SIZE override must be IN direction - "
+                f"{where}: TEXEL_BYTE_SIZE override must be IN direction - "
                 f"the Mako templates have no OUT-direction branch for it"
             )
         for field_name in ('pixel_format_param', 'pixel_type_param'):
             sibling_name = getattr(override, field_name)
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
+            if not has_scalar_sibling(other_params, sibling_name):
                 raise ValueError(
-                    f"{command_name}.{param.name}: TEXEL_BYTE_SIZE's {field_name} must name a "
+                    f"{where}: TEXEL_BYTE_SIZE's {field_name} must name a "
                     f"plain scalar sibling (got {sibling_name!r})"
                 )
-    elif override.length_source_kind is LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
+    elif kind is LengthSourceKind.INDIRECT_COMMANDS_BYTE_SIZE:
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE override must be IN "
+                f"{where}: INDIRECT_COMMANDS_BYTE_SIZE override must be IN "
                 f"direction - the driver only reads draw commands"
             )
         if override.indirect_command_size <= 0:
             raise ValueError(
-                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE needs a positive "
+                f"{where}: INDIRECT_COMMANDS_BYTE_SIZE needs a positive "
                 f"indirect_command_size"
             )
         if (override.length_source_value is None) != (override.indirect_stride_param is None):
             raise ValueError(
-                f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE needs both a count "
+                f"{where}: INDIRECT_COMMANDS_BYTE_SIZE needs both a count "
                 f"and a stride sibling, or neither (a single draw command)"
             )
         for field_name in ('length_source_value', 'indirect_stride_param'):
             sibling_name = getattr(override, field_name)
-            if sibling_name is None:
-                continue
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
+            if sibling_name is not None and not has_scalar_sibling(other_params, sibling_name):
                 raise ValueError(
-                    f"{command_name}.{param.name}: INDIRECT_COMMANDS_BYTE_SIZE's {field_name} "
+                    f"{where}: INDIRECT_COMMANDS_BYTE_SIZE's {field_name} "
                     f"must name a plain scalar sibling (got {sibling_name!r})"
                 )
-    elif override.length_source_kind is LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE:
+    elif kind is LengthSourceKind.ELEMENT_INDICES_BYTE_SIZE:
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: ELEMENT_INDICES_BYTE_SIZE override must be IN "
+                f"{where}: ELEMENT_INDICES_BYTE_SIZE override must be IN "
                 f"direction - the driver only reads indices"
             )
         for field_name in ('length_source_value', 'index_type_param'):
             sibling_name = getattr(override, field_name)
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
+            if not has_scalar_sibling(other_params, sibling_name):
                 raise ValueError(
-                    f"{command_name}.{param.name}: ELEMENT_INDICES_BYTE_SIZE's {field_name} "
+                    f"{where}: ELEMENT_INDICES_BYTE_SIZE's {field_name} "
                     f"must name a plain scalar sibling (got {sibling_name!r})"
                 )
-    elif override.length_source_kind is LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
+    elif kind is LengthSourceKind.LIST_NAME_ARRAY_BYTE_SIZE:
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: LIST_NAME_ARRAY_BYTE_SIZE override must be IN "
+                f"{where}: LIST_NAME_ARRAY_BYTE_SIZE override must be IN "
                 f"direction - the Mako templates have no OUT-direction branch for it"
             )
         for field_name in ('length_source_value', 'list_type_param'):
             sibling_name = getattr(override, field_name)
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
+            if not has_scalar_sibling(other_params, sibling_name):
                 raise ValueError(
-                    f"{command_name}.{param.name}: LIST_NAME_ARRAY_BYTE_SIZE's {field_name} must "
+                    f"{where}: LIST_NAME_ARRAY_BYTE_SIZE's {field_name} must "
                     f"name a plain scalar sibling (got {sibling_name!r})"
                 )
-    elif override.length_source_kind is LengthSourceKind.BITMAP_BYTE_SIZE:
+    elif kind is LengthSourceKind.BITMAP_BYTE_SIZE:
         if override.direction is not PointerDirection.IN or not override.unpack_pbo_guard:
             raise ValueError(
-                f"{command_name}.{param.name}: BITMAP_BYTE_SIZE override must be IN direction "
+                f"{where}: BITMAP_BYTE_SIZE override must be IN direction "
                 f"with unpack_pbo_guard - the bitmap can be a GL_PIXEL_UNPACK_BUFFER offset"
             )
         if (override.pixel_width_param is None) != (override.pixel_height_param is None):
             raise ValueError(
-                f"{command_name}.{param.name}: BITMAP_BYTE_SIZE needs both a width and a height "
+                f"{where}: BITMAP_BYTE_SIZE needs both a width and a height "
                 f"sibling, or neither (a 32x32 polygon stipple)"
             )
         for field_name in ('pixel_width_param', 'pixel_height_param'):
             sibling_name = getattr(override, field_name)
-            if sibling_name is None:
-                continue
-            sibling = next((p for p in other_params if p.name == sibling_name), None)
-            if sibling is None or not sibling.type_facts.is_scalar:
+            if sibling_name is not None and not has_scalar_sibling(other_params, sibling_name):
                 raise ValueError(
-                    f"{command_name}.{param.name}: BITMAP_BYTE_SIZE's {field_name} must name a "
+                    f"{where}: BITMAP_BYTE_SIZE's {field_name} must name a "
                     f"plain scalar sibling (got {sibling_name!r})"
                 )
-    elif override.length_source_kind is LengthSourceKind.LENGTH_OR_NULL_TERMINATED:
+    elif kind is LengthSourceKind.LENGTH_OR_NULL_TERMINATED:
         if override.direction is not PointerDirection.IN:
             raise ValueError(
-                f"{command_name}.{param.name}: LENGTH_OR_NULL_TERMINATED override must be IN "
+                f"{where}: LENGTH_OR_NULL_TERMINATED override must be IN "
                 f"direction - the Mako templates have no OUT-direction branch for it"
             )
-        sibling = next((p for p in other_params if p.name == override.length_source_value), None)
-        if sibling is None or not sibling.type_facts.is_scalar:
+        if not has_scalar_sibling(other_params, override.length_source_value):
             raise ValueError(
-                f"{command_name}.{param.name}: LENGTH_OR_NULL_TERMINATED's length_source_value "
+                f"{where}: LENGTH_OR_NULL_TERMINATED's length_source_value "
                 f"must name a plain scalar sibling (got {override.length_source_value!r})"
             )
     # NULL_TERMINATED/KEY_VALUE_LIST/GLX_VISUAL_ATTRIB_LIST need no structural validation - none
@@ -696,7 +647,7 @@ def _validate_array_of_arrays_override(
     """Raise ValueError if an ARRAY_OF_ARRAYS_PARAM_OVERRIDES entry doesn't match this
     command's actual signature - mirrors _validate_pointer_override's precedent exactly, for
     the two sibling parameters (outer_count_param/element_length_param) instead of one."""
-    outer = next((p for p in other_params if p.name == override.outer_count_param), None)
+    outer = _find_param(other_params, override.outer_count_param)
     if outer is None:
         raise ValueError(
             f"{command_name}.{param.name}: ARRAY_OF_ARRAYS_PARAM_OVERRIDES names outer count "
@@ -712,7 +663,7 @@ def _validate_array_of_arrays_override(
         # comment for why this is legitimate (glCreateShaderProgramv/
         # glTransformFeedbackVaryings, neither of which gl.xml gives a `length` parameter).
         return
-    length_param = next((p for p in other_params if p.name == override.element_length_param), None)
+    length_param = _find_param(other_params, override.element_length_param)
     if length_param is None:
         raise ValueError(
             f"{command_name}.{param.name}: ARRAY_OF_ARRAYS_PARAM_OVERRIDES names element "
@@ -810,11 +761,31 @@ def _pointer_override_for_command_or_alias(
     ARB/EXT alias needing the doubly-indirect shape that table covers, and it has its own entry.
     """
     override = POINTER_PARAM_OVERRIDES.get((command_name, param_name))
+    if override is None and alias is not None:
+        override = POINTER_PARAM_OVERRIDES.get((alias, param_name))
+    return override
+
+
+def derive_pointer_override(
+    command_name: str, param: Parameter, other_params: list[Parameter],
+) -> PointerParamOverride | None:
+    """Derived pointer classification for a (command, param) with no POINTER_PARAM_OVERRIDES
+    entry, own or alias, or None. Tries, in order: the COMPSIZE(format,type,<dims>) pixel
+    transfers (pixel_transfer_metadata.py), the glUniform*v/glUniformMatrix*v families
+    (uniform_setter_metadata.py), the glTexParameter*v/glSamplerParameter*v families
+    (tex_sampler_parameter_metadata.py), audited COMPSIZE(pname) setter groups
+    (pname_value_counts.py), and the generic type-and-len= rule (pointer_length_derivation.py's
+    derive_pointer_param_override()). See each module's header comment for exactly what evidence
+    it requires before returning non-None."""
+    override = derive_pixel_transfer_override(param, other_params)
     if override is not None:
         return override
-    if alias is None:
-        return None
-    return POINTER_PARAM_OVERRIDES.get((alias, param_name))
+    for derive in (derive_uniform_setter_override, derive_tex_sampler_parameter_override,
+                   derive_pname_value_count_override, derive_pointer_param_override):
+        override = derive(command_name, param, other_params)
+        if override is not None:
+            return override
+    return None
 
 
 def _is_param_capturable(
@@ -879,31 +850,10 @@ def _is_param_capturable(
         return False
     if _requires_object_name_override(command_name, param):
         return False
-    override = _pointer_override_for_command_or_alias(command_name, param.name, alias)
     if override is None:
-        # Explicit table entry always wins; only fall back to the generic
-        # COMPSIZE(format,type,<dims>) pixel-transfer auto-derivation when this (command,
-        # param) has no hand-authored entry at all - see pixel_transfer_metadata.py's own
-        # header comment for exactly what evidence it requires before returning non-None.
-        override = derive_pixel_transfer_override(param, other_params)
-    if override is None:
-        # Second fallback: the glUniform*v/glProgramUniform*v/glUniformMatrix*v/
-        # glProgramUniformMatrix*v sibling-family auto-derivation - see
-        # uniform_setter_metadata.py's own header comment for exactly what evidence it
-        # requires before returning non-None.
-        override = derive_uniform_setter_override(command_name, param, other_params)
-    if override is None:
-        # Third fallback: the glTexParameter*v/glSamplerParameter*v sibling-family
-        # auto-derivation - see tex_sampler_parameter_metadata.py's own header comment for
-        # exactly what evidence it requires before returning non-None.
-        override = derive_tex_sampler_parameter_override(command_name, param, other_params)
-    if override is None:
-        # Audited COMPSIZE(pname) setter groups - see pname_value_counts.py.
-        override = derive_pname_value_count_override(command_name, param, other_params)
-    if override is None:
-        # Last fallback: the generic type-and-len= rule - see pointer_length_derivation.py's
-        # derive_pointer_param_override().
-        override = derive_pointer_param_override(command_name, param, other_params)
+        # Explicit table entry always wins; only derive one when this (command, param) has no
+        # hand-authored entry at all.
+        override = derive_pointer_override(command_name, param, other_params)
     if override is None:
         return False
     _validate_pointer_override(command_name, param, override, other_params)
@@ -1234,8 +1184,7 @@ def load_registries_and_extract_xml_data(paths_and_apis: dict[Path, Api]) -> tup
         registry.loadFile(path)
 
         # Extract enums.
-        raw_enums: list[dict[str, Any]]
-        raw_enums = [dict(**e.attrib) for e in registry.enumdict.values()]
+        raw_enums: list[dict[str, Any]] = [dict(e.attrib) for e in registry.enumdict.values()]
         raw_enums_by_api[api] = raw_enums
 
         # Check for unknown enum attributes.

@@ -301,6 +301,9 @@ _FIXED_SIZE_STRUCT_BASE_TYPES: frozenset[str] = frozenset({
     'PIXELFORMATDESCRIPTOR',
 })
 
+# Element types an array (or array of arrays) can memcpy.
+_ELEMENT_BASE_TYPES: frozenset[str] = _SCALAR_BASE_TYPES | _FIXED_SIZE_STRUCT_BASE_TYPES
+
 
 @dataclass(frozen=True, kw_only=True)
 class TypeFacts:
@@ -311,12 +314,9 @@ class TypeFacts:
 
     @classmethod
     def from_type(cls, type_text: str) -> 'TypeFacts':
-        normalized = ' '.join(type_text.split())
-        pointer_depth = normalized.count('*')
-
         return cls(
             base_type=get_base_type_from_full_type(type_text),
-            pointer_depth=pointer_depth,
+            pointer_depth=type_text.count('*'),
         )
 
     @property
@@ -367,8 +367,7 @@ class TypeFacts:
         (currently just PIXELFORMATDESCRIPTOR) - same memcpy-safety argument, just for a POD
         struct instead of a scalar; see that set's own comment.
         """
-        return self.pointer_depth == 1 and (
-            self.base_type in _SCALAR_BASE_TYPES or self.base_type in _FIXED_SIZE_STRUCT_BASE_TYPES)
+        return self.pointer_depth == 1 and self.base_type in _ELEMENT_BASE_TYPES
 
     @property
     def is_array_of_arrays_eligible(self) -> bool:
@@ -384,8 +383,7 @@ class TypeFacts:
         count + per-element length sibling parameters) is known - see
         array_of_arrays_metadata.py for that second half of the classification.
         """
-        return self.pointer_depth == 2 and (
-            self.base_type in _SCALAR_BASE_TYPES or self.base_type in _FIXED_SIZE_STRUCT_BASE_TYPES)
+        return self.pointer_depth == 2 and self.base_type in _ELEMENT_BASE_TYPES
 
 
 @dataclass(kw_only=True)
@@ -409,10 +407,6 @@ class ReturnValue(Parameter):
     """Return value of a Command."""
 
     name: str = field(init=False, default='return_value')
-    type: str
-    group: str | None = None
-    class_: str | None = None
-    kinds: tuple[str, ...] = ()
     len: str | None = field(init=False, default=None)
 
 
