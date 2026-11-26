@@ -25,9 +25,7 @@ Configuration:
             LongDescription:
               "The levels are: TRACEVERBOSE, TRACE, INFOVERBOSE, INFO (default),
               WARNING, ERROR and OFF. With TRACE level API calls are logged. With TRACEVERBOSE
-              additional details are logged, for example in OGL streams log will contain
-              state like list of bound framebuffers with attachments, pipelines, programs,
-              shaders, buffers and textures."
+              additional details are logged."
             ConfigName: LogLevel
           - Name: logToConsole
             Type: bool
@@ -391,11 +389,10 @@ Configuration:
             Type: bool
             Default: false
             Arguments: [renderOffscreen]
-            Description: Forces offscreen rendering in EGL, Vulkan or DirectX 12.
+            Description: Forces offscreen rendering in Vulkan or DirectX 12.
             LongDescription: |
               Offscreen rendering:
 
-              - in EGL to a pbuffer,
               - in Vulkan to a swapchain without presentation,
               - in DirectX 12 to swapchains that are not bound to any window (no window is created).
 
