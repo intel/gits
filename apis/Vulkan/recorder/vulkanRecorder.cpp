@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 #include <dlfcn.h>
 #include <sys/mman.h>
@@ -56,9 +57,13 @@ std::unique_ptr<gits::vulkan::RecorderWrapper> g_RecorderWrapper;
 #ifdef GITS_PLATFORM_LINUX
 namespace {
 
+// Serializes finish + real _exit/_Exit so a second exiting thread waits until Close completes
+// and the first thread has entered the real exit (which does not return).
+std::mutex g_FinalizeMutex;
 bool g_RecordingFinished = false;
+pid_t g_RecordingProcessId = 0;
 
-void FinishRecordingImpl() {
+void FinishRecordingUnlocked() {
   if (g_RecordingFinished) {
     return;
   }
@@ -71,9 +76,17 @@ void FinishRecordingImpl() {
   LOG_INFO << "Recording done";
 }
 
+void FinishRecordingImpl() {
+  std::lock_guard<std::mutex> lock(g_FinalizeMutex);
+  FinishRecordingUnlocked();
+}
+
 // Linux counterpart of recorderDLL.cpp ExitProcess instrumentation: the process can call
 // _exit/_Exit and skip atexit and C++ destructors, so the stream never finishes.
 constexpr size_t kExitPatchSize = 12;
+
+// libc .text is mapped r-x; temporarily elevate to rwx only while patching.
+constexpr int kLibcTextProt = PROT_READ | PROT_EXEC;
 
 struct ExitHook {
   void* address = nullptr;
@@ -92,15 +105,14 @@ void RouteEntryPoint(void* src, void* dst) {
   std::memcpy(src, routingCode, sizeof(routingCode));
 }
 
-bool MakeWritable(void* address, size_t size) {
+bool SetProtection(void* address, size_t size, int prot) {
   const long pageSize = sysconf(_SC_PAGESIZE);
-  if (pageSize <= 0) {
+  if (pageSize <= 0 || address == nullptr || size == 0) {
     return false;
   }
   auto start = reinterpret_cast<uintptr_t>(address) & ~(static_cast<uintptr_t>(pageSize) - 1);
   auto end = reinterpret_cast<uintptr_t>(address) + size;
-  auto length = end - start;
-  return mprotect(reinterpret_cast<void*>(start), length, PROT_READ | PROT_WRITE | PROT_EXEC) == 0;
+  return mprotect(reinterpret_cast<void*>(start), end - start, prot) == 0;
 }
 
 bool InstallExitHook(ExitHook& hook, const char* name, void* replacement) {
@@ -109,14 +121,20 @@ bool InstallExitHook(ExitHook& hook, const char* name, void* replacement) {
     LOG_WARNING << "Failed to find libc symbol for exit hook: " << name;
     return false;
   }
-  if (!MakeWritable(address, kExitPatchSize)) {
+  if (!SetProtection(address, kExitPatchSize, PROT_READ | PROT_WRITE | PROT_EXEC)) {
     LOG_WARNING << "Failed to make libc " << name << " writable for exit hook";
     return false;
   }
   std::memcpy(hook.original, address, kExitPatchSize);
   hook.address = address;
   RouteEntryPoint(address, replacement);
-  hook.installed = true;
+  hook.installed = SetProtection(address, kExitPatchSize, kLibcTextProt);
+  if (!hook.installed) {
+    LOG_WARNING << "Failed to restore libc code page protection after exit hook patch";
+    // Best effort: put original bytes back while still writable.
+    std::memcpy(address, hook.original, kExitPatchSize);
+    return false;
+  }
   return true;
 }
 
@@ -124,41 +142,66 @@ void RestoreExitHook(ExitHook& hook) {
   if (!hook.installed || hook.address == nullptr) {
     return;
   }
-  MakeWritable(hook.address, kExitPatchSize);
+  if (!SetProtection(hook.address, kExitPatchSize, PROT_READ | PROT_WRITE | PROT_EXEC)) {
+    return;
+  }
   std::memcpy(hook.address, hook.original, kExitPatchSize);
+  if (!SetProtection(hook.address, kExitPatchSize, kLibcTextProt)) {
+    LOG_WARNING << "Failed to restore libc code page protection after exit hook patch";
+  }
 }
 
 void ReinstallExitHook(ExitHook& hook, void* replacement) {
   if (!hook.installed || hook.address == nullptr) {
     return;
   }
-  MakeWritable(hook.address, kExitPatchSize);
+  if (!SetProtection(hook.address, kExitPatchSize, PROT_READ | PROT_WRITE | PROT_EXEC)) {
+    return;
+  }
   RouteEntryPoint(hook.address, replacement);
+  if (!SetProtection(hook.address, kExitPatchSize, kLibcTextProt)) {
+    LOG_WARNING << "Failed to restore libc code page protection after exit hook patch";
+  }
 }
 
 using LibcExitFn = void (*)(int);
 
+void CallRealExit(ExitHook& hook, int status, void* replacement) {
+  RestoreExitHook(hook);
+  auto realExit = reinterpret_cast<LibcExitFn>(hook.address);
+  realExit(status);
+  ReinstallExitHook(hook, replacement);
+}
+
 void GitsExit(int status) {
+  // Forked child: do not take the mutex (can deadlock after multithreaded fork()) or finalize.
+  if (getpid() != g_RecordingProcessId) {
+    CallRealExit(g_ExitHook, status, reinterpret_cast<void*>(&GitsExit));
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(g_FinalizeMutex);
   // _Exit may call _exit; log only on the first finish path.
   if (!g_RecordingFinished) {
     LOG_INFO << "Closing recorder due to _exit(" << status << ")";
   }
-  FinishRecordingImpl();
-  RestoreExitHook(g_ExitHook);
-  auto realExit = reinterpret_cast<LibcExitFn>(g_ExitHook.address);
-  realExit(status);
-  ReinstallExitHook(g_ExitHook, reinterpret_cast<void*>(&GitsExit));
+  FinishRecordingUnlocked();
+  CallRealExit(g_ExitHook, status, reinterpret_cast<void*>(&GitsExit));
 }
 
 void GitsExitUpper(int status) {
+  if (getpid() != g_RecordingProcessId) {
+    CallRealExit(g_ExitUpperHook, status, reinterpret_cast<void*>(&GitsExitUpper));
+    return;
+  }
+
+  std::lock_guard<std::mutex> lock(g_FinalizeMutex);
+  // Log only on the first finish path (_exit may already have run).
   if (!g_RecordingFinished) {
     LOG_INFO << "Closing recorder due to _Exit(" << status << ")";
   }
-  FinishRecordingImpl();
-  RestoreExitHook(g_ExitUpperHook);
-  auto realExit = reinterpret_cast<LibcExitFn>(g_ExitUpperHook.address);
-  realExit(status);
-  ReinstallExitHook(g_ExitUpperHook, reinterpret_cast<void*>(&GitsExitUpper));
+  FinishRecordingUnlocked();
+  CallRealExit(g_ExitUpperHook, status, reinterpret_cast<void*>(&GitsExitUpper));
 }
 
 void InstrumentLibcExits() {
@@ -183,6 +226,7 @@ gits::vulkan::IRecorderWrapper* STDCALL GITSRecorderVulkan2() {
       // Construct MessageBus before atexit so its __cxa_atexit destructor is registered after
       // FinishRecordingImpl; otherwise exit destroys the bus first and publish is use-after-free.
       gits::MessageBus::get();
+      g_RecordingProcessId = getpid();
       // atexit covers exit(); hook _exit/_Exit which skip atexit (Windows uses ExitProcess).
       std::atexit(FinishRecordingImpl);
       InstrumentLibcExits();
