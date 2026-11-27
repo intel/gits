@@ -124,6 +124,8 @@ void CaptureCustomizationLayer::Post(ID3D12DeviceCreateCommittedResourceCommand&
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -142,6 +144,8 @@ void CaptureCustomizationLayer::Post(ID3D12Device4CreateCommittedResource1Comman
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -160,6 +164,8 @@ void CaptureCustomizationLayer::Post(ID3D12Device8CreateCommittedResource2Comman
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -178,6 +184,8 @@ void CaptureCustomizationLayer::Post(ID3D12Device10CreateCommittedResource3Comma
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -196,6 +204,8 @@ void CaptureCustomizationLayer::Post(ID3D12Device16CreateCommittedResource4Comma
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -214,6 +224,8 @@ void CaptureCustomizationLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& 
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
     m_Manager.GetGpuAddressService().CreateResource(c.m_ppvResource.Key, resource);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(
+        c.m_ppvResource.Key, *m_HeapInfo.PropertiesPtr, m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pHeapProperties.Value = m_HeapInfo.PropertiesPtr;
@@ -251,6 +263,7 @@ void CaptureCustomizationLayer::Post(INTC_D3D12_CreateReservedResourceCommand& c
 void CaptureCustomizationLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetMapTrackingService().StorePlacedResourceHeap(c.m_ppvResource.Key, c.m_pHeap.Key);
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_InitialState.Value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -260,6 +273,7 @@ void CaptureCustomizationLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c)
 void CaptureCustomizationLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetMapTrackingService().StorePlacedResourceHeap(c.m_ppvResource.Key, c.m_pHeap.Key);
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_InitialState.Value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -269,6 +283,7 @@ void CaptureCustomizationLayer::Post(ID3D12Device8CreatePlacedResource1Command& 
 void CaptureCustomizationLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetMapTrackingService().StorePlacedResourceHeap(c.m_ppvResource.Key, c.m_pHeap.Key);
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_pDesc.Value->Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -278,6 +293,7 @@ void CaptureCustomizationLayer::Post(ID3D12Device10CreatePlacedResource2Command&
 void CaptureCustomizationLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetMapTrackingService().StorePlacedResourceHeap(c.m_ppvResource.Key, c.m_pHeap.Key);
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_pResourceDesc.Value->Flags & D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -287,6 +303,7 @@ void CaptureCustomizationLayer::Post(ID3D12Device16CreatePlacedResource3Command&
 void CaptureCustomizationLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Resource* resource = static_cast<ID3D12Resource*>(*c.m_ppvResource.Value);
+    m_Manager.GetMapTrackingService().StorePlacedResourceHeap(c.m_ppvResource.Key, c.m_pHeap.Key);
     m_Manager.GetGpuAddressService().CreatePlacedResource(
         c.m_ppvResource.Key, resource, c.m_pHeap.Key, c.m_pHeap.Value, c.m_HeapOffset.Value,
         c.m_InitialState.Value == D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
@@ -304,6 +321,8 @@ void CaptureCustomizationLayer::Post(ID3D12DeviceCreateHeapCommand& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
     m_Manager.GetGpuAddressService().CreateHeap(c.m_ppvHeap.Key, heap);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(c.m_ppvHeap.Key, m_HeapInfo.Properties,
+                                                             m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pDesc.Value->Properties = m_HeapInfo.Properties;
@@ -321,6 +340,8 @@ void CaptureCustomizationLayer::Post(ID3D12Device4CreateHeap1Command& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
     m_Manager.GetGpuAddressService().CreateHeap(c.m_ppvHeap.Key, heap);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(c.m_ppvHeap.Key, m_HeapInfo.Properties,
+                                                             m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pDesc.Value->Properties = m_HeapInfo.Properties;
@@ -338,6 +359,8 @@ void CaptureCustomizationLayer::Post(INTC_D3D12_CreateHeapCommand& c) {
   if (c.m_Result.Value == S_OK) {
     ID3D12Heap* heap = static_cast<ID3D12Heap*>(*c.m_ppvHeap.Value);
     m_Manager.GetGpuAddressService().CreateHeap(c.m_ppvHeap.Key, heap);
+    m_Manager.GetMapTrackingService().StoreAppHeapProperties(c.m_ppvHeap.Key, m_HeapInfo.Properties,
+                                                             m_HeapInfo.Flags);
   }
   // Restore D3D12_HEAP_PROPERTIES and D3D12_HEAP_FLAGS
   c.m_pDesc.Value->pD3D12Desc->Properties = m_HeapInfo.Properties;
@@ -388,6 +411,19 @@ void CaptureCustomizationLayer::Post(ID3D12ResourceMapCommand& c) {
   }
   m_Manager.GetMapTrackingService().MapResource(c.m_Object.Key, c.m_Object.Value,
                                                 c.m_Subresource.Value, c.m_ppData.Value);
+}
+
+void CaptureCustomizationLayer::Post(ID3D12ResourceGetHeapPropertiesCommand& c) {
+  if (c.m_Result.Value != S_OK) {
+    return;
+  }
+  m_Manager.GetMapTrackingService().RestoreAppHeapProperties(
+      c.m_Object.Key, c.m_pHeapProperties.Value, c.m_pHeapFlags.Value);
+}
+
+void CaptureCustomizationLayer::Post(ID3D12HeapGetDescCommand& c) {
+  m_Manager.GetMapTrackingService().RestoreAppHeapProperties(
+      c.m_Object.Key, &c.m_Result.Value.Properties, &c.m_Result.Value.Flags);
 }
 
 void CaptureCustomizationLayer::Pre(ID3D12ResourceUnmapCommand& c) {

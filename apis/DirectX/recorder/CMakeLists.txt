@@ -21,6 +21,7 @@ set(INTERCEPTOR_SRC
   ${SRC_DIR}/functionDispatchTables.h
   ${SRC_DIR}/wrappersAuto.cpp
   ${SRC_DIR}/wrappersAuto.h
+  ${SRC_DIR}/wrappersCustom.cpp
   ${SRC_DIR}/wrapperCreatorsAuto.h
   ${SRC_DIR}/wrapperCreatorsAuto.cpp
   ${SRC_DIR}/legacyPreviewWrappers.h

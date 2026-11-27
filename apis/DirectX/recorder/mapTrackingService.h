@@ -25,6 +25,13 @@ public:
   MapTrackingService(stream::OrderingRecorder* recorder);
 
   void EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties, D3D12_HEAP_FLAGS& flags);
+  void StoreAppHeapProperties(ObjectKey key,
+                              const D3D12_HEAP_PROPERTIES& properties,
+                              D3D12_HEAP_FLAGS flags);
+  void StorePlacedResourceHeap(ObjectKey resourceKey, ObjectKey heapKey);
+  void RestoreAppHeapProperties(ObjectKey key,
+                                D3D12_HEAP_PROPERTIES* properties,
+                                D3D12_HEAP_FLAGS* flags);
   void MapResource(ObjectKey resourceKey,
                    ID3D12Resource* resource,
                    unsigned subresourceIndex,
@@ -53,6 +60,12 @@ private:
     std::vector<void*> WatchedPages;
   };
   std::unordered_map<ObjectKey, std::map<unsigned, std::unique_ptr<MappedInfo>>> m_MappedData;
+
+  struct AppHeapProperties {
+    D3D12_HEAP_PROPERTIES Properties{};
+    D3D12_HEAP_FLAGS Flags{};
+  };
+  std::unordered_map<ObjectKey, AppHeapProperties> m_AppHeapProperties;
 
   size_t m_PageSize{0};
   std::mutex m_Mutex;

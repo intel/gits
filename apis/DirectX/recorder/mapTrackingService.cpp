@@ -41,6 +41,51 @@ void MapTrackingService::EnableWriteWatch(D3D12_HEAP_PROPERTIES& properties,
   }
 }
 
+void MapTrackingService::StoreAppHeapProperties(ObjectKey key,
+                                                const D3D12_HEAP_PROPERTIES& properties,
+                                                D3D12_HEAP_FLAGS flags) {
+  if (m_ShadowMemory || !IsUploadHeap(properties.Type, properties.CPUPageProperty)) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_AppHeapProperties[key] = AppHeapProperties{properties, flags};
+}
+
+void MapTrackingService::StorePlacedResourceHeap(ObjectKey resourceKey, ObjectKey heapKey) {
+  if (m_ShadowMemory) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_AppHeapProperties.find(heapKey);
+  if (it != m_AppHeapProperties.end()) {
+    AppHeapProperties heapProperties = it->second;
+    m_AppHeapProperties[resourceKey] = heapProperties;
+  }
+}
+
+void MapTrackingService::RestoreAppHeapProperties(ObjectKey key,
+                                                  D3D12_HEAP_PROPERTIES* properties,
+                                                  D3D12_HEAP_FLAGS* flags) {
+  if (m_ShadowMemory) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  auto it = m_AppHeapProperties.find(key);
+  if (it == m_AppHeapProperties.end()) {
+    return;
+  }
+  const AppHeapProperties& app = it->second;
+  if (properties) {
+    properties->Type = app.Properties.Type;
+    properties->CPUPageProperty = app.Properties.CPUPageProperty;
+    properties->MemoryPoolPreference = app.Properties.MemoryPoolPreference;
+  }
+  if (flags) {
+    *flags = (*flags & ~D3D12_HEAP_FLAG_ALLOW_WRITE_WATCH) |
+             (app.Flags & D3D12_HEAP_FLAG_ALLOW_WRITE_WATCH);
+  }
+}
+
 void MapTrackingService::MapResource(ObjectKey resourceKey,
                                      ID3D12Resource* resource,
                                      unsigned subresourceIndex,
@@ -130,6 +175,7 @@ void MapTrackingService::DestroyResource(ObjectKey resourceKey) {
 
   std::lock_guard<std::mutex> lock(m_Mutex);
 
+  m_AppHeapProperties.erase(resourceKey);
   auto it = m_MappedData.find(resourceKey);
   if (it == m_MappedData.end()) {
     return;

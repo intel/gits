@@ -48,6 +48,8 @@ public:
   void Post(ID3D12Device3OpenExistingHeapFromAddressCommand& command) override;
   void Post(ID3D12Device13OpenExistingHeapFromAddress1Command& command) override;
   void Post(ID3D12ResourceMapCommand& command) override;
+  void Post(ID3D12ResourceGetHeapPropertiesCommand& command) override;
+  void Post(ID3D12HeapGetDescCommand& command) override;
   void Pre(ID3D12ResourceUnmapCommand& command) override;
   void Pre(ID3D12CommandQueueExecuteCommandListsCommand& command) override;
   void Post(ID3D12DeviceCreateDescriptorHeapCommand& command) override;

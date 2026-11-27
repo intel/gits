@@ -125,8 +125,14 @@ ${generate_return(function)} ${function.name}Wrapper(${'' if params else ') {'}
 }
 %endfor
 
+<%
+custom = [
+    'ID3D12HeapGetDesc'
+]
+%>\
 %for interface in interfaces:
 %for function in interface.functions:
+%if not interface.name + function.name in custom:
 <%
 params = generate_params(function)
 args = generate_args(function)
@@ -213,6 +219,7 @@ ${generate_return(function)} ${interface.name}Wrapper::${function.name}(${'' if 
   return result;
   %endif
 }
+%endif
 %endfor
 %endfor
 } // namespace DirectX
