@@ -81,16 +81,20 @@ def get_sal_size_value(parameter, is_command_argument):
     for input_size_sal in input_size_sals:
         if parameter.sal.startswith(input_size_sal):
             sal_size = parameter.sal_size
-            sal_size_decorator = ""
-            if sal_size[0] == '*':
+            is_size_pointer = sal_size[0] == '*'
+            if is_size_pointer:
                 sal_size = sal_size[1:]
-                sal_size_decorator = "*"
             if ',' in sal_size:
                 sal_size = sal_size.split(',')[0]
             if is_command_argument:
-                str = f'{sal_size_decorator}c.m_{sal_size}.Value;'
+                size_value = f'c.m_{sal_size}.Value'
             else:
-                str = f'{sal_size_decorator}value.{sal_size};'
+                size_value = f'value.{sal_size}'
+            # Size pointers can be null (e.g. _Inout_opt_ counts)
+            if is_size_pointer:
+                str = f'{size_value} ? *{size_value} : 0;'
+            else:
+                str = f'{size_value};'
     return str
 
 def to_lower_camel_case(name):
