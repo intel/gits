@@ -88,16 +88,20 @@ void CapturePlayerGpuAddressService::DestroyInterface(ObjectKey interfaceKey) {
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::
-    GetResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
+    GetResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address,
+                                    bool raytracingAS,
+                                    bool selectBySize) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  return m_GpuAddressService.GetResourceInfo(address, raytracingAS);
+  return m_GpuAddressService.GetResourceInfo(address, raytracingAS, selectBySize);
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::
-    GetResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
+    GetResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address,
+                                   bool raytracingAS,
+                                   bool selectBySize) {
   if (m_GpuPlayerAddress) {
     std::lock_guard<std::mutex> lock(m_Mutex);
-    return m_GpuPlayerAddress->GetResourceInfo(address, raytracingAS);
+    return m_GpuPlayerAddress->GetResourceInfo(address, raytracingAS, selectBySize);
   }
   return nullptr;
 }
@@ -286,31 +290,26 @@ void CapturePlayerGpuAddressService::GpuAddressService::DestroyInterface(ObjectK
 }
 
 CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::GpuAddressService::
-    GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS) {
+    GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS, bool selectBySize) {
 
-  ResourceInfo* resourceInfo{};
   if (!address) {
-    return resourceInfo;
+    return nullptr;
   }
 
   auto itResource = m_ResourcesByAddress.upper_bound(address);
-  if (itResource != m_ResourcesByAddress.begin() && !m_ResourcesByAddress.empty()) {
+  if (itResource != m_ResourcesByAddress.begin()) {
     --itResource;
     ResourceInfo* info = itResource->second;
     D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
     if (address >= start && address < start + info->Size) {
-      resourceInfo = info;
+      return info;
     }
-  }
-  if (resourceInfo) {
-    return resourceInfo;
   }
 
   PlacedResourceInfo* placedResourceInfo{};
-  for (unsigned layerIndex = 0; layerIndex < m_PlacedResourcesByAddress.size(); ++layerIndex) {
-    auto itPlaced = m_PlacedResourcesByAddress[layerIndex].upper_bound(address);
-    if (itPlaced != m_PlacedResourcesByAddress[layerIndex].begin() &&
-        !m_PlacedResourcesByAddress[layerIndex].empty()) {
+  for (auto& layer : m_PlacedResourcesByAddress) {
+    auto itPlaced = layer.upper_bound(address);
+    if (itPlaced != layer.begin()) {
       --itPlaced;
       PlacedResourceInfo* info = itPlaced->second;
       D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
@@ -320,43 +319,46 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
       }
     }
   }
+  if (!placedResourceInfo) {
+    return nullptr;
+  }
 
-  auto isNewer = [](CommandKey a, CommandKey b) {
-    if (IsStateRestoreKey(a) && !IsStateRestoreKey(b)) {
-      return false;
-    } else if (!IsStateRestoreKey(a) && IsStateRestoreKey(b)) {
-      return true;
+  auto selected = [selectBySize](PlacedResourceInfo* info, PlacedResourceInfo* selectedInfo) {
+    if (selectBySize) {
+      D3D12_GPU_VIRTUAL_ADDRESS selectedEnd = selectedInfo->CaptureStart + selectedInfo->Size;
+      D3D12_GPU_VIRTUAL_ADDRESS end = info->CaptureStart + info->Size;
+      return end > selectedEnd;
+    } else {
+      CommandKey infoKey = info->GetGPUVirtualAddressCommandKey;
+      CommandKey selectedInfoKey = selectedInfo->GetGPUVirtualAddressCommandKey;
+      if (IsStateRestoreKey(infoKey) && !IsStateRestoreKey(selectedInfoKey)) {
+        return false;
+      } else if (!IsStateRestoreKey(infoKey) && IsStateRestoreKey(selectedInfoKey)) {
+        return true;
+      }
+      return infoKey > selectedInfoKey;
     }
-    return a > b;
   };
 
-  if (placedResourceInfo && !placedResourceInfo->Intersecting.empty()) {
-    PlacedResourceInfo* selectedInfo = placedResourceInfo;
-    for (PlacedResourceInfo* info : placedResourceInfo->Intersecting) {
-      D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
-      D3D12_GPU_VIRTUAL_ADDRESS end = start + info->Size;
-      if (address >= start && address < end) {
-        if (raytracingAS) {
-          if (!selectedInfo->RaytracingAS ||
-              isNewer(info->GetGPUVirtualAddressCommandKey,
-                      selectedInfo->GetGPUVirtualAddressCommandKey)) {
-            if (info->RaytracingAS) {
-              selectedInfo = info;
-            }
-          }
-        } else {
-          if (isNewer(info->GetGPUVirtualAddressCommandKey,
-                      selectedInfo->GetGPUVirtualAddressCommandKey)) {
-            if (!info->DeniedShaderResource) {
-              selectedInfo = info;
-            }
-          }
-        }
+  PlacedResourceInfo* selectedInfo = placedResourceInfo;
+  for (PlacedResourceInfo* info : placedResourceInfo->Intersecting) {
+    D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
+    D3D12_GPU_VIRTUAL_ADDRESS end = start + info->Size;
+    if (address < start || address >= end) {
+      continue;
+    }
+    if (raytracingAS) {
+      if (info->RaytracingAS && (!selectedInfo->RaytracingAS || selected(info, selectedInfo))) {
+        selectedInfo = info;
+      }
+    } else {
+      if (!info->DeniedShaderResource &&
+          (selectedInfo->DeniedShaderResource || selected(info, selectedInfo))) {
+        selectedInfo = info;
       }
     }
-    placedResourceInfo = selectedInfo;
   }
-  return placedResourceInfo;
+  return selectedInfo;
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::GetMappings(

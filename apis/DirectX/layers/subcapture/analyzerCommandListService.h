@@ -185,7 +185,7 @@ private:
 
   bool m_RestoreTlases{};
   std::set<CommandKey> m_TlasBuildKeys;
-  std::map<std::pair<ObjectKey, unsigned>, CommandKey> m_TlasesBeforeRange;
+  std::map<AnalyzerRaytracingService::KeyOffset, CommandKey> m_TlasesBeforeRange;
 
   RaytracingBuildInputsMap<CommandKey> m_PrebuildInfoKeysByInputs;
   std::unordered_map<CommandKey, CommandKey> m_PrebuildInfoKeysByBuild;

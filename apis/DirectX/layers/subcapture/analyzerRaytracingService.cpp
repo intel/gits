@@ -236,7 +236,25 @@ void AnalyzerRaytracingService::BuildTlas(
     }
   }
 
-  m_TlasBuildKeys[c.m_pDesc.Value->DestAccelerationStructureData] = c.Key;
+  m_TlasBuildKeys[GetAccelerationStructureId(c.m_pDesc.DestAccelerationStructureKey,
+                                             c.m_pDesc.DestAccelerationStructureOffset)] = c.Key;
+}
+
+void AnalyzerRaytracingService::CreatePlacedResource(ObjectKey heapKey,
+                                                     UINT64 heapOffset,
+                                                     ObjectKey resourceKey) {
+  std::lock_guard<std::mutex> lock(m_PlacedResourcesMutex);
+  m_PlacedResources[resourceKey] = {heapKey, heapOffset};
+}
+
+AnalyzerRaytracingService::KeyOffset AnalyzerRaytracingService::GetAccelerationStructureId(
+    ObjectKey resourceKey, UINT64 offset) {
+  std::lock_guard<std::mutex> lock(m_PlacedResourcesMutex);
+  auto it = m_PlacedResources.find(resourceKey);
+  if (it != m_PlacedResources.end()) {
+    return {it->second.first, it->second.second + offset};
+  }
+  return {resourceKey, offset};
 }
 
 void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
@@ -393,7 +411,7 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   }
 }
 
-CommandKey AnalyzerRaytracingService::FindTlas(D3D12_GPU_VIRTUAL_ADDRESS tlas) {
+CommandKey AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
   auto it = m_TlasBuildKeys.find(tlas);
   if (it != m_TlasBuildKeys.end()) {
     return it->second;

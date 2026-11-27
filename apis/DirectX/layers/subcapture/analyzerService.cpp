@@ -300,7 +300,7 @@ void AnalyzerService::DumpAnalysisFile() {
   m_ExecuteIndirectService.Flush();
 
   // optimize raytracing
-  std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS> blases;
+  std::unordered_set<AnalyzerRaytracingService::KeyOffset, KeyOffsetHash> blases;
   for (CommandKey buildKey : m_CommandListService.GetTlases()) {
     for (auto& as : m_RaytracingService.GetBlases(buildKey)) {
       blases.insert(as);

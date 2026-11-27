@@ -59,9 +59,11 @@ public:
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
   void DestroyInterface(ObjectKey interfaceKey);
   ResourceInfo* GetResourceInfoByCaptureAddress(D3D12_GPU_VIRTUAL_ADDRESS address,
-                                                bool raytracingAS = false);
+                                                bool raytracingAS = false,
+                                                bool selectBySize = true);
   ResourceInfo* GetResourceInfoByPlayerAddress(D3D12_GPU_VIRTUAL_ADDRESS address,
-                                               bool raytracingAS = false);
+                                               bool raytracingAS = false,
+                                               bool selectBySize = true);
   void GetMappings(std::vector<GpuAddressMapping>& mappings);
   void EnablePlayerAddressLookup();
 
@@ -81,7 +83,9 @@ private:
     void DestroyInterface(ObjectKey interfaceKey);
     void GetMappings(std::vector<GpuAddressMapping>& mappings);
     void GetMappingsResourcePlacement(std::vector<GpuAddressMapping>& mappings);
-    ResourceInfo* GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address, bool raytracingAS);
+    ResourceInfo* GetResourceInfo(D3D12_GPU_VIRTUAL_ADDRESS address,
+                                  bool raytracingAS,
+                                  bool selectBySize);
 
   private:
     struct PlacedResourceInfo : public ResourceInfo {

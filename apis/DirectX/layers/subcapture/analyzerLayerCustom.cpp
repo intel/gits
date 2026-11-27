@@ -40,7 +40,7 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                           m_ResourceStateTracker),
       m_ExecuteIndirectService(
           m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService),
-      m_RaytracingOptimizationService(m_GpuAddressService) {
+      m_RaytracingOptimizationService(m_RaytracingService, m_GpuAddressService) {
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
   if (m_Optimize) {
     m_ShaderIdentifierService.EnablePlayerIdentifierLookup();
@@ -1412,6 +1412,10 @@ void AnalyzerLayer::Post(INTC_D3D12_CreatePlacedResourceCommand& c) {
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                      c.m_ppvResource.Key, c.m_InitialState.Value);
+  if (m_Optimize) {
+    m_RaytracingService.CreatePlacedResource(c.m_pHeap.Key, c.m_HeapOffset.Value,
+                                             c.m_ppvResource.Key);
+  }
 }
 
 void AnalyzerLayer::Post(INTC_D3D12_CreateCommittedResourceCommand& c) {
@@ -1614,6 +1618,8 @@ void AnalyzerLayer::Post(ID3D12DeviceCreatePlacedResourceCommand& c) {
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
+      m_RaytracingService.CreatePlacedResource(c.m_pHeap.Key, c.m_HeapOffset.Value,
+                                               c.m_ppvResource.Key);
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialState.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
@@ -1845,6 +1851,8 @@ void AnalyzerLayer::Post(ID3D12Device8CreatePlacedResource1Command& c) {
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
+      m_RaytracingService.CreatePlacedResource(c.m_pHeap.Key, c.m_HeapOffset.Value,
+                                               c.m_ppvResource.Key);
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialState.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
@@ -1892,6 +1900,8 @@ void AnalyzerLayer::Post(ID3D12Device10CreatePlacedResource2Command& c) {
   m_AnalyzerService.AddParent(c.m_pHeap.Key, c.m_pHeap.Key);
   if (m_Optimize) {
     if (c.m_Result.Value == S_OK) {
+      m_RaytracingService.CreatePlacedResource(c.m_pHeap.Key, c.m_HeapOffset.Value,
+                                               c.m_ppvResource.Key);
       m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                          c.m_ppvResource.Key, c.m_InitialLayout.Value);
       m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,
@@ -1920,6 +1930,8 @@ void AnalyzerLayer::Post(ID3D12Device16CreatePlacedResource3Command& c) {
   m_AnalyzerService.NotifyObject(c.m_ppvResource.Key);
   m_AnalyzerService.AddParent(c.m_ppvResource.Key, c.m_pHeap.Key);
   if (m_Optimize) {
+    m_RaytracingService.CreatePlacedResource(c.m_pHeap.Key, c.m_HeapOffset.Value,
+                                             c.m_ppvResource.Key);
     m_ResourceStateTracker.AddResource(*reinterpret_cast<ID3D12Resource**>(c.m_ppvResource.Value),
                                        c.m_ppvResource.Key, c.m_InitialLayout.Value);
     m_GpuAddressService.CreatePlacedResource(c.m_pHeap.Key, c.m_ppvResource.Key,

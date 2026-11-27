@@ -8,10 +8,11 @@
 
 #pragma once
 #include "arguments.h"
+
 #include "commandsAuto.h"
 #include "commandsCustom.h"
 #include "hashUtils.h"
-#include "capturePlayerGpuAddressService.h"
+#include "analyzerRaytracingService.h"
 
 #include <unordered_set>
 #include <unordered_map>
@@ -23,8 +24,9 @@ namespace DirectX {
 
 class RaytracingOptimizationService {
 public:
-  RaytracingOptimizationService(CapturePlayerGpuAddressService& gpuAddressService)
-      : m_GpuAddressService(gpuAddressService) {}
+  RaytracingOptimizationService(AnalyzerRaytracingService& raytracingService,
+                                CapturePlayerGpuAddressService& gpuAddressService)
+      : m_RaytracingService(raytracingService), m_GpuAddressService(gpuAddressService) {}
   void BuildAccelerationStructure(
       ID3D12GraphicsCommandList4BuildRaytracingAccelerationStructureCommand& c);
   void CopyAccelerationStructure(
@@ -33,7 +35,7 @@ public:
       NvAPI_D3D12_BuildRaytracingAccelerationStructureExCommand& c);
   void NvapiBuildOpacityMicromapArray(NvAPI_D3D12_BuildRaytracingOpacityMicromapArrayCommand& c);
   void ExecuteCommandLists(ID3D12CommandQueueExecuteCommandListsCommand& c);
-  void Optimize(std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS>& ases);
+  void Optimize(std::unordered_set<AnalyzerRaytracingService::KeyOffset, KeyOffsetHash>& ases);
   std::vector<std::pair<CommandKey, CommandKey>>& GetOptimizedCommands() {
     return m_OptimizedCommandsWithSources;
   }
@@ -45,23 +47,28 @@ private:
   struct RaytracingCommand {
     unsigned Id{};
     CommandKey Key{};
-    D3D12_GPU_VIRTUAL_ADDRESS DestAddress{};
-    ObjectKey CaptureDestKey{};
-    ObjectKey PlaybackDestKey{};
-    D3D12_GPU_VIRTUAL_ADDRESS SourceAddress{};
+    // for placed resources heap key and heap offset, otherwise resource key and resource offset
+    ObjectKey DestKey{};
+    UINT64 DestOffset{};
+    ObjectKey SourceKey{};
+    UINT64 SourceOffset{};
+    ObjectKey DestResourceKey{};
+    ObjectKey AlternateDestResourceKey{};
     bool UpdateBuild{};
     RaytracingCommand* Source{};
     bool Restore{};
     std::unordered_set<ObjectKey> Buffers;
-    std::unordered_set<D3D12_GPU_VIRTUAL_ADDRESS> OmmLinkages;
+    std::unordered_set<AnalyzerRaytracingService::KeyOffset, KeyOffsetHash> OmmLinkages;
     std::vector<RaytracingCommand*> OpacityMicromapArrays;
   };
 
+  AnalyzerRaytracingService& m_RaytracingService;
   CapturePlayerGpuAddressService& m_GpuAddressService;
   unsigned m_CommandUniqueId{};
   std::unordered_map<ObjectKey, std::vector<std::unique_ptr<RaytracingCommand>>>
       m_CommandsByCommandList;
-  std::unordered_map<D3D12_GPU_VIRTUAL_ADDRESS, RaytracingCommand*> m_CommandByAddress;
+  std::unordered_map<AnalyzerRaytracingService::KeyOffset, RaytracingCommand*, KeyOffsetHash>
+      m_CommandByKeyOffset;
   std::unordered_map<unsigned, std::unique_ptr<RaytracingCommand>> m_CommandById;
 
   std::vector<std::pair<CommandKey, CommandKey>> m_OptimizedCommandsWithSources;

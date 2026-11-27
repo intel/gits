@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <map>
+#include <mutex>
 
 namespace gits {
 namespace DirectX {
@@ -58,8 +60,12 @@ public:
                         UINT64 size,
                         UINT64 stride,
                         D3D12_GPU_VIRTUAL_ADDRESS address);
-  void AddAccelerationStructureSource(D3D12_GPU_VIRTUAL_ADDRESS address) {
-    m_Sources.insert(address);
+  // acceleration structure in placed resource is identified by heap key and heap offset
+  using KeyOffset = std::pair<ObjectKey, UINT64>;
+  void CreatePlacedResource(ObjectKey heapKey, UINT64 heapOffset, ObjectKey resourceKey);
+  KeyOffset GetAccelerationStructureId(ObjectKey resourceKey, UINT64 offset);
+  void AddAccelerationStructureSource(ObjectKey key, unsigned offset) {
+    m_Sources.insert(GetAccelerationStructureId(key, offset));
   }
   void Flush();
   void ExecuteCommandLists(CommandKey key,
@@ -95,10 +101,10 @@ public:
   }
 
   std::set<ObjectKey> GetStateObjectAllSubobjects(ObjectKey stateObjectKey);
-  std::vector<D3D12_GPU_VIRTUAL_ADDRESS>& GetBlases(CommandKey tlasBuildKey) {
+  std::vector<KeyOffset>& GetBlases(CommandKey tlasBuildKey) {
     return m_BlasesByTlas[tlasBuildKey];
   }
-  std::set<D3D12_GPU_VIRTUAL_ADDRESS>& GetSources() {
+  std::set<KeyOffset>& GetSources() {
     return m_Sources;
   }
   std::unordered_set<ObjectKey>& GetBindingTablesResources() {
@@ -108,7 +114,7 @@ public:
     return m_BindingTablesDump.GetBindingTablesDescriptors();
   }
 
-  CommandKey FindTlas(D3D12_GPU_VIRTUAL_ADDRESS tlas);
+  CommandKey FindTlas(const KeyOffset& tlas);
   void GetTlases(std::set<CommandKey>& tlases);
 
 private:
@@ -133,9 +139,11 @@ private:
 
   RaytracingInstancesDump m_InstancesDump;
   BindingTablesDump m_BindingTablesDump;
-  std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_BlasesByTlas;
-  std::map<D3D12_GPU_VIRTUAL_ADDRESS, CommandKey> m_TlasBuildKeys;
-  std::set<D3D12_GPU_VIRTUAL_ADDRESS> m_Sources;
+  std::unordered_map<CommandKey, std::vector<KeyOffset>> m_BlasesByTlas;
+  std::map<KeyOffset, CommandKey> m_TlasBuildKeys;
+  std::set<KeyOffset> m_Sources;
+  std::unordered_map<ObjectKey, KeyOffset> m_PlacedResources;
+  std::mutex m_PlacedResourcesMutex;
   std::unordered_map<ObjectKey, ID3D12Resource*> m_ResourceByKey;
   std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>
       m_InstancesArraysOfPointers;
