@@ -1,3 +1,11 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
 #pragma once
 
 #include "layerAuto.h"
@@ -15,6 +23,7 @@ public:
   void Pre(vkEnumerateDeviceLayerPropertiesCommand& command) override;
   void Pre(vkEnumerateInstanceExtensionPropertiesCommand& command) override;
   void Pre(vkEnumerateDeviceExtensionPropertiesCommand& command) override;
+  void Pre(vkCreateDeviceCommand& command) override;
 
   void Post(vkGetPhysicalDeviceFeaturesCommand& command) override;
   void Post(vkGetPhysicalDeviceFeatures2Command& command) override;

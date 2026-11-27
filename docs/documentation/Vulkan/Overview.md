@@ -76,9 +76,10 @@ not use substring matching. Unknown or unsupported selectors produce a recording
 
 During recording, GITS suppresses matching core feature-query results and recognized structures
 in the `vkGetPhysicalDeviceFeatures2` output chain. This does not change application device-create
-requests. During replay, GITS suppresses matching enabled core and recognized `pNext` features at
-device creation, warning for each enabled feature it disables. Replay continues, but may fail or
-behave incorrectly if the stream requires a suppressed feature.
+requests; GITS warns if an application still enables a suppressed feature. During replay, GITS
+suppresses matching enabled core and recognized `pNext` features at device creation, warning for
+each enabled feature it disables. Replay continues, but may fail or behave incorrectly if the
+stream requires a suppressed feature.
 
 ## Image memory requirements for portable recordings
 

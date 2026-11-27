@@ -1,3 +1,11 @@
+// ===================== begin_copyright_notice ============================
+//
+// Copyright (C) 2023-2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+//
+// ===================== end_copyright_notice ==============================
+
 #include "capabilitySuppressionLayer.h"
 #include "captureManager.h"
 #include "configurator.h"
@@ -85,6 +93,33 @@ void CapabilitySuppressionLayer::Pre(vkEnumerateDeviceExtensionPropertiesCommand
       },
       [](const VkExtensionProperties& extension) { return extension.extensionName; },
       command.m_pPropertyCount.Value, command.m_pProperties.Value);
+}
+
+void CapabilitySuppressionLayer::Pre(vkCreateDeviceCommand& command) {
+  const auto& suppressedFeatures = Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures;
+  const VkDeviceCreateInfo* createInfo = command.m_pCreateInfo.Value;
+  if (suppressedFeatures.empty() || createInfo == nullptr) {
+    return;
+  }
+
+  auto warnIfSuppressed = [&](const char* structureName, const char* featureName,
+                              const VkBool32& value) {
+    if (value != VK_FALSE &&
+        std::any_of(suppressedFeatures.begin(), suppressedFeatures.end(),
+                    [&](const std::string& selector) {
+                      return MatchesPhysicalDeviceFeature(selector, structureName, featureName);
+                    })) {
+      LOG_WARNING << "Application enables physical device feature " << structureName << "."
+                  << featureName
+                  << " configured for suppression during capture; the device-create request is "
+                     "unchanged, but replay may be invalid.";
+    }
+  };
+
+  if (createInfo->pEnabledFeatures != nullptr) {
+    VisitPhysicalDeviceFeatures(*createInfo->pEnabledFeatures, warnIfSuppressed);
+  }
+  VisitPhysicalDeviceFeatureChain(createInfo->pNext, warnIfSuppressed);
 }
 
 // Filter the query results after the driver fills them, before returning them to the application.
