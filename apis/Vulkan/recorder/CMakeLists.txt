@@ -25,6 +25,8 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/wrappersAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/capabilitySuppressionLayer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/capabilitySuppressionLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayerGroup.h
