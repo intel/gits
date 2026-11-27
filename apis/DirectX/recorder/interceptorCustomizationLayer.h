@@ -31,6 +31,7 @@ public:
 
   void Pre(D3D12CreateDeviceCommand& command) override;
   void Post(D3D12CreateDeviceCommand& command) override;
+  void Post(ID3D12DeviceFactoryCreateDeviceCommand& command) override;
 
 private:
   void RemoveSwapChainBufferWrappersOnResize(ObjectKey swapChainKey);

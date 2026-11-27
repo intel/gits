@@ -148,6 +148,7 @@ public:
     return m_NvapiFunctionIds;
   }
 
+  void InterceptDirectMLFunctions();
   void InterceptXessFunctions();
   void InterceptXellFunctions();
   void InterceptXefgFunctions();
@@ -160,7 +161,6 @@ private:
   CaptureManager& operator=(const CaptureManager&) = delete;
 
   void Close();
-  void InterceptDirectMLFunctions();
   void InterceptDirectStorageFunctions();
   void InterceptKernelFunctions();
   void InterceptNvAPIFunctions();
@@ -206,8 +206,10 @@ private:
   ContextMapService m_XellContextMap;
   ContextMapService m_XefgContextMap;
 
+  std::mutex m_DetoursMutex;
   HMODULE m_KernelDll{};
   HMODULE m_DmlDll{};
+  std::once_flag m_DmlOnce;
   HMODULE m_DstorageDll{};
   HMODULE m_XessDll{};
   HMODULE m_XellDll{};

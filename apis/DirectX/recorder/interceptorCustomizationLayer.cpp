@@ -124,9 +124,14 @@ void InterceptorCustomizationLayer::Pre(D3D12CreateDeviceCommand& command) {
 }
 
 void InterceptorCustomizationLayer::Post(D3D12CreateDeviceCommand& command) {
+  CaptureManager::Get().InterceptDirectMLFunctions();
   CaptureManager::Get().InterceptXessFunctions();
   CaptureManager::Get().InterceptXellFunctions();
   CaptureManager::Get().InterceptXefgFunctions();
+}
+
+void InterceptorCustomizationLayer::Post(ID3D12DeviceFactoryCreateDeviceCommand& command) {
+  CaptureManager::Get().InterceptDirectMLFunctions();
 }
 
 } // namespace DirectX

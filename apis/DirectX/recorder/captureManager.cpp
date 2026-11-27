@@ -37,9 +37,6 @@ CaptureManager& CaptureManager::Get() {
     if (Configurator::Get().directx.recorder.captureDirectStorage) {
       m_Instance->InterceptDirectStorageFunctions();
     }
-    if (Configurator::Get().directx.recorder.captureDirectML) {
-      m_Instance->InterceptDirectMLFunctions();
-    }
     if (Configurator::Get().directx.recorder.captureNvAPI) {
       m_Instance->InterceptNvAPIFunctions();
     }
@@ -124,28 +121,36 @@ CaptureManager::CaptureManager() {
 }
 
 void CaptureManager::InterceptDirectMLFunctions() {
-  // Load DirectML.dll from the current directory or System32
-  // Most DirectML applications include the DirectML runtime
-  m_DmlDll = LoadLibrary("DirectML.dll");
-  GITS_ASSERT(m_DmlDll);
+  // Called on D3D12 device creation: DirectML.dll imports d3d12.dll, so it must not be loaded
+  // before the application loads d3d12.dll, and every DirectML device needs a D3D12 device.
+  if (!Configurator::Get().directx.recorder.captureDirectML) {
+    return;
+  }
+  std::call_once(m_DmlOnce, [this]() {
+    // Load DirectML.dll from the current directory or System32
+    // Most DirectML applications include the DirectML runtime
+    m_DmlDll = LoadLibrary("DirectML.dll");
+    GITS_ASSERT(m_DmlDll);
 
-  m_DmlDispatchTable.DMLCreateDevice =
-      reinterpret_cast<decltype(DMLCreateDevice)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice"));
-  m_DmlDispatchTable.DMLCreateDevice1 =
-      reinterpret_cast<decltype(DMLCreateDevice1)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice1"));
+    m_DmlDispatchTable.DMLCreateDevice =
+        reinterpret_cast<decltype(DMLCreateDevice)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice"));
+    m_DmlDispatchTable.DMLCreateDevice1 =
+        reinterpret_cast<decltype(DMLCreateDevice1)*>(GetProcAddress(m_DmlDll, "DMLCreateDevice1"));
 
-  LONG ret = DetourTransactionBegin();
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourUpdateThread(GetCurrentThread());
-  GITS_ASSERT(ret == NO_ERROR);
+    std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
+    LONG ret = DetourTransactionBegin();
+    GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourUpdateThread(GetCurrentThread());
+    GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice, DMLCreateDeviceWrapper);
-  GITS_ASSERT(ret == NO_ERROR);
-  ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice1, DMLCreateDevice1Wrapper);
-  GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice, DMLCreateDeviceWrapper);
+    GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourAttach(&m_DmlDispatchTable.DMLCreateDevice1, DMLCreateDevice1Wrapper);
+    GITS_ASSERT(ret == NO_ERROR);
 
-  ret = DetourTransactionCommit();
-  GITS_ASSERT(ret == NO_ERROR);
+    ret = DetourTransactionCommit();
+    GITS_ASSERT(ret == NO_ERROR);
+  });
 }
 
 void CaptureManager::InterceptDirectStorageFunctions() {
@@ -166,6 +171,7 @@ void CaptureManager::InterceptDirectStorageFunctions() {
       reinterpret_cast<decltype(DStorageCreateCompressionCodec)*>(
           GetProcAddress(m_DstorageDll, "DStorageCreateCompressionCodec"));
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -251,6 +257,7 @@ void CaptureManager::InterceptKernelFunctions() {
   m_Kernel32DispatchTableSystem.LoadLibraryExW =
       reinterpret_cast<decltype(LoadLibraryExW)*>(GetProcAddress(m_KernelDll, "LoadLibraryExW"));
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -384,6 +391,7 @@ void CaptureManager::InterceptXessFunctions() {
   LOG_INFO << "Loaded XeSS (libxess.dll) version: " << xessVersion.major << "." << xessVersion.minor
            << "." << xessVersion.patch;
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -532,6 +540,7 @@ void CaptureManager::InterceptXellFunctions() {
   LOG_INFO << "Loaded XeLL (libxell.dll) version: " << xellVersion.major << "." << xellVersion.minor
            << "." << xellVersion.patch;
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -668,6 +677,7 @@ void CaptureManager::InterceptXefgFunctions() {
   LOG_INFO << "Loaded XeSS FG (libxess_fg.dll) version: " << xefgVersion.major << "."
            << xefgVersion.minor << "." << xefgVersion.patch;
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -962,6 +972,7 @@ void CaptureManager::InterceptNvAPIFunctions() {
                 m_NvapiFunctionIds.at("NvAPI_D3D12_BuildRaytracingPartitionedTlasIndirect"));
   }
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());
@@ -1034,6 +1045,7 @@ void CaptureManager::InterceptD3D11On12Functions() {
             GetProcAddress(m_D3D11Dll, "D3D11On12CreateDevice"));
   }
 
+  std::lock_guard<std::mutex> detoursLock(m_DetoursMutex);
   LONG ret = DetourTransactionBegin();
   GITS_ASSERT(ret == NO_ERROR);
   ret = DetourUpdateThread(GetCurrentThread());

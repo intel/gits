@@ -80,6 +80,8 @@ if(WITH_DIRECTX)
   )
   target_link_options(gits_recorder PRIVATE "/DELAYLOAD:gits_tbb.dll")
   target_link_options(gits_recorder PRIVATE "/DELAYLOAD:gits_tbb_debug.dll")
+  target_link_options(gits_recorder PRIVATE "/DELAYLOAD:d3d12.dll")
+  target_link_options(gits_recorder PRIVATE "/DELAYLOAD:dxgi.dll")
 endif()
 
 if(UNIX)

@@ -41,6 +41,7 @@ target_link_libraries(DirectX_rtsr PRIVATE
   rtsr_module_shared
   d3d12.lib
 )
+target_link_options(DirectX_rtsr PRIVATE "/DELAYLOAD:d3d12.dll")
 
 set_target_properties(DirectX_rtsr PROPERTIES FOLDER "${GUI_MODULES_FOLDER}/rtsr")
 
