@@ -87,7 +87,10 @@ if(MSVC)
 endif()
 
 if(WIN32)
-  set_target_properties(gits_player_lib PROPERTIES OUTPUT_NAME "gitsPlayer")
+  # gitsPlayer.exe installs gitsPlayer.pdb to the same directory.
+  set_target_properties(gits_player_lib PROPERTIES
+    OUTPUT_NAME "gitsPlayer"
+    PDB_NAME "gitsPlayerLib")
 endif()
 if(UNIX)
   set_target_properties(gits_player_lib PROPERTIES OUTPUT_NAME "GitsPlayer")
