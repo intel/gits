@@ -403,8 +403,8 @@ void RaytracingAssertionsLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c
   if (it == m_Resources.end()) {
     return;
   }
-  m_AddressService.AddGpuCaptureAddress(it->second, c.m_Object.Key, it->second->GetDesc().Width,
-                                        c.m_Result.Value);
+  m_AddressService.AddGpuCaptureAddress(c.Key, it->second, c.m_Object.Key,
+                                        it->second->GetDesc().Width, c.m_Result.Value);
 }
 
 void RaytracingAssertionsLayer::Post(IUnknownReleaseCommand& c) {

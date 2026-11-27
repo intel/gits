@@ -8,7 +8,6 @@
 
 #include "raytracingInstancesDump.h"
 #include "analyzerRaytracingService.h"
-#include "capturePlayerGpuAddressService.h"
 #include "log.h"
 
 namespace gits {
@@ -47,33 +46,21 @@ void RaytracingInstancesDump::DumpBuffer(DumpInfo& dumpInfo, void* data) {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   InstancesInfo& instancesInfo = static_cast<InstancesInfo&>(dumpInfo);
-  std::vector<AnalyzerRaytracingService::KeyOffset>& blases =
+  std::vector<D3D12_GPU_VIRTUAL_ADDRESS>& blases =
       m_RaytracingService.GetBlases(instancesInfo.BuildCall);
 
   D3D12_RAYTRACING_INSTANCE_DESC* instances = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(data);
   unsigned numInstances = instancesInfo.Size / sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
   if (instancesInfo.ArrayOfPointersOffsets.empty()) {
     for (unsigned i = 0; i < numInstances; ++i) {
-      CapturePlayerGpuAddressService::ResourceInfo* info =
-          m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(
-              instances[i].AccelerationStructure, true);
-      if (info) {
-        unsigned offset = instances[i].AccelerationStructure - info->CaptureStart;
-        blases.push_back(std::make_pair(info->Key, offset));
-      }
+      blases.push_back(instances[i].AccelerationStructure);
     }
   } else {
     for (unsigned i = 0; i < instancesInfo.ArrayOfPointersOffsets.size(); ++i) {
       GITS_ASSERT(instancesInfo.ArrayOfPointersOffsets[i] < numInstances);
       unsigned index = instancesInfo.ArrayOfPointersOffsets[i];
       D3D12_GPU_VIRTUAL_ADDRESS blasAddress = instances[index].AccelerationStructure;
-      CapturePlayerGpuAddressService::ResourceInfo* info =
-          m_RaytracingService.GetGpuAddressService().GetResourceInfoByCaptureAddress(blasAddress,
-                                                                                     true);
-      if (info) {
-        unsigned offset = instances[index].AccelerationStructure - info->CaptureStart;
-        blases.push_back(std::make_pair(info->Key, offset));
-      }
+      blases.push_back(blasAddress);
     }
   }
 }

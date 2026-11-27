@@ -620,8 +620,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandListSetComputeRootShaderResourceViewCommand& c) {
   AddObjectForRestore(c.m_BufferLocation.InterfaceKey);
 
-  CommandKey tlasBuildKey = m_RaytracingService.FindTlas(AnalyzerRaytracingService::KeyOffset(
-      c.m_BufferLocation.InterfaceKey, c.m_BufferLocation.Offset));
+  CommandKey tlasBuildKey = m_RaytracingService.FindTlas(c.m_BufferLocation.Value);
   if (tlasBuildKey) {
     m_TlasBuildKeys.insert(tlasBuildKey);
   }
@@ -935,27 +934,17 @@ void AnalyzerCommandListService::CommandAnalysis(
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     if (c.m_pDesc.SourceAccelerationStructureKey) {
       m_RaytracingService.AddAccelerationStructureSource(
-          c.m_pDesc.SourceAccelerationStructureKey, c.m_pDesc.SourceAccelerationStructureOffset);
+          c.m_pDesc.Value->SourceAccelerationStructureData);
     }
-    unsigned inputIndex = 0;
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& inputs = c.m_pDesc.Value->Inputs;
     for (unsigned i = 0; i < inputs.NumDescs; ++i) {
       D3D12_RAYTRACING_GEOMETRY_DESC& desc = const_cast<D3D12_RAYTRACING_GEOMETRY_DESC&>(
           inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT_ARRAY ? inputs.pGeometryDescs[i]
                                                             : *inputs.ppGeometryDescs[i]);
-      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        inputIndex += 3;
-      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        ++inputIndex;
-      } else if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
-        if (desc.OmmTriangles.pTriangles) {
-          inputIndex += 3;
-        }
+      if (desc.Type == D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES) {
         if (desc.OmmTriangles.pOmmLinkage) {
-          ++inputIndex;
-          m_RaytracingService.AddAccelerationStructureSource(c.m_pDesc.InputKeys[inputIndex],
-                                                             c.m_pDesc.InputOffsets[inputIndex]);
-          ++inputIndex;
+          m_RaytracingService.AddAccelerationStructureSource(
+              desc.OmmTriangles.pOmmLinkage->OpacityMicromapArray);
         }
       }
     }
@@ -1038,10 +1027,8 @@ void AnalyzerCommandListService::CommandAnalysis(
              D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL) {
     if (c.m_pParams.SourceAccelerationStructureKey) {
       m_RaytracingService.AddAccelerationStructureSource(
-          c.m_pParams.SourceAccelerationStructureKey,
-          c.m_pParams.SourceAccelerationStructureOffset);
+          c.m_pParams.Value->pDesc->sourceAccelerationStructureData);
     }
-    unsigned inputIndex = 0;
     const NVAPI_D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS_EX& inputs =
         c.m_pParams.Value->pDesc->inputs;
     for (unsigned i = 0; i < inputs.numDescs; ++i) {
@@ -1051,23 +1038,11 @@ void AnalyzerCommandListService::CommandAnalysis(
                     reinterpret_cast<const char*>(inputs.pGeometryDescs) +
                     inputs.geometryDescStrideInBytes * i)
               : *inputs.ppGeometryDescs[i];
-      if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES) {
-        inputIndex += 3;
-      } else if (desc.type == D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS) {
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
-        inputIndex += 4;
+      if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_OMM_TRIANGLES_EX) {
         if (desc.ommTriangles.ommAttachment.opacityMicromapArray) {
-          m_RaytracingService.AddAccelerationStructureSource(c.m_pParams.InputKeys[inputIndex],
-                                                             c.m_pParams.InputOffsets[inputIndex]);
+          m_RaytracingService.AddAccelerationStructureSource(
+              desc.ommTriangles.ommAttachment.opacityMicromapArray);
         }
-        ++inputIndex;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_DMM_TRIANGLES_EX) {
-        inputIndex += 8;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_SPHERES_EX) {
-        inputIndex += 3;
-      } else if (desc.type == NVAPI_D3D12_RAYTRACING_GEOMETRY_TYPE_LSS_EX) {
-        inputIndex += 3;
       }
     }
   }
@@ -1150,8 +1125,7 @@ void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4EmitRaytracingAccelerationStructurePostbuildInfoCommand& c) {
   for (unsigned i = 0; i < c.m_NumSourceAccelerationStructures.Value; ++i) {
     m_RaytracingService.AddAccelerationStructureSource(
-        c.m_pSourceAccelerationStructureData.InterfaceKeys[i],
-        c.m_pSourceAccelerationStructureData.Offsets[i]);
+        c.m_pSourceAccelerationStructureData.Value[i]);
     if (m_Optimize) {
       AddObjectForRestore(c.m_pSourceAccelerationStructureData.InterfaceKeys[i]);
     }
@@ -1176,8 +1150,7 @@ void AnalyzerCommandListService::Command(
 
 void AnalyzerCommandListService::CommandAnalysis(
     ID3D12GraphicsCommandList4CopyRaytracingAccelerationStructureCommand& c) {
-  m_RaytracingService.AddAccelerationStructureSource(
-      c.m_SourceAccelerationStructureData.InterfaceKey, c.m_SourceAccelerationStructureData.Offset);
+  m_RaytracingService.AddAccelerationStructureSource(c.m_SourceAccelerationStructureData.Value);
   AddObjectForRestore(c.m_DestAccelerationStructureData.InterfaceKey);
   AddObjectForRestore(c.m_SourceAccelerationStructureData.InterfaceKey);
 }

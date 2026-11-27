@@ -58,8 +58,8 @@ public:
                         UINT64 size,
                         UINT64 stride,
                         D3D12_GPU_VIRTUAL_ADDRESS address);
-  void AddAccelerationStructureSource(ObjectKey key, unsigned offset) {
-    m_Sources.insert(std::make_pair(key, offset));
+  void AddAccelerationStructureSource(D3D12_GPU_VIRTUAL_ADDRESS address) {
+    m_Sources.insert(address);
   }
   void Flush();
   void ExecuteCommandLists(CommandKey key,
@@ -95,11 +95,10 @@ public:
   }
 
   std::set<ObjectKey> GetStateObjectAllSubobjects(ObjectKey stateObjectKey);
-  using KeyOffset = std::pair<ObjectKey, unsigned>;
-  std::vector<KeyOffset>& GetBlases(CommandKey tlasBuildKey) {
+  std::vector<D3D12_GPU_VIRTUAL_ADDRESS>& GetBlases(CommandKey tlasBuildKey) {
     return m_BlasesByTlas[tlasBuildKey];
   }
-  std::set<KeyOffset>& GetSources() {
+  std::set<D3D12_GPU_VIRTUAL_ADDRESS>& GetSources() {
     return m_Sources;
   }
   std::unordered_set<ObjectKey>& GetBindingTablesResources() {
@@ -109,7 +108,7 @@ public:
     return m_BindingTablesDump.GetBindingTablesDescriptors();
   }
 
-  CommandKey FindTlas(const KeyOffset& tlas);
+  CommandKey FindTlas(D3D12_GPU_VIRTUAL_ADDRESS tlas);
   void GetTlases(std::set<CommandKey>& tlases);
 
 private:
@@ -134,9 +133,9 @@ private:
 
   RaytracingInstancesDump m_InstancesDump;
   BindingTablesDump m_BindingTablesDump;
-  std::unordered_map<CommandKey, std::vector<KeyOffset>> m_BlasesByTlas;
-  std::map<KeyOffset, CommandKey> m_TlasBuildKeys;
-  std::set<KeyOffset> m_Sources;
+  std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_BlasesByTlas;
+  std::map<D3D12_GPU_VIRTUAL_ADDRESS, CommandKey> m_TlasBuildKeys;
+  std::set<D3D12_GPU_VIRTUAL_ADDRESS> m_Sources;
   std::unordered_map<ObjectKey, ID3D12Resource*> m_ResourceByKey;
   std::unordered_map<CommandKey, std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>
       m_InstancesArraysOfPointers;

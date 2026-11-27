@@ -39,7 +39,8 @@ AnalyzerLayer::AnalyzerLayer(SubcaptureRange& subcaptureRange)
                           m_RootSignatureService,
                           m_ResourceStateTracker),
       m_ExecuteIndirectService(
-          m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService) {
+          m_ResourceStateTracker, m_GpuAddressService, m_RaytracingService, m_CommandListService),
+      m_RaytracingOptimizationService(m_GpuAddressService) {
   m_Optimize = Configurator::Get().common.player.subcapture.optimize;
   if (m_Optimize) {
     m_ShaderIdentifierService.EnablePlayerIdentifierLookup();
@@ -798,7 +799,7 @@ void AnalyzerLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   if (m_Optimize) {
     m_RaytracingService.GetGPUVirtualAddress(c);
     D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
-    m_GpuAddressService.AddGpuCaptureAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
+    m_GpuAddressService.AddGpuCaptureAddress(c.Key, c.m_Object.Value, c.m_Object.Key, desc.Width,
                                              c.m_Result.Value);
   }
 }
@@ -810,7 +811,7 @@ void AnalyzerLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   if (m_Optimize) {
     m_AnalyzerService.NotifyObject(c.m_Object.Key);
     D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
-    m_GpuAddressService.AddGpuPlayerAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
+    m_GpuAddressService.AddGpuPlayerAddress(c.Key, c.m_Object.Value, c.m_Object.Key, desc.Width,
                                             c.m_Result.Value);
   }
 }

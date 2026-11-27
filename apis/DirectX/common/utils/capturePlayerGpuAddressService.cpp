@@ -8,6 +8,7 @@
 
 #include "capturePlayerGpuAddressService.h"
 #include "arguments.h"
+#include "keyUtils.h"
 #include "log.h"
 #include "configurationLib.h"
 
@@ -55,22 +56,25 @@ void CapturePlayerGpuAddressService::CreatePlacedResource(ObjectKey heapKey,
 }
 
 void CapturePlayerGpuAddressService::AddGpuCaptureAddress(
+    CommandKey commandKey,
     ID3D12Resource* resource,
     ObjectKey resourceKey,
     unsigned size,
     D3D12_GPU_VIRTUAL_ADDRESS captureAddress) {
   std::lock_guard<std::mutex> lock(m_Mutex);
-  m_GpuAddressService.AddGpuCaptureAddress(resource, resourceKey, size, captureAddress);
+  m_GpuAddressService.AddGpuCaptureAddress(commandKey, resource, resourceKey, size, captureAddress);
 }
 
-void CapturePlayerGpuAddressService::AddGpuPlayerAddress(ID3D12Resource* resource,
+void CapturePlayerGpuAddressService::AddGpuPlayerAddress(CommandKey commandKey,
+                                                         ID3D12Resource* resource,
                                                          ObjectKey resourceKey,
                                                          unsigned size,
                                                          D3D12_GPU_VIRTUAL_ADDRESS playerAddress) {
   std::lock_guard<std::mutex> lock(m_Mutex);
   m_GpuAddressService.AddGpuPlayerAddress(resourceKey, playerAddress);
   if (m_GpuPlayerAddress) {
-    m_GpuPlayerAddress->AddGpuCaptureAddress(resource, resourceKey, size, playerAddress);
+    m_GpuPlayerAddress->AddGpuCaptureAddress(commandKey, resource, resourceKey, size,
+                                             playerAddress);
     m_GpuPlayerAddress->AddGpuPlayerAddress(resourceKey, playerAddress);
   }
 }
@@ -144,6 +148,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::CreatePlacedResource(
 }
 
 void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
+    CommandKey commandKey,
     ID3D12Resource* resource,
     ObjectKey resourceKey,
     unsigned size,
@@ -153,6 +158,7 @@ void CapturePlayerGpuAddressService::GpuAddressService::AddGpuCaptureAddress(
   }
   auto it = m_PlacedResourcesByKey.find(resourceKey);
   if (it != m_PlacedResourcesByKey.end()) {
+    it->second->GetGPUVirtualAddressCommandKey = commandKey;
     if (it->second->CaptureStart) {
       return;
     }
@@ -314,22 +320,33 @@ CapturePlayerGpuAddressService::ResourceInfo* CapturePlayerGpuAddressService::Gp
       }
     }
   }
+
+  auto isNewer = [](CommandKey a, CommandKey b) {
+    if (IsStateRestoreKey(a) && !IsStateRestoreKey(b)) {
+      return false;
+    } else if (!IsStateRestoreKey(a) && IsStateRestoreKey(b)) {
+      return true;
+    }
+    return a > b;
+  };
+
   if (placedResourceInfo && !placedResourceInfo->Intersecting.empty()) {
     PlacedResourceInfo* selectedInfo = placedResourceInfo;
     for (PlacedResourceInfo* info : placedResourceInfo->Intersecting) {
-      D3D12_GPU_VIRTUAL_ADDRESS selectedStart = selectedInfo->CaptureStart;
-      D3D12_GPU_VIRTUAL_ADDRESS selectedEnd = selectedStart + selectedInfo->Size;
       D3D12_GPU_VIRTUAL_ADDRESS start = info->CaptureStart;
       D3D12_GPU_VIRTUAL_ADDRESS end = start + info->Size;
       if (address >= start && address < end) {
         if (raytracingAS) {
-          if (!selectedInfo->RaytracingAS || end > selectedEnd) {
+          if (!selectedInfo->RaytracingAS ||
+              isNewer(info->GetGPUVirtualAddressCommandKey,
+                      selectedInfo->GetGPUVirtualAddressCommandKey)) {
             if (info->RaytracingAS) {
               selectedInfo = info;
             }
           }
         } else {
-          if (end > selectedEnd) {
+          if (isNewer(info->GetGPUVirtualAddressCommandKey,
+                      selectedInfo->GetGPUVirtualAddressCommandKey)) {
             if (!info->DeniedShaderResource) {
               selectedInfo = info;
             }

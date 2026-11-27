@@ -236,8 +236,7 @@ void AnalyzerRaytracingService::BuildTlas(
     }
   }
 
-  m_TlasBuildKeys[{c.m_pDesc.DestAccelerationStructureKey,
-                   c.m_pDesc.DestAccelerationStructureOffset}] = c.Key;
+  m_TlasBuildKeys[c.m_pDesc.Value->DestAccelerationStructureData] = c.Key;
 }
 
 void AnalyzerRaytracingService::DispatchRays(ID3D12GraphicsCommandList4DispatchRaysCommand& c) {
@@ -394,7 +393,7 @@ void AnalyzerRaytracingService::LoadInstancesArraysOfPointers() {
   }
 }
 
-CommandKey AnalyzerRaytracingService::FindTlas(const KeyOffset& tlas) {
+CommandKey AnalyzerRaytracingService::FindTlas(D3D12_GPU_VIRTUAL_ADDRESS tlas) {
   auto it = m_TlasBuildKeys.find(tlas);
   if (it != m_TlasBuildKeys.end()) {
     return it->second;

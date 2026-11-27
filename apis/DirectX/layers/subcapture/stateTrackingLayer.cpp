@@ -2206,7 +2206,7 @@ void StateTrackingLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   ResourceState* state = static_cast<ResourceState*>(m_StateService.GetState(c.m_Object.Key));
   GITS_ASSERT(state);
   state->GpuVirtualAddress = c.m_Result.Value;
-  m_GpuAddressService.AddGpuCaptureAddress(c.m_Object.Value, c.m_Object.Key,
+  m_GpuAddressService.AddGpuCaptureAddress(c.Key, c.m_Object.Value, c.m_Object.Key,
                                            c.m_Object.Value->GetDesc().Width, c.m_Result.Value);
 }
 

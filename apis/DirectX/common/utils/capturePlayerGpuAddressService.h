@@ -8,6 +8,7 @@
 
 #pragma once
 #include "arguments.h"
+#include "command.h"
 
 #include <map>
 #include <unordered_map>
@@ -46,11 +47,13 @@ public:
                             ObjectKey resourceKey,
                             D3D12_RESOURCE_FLAGS flags,
                             D3D12_BARRIER_LAYOUT initialLayout);
-  void AddGpuCaptureAddress(ID3D12Resource* resource,
+  void AddGpuCaptureAddress(CommandKey commandKey,
+                            ID3D12Resource* resource,
                             ObjectKey resourceKey,
                             unsigned size,
                             D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
-  void AddGpuPlayerAddress(ID3D12Resource* resource,
+  void AddGpuPlayerAddress(CommandKey commandKey,
+                           ID3D12Resource* resource,
                            ObjectKey resourceKey,
                            unsigned size,
                            D3D12_GPU_VIRTUAL_ADDRESS playerAddress);
@@ -69,7 +72,8 @@ private:
                               ObjectKey resourceKey,
                               D3D12_RESOURCE_FLAGS flags,
                               bool raytracingAS);
-    void AddGpuCaptureAddress(ID3D12Resource* resource,
+    void AddGpuCaptureAddress(CommandKey commandKey,
+                              ID3D12Resource* resource,
                               ObjectKey resourceKey,
                               unsigned size,
                               D3D12_GPU_VIRTUAL_ADDRESS captureAddress);
@@ -89,6 +93,7 @@ private:
       bool DeniedShaderResource{};
       bool RaytracingAS{};
       ObjectKey HeapKey{};
+      CommandKey GetGPUVirtualAddressCommandKey{};
     };
 
     std::map<D3D12_GPU_VIRTUAL_ADDRESS, ResourceInfo*> m_ResourcesByAddress;

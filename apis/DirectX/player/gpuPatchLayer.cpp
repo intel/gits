@@ -101,7 +101,7 @@ void GpuPatchLayer::Pre(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   }
   D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
   if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    m_AddressService.AddGpuCaptureAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
+    m_AddressService.AddGpuCaptureAddress(c.Key, c.m_Object.Value, c.m_Object.Key, desc.Width,
                                           c.m_Result.Value);
   }
   m_ResourceByKey[c.m_Object.Key] = c.m_Object.Value;
@@ -113,7 +113,7 @@ void GpuPatchLayer::Post(ID3D12ResourceGetGPUVirtualAddressCommand& c) {
   }
   D3D12_RESOURCE_DESC desc = c.m_Object.Value->GetDesc();
   if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER) {
-    m_AddressService.AddGpuPlayerAddress(c.m_Object.Value, c.m_Object.Key, desc.Width,
+    m_AddressService.AddGpuPlayerAddress(c.Key, c.m_Object.Value, c.m_Object.Key, desc.Width,
                                          c.m_Result.Value);
   }
 }
