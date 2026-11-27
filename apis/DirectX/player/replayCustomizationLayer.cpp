@@ -76,7 +76,7 @@ void ReplayCustomizationLayer::Post(IUnknownReleaseCommand& c) {
   if (c.Skip) {
     return;
   }
-  if (m_StreamReleaseResult == 0) {
+  if (m_StreamReleaseResult == 0 || c.m_Result.Value == 0) {
     m_ExclusiveFullscreenSwapChains.erase(c.m_Object.Key);
     m_Manager.GetDescriptorHandleService().DestroyDescriptorHeap(c.m_Object.Key);
     m_Manager.GetMapTrackingService().DestroyResource(c.m_Object.Key);
