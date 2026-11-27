@@ -1180,26 +1180,31 @@ void ReplayCustomizationLayer::Pre(vkCreateDeviceCommand& command) {
     }
 #endif
 
-    // Features can be enabled either through pEnabledFeatures or a
-    // VkPhysicalDeviceFeatures2 chained into pNext; handle both.
-    uint32_t suppressedFeatures = SuppressPhysicalDeviceFeatures(
-        vulkanShared.suppressPhysicalDeviceFeatures,
-        const_cast<VkPhysicalDeviceFeatures*>(createInfo->pEnabledFeatures));
-    for (auto* node = static_cast<VkBaseOutStructure*>(const_cast<void*>(createInfo->pNext)); node;
-         node = node->pNext) {
-      if (node->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2) {
-        suppressedFeatures += SuppressPhysicalDeviceFeatures(
-            vulkanShared.suppressPhysicalDeviceFeatures,
-            &reinterpret_cast<VkPhysicalDeviceFeatures2*>(node)->features);
-      }
-    }
-    if (suppressedFeatures > 0) {
-      LOG_INFO << "ReplayCustomization: suppressed " << suppressedFeatures
-               << " physical device feature(s) during vkCreateDevice.";
-    }
-
     m_Manager.GetDeviceDiagnosticService().PrepareDeviceCreate(command.m_physicalDevice.Value,
                                                                createInfo);
+
+    const auto& suppressedFeatures = vulkanShared.suppressPhysicalDeviceFeatures;
+    if (!suppressedFeatures.empty()) {
+      auto suppressFeature = [&](const char* structureName, const char* featureName,
+                                 VkBool32& value) {
+        if (value != VK_FALSE &&
+            std::any_of(suppressedFeatures.begin(), suppressedFeatures.end(),
+                        [&](const std::string& selector) {
+                          return MatchesPhysicalDeviceFeature(selector, structureName, featureName);
+                        })) {
+          LOG_WARNING << "ReplayCustomization: suppressing enabled physical device feature "
+                      << structureName << "." << featureName
+                      << " during vkCreateDevice; replay may be invalid.";
+          value = VK_FALSE;
+        }
+      };
+      if (createInfo->pEnabledFeatures) {
+        VisitPhysicalDeviceFeatures(
+            *const_cast<VkPhysicalDeviceFeatures*>(createInfo->pEnabledFeatures), suppressFeature);
+      }
+      VisitPhysicalDeviceFeatureChain(const_cast<void*>(createInfo->pNext), suppressFeature);
+    }
+
     m_RayTracingService.OnPreCreateDevice(command);
   }
 }

@@ -1057,9 +1057,12 @@ Configuration:
             Default: []
             Arguments: [suppressVKDeviceFeatures]
             Description:
-              Disable physical device features during logical device creation.
-              Option accepts list of comma (,) separated names of physical device features
-              (as specified in the VkPhysicalDeviceFeatures structure definition).
+              Suppress physical device features using comma-separated member names or
+              StructureName.memberName selectors. Bare names match every recognized feature
+              member with that exact name. Qualified names also match explicitly registered
+              promoted equivalents. During capture, suppression affects feature-query results;
+              during replay, it affects core and recognized pNext features enabled at device
+              creation. GITS warns when disabling enabled features, as replay may be invalid.
           - Name: suppressExtensions
             Type: std::vector<std::string>
             Default:

@@ -70,6 +70,7 @@ class NestedStructMember:
 @dataclass
 class Member:
     name: str = ''
+    name_alias: str = ''
     base_type: str = ''
     full_type: str = ''
     is_const: bool = False

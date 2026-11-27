@@ -177,6 +177,7 @@ def parse_member(node) -> Member:
 
     member = Member(
         name=name,
+        name_alias=node.find('name').get('alias', '') if node.find('name') is not None else '',
         base_type=base_type,
         full_type=full_type,
         is_const=bool(re.search(r'\bconst\b', full_type)),

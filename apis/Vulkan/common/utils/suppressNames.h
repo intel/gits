@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace gits {
@@ -99,27 +100,60 @@ void ProduceFilteredProperties(const std::vector<std::string>& suppressed,
   }
 }
 
-// Clears every VkPhysicalDeviceFeatures field whose identifier is listed in
-// `suppressed`, matching the member names from the VkPhysicalDeviceFeatures
-// struct definition (and the Common.Vulkan.Shared.SuppressPhysicalDeviceFeatures
-// option). Returns the number of features that were suppressed.
+inline bool MatchesPhysicalDeviceFeature(std::string_view selector,
+                                         std::string_view structureName,
+                                         std::string_view memberName) {
+  const auto separator = selector.find('.');
+  if (separator == std::string_view::npos) {
+    return selector == memberName;
+  }
+
+  // Qualified selectors also match registry-defined aliases and promoted features.
+  const auto selectedIdentity = GetPhysicalDeviceFeatureIdentity(selector.substr(0, separator),
+                                                                 selector.substr(separator + 1));
+  return !selectedIdentity.empty() &&
+         selectedIdentity == GetPhysicalDeviceFeatureIdentity(structureName, memberName);
+}
+
+// Returns the number of selector-field matches, including duplicate selectors
+// and fields that were already false.
 inline uint32_t SuppressPhysicalDeviceFeatures(const std::vector<std::string>& suppressed,
                                                VkPhysicalDeviceFeatures* features) {
   if (features == nullptr || suppressed.empty()) {
     return 0;
   }
 
-  uint32_t suppressedCount = 0;
-  for (const auto& name : suppressed) {
-    VisitPhysicalDeviceFeatures(*features,
-                                [&](const char*, const char* featureName, VkBool32& value) {
-                                  if (name == featureName) {
-                                    value = VK_FALSE;
-                                    ++suppressedCount;
-                                  }
-                                });
+  uint32_t matchCount = 0;
+  for (const auto& selector : suppressed) {
+    VisitPhysicalDeviceFeatures(
+        *features, [&](const char* structureName, const char* featureName, VkBool32& value) {
+          if (MatchesPhysicalDeviceFeature(selector, structureName, featureName)) {
+            value = VK_FALSE;
+            ++matchCount;
+          }
+        });
   }
-  return suppressedCount;
+  return matchCount;
+}
+
+inline uint32_t SuppressPhysicalDeviceFeatures(const std::vector<std::string>& suppressed,
+                                               VkPhysicalDeviceFeatures2* features) {
+  if (features == nullptr || suppressed.empty()) {
+    return 0;
+  }
+
+  // Suppress both the embedded core features and recognized pNext structures.
+  uint32_t matchCount = SuppressPhysicalDeviceFeatures(suppressed, &features->features);
+  for (const auto& selector : suppressed) {
+    VisitPhysicalDeviceFeatureChain(
+        features->pNext, [&](const char* structureName, const char* featureName, VkBool32& value) {
+          if (MatchesPhysicalDeviceFeature(selector, structureName, featureName)) {
+            value = VK_FALSE;
+            ++matchCount;
+          }
+        });
+  }
+  return matchCount;
 }
 
 } // namespace vulkan

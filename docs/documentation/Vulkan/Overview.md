@@ -65,6 +65,21 @@ place of the real loader and records the application's calls.
 Learn more about the configuration file options
 [here](../../configuration/VulkanAuto.md).
 
+## Physical device feature suppression
+
+`Vulkan.Shared.SuppressPhysicalDeviceFeatures` accepts a list of feature selectors. An
+unqualified member name, such as `meshShader`, matches that exact member name in every recognized
+feature structure, including NV and EXT variants. A qualified selector, such as
+`VkPhysicalDeviceBufferDeviceAddressFeaturesKHR.bufferDeviceAddress`, matches that feature and
+the equivalents explicitly linked by the Vulkan registry. Matching is case-sensitive and does
+not use substring matching. Unknown or unsupported selectors produce a recording warning.
+
+During recording, GITS suppresses matching core feature-query results and recognized structures
+in the `vkGetPhysicalDeviceFeatures2` output chain. This does not change application device-create
+requests. During replay, GITS suppresses matching enabled core and recognized `pNext` features at
+device creation, warning for each enabled feature it disables. Replay continues, but may fail or
+behave incorrectly if the stream requires a suppressed feature.
+
 ## Image memory requirements for portable recordings
 
 The recorder can report larger image memory requirements to the application, allowing its

@@ -9,8 +9,7 @@ class CaptureManager;
 
 class CapabilitySuppressionLayer : public Layer {
 public:
-  explicit CapabilitySuppressionLayer(CaptureManager& manager)
-      : Layer("CapabilitySuppression"), m_Manager(manager) {}
+  explicit CapabilitySuppressionLayer(CaptureManager& manager);
 
   void Pre(vkEnumerateInstanceLayerPropertiesCommand& command) override;
   void Pre(vkEnumerateDeviceLayerPropertiesCommand& command) override;

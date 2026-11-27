@@ -1,10 +1,21 @@
 #include "capabilitySuppressionLayer.h"
 #include "captureManager.h"
 #include "configurator.h"
+#include "log.h"
 #include "suppressNames.h"
 
 namespace gits {
 namespace vulkan {
+
+CapabilitySuppressionLayer::CapabilitySuppressionLayer(CaptureManager& manager)
+    : Layer("CapabilitySuppression"), m_Manager(manager) {
+  for (const auto& selector : Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures) {
+    if (!IsKnownPhysicalDeviceFeature(selector)) {
+      LOG_WARNING << "Unknown or unsupported physical device feature suppression selector: "
+                  << selector;
+    }
+  }
+}
 
 void CapabilitySuppressionLayer::Pre(vkEnumerateInstanceLayerPropertiesCommand& command) {
   const auto& suppressLayers = Configurator::Get().vulkan.recorder.suppressLayers;
@@ -76,23 +87,20 @@ void CapabilitySuppressionLayer::Pre(vkEnumerateDeviceExtensionPropertiesCommand
       command.m_pPropertyCount.Value, command.m_pProperties.Value);
 }
 
+// Filter the query results after the driver fills them, before returning them to the application.
 void CapabilitySuppressionLayer::Post(vkGetPhysicalDeviceFeaturesCommand& command) {
   SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
                                  command.m_pFeatures.Value);
 }
 
 void CapabilitySuppressionLayer::Post(vkGetPhysicalDeviceFeatures2Command& command) {
-  if (command.m_pFeatures.Value) {
-    SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
-                                   &command.m_pFeatures.Value->features);
-  }
+  SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+                                 command.m_pFeatures.Value);
 }
 
 void CapabilitySuppressionLayer::Post(vkGetPhysicalDeviceFeatures2KHRCommand& command) {
-  if (command.m_pFeatures.Value) {
-    SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
-                                   &command.m_pFeatures.Value->features);
-  }
+  SuppressPhysicalDeviceFeatures(Configurator::Get().vulkan.shared.suppressPhysicalDeviceFeatures,
+                                 command.m_pFeatures.Value);
 }
 
 } // namespace vulkan
