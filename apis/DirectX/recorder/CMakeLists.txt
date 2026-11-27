@@ -57,6 +57,8 @@ set(CAPTURE_SRC
   ${SRC_DIR}/captureCustomizationLayer.cpp
   ${SRC_DIR}/captureSynchronizationLayer.h
   ${SRC_DIR}/captureSynchronizationLayer.cpp
+  ${SRC_DIR}/objectLifetimeSynchronizationLayer.h
+  ${SRC_DIR}/objectLifetimeSynchronizationLayer.cpp
   ${SRC_DIR}/encoderLayerAuto.h
   ${SRC_DIR}/encoderLayerAuto.cpp
   ${SRC_DIR}/encoderLayerCustom.cpp

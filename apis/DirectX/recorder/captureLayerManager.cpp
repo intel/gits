@@ -13,6 +13,7 @@
 #include "encoderLayerAuto.h"
 #include "captureCustomizationLayer.h"
 #include "captureSynchronizationLayer.h"
+#include "objectLifetimeSynchronizationLayer.h"
 #include "captureGpuPatchLayer.h"
 #include "debugInfoLayerAuto.h"
 #include "globalSynchronizationLayerAuto.h"
@@ -48,6 +49,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   std::unique_ptr<Layer> debugInfoLayer;
   std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> captureSynchronizationLayer;
+  std::unique_ptr<Layer> objectLifetimeSynchronizationLayer;
   std::unique_ptr<Layer> encoderLayer;
   std::unique_ptr<Layer> gpuPatchLayer;
   std::unique_ptr<Layer> imGuiHUDLayer;
@@ -66,6 +68,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     captureCustomizationLayer =
         std::make_unique<CaptureCustomizationLayer>(captureManager, *gitsRecorder);
     captureSynchronizationLayer = std::make_unique<CaptureSynchronizationLayer>(captureManager);
+    objectLifetimeSynchronizationLayer = std::make_unique<ObjectLifetimeSynchronizationLayer>();
     encoderLayer = std::make_unique<EncoderLayer>(*gitsRecorder);
     gpuPatchLayer = std::make_unique<CaptureGpuPatchLayer>(gpuAddressService);
     portabilityLayer = m_PortabilityLayerGroup.GetLayer("Portability");
@@ -88,6 +91,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     }
   };
   enablePreLayer(globalSynchronizationLayer.get());
+  enablePreLayer(objectLifetimeSynchronizationLayer.get());
   enablePreLayer(traceLayer);
   enablePreLayer(interceptorCustomizationLayer.get());
   enablePreLayer(dllOverrideStoreLayer.get());
@@ -127,6 +131,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   }
 
   // keep as last
+  enablePostLayer(objectLifetimeSynchronizationLayer.get());
   enablePostLayer(globalSynchronizationLayer.get());
 
   // Retain ownership of layers
@@ -138,6 +143,7 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   retainLayer(std::move(interceptorCustomizationLayer));
   retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(captureSynchronizationLayer));
+  retainLayer(std::move(objectLifetimeSynchronizationLayer));
   retainLayer(std::move(encoderLayer));
   retainLayer(std::move(gpuPatchLayer));
   retainLayer(std::move(debugInfoLayer));

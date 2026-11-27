@@ -39,6 +39,8 @@ set(UTILS_FILES
   ${SRC_DIR}/imageWriter.h
   ${SRC_DIR}/imageWriter.cpp
   ${SRC_DIR}/hashUtils.h
+  ${SRC_DIR}/asymmetricSharedMutex.h
+  ${SRC_DIR}/asymmetricSharedMutex.cpp
 )
 source_group("" FILES ${UTILS_FILES})
 
