@@ -1058,11 +1058,11 @@ Configuration:
             Arguments: [suppressVKDeviceFeatures]
             Description:
               Suppress physical device features using comma-separated member names or
-              StructureName.memberName selectors. Bare names match every recognized feature
-              member with that exact name. Qualified names also match explicitly registered
-              promoted equivalents. During capture, suppression affects feature-query results;
-              during replay, it affects core and recognized pNext features enabled at device
-              creation. GITS warns when disabling enabled features, as replay may be invalid.
+              StructureName.memberName selectors. Matching ignores case. Bare names match every
+              recognized feature member with that exact name. Qualified names also match explicitly
+              registered promoted equivalents. During capture, suppression affects feature-query
+              results; during replay, it affects core and recognized pNext features enabled at
+              device creation. GITS warns when disabling enabled features, as replay may be invalid.
           - Name: suppressExtensions
             Type: std::vector<std::string>
             Default:

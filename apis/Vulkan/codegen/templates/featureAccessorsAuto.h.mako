@@ -5,11 +5,21 @@ ${header}
 
 #include "vulkanHeader2.h"
 
+#include <algorithm>
+#include <locale>
 #include <string_view>
 #include <type_traits>
 
 namespace gits {
 namespace vulkan {
+
+inline bool EqualPhysicalDeviceFeatureNames(std::string_view left, std::string_view right) {
+  const auto& locale = std::locale::classic();
+  return left.size() == right.size() &&
+         std::equal(left.begin(), left.end(), right.begin(), [&locale](char lhs, char rhs) {
+           return std::tolower(lhs, locale) == std::tolower(rhs, locale);
+         });
+}
 
 inline std::string_view GetPhysicalDeviceFeatureIdentity(std::string_view structureName,
                                                          std::string_view memberName) {
@@ -18,13 +28,13 @@ inline std::string_view GetPhysicalDeviceFeatureIdentity(std::string_view struct
 % if define:
 #ifdef ${define}
 % endif
-  if (structureName == "${structure.name}"\
+  if (EqualPhysicalDeviceFeatureNames(structureName, "${structure.name}")\
 % for alias in structure.aliases:
- || structureName == "${alias}"\
+ || EqualPhysicalDeviceFeatureNames(structureName, "${alias}")\
 % endfor
       ) {
 % for member in feature_members(structure):
-    if (memberName == "${member.name}") {
+    if (EqualPhysicalDeviceFeatureNames(memberName, "${member.name}")) {
       return "${feature_identities[(structure.name, member.name)]}";
     }
 % endfor
@@ -49,7 +59,7 @@ inline bool IsKnownPhysicalDeviceFeature(std::string_view selector) {
 #ifdef ${define}
 % endif
 % for member in feature_members(structure):
-  if (selector == "${member.name}") {
+  if (EqualPhysicalDeviceFeatureNames(selector, "${member.name}")) {
     return true;
   }
 % endfor

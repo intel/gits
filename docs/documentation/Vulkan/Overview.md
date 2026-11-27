@@ -68,10 +68,10 @@ Learn more about the configuration file options
 ## Physical device feature suppression
 
 `Vulkan.Shared.SuppressPhysicalDeviceFeatures` accepts a list of feature selectors. An
-unqualified member name, such as `meshShader`, matches that exact member name in every recognized
-feature structure, including NV and EXT variants. A qualified selector, such as
+unqualified member name, such as `meshShader`, matches that member name in every recognized
+feature structure, including NV and EXT variants, ignoring case. A qualified selector, such as
 `VkPhysicalDeviceBufferDeviceAddressFeaturesKHR.bufferDeviceAddress`, matches that feature and
-the equivalents explicitly linked by the Vulkan registry. Matching is case-sensitive and does
+the equivalents explicitly linked by the Vulkan registry. Matching is case-insensitive and does
 not use substring matching. Unknown or unsupported selectors produce a recording warning.
 
 During recording, GITS suppresses matching core feature-query results and recognized structures

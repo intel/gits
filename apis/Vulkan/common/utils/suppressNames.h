@@ -105,7 +105,7 @@ inline bool MatchesPhysicalDeviceFeature(std::string_view selector,
                                          std::string_view memberName) {
   const auto separator = selector.find('.');
   if (separator == std::string_view::npos) {
-    return selector == memberName;
+    return EqualPhysicalDeviceFeatureNames(selector, memberName);
   }
 
   // Qualified selectors also match registry-defined aliases and promoted features.
