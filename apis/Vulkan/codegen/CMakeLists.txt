@@ -29,6 +29,7 @@ set(SCRIPTS_SRC
   generator_subcapture.py
   generator_api_debug.py
   generator_resource_dumping.py
+  generator_feature_accessors.py
 )
 source_group("scripts" FILES ${SCRIPTS_SRC})
 

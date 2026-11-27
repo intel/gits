@@ -10,11 +10,14 @@ add_library(Vulkan_utils STATIC)
 
 set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+set_source_files_properties(${SRC_DIR}/featureAccessorsAuto.h PROPERTIES GENERATED 1)
+
 target_sources(Vulkan_utils
 PRIVATE
   ${SRC_DIR}/pluginService.h
   ${SRC_DIR}/pluginService.cpp
   ${SRC_DIR}/suppressNames.h
+  ${SRC_DIR}/featureAccessorsAuto.h
   ${SRC_DIR}/formatBlockInfo.h
   ${SRC_DIR}/formatBlockInfo.cpp
 )
@@ -32,6 +35,6 @@ PUBLIC
   Vulkan_layer_interface
 )
 
-add_dependencies(Vulkan_utils config_codegen)
+add_dependencies(Vulkan_utils config_codegen Vulkan_codegen)
 
 set_target_properties(Vulkan_utils PROPERTIES FOLDER Vulkan/Vulkan_common)

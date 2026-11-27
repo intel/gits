@@ -26,6 +26,7 @@ from plugin_generator import generate_plugin_artifacts
 from generator_subcapture import generate_subcapture_files
 from generator_api_debug import generate_api_debug_files
 from generator_resource_dumping import generate_resource_dumping_files
+from generator_feature_accessors import generate_feature_accessors
 
 def main():
     parser = argparse.ArgumentParser(description='Generate vulkan files.')
@@ -64,6 +65,7 @@ def main():
 
     generate_layer_files(context, os.path.join(output_path, 'common/layer_interface'))
     generate_coders_files(context, os.path.join(output_path, 'common/coders'))
+    generate_feature_accessors(context, os.path.join(output_path, 'common/utils'))
     generate_recorder_files(context, os.path.join(output_path, 'recorder'))
     generate_player_files(context, os.path.join(output_path, 'player'))
     generate_trace_files(context, os.path.join(output_path, 'layers/trace'))
