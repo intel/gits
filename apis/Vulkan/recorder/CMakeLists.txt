@@ -27,6 +27,10 @@ set(CAPTURE_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/encoderLayerAuto.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.h
   ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayer.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayerGroup.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/captureCustomizationLayerGroup.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/memoryRequirementsCaptureLayer.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/memoryRequirementsCaptureLayer.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdaters.h
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.h
   ${CMAKE_CURRENT_SOURCE_DIR}/handleArgumentUpdatersAuto.cpp

@@ -11,7 +11,6 @@
 #include "configurator.h"
 #include "pluginService.h"
 #include "encoderLayerAuto.h"
-#include "captureCustomizationLayer.h"
 #include "logVkErrorLayerAuto.h"
 #include "hudLayer.h"
 
@@ -25,7 +24,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
 
   std::unique_ptr<Layer> logVkErrorLayer = std::make_unique<LogVkErrorLayer>();
   std::unique_ptr<Layer> encoderLayer;
-  std::unique_ptr<Layer> captureCustomizationLayer;
   std::unique_ptr<Layer> hudLayer;
 
   const auto& traceCfg = Configurator::Get().common.shared.trace;
@@ -46,8 +44,8 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   }
 
   if (cfg.common.recorder.enabled) {
-    captureCustomizationLayer =
-        std::make_unique<CaptureCustomizationLayer>(captureManager, recorder);
+    m_CaptureCustomizationLayerGroup =
+        std::make_unique<CaptureCustomizationLayerGroup>(captureManager, recorder);
     encoderLayer = std::make_unique<EncoderLayer>(recorder);
   }
 
@@ -57,7 +55,10 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     }
   };
 
-  enablePreLayer(captureCustomizationLayer);
+  if (m_CaptureCustomizationLayerGroup) {
+    const auto& layers = m_CaptureCustomizationLayerGroup->GetPreLayers();
+    m_PreLayers.insert(m_PreLayers.end(), layers.begin(), layers.end());
+  }
   if (traceCfg.enabled && traceCfg.print.preCalls) {
     enablePreLayer(traceLayer);
   }
@@ -81,7 +82,10 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
   }
 
   enablePostLayer(logVkErrorLayer);
-  enablePostLayer(captureCustomizationLayer);
+  if (m_CaptureCustomizationLayerGroup) {
+    const auto& layers = m_CaptureCustomizationLayerGroup->GetPostLayers();
+    m_PostLayers.insert(m_PostLayers.end(), layers.begin(), layers.end());
+  }
   if (traceCfg.enabled && traceCfg.print.postCalls) {
     enablePostLayer(traceLayer);
   }
@@ -98,7 +102,6 @@ void CaptureLayerManager::LoadLayers(CaptureManager& captureManager,
     }
   };
 
-  retainLayer(std::move(captureCustomizationLayer));
   retainLayer(std::move(logVkErrorLayer));
   retainLayer(std::move(traceLayer));
 
@@ -121,6 +124,7 @@ void CaptureLayerManager::Shutdown() {
   m_PreLayers.clear();
   m_PostLayers.clear();
   m_LayersOwner.clear();
+  m_CaptureCustomizationLayerGroup.reset();
   m_ResourceDumpingLayerGroup.reset();
   m_TraceLayerGroup.reset();
 }

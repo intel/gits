@@ -65,6 +65,46 @@ place of the real loader and records the application's calls.
 Learn more about the configuration file options
 [here](../../configuration/VulkanAuto.md).
 
+## Image memory requirements for portable recordings
+
+The recorder can report larger image memory requirements to the application, allowing its
+allocator to reserve extra space and adjust suballocation offsets for replay on hardware with
+larger requirements. Configure this before recording, for example:
+
+```yaml
+Vulkan:
+  Recorder:
+    Portability:
+      ImageMemoryRequirementIncrease:
+        Size:
+          Percent: 25
+          FixedAmount: 65536
+        Alignment: 65536
+```
+
+`FixedAmount` and `Alignment` are in bytes. The recorder adds the percentage
+(rounded upward) and fixed amount to the image's reported size. Alignment constrains the binding
+offset. A nonzero image alignment override must be a power of two, no smaller than the driver
+requirement, and a multiple of it; otherwise a warning is logged and the driver alignment is
+retained. An alignment-only override does not increase the reported size. Arithmetic overflow
+stops recording with an error.
+
+The policy applies to `vkGetImageMemoryRequirements`, the core/KHR `vkGetImageMemoryRequirements2`
+variants, and the core/KHR `vkGetDeviceImageMemoryRequirements` variants. All settings default to
+zero (disabled). Memory type bits and dedicated-allocation requirements are unchanged.
+
+When a requirements2 output chain reports that an image requires or prefers dedicated allocation,
+the image memory requirements are left unchanged, including alignment. This is best-effort: an
+application may still choose a dedicated allocation when neither flag is set. If a handle-based
+requirements query was increased and the application later requests a dedicated allocation for
+that image, GITS logs a warning; the application has already received the increased value, so the
+recorder cannot undo that decision. Create-info-based requirement queries have no image handle to
+correlate with a later allocation, so they cannot produce this warning.
+
+The options increase recording-time memory consumption and does not guarantee replay compatibility
+with arbitrary hardware. It does not repair existing streams or change sparse-image requirements.
+Existing replay validation remains unchanged.
+
 ## Plugins
 
 Plugins can extend the **Vulkan** backend during capture and replay (Windows today). See [Plugins](../Plugins.md) for shared configuration and the [Vulkan plugin catalog](Plugins.md).

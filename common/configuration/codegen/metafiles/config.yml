@@ -1255,6 +1255,34 @@ Configuration:
             Type: bool
             Default: true
             OSVisibility: [WINDOWS]
+          - Name: Portability
+            Type: Group
+            Description:
+              Recorder settings that improve portability of captured streams across hardware.
+            Options:
+              - Name: ImageMemoryRequirementIncrease
+                Type: Group
+                Description:
+                  Increase reported image memory requirements so application allocators reserve
+                  additional memory for replay on devices with larger requirements.
+                LegacyPaths: ["Vulkan.Recorder.IncreaseImageMemorySizeRequirement"]
+                Options:
+                  - Name: Size
+                    Type: Group
+                    Options:
+                      - Name: fixedAmount
+                        Type: uint32_t
+                        Default: 0
+                      - Name: percent
+                        Type: uint32_t
+                        Default: 0
+                  - Name: alignment
+                    Type: uint32_t
+                    Default: 0
+                    Description:
+                      Override the reported image memory binding alignment during recording.
+                      The value must be a power of two, no smaller than, and a multiple of the
+                      driver's required alignment.
 
 # Options that are no longer supported. Older config files may still contain them, so instead of
 # stopping the execution they are skipped with a warning. Path uses the config file names (for

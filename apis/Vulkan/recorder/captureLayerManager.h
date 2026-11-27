@@ -13,6 +13,7 @@
 #include "orderingRecorder.h"
 #include "resourceDumpingLayerGroup.h"
 #include "traceLayerGroup.h"
+#include "captureCustomizationLayerGroup.h"
 
 #include <vector>
 #include <memory>
@@ -43,6 +44,7 @@ private:
   std::vector<Layer*> m_PreLayers;
   std::vector<Layer*> m_PostLayers;
   std::vector<std::unique_ptr<Layer>> m_LayersOwner;
+  std::unique_ptr<CaptureCustomizationLayerGroup> m_CaptureCustomizationLayerGroup;
   std::unique_ptr<TraceLayerGroup> m_TraceLayerGroup;
   std::unique_ptr<ResourceDumpingLayerGroup> m_ResourceDumpingLayerGroup;
 };
